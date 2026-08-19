@@ -1,0 +1,33 @@
+:root {
+  --ids-brand-qualora-accent: #3d4f66;
+  --ids-brand-qualora-accent-hover: #334257;
+  --ids-brand-qualora-accent-foreground: #f5f7fa;
+  --ids-brand-qualora-ring: #3d4f66;
+}
+
+.dark {
+  --ids-brand-qualora-accent: #9eb4c9;
+  --ids-brand-qualora-accent-hover: #b3c5d6;
+  --ids-brand-qualora-accent-foreground: #15181c;
+  --ids-brand-qualora-ring: #9eb4c9;
+}
+
+html[data-ids-brand="qualora"] {
+  --accent: var(--ids-brand-qualora-accent);
+  --accent-hover: var(--ids-brand-qualora-accent-hover);
+  --accent-foreground: var(--ids-brand-qualora-accent-foreground);
+  --ring: var(--ids-brand-qualora-ring);
+  --background: color-mix(
+    in srgb,
+    var(--ids-brand-qualora-accent) 4%,
+    var(--ids-foundation-color-background)
+  );
+}
+
+html.dark[data-ids-brand="qualora"] {
+  --background: color-mix(
+    in srgb,
+    var(--ids-brand-qualora-accent) 6%,
+    var(--ids-foundation-color-background)
+  );
+}

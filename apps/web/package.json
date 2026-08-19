@@ -1,0 +1,43 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint --max-warnings 0",
+    "check-types": "next typegen && tsc --noEmit",
+    "test": "tsx --test src/core/runtime/runtime.test.ts src/core/recommendation/briefing.test.ts src/core/venture/situation-room.test.ts src/core/capability/capability.test.ts src/core/venture-definition/venture-definition.test.ts src/core/venture-definition/instantiation.test.ts src/core/venture-definition/enforcement.test.ts src/modules/ventures/launch/bootstrap.test.ts src/lib/auth/session-token.test.ts src/modules/workspaces/membership.test.ts src/modules/intelligence/governance.test.ts src/modules/intelligence/workspace-scope.test.ts src/platform/persistence/repositories/repository.test.ts src/core/theme/ids-bind.test.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "@repo/ids": "workspace:*",
+    "@repo/ui": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.9",
+    "lucide-react": "^1.31.0",
+    "next": "16.3.0",
+    "next-themes": "^0.4.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^22.15.3",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.12",
+    "tsx": "^4.21.0",
+    "typescript": "5.9.2"
+  }
+}

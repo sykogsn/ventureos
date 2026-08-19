@@ -1,0 +1,40 @@
+import { createDecisionEngine } from "./model";
+
+export const harborDecisionEngineMock = createDecisionEngine([
+  {
+    id: "pricing",
+    ventureId: "harbor",
+    company: "Harbor Pay",
+    companyHref: "/ventures",
+    ownerRoleId: "founder",
+    question: "Run Harbor’s 14-day price test, or wait for more data?",
+    title: "Harbor price test",
+    recommendation:
+      "Run it. You already have enough signal to learn; delay will not produce a cleaner experiment.",
+    costOfInaction: "Loses the only commercial learning window this sprint.",
+    decideBy: "Today, 4:00pm",
+    actionLabel: "Decide now",
+    actionHref: "/ventures",
+    status: "upcoming",
+    briefing: true,
+  },
+  {
+    id: "harbor-raise",
+    ventureId: "harbor",
+    company: "Harbor Pay",
+    companyHref: "/ventures",
+    ownerRoleId: "founder",
+    question: "Raise for Harbor this quarter?",
+    title: "Harbor raise this quarter",
+    recommendation: "No. Runway is not the story.",
+    costOfInaction: "A process now would substitute for a price reading.",
+    decideBy: "Thursday",
+    actionLabel: "Keep the raise closed",
+    actionHref: "/dashboard",
+    status: "resolved",
+    briefing: false,
+    ruling: "No. Runway is not the story.",
+    result: "CFO was told to keep the raise closed and pressure-test price instead.",
+    resolvedOn: "Thursday",
+  },
+]);

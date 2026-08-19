@@ -1,0 +1,110 @@
+import { registerExtension } from "./registry";
+
+registerExtension({
+  id: "ventureos.shell",
+  name: "VentureOS Shell",
+  nav: [
+    {
+      id: "dashboard",
+      label: "Situation Room",
+      href: "/dashboard",
+      section: "operate",
+      icon: "layout-dashboard",
+    },
+    {
+      id: "ventures",
+      label: "Ventures",
+      href: "/ventures",
+      section: "operate",
+      icon: "building-2",
+    },
+    {
+      id: "agents",
+      label: "Executive Office",
+      href: "/agents",
+      section: "intelligence",
+      icon: "bot",
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      href: "/settings",
+      section: "system",
+      icon: "settings",
+    },
+  ],
+  commands: [
+    {
+      id: "nav.dashboard",
+      title: "Go to Situation Room",
+      group: "navigation",
+      href: "/dashboard",
+      keywords: ["home", "os", "dashboard", "briefing"],
+    },
+    {
+      id: "nav.ventures",
+      title: "Go to Ventures",
+      group: "navigation",
+      href: "/ventures",
+      keywords: ["companies", "workspace", "hq"],
+    },
+    {
+      id: "nav.agents",
+      title: "Go to Executive Office",
+      group: "ai",
+      href: "/agents",
+      keywords: ["runtime", "tools", "agents", "leadership", "office"],
+    },
+    {
+      id: "nav.settings",
+      title: "Go to Settings",
+      group: "system",
+      href: "/settings",
+    },
+    {
+      id: "ai.ask",
+      title: "Ask VentureOS",
+      group: "ai",
+      action: "palette.ai",
+      keywords: ["chat", "prompt", "agent"],
+    },
+    {
+      id: "system.palette",
+      title: "Open command palette",
+      group: "system",
+      action: "palette.open",
+      keywords: ["search", "jump"],
+    },
+    {
+      id: "system.notifications",
+      title: "Open notifications",
+      group: "system",
+      action: "notifications.open",
+    },
+    {
+      id: "system.theme.toggle",
+      title: "Toggle theme",
+      group: "system",
+      action: "theme.toggle",
+      keywords: ["dark", "light"],
+    },
+    {
+      id: "system.theme.dark",
+      title: "Use dark theme",
+      group: "system",
+      action: "theme.dark",
+    },
+    {
+      id: "system.theme.light",
+      title: "Use light theme",
+      group: "system",
+      action: "theme.light",
+    },
+    {
+      id: "system.theme.system",
+      title: "Use system theme",
+      group: "system",
+      action: "theme.system",
+    },
+  ],
+});

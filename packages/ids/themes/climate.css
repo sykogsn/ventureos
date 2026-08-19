@@ -1,0 +1,18 @@
+:root {
+  --background: var(--ids-foundation-color-background);
+  --foreground: var(--ids-foundation-color-foreground);
+  --surface: var(--ids-foundation-color-surface);
+  --surface-muted: var(--ids-foundation-color-surface-muted);
+  --border: var(--ids-foundation-color-border);
+  --muted: var(--ids-foundation-color-muted);
+  --accent: var(--ids-foundation-color-accent);
+  --accent-hover: var(--ids-foundation-color-accent-hover);
+  --accent-foreground: var(--ids-foundation-color-accent-foreground);
+  --ring: var(--ids-foundation-color-ring);
+  --danger: var(--ids-foundation-color-danger);
+  --radius: var(--ids-foundation-radius-panel);
+  --radius-control: var(--ids-foundation-radius-control);
+  --shadow-xs: var(--ids-foundation-shadow-xs);
+  --shadow-panel: var(--ids-foundation-shadow-panel);
+  --shadow-overlay: var(--ids-foundation-shadow-overlay);
+}

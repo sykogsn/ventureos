@@ -1,0 +1,23 @@
+{
+  "name": "@repo/ids",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./tokens/index.css",
+    "./themes/bind": "./themes/bind.ts"
+  },
+  "scripts": {
+    "lint": "eslint themes/bind.ts --max-warnings 0",
+    "check-types": "tsc --noEmit",
+    "test": "tsx --test themes/bind.test.ts"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.15.3",
+    "eslint": "^9.39.1",
+    "tsx": "^4.21.0",
+    "typescript": "5.9.2"
+  }
+}

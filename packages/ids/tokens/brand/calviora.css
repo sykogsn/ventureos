@@ -1,0 +1,33 @@
+:root {
+  --ids-brand-calviora-accent: #6b4f32;
+  --ids-brand-calviora-accent-hover: #5a4129;
+  --ids-brand-calviora-accent-foreground: #f8f4ee;
+  --ids-brand-calviora-ring: #6b4f32;
+}
+
+.dark {
+  --ids-brand-calviora-accent: #c4a574;
+  --ids-brand-calviora-accent-hover: #d2b68a;
+  --ids-brand-calviora-accent-foreground: #1a1714;
+  --ids-brand-calviora-ring: #c4a574;
+}
+
+html[data-ids-brand="calviora"] {
+  --accent: var(--ids-brand-calviora-accent);
+  --accent-hover: var(--ids-brand-calviora-accent-hover);
+  --accent-foreground: var(--ids-brand-calviora-accent-foreground);
+  --ring: var(--ids-brand-calviora-ring);
+  --background: color-mix(
+    in srgb,
+    var(--ids-brand-calviora-accent) 5%,
+    var(--ids-foundation-color-background)
+  );
+}
+
+html.dark[data-ids-brand="calviora"] {
+  --background: color-mix(
+    in srgb,
+    var(--ids-brand-calviora-accent) 7%,
+    var(--ids-foundation-color-background)
+  );
+}

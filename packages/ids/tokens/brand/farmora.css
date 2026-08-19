@@ -1,0 +1,33 @@
+:root {
+  --ids-brand-farmora-accent: #3f5c38;
+  --ids-brand-farmora-accent-hover: #334a2e;
+  --ids-brand-farmora-accent-foreground: #f4f7f1;
+  --ids-brand-farmora-ring: #3f5c38;
+}
+
+.dark {
+  --ids-brand-farmora-accent: #a3c48a;
+  --ids-brand-farmora-accent-hover: #b5d19d;
+  --ids-brand-farmora-accent-foreground: #141812;
+  --ids-brand-farmora-ring: #a3c48a;
+}
+
+html[data-ids-brand="farmora"] {
+  --accent: var(--ids-brand-farmora-accent);
+  --accent-hover: var(--ids-brand-farmora-accent-hover);
+  --accent-foreground: var(--ids-brand-farmora-accent-foreground);
+  --ring: var(--ids-brand-farmora-ring);
+  --background: color-mix(
+    in srgb,
+    var(--ids-brand-farmora-accent) 5%,
+    var(--ids-foundation-color-background)
+  );
+}
+
+html.dark[data-ids-brand="farmora"] {
+  --background: color-mix(
+    in srgb,
+    var(--ids-brand-farmora-accent) 7%,
+    var(--ids-foundation-color-background)
+  );
+}
