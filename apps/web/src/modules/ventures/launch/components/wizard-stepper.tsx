@@ -23,8 +23,8 @@ export function WizardStepper({
                   "ids-kicker ids-transition flex h-7 w-7 items-center justify-center rounded-full",
                   current && "bg-accent text-accent-foreground",
                   complete && "bg-accent/20 text-foreground",
-                  skipped && "bg-surface-muted text-muted line-through",
-                  !current && !complete && !skipped && "bg-surface-muted text-muted",
+                  skipped && "bg-surface-hover text-muted line-through",
+                  !current && !complete && !skipped && "bg-surface-hover text-muted",
                 )}
               >
                 {index + 1}

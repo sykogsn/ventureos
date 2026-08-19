@@ -119,7 +119,7 @@ export function CommandPalette() {
         role="dialog"
         aria-modal="true"
         aria-label={paletteMode === "ai" ? "Ask VentureOS" : "Command palette"}
-        className="relative z-10 w-full max-w-xl overflow-hidden vos-dialog"
+        className="relative z-10 w-full max-w-xl overflow-hidden ids-surface-modal"
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             closePalette();
@@ -177,7 +177,7 @@ export function CommandPalette() {
                           className={cn(
                             "vos-row",
                             index === activeIndex
-                              ? "bg-surface-muted text-foreground"
+                              ? "ids-surface-selected text-foreground"
                               : "text-muted hover:text-foreground",
                           )}
                         >

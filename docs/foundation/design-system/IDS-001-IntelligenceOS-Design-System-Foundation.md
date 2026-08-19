@@ -40,7 +40,7 @@ The Executive Intelligence Runtime remains the only orchestrator. The Shared Cap
 
 Foundation tokens are the OS grammar. They name roles, not brands.
 
-They include colour roles (background, foreground, surface, border, muted, accent, danger, ring), space, type scale, radius, shadow, elevation, motion duration and easing, breakpoints, z-index, and icon size.
+They include colour roles (background, surface, surface-elevated, border, divider; text primary, secondary, muted, disabled, inverse; brand primary, hover, active; success, warning, danger, info; chart series), space, type scale, radius, shadow, elevation, motion duration and easing, breakpoints, z-index, and icon size.
 
 Foundation tokens must be sufficient to render the shell without a brand overlay. A brand overlay may retint accent, atmosphere and kicker; it may not invent a second spacing scale or a second type ladder.
 
@@ -57,7 +57,7 @@ Brand tokens are product identity overlays keyed to Venture Definition ids.
 | Calviora | `calviora` | Livestock operating cadence |
 | Farmora | `farmora` | Farm operations intelligence |
 
-Brand tokens may specify accent, accent-hover, accent-foreground, atmospheric background shift, and optional kicker colour. They must not specify a private Runtime, a private capability catalogue, or a private navigation model.
+Brand tokens may specify brand primary, hover, active, on-brand inverse text, atmospheric background shift, and optional kicker colour. They must not specify a private Runtime, a private capability catalogue, or a private navigation model.
 
 Brand is resolved from the Venture Instance definition. Brand is not resolved from the Runtime pipeline, from capability lifecycle, or from persistence schema.
 
@@ -67,13 +67,23 @@ Until a Theme Engine exists, VentureOS brand values are the only live overlay. O
 
 Colour is atmosphere and signal, not illustration.
 
+- Two climates only: Executive Light (premium white, warm greys, soft borders, subtle surfaces) and Executive Dark (graphite, deep charcoal, premium navy, soft contrast). No additional themes.
 - Paper and ink establish the desk. Warm neutrality is the default climate of VentureOS.
-- Accent marks the primary act (found, confirm, skip-to-content, selected control). It is not a fill for large regions.
-- Muted text carries explanation. It never competes with a title.
-- Danger is for error and irreversible risk. It is not for emphasis.
-- Dark theme inverts climate without changing hierarchy. Brass or equivalent on dark is still an accent, not a carnival.
+- Brand primary marks the primary act (found, confirm, skip-to-content, selected control). It is not a fill for large regions. Hover and active are the only brand states.
+- Text primary carries titles and decisions. Secondary recedes. Muted explains. Disabled is inert. Inverse sits on brand fills.
+- Success, warning, danger and info are semantic signal. Danger is for error and irreversible risk, not emphasis. Colour is never the only encoding.
+- Charts use the eight-series professional palette. They do not invent hues.
+- Dark climate inverts paper and ink without changing hierarchy. Brass or equivalent on dark is still brand, not a carnival.
 
-Product brands may shift climate (clinical, pastoral, field) while preserving the same roles. A Qualora screen must still have background, surface, accent and danger. It must not replace those roles with unnamed hex values.
+Product brands may shift atmosphere (clinical, pastoral, field) while preserving the same roles. A Qualora screen must still have background, surface, brand primary and danger. It must not replace those roles with unnamed hex values.
+
+## Surfaces
+
+Surfaces are how paper sits on the desk. They are not a second colour system.
+
+Official roles: Surface, Elevated Surface, Panel, Card, Modal, Drawer, Toolbar, Sidebar, Section.
+
+Elevation, hairline borders, two radii (control and panel; chrome is square), quiet shadows, and a very subtle glass fill on toolbars are surface concerns. Hover, selected and focus are surface states. Components consume these roles. They do not invent shadows, radius, or translucent fills.
 
 ## Typography
 
@@ -102,7 +112,7 @@ IDS is unusable if it is not operable.
 
 - Skip to main content is part of the OS chrome, not an optional widget.
 - Focus indicators remain visible on interactive elements and on skip targets.
-- Contrast of text against paper, and of accent-foreground against accent, must meet WCAG 2.2 AA for the roles in use.
+- Contrast of text against paper, and of text-inverse against brand-primary, must meet WCAG 2.2 AA for the roles in use.
 - Empty and loading states expose status to assistive technology.
 - Keyboard order follows visual order. No interaction exists only on hover.
 - Colour is never the only encoding of health, danger or selection.
@@ -137,7 +147,7 @@ The founder selects a Product. Products resolve to definitions through the Defin
 
 Theme has two axes.
 
-1. **Climate:** light and dark. Climate inverts paper and ink. It does not change brand.
+1. **Climate:** Executive Light and Executive Dark. Climate inverts paper and ink. It does not change brand. Do not add a third climate.
 2. **Brand:** VentureOS, Qualora, Calviora, Farmora. Brand retints accent and atmosphere. It does not change climate independently of the founder’s appearance control.
 
 A Theme Engine, when built, applies brand from the active Venture Instance definition id and climate from appearance. Until then, climate may live in the application and brand remains VentureOS.

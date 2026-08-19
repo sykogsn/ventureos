@@ -1,6 +1,7 @@
 :root {
   --ids-brand-calviora-accent: #6b4f32;
   --ids-brand-calviora-accent-hover: #5a4129;
+  --ids-brand-calviora-accent-active: #4a3622;
   --ids-brand-calviora-accent-foreground: #f8f4ee;
   --ids-brand-calviora-ring: #6b4f32;
 }
@@ -8,6 +9,7 @@
 .dark {
   --ids-brand-calviora-accent: #c4a574;
   --ids-brand-calviora-accent-hover: #d2b68a;
+  --ids-brand-calviora-accent-active: #b08f5e;
   --ids-brand-calviora-accent-foreground: #1a1714;
   --ids-brand-calviora-ring: #c4a574;
 }
@@ -15,8 +17,13 @@
 html[data-ids-brand="calviora"] {
   --accent: var(--ids-brand-calviora-accent);
   --accent-hover: var(--ids-brand-calviora-accent-hover);
+  --accent-active: var(--ids-brand-calviora-accent-active);
   --accent-foreground: var(--ids-brand-calviora-accent-foreground);
   --ring: var(--ids-brand-calviora-ring);
+  --brand-primary: var(--ids-brand-calviora-accent);
+  --brand-primary-hover: var(--ids-brand-calviora-accent-hover);
+  --brand-primary-active: var(--ids-brand-calviora-accent-active);
+  --text-inverse: var(--ids-brand-calviora-accent-foreground);
   --background: color-mix(
     in srgb,
     var(--ids-brand-calviora-accent) 5%,

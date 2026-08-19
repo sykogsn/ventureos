@@ -41,8 +41,8 @@ function NavLink({ item, pathname }: { item: NavContribution; pathname: string }
       className={cn(
         "ids-label ids-transition flex items-center gap-2 rounded-md px-2 py-2",
         active
-          ? "bg-surface-muted text-foreground shadow-xs"
-          : "text-muted hover:bg-surface-muted hover:text-foreground",
+          ? "bg-surface-selected text-foreground shadow-xs"
+          : "text-muted hover:bg-surface-hover hover:text-foreground",
       )}
     >
       <Icon className="ids-icon-sm" />
@@ -56,7 +56,7 @@ export function Sidebar() {
   const items = listNavContributions();
 
   return (
-    <aside className="z-sidebar flex w-[13.75rem] shrink-0 flex-col border-r border-border bg-surface lg:w-60">
+    <aside className="ids-surface-sidebar z-sidebar flex w-[13.75rem] shrink-0 flex-col lg:w-60">
       <div className="flex h-14 items-center border-b border-border px-4">
         <Link href="/dashboard" className="ids-label">
           VentureOS

@@ -10,7 +10,7 @@
   "scripts": {
     "lint": "eslint themes/bind.ts --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "test": "tsx --test themes/bind.test.ts"
+    "test": "tsx --test themes/bind.test.ts tokens/color.test.ts tokens/surface.test.ts"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

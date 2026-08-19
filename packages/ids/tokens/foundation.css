@@ -1,18 +1,47 @@
 :root {
   color-scheme: light;
 
-  --ids-foundation-color-background: #f3f1ec;
-  --ids-foundation-color-foreground: #1c1b18;
-  --ids-foundation-color-surface: #fbfaf7;
-  --ids-foundation-color-surface-muted: #ece9e2;
-  --ids-foundation-color-border: #e2ddd4;
-  --ids-foundation-color-muted: #6f6b64;
-  --ids-foundation-color-danger: #9f3a32;
-  --ids-foundation-color-overlay: rgb(28 27 24 / 0.4);
-  --ids-foundation-color-accent: #3d5248;
-  --ids-foundation-color-accent-hover: #33453c;
-  --ids-foundation-color-accent-foreground: #f7f5f0;
-  --ids-foundation-color-ring: #3d5248;
+  /* Executive Light — premium white, warm greys, soft borders */
+  --ids-foundation-color-background: #f7f6f3;
+  --ids-foundation-color-surface: #fffefb;
+  --ids-foundation-color-surface-elevated: #efede8;
+  --ids-foundation-color-border: #e3e0d9;
+  --ids-foundation-color-divider: #ece9e3;
+
+  --ids-foundation-color-text-primary: #1a1916;
+  --ids-foundation-color-text-secondary: #4e4b46;
+  --ids-foundation-color-text-muted: #6f6b64;
+  --ids-foundation-color-text-disabled: #a39e96;
+  --ids-foundation-color-text-inverse: #f8f6f1;
+
+  --ids-foundation-color-brand-primary: #3d5248;
+  --ids-foundation-color-brand-primary-hover: #33453c;
+  --ids-foundation-color-brand-primary-active: #2b3a34;
+
+  --ids-foundation-color-success: #3f6a56;
+  --ids-foundation-color-warning: #8a6b3c;
+  --ids-foundation-color-danger: #9a4540;
+  --ids-foundation-color-info: #4a5c6e;
+
+  --ids-foundation-color-chart-1: #3d5270;
+  --ids-foundation-color-chart-2: #4a6b5c;
+  --ids-foundation-color-chart-3: #9a7f52;
+  --ids-foundation-color-chart-4: #6a6570;
+  --ids-foundation-color-chart-5: #7a4e52;
+  --ids-foundation-color-chart-6: #5b6e7a;
+  --ids-foundation-color-chart-7: #8c7354;
+  --ids-foundation-color-chart-8: #3f4550;
+
+  --ids-foundation-color-overlay: rgb(26 25 22 / 0.4);
+
+  /* Compatibility aliases — existing utilities keep working */
+  --ids-foundation-color-foreground: var(--ids-foundation-color-text-primary);
+  --ids-foundation-color-surface-muted: var(--ids-foundation-color-surface-elevated);
+  --ids-foundation-color-muted: var(--ids-foundation-color-text-muted);
+  --ids-foundation-color-accent: var(--ids-foundation-color-brand-primary);
+  --ids-foundation-color-accent-hover: var(--ids-foundation-color-brand-primary-hover);
+  --ids-foundation-color-accent-foreground: var(--ids-foundation-color-text-inverse);
+  --ids-foundation-color-ring: var(--ids-foundation-color-brand-primary);
 
   --ids-foundation-space-0: 0;
   --ids-foundation-space-1: 0.25rem;
@@ -121,10 +150,10 @@
   --ids-foundation-radius-control: 0.5rem;
   --ids-foundation-radius-panel: 0.625rem;
 
-  --ids-foundation-shadow-xs: 0 1px 1px rgb(28 27 24 / 0.04);
-  --ids-foundation-shadow-panel: 0 1px 1px rgb(28 27 24 / 0.04),
-    0 10px 28px rgb(28 27 24 / 0.05);
-  --ids-foundation-shadow-overlay: 0 16px 40px rgb(28 27 24 / 0.12);
+  --ids-foundation-shadow-xs: 0 1px 1px rgb(26 25 22 / 0.04);
+  --ids-foundation-shadow-panel: 0 1px 1px rgb(26 25 22 / 0.04),
+    0 6px 18px rgb(26 25 22 / 0.04);
+  --ids-foundation-shadow-overlay: 0 10px 28px rgb(26 25 22 / 0.08);
 
   --ids-foundation-motion-duration-fast: 120ms;
   --ids-foundation-motion-duration-base: 180ms;
@@ -160,21 +189,49 @@
 .dark {
   color-scheme: dark;
 
-  --ids-foundation-color-background: #121211;
-  --ids-foundation-color-foreground: #f2efe8;
-  --ids-foundation-color-surface: #1b1b19;
-  --ids-foundation-color-surface-muted: #262623;
-  --ids-foundation-color-border: #34332e;
-  --ids-foundation-color-muted: #a8a49b;
-  --ids-foundation-color-danger: #e07a72;
-  --ids-foundation-color-overlay: rgb(0 0 0 / 0.55);
-  --ids-foundation-color-accent: #c4b08a;
-  --ids-foundation-color-accent-hover: #d0bf9e;
-  --ids-foundation-color-accent-foreground: #1b1b19;
-  --ids-foundation-color-ring: #c4b08a;
+  /* Executive Dark — graphite, deep charcoal, premium navy, soft contrast */
+  --ids-foundation-color-background: #12141a;
+  --ids-foundation-color-surface: #191c24;
+  --ids-foundation-color-surface-elevated: #242833;
+  --ids-foundation-color-border: #2f3440;
+  --ids-foundation-color-divider: #272b36;
 
-  --ids-foundation-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.35);
-  --ids-foundation-shadow-panel: 0 1px 1px rgb(0 0 0 / 0.25),
-    0 12px 32px rgb(0 0 0 / 0.28);
-  --ids-foundation-shadow-overlay: 0 16px 48px rgb(0 0 0 / 0.45);
+  --ids-foundation-color-text-primary: #eceae4;
+  --ids-foundation-color-text-secondary: #b4b0a7;
+  --ids-foundation-color-text-muted: #8e8a82;
+  --ids-foundation-color-text-disabled: #5c5a56;
+  --ids-foundation-color-text-inverse: #16181e;
+
+  --ids-foundation-color-brand-primary: #c4b08a;
+  --ids-foundation-color-brand-primary-hover: #d0bf9e;
+  --ids-foundation-color-brand-primary-active: #b39d76;
+
+  --ids-foundation-color-success: #7d9e8c;
+  --ids-foundation-color-warning: #c4a574;
+  --ids-foundation-color-danger: #c98b84;
+  --ids-foundation-color-info: #8a9bb0;
+
+  --ids-foundation-color-chart-1: #7a90b0;
+  --ids-foundation-color-chart-2: #7da08c;
+  --ids-foundation-color-chart-3: #c4b08a;
+  --ids-foundation-color-chart-4: #9a96a0;
+  --ids-foundation-color-chart-5: #c08a8c;
+  --ids-foundation-color-chart-6: #8aa0b0;
+  --ids-foundation-color-chart-7: #c4a888;
+  --ids-foundation-color-chart-8: #a8adb8;
+
+  --ids-foundation-color-overlay: rgb(8 10 14 / 0.58);
+
+  --ids-foundation-color-foreground: var(--ids-foundation-color-text-primary);
+  --ids-foundation-color-surface-muted: var(--ids-foundation-color-surface-elevated);
+  --ids-foundation-color-muted: var(--ids-foundation-color-text-muted);
+  --ids-foundation-color-accent: var(--ids-foundation-color-brand-primary);
+  --ids-foundation-color-accent-hover: var(--ids-foundation-color-brand-primary-hover);
+  --ids-foundation-color-accent-foreground: var(--ids-foundation-color-text-inverse);
+  --ids-foundation-color-ring: var(--ids-foundation-color-brand-primary);
+
+  --ids-foundation-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.28);
+  --ids-foundation-shadow-panel: 0 1px 1px rgb(0 0 0 / 0.2),
+    0 8px 20px rgb(0 0 0 / 0.16);
+  --ids-foundation-shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.28);
 }

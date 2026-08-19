@@ -10,7 +10,7 @@ export function IconButton({
     <button
       type="button"
       className={cn(
-        "ids-transition inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-foreground",
+        "ids-transition inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground",
         className,
       )}
       {...props}

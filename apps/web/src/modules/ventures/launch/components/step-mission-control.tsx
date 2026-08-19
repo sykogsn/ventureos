@@ -29,7 +29,7 @@ export function StepMissionControl({ draft }: { draft: LaunchDraft }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-lg border border-border bg-surface px-4">
+      <div className="ids-surface-card px-4">
         <p className="ids-kicker pt-4">Venture Genome</p>
         <p className="ids-body mt-2">{genome.thesis}</p>
         <dl className="mt-2">
@@ -39,7 +39,7 @@ export function StepMissionControl({ draft }: { draft: LaunchDraft }) {
           <Row label="Cadence" value={genome.cadence} />
         </dl>
       </div>
-      <div className="rounded-lg border border-border bg-surface px-4">
+      <div className="ids-surface-card px-4">
         <dl>
           <Row
             label="Product"

@@ -23,7 +23,7 @@ export function VentureWorkspaceNav({
   ];
 
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-border bg-surface px-3 sm:px-4">
+    <nav className="ids-surface-toolbar flex gap-1 overflow-x-auto px-3 sm:px-4">
       {links.map((item) => {
         const active =
           item.match === "prefix"

@@ -15,7 +15,7 @@ export function TopNav() {
   const runtime = getAiRuntime();
 
   return (
-    <header className="z-topbar flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface px-3 sm:gap-3 sm:px-4">
+    <header className="ids-surface-toolbar z-topbar flex h-14 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-4">
       <WorkspaceSwitcher />
       <VentureSwitcher />
       <button

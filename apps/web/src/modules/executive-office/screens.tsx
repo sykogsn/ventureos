@@ -15,7 +15,7 @@ export function ExecutiveOfficeFloorScreen({
 }) {
   return (
     <section className="flex min-h-full flex-1 flex-col">
-      <div className="vos-screen mx-auto flex w-full max-w-[1040px] flex-1 flex-col gap-8">
+      <div className="ids-surface-section vos-screen mx-auto flex w-full max-w-[1040px] flex-1 flex-col gap-8">
         <FloorHeader
           dateLabel={formatBriefingDate(now)}
           posture={data.posture}

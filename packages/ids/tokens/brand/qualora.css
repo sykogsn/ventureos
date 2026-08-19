@@ -1,6 +1,7 @@
 :root {
   --ids-brand-qualora-accent: #3d4f66;
   --ids-brand-qualora-accent-hover: #334257;
+  --ids-brand-qualora-accent-active: #2b3849;
   --ids-brand-qualora-accent-foreground: #f5f7fa;
   --ids-brand-qualora-ring: #3d4f66;
 }
@@ -8,6 +9,7 @@
 .dark {
   --ids-brand-qualora-accent: #9eb4c9;
   --ids-brand-qualora-accent-hover: #b3c5d6;
+  --ids-brand-qualora-accent-active: #8aa3bb;
   --ids-brand-qualora-accent-foreground: #15181c;
   --ids-brand-qualora-ring: #9eb4c9;
 }
@@ -15,8 +17,13 @@
 html[data-ids-brand="qualora"] {
   --accent: var(--ids-brand-qualora-accent);
   --accent-hover: var(--ids-brand-qualora-accent-hover);
+  --accent-active: var(--ids-brand-qualora-accent-active);
   --accent-foreground: var(--ids-brand-qualora-accent-foreground);
   --ring: var(--ids-brand-qualora-ring);
+  --brand-primary: var(--ids-brand-qualora-accent);
+  --brand-primary-hover: var(--ids-brand-qualora-accent-hover);
+  --brand-primary-active: var(--ids-brand-qualora-accent-active);
+  --text-inverse: var(--ids-brand-qualora-accent-foreground);
   --background: color-mix(
     in srgb,
     var(--ids-brand-qualora-accent) 4%,

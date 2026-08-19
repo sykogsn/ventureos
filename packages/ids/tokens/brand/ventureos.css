@@ -1,20 +1,27 @@
 :root {
   --ids-brand-ventureos-accent: #3d5248;
   --ids-brand-ventureos-accent-hover: #33453c;
-  --ids-brand-ventureos-accent-foreground: #f7f5f0;
+  --ids-brand-ventureos-accent-active: #2b3a34;
+  --ids-brand-ventureos-accent-foreground: #f8f6f1;
   --ids-brand-ventureos-ring: #3d5248;
 }
 
 .dark {
   --ids-brand-ventureos-accent: #c4b08a;
   --ids-brand-ventureos-accent-hover: #d0bf9e;
-  --ids-brand-ventureos-accent-foreground: #1b1b19;
+  --ids-brand-ventureos-accent-active: #b39d76;
+  --ids-brand-ventureos-accent-foreground: #16181e;
   --ids-brand-ventureos-ring: #c4b08a;
 }
 
 html[data-ids-brand="ventureos"] {
   --accent: var(--ids-brand-ventureos-accent);
   --accent-hover: var(--ids-brand-ventureos-accent-hover);
+  --accent-active: var(--ids-brand-ventureos-accent-active);
   --accent-foreground: var(--ids-brand-ventureos-accent-foreground);
   --ring: var(--ids-brand-ventureos-ring);
+  --brand-primary: var(--ids-brand-ventureos-accent);
+  --brand-primary-hover: var(--ids-brand-ventureos-accent-hover);
+  --brand-primary-active: var(--ids-brand-ventureos-accent-active);
+  --text-inverse: var(--ids-brand-ventureos-accent-foreground);
 }

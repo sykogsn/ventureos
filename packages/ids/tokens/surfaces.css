@@ -1,0 +1,53 @@
+:root {
+  /* Fills consume colour tokens. This file does not redefine colour hex. */
+  --ids-foundation-surface-fill: var(--ids-foundation-color-surface);
+  --ids-foundation-surface-fill-elevated: var(--ids-foundation-color-surface-elevated);
+  --ids-foundation-surface-hover: var(--ids-foundation-color-surface-elevated);
+  --ids-foundation-surface-selected: var(--ids-foundation-color-surface-elevated);
+  --ids-foundation-surface-focus: var(--ids-foundation-color-surface);
+
+  --ids-foundation-surface-glass-fill: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface) 92%,
+    transparent
+  );
+  --ids-foundation-surface-glass-blur: 12px;
+
+  --ids-foundation-surface-border: var(--ids-foundation-color-border);
+  --ids-foundation-surface-border-subtle: var(--ids-foundation-color-divider);
+  --ids-foundation-surface-border-selected: color-mix(
+    in srgb,
+    var(--ids-foundation-color-brand-primary) 40%,
+    var(--ids-foundation-color-border)
+  );
+  --ids-foundation-surface-border-focus: var(--ids-foundation-color-ring);
+  --ids-foundation-surface-border-width: 1px;
+
+  --ids-foundation-surface-radius: var(--ids-foundation-radius-panel);
+  --ids-foundation-surface-radius-control: var(--ids-foundation-radius-control);
+  --ids-foundation-surface-radius-chrome: 0;
+
+  --ids-foundation-surface-shadow-none: none;
+  --ids-foundation-surface-shadow-raised: var(--ids-foundation-shadow-panel);
+  --ids-foundation-surface-shadow-overlay: var(--ids-foundation-shadow-overlay);
+  --ids-foundation-surface-shadow-modal: var(--ids-foundation-shadow-overlay);
+
+  --ids-foundation-surface-elevation-base: var(--ids-foundation-elevation-base);
+  --ids-foundation-surface-elevation-raised: var(--ids-foundation-elevation-raised);
+  --ids-foundation-surface-elevation-overlay: var(--ids-foundation-elevation-overlay);
+  --ids-foundation-surface-elevation-modal: var(--ids-foundation-elevation-modal);
+
+  --ids-foundation-surface-focus-ring: color-mix(
+    in srgb,
+    var(--ids-foundation-color-ring) 55%,
+    transparent
+  );
+}
+
+.dark {
+  --ids-foundation-surface-glass-fill: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface) 88%,
+    transparent
+  );
+}

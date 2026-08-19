@@ -58,7 +58,7 @@ export function Popover({
       ref={ref}
       role="dialog"
       className={cn(
-        "absolute top-[calc(100%+0.5rem)] z-popover w-64 rounded-md border border-border bg-surface p-2 shadow-panel",
+        "absolute top-[calc(100%+0.5rem)] z-popover w-64 ids-surface-modal p-2",
         align === "end" ? "right-0" : "left-0",
         className,
       )}

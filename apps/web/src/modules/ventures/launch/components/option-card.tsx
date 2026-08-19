@@ -19,10 +19,8 @@ export function OptionCard({
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "ids-transition flex flex-col gap-1 rounded-lg border p-3 text-left shadow-xs",
-        selected
-          ? "border-accent/40 bg-surface-muted"
-          : "border-border bg-surface hover:bg-surface-muted",
+        "ids-surface-card ids-transition flex flex-col gap-1 p-3 text-left",
+        selected ? "ids-surface-selected" : "hover:bg-surface-hover",
         disabled && "cursor-not-allowed opacity-50 hover:bg-background",
       )}
     >

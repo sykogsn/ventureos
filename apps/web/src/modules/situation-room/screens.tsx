@@ -18,7 +18,7 @@ export function SituationRoomScreen({
 }) {
   return (
     <section className="flex min-h-full flex-1 flex-col">
-      <div className="vos-screen mx-auto flex w-full max-w-[880px] flex-1 flex-col gap-8">
+      <div className="ids-surface-section vos-screen mx-auto flex w-full max-w-[880px] flex-1 flex-col gap-8">
         <SituationRoomHeader
           founderName={data.header.founderName}
           posture={data.header.posture}

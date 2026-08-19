@@ -11,7 +11,7 @@ export function LaunchSequence({
 }) {
   return (
     <div className="fixed inset-0 z-dialog flex items-center justify-center ids-overlay px-4">
-      <div className="vos-dialog w-full max-w-md p-6">
+      <div className="ids-surface-modal w-full max-w-md p-6">
         <p className="ids-kicker">Launch sequence</p>
         <h2 className="ids-lead mt-2">
           {complete ? "Company HQ is ready" : "Founding the company"}
@@ -25,12 +25,12 @@ export function LaunchSequence({
               <li
                 key={artefact.id}
                 className={cn(
-                  "ids-label ids-transition flex items-center justify-between rounded-md border px-3 py-2",
+                  "ids-label ids-transition flex items-center justify-between px-3 py-2",
                   done
-                    ? "border-border bg-background"
+                    ? "ids-surface-elevated"
                     : current
-                      ? "border-foreground bg-surface-muted"
-                      : "border-transparent text-muted",
+                      ? "ids-surface-card ids-surface-selected"
+                      : "text-muted",
                 )}
               >
                 <span>{artefact.label}</span>

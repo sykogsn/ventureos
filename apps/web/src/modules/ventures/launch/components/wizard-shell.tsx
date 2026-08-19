@@ -23,7 +23,7 @@ export function WizardShell({
   const step = launchSteps[currentIndex];
 
   return (
-    <section className="vos-screen mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8">
+    <section className="ids-surface-section vos-screen mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8">
       <header className="flex flex-col gap-2">
         <p className="ids-kicker">Found a company</p>
         <h1 className="ids-display">{step?.title}</h1>

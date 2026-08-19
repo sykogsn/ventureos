@@ -3,7 +3,7 @@ import Link from "next/link";
 export function FounderWelcome({ founderName }: { founderName: string }) {
   return (
     <section className="flex min-h-full flex-1 flex-col">
-      <div className="vos-screen mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
+      <div className="ids-surface-section vos-screen mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
         <p className="ids-kicker">VentureOS · {founderName}</p>
         <h1 className="ids-display mt-5">Welcome to VentureOS</h1>
         <p className="ids-lead mt-10">

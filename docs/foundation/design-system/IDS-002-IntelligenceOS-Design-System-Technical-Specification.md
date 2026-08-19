@@ -43,59 +43,101 @@ Semantic aliases (stable for components):
 | Alias | Resolves to |
 |---|---|
 | `--background` | foundation background after climate + brand atmosphere |
-| `--foreground` | foundation foreground |
 | `--surface` | foundation surface |
-| `--surface-muted` | foundation surface-muted |
+| `--surface-elevated` | foundation surface-elevated |
+| `--surface-muted` | alias of `--surface-elevated` |
 | `--border` | foundation border |
-| `--muted` | foundation muted |
-| `--accent` | active brand accent |
-| `--accent-hover` | active brand accent-hover |
-| `--accent-foreground` | active brand accent-foreground |
-| `--ring` | active brand ring (defaults to accent) |
-| `--danger` | foundation danger for the active climate |
+| `--divider` | foundation divider |
+| `--text-primary` | foundation text-primary |
+| `--text-secondary` | foundation text-secondary |
+| `--text-muted` | foundation text-muted |
+| `--text-disabled` | foundation text-disabled |
+| `--text-inverse` | foundation text-inverse (on brand fills) |
+| `--foreground` | alias of `--text-primary` |
+| `--muted` | alias of `--text-muted` |
+| `--brand-primary` | active brand primary |
+| `--brand-primary-hover` | active brand primary-hover |
+| `--brand-primary-active` | active brand primary-active |
+| `--accent` | alias of `--brand-primary` |
+| `--accent-hover` | alias of `--brand-primary-hover` |
+| `--accent-active` | alias of `--brand-primary-active` |
+| `--accent-foreground` | alias of `--text-inverse` |
+| `--ring` | active brand ring (defaults to brand-primary) |
+| `--success` | foundation success |
+| `--warning` | foundation warning |
+| `--danger` | foundation danger |
+| `--info` | foundation info |
+| `--chart-1` … `--chart-8` | foundation chart series |
 
 ## 2. Foundation tokens
 
 ### 2.1 Colours (roles)
 
-Climate is `light` | `dark`. Roles do not change.
+Climate is Executive Light (`:root`) or Executive Dark (`.dark`). Two climates only. Roles do not change.
 
-**Light**
+Hex lives in `packages/ids/tokens/foundation.css`. Components consume semantic aliases, never hex.
 
-| Token | Value |
-|---|---|
-| `--ids-foundation-color-background` | `#f3f1ec` |
-| `--ids-foundation-color-foreground` | `#1c1b18` |
-| `--ids-foundation-color-surface` | `#fbfaf7` |
-| `--ids-foundation-color-surface-muted` | `#ece9e2` |
-| `--ids-foundation-color-border` | `#e2ddd4` |
-| `--ids-foundation-color-muted` | `#6f6b64` |
-| `--ids-foundation-color-danger` | `#9f3a32` |
-| `--ids-foundation-color-overlay` | `rgb(28 27 24 / 0.40)` |
+**Neutral**
 
-**Dark**
+| Token | Executive Light | Executive Dark |
+|---|---|---|
+| `--ids-foundation-color-background` | `#f7f6f3` | `#12141a` |
+| `--ids-foundation-color-surface` | `#fffefb` | `#191c24` |
+| `--ids-foundation-color-surface-elevated` | `#efede8` | `#242833` |
+| `--ids-foundation-color-border` | `#e3e0d9` | `#2f3440` |
+| `--ids-foundation-color-divider` | `#ece9e3` | `#272b36` |
 
-| Token | Value |
-|---|---|
-| `--ids-foundation-color-background` | `#121211` |
-| `--ids-foundation-color-foreground` | `#f2efe8` |
-| `--ids-foundation-color-surface` | `#1b1b19` |
-| `--ids-foundation-color-surface-muted` | `#262623` |
-| `--ids-foundation-color-border` | `#34332e` |
-| `--ids-foundation-color-muted` | `#a8a49b` |
-| `--ids-foundation-color-danger` | `#e07a72` |
-| `--ids-foundation-color-overlay` | `rgb(0 0 0 / 0.55)` |
+**Text**
 
-Default accent on foundation (used when brand is VentureOS; other brands replace accent only):
+| Token | Executive Light | Executive Dark |
+|---|---|---|
+| `--ids-foundation-color-text-primary` | `#1a1916` | `#eceae4` |
+| `--ids-foundation-color-text-secondary` | `#4e4b46` | `#b4b0a7` |
+| `--ids-foundation-color-text-muted` | `#6f6b64` | `#8e8a82` |
+| `--ids-foundation-color-text-disabled` | `#a39e96` | `#5c5a56` |
+| `--ids-foundation-color-text-inverse` | `#f8f6f1` | `#16181e` |
 
-| Climate | `--ids-foundation-color-accent` | hover | foreground | ring |
-|---|---|---|---|---|
-| light | `#3d5248` | `#33453c` | `#f7f5f0` | `#3d5248` |
-| dark | `#c4b08a` | `#d0bf9e` | `#1b1b19` | `#c4b08a` |
+**Brand** (VentureOS default; other brands replace these via overlay)
+
+| Token | Executive Light | Executive Dark |
+|---|---|---|
+| `--ids-foundation-color-brand-primary` | `#3d5248` | `#c4b08a` |
+| `--ids-foundation-color-brand-primary-hover` | `#33453c` | `#d0bf9e` |
+| `--ids-foundation-color-brand-primary-active` | `#2b3a34` | `#b39d76` |
+
+**Semantic**
+
+| Token | Executive Light | Executive Dark |
+|---|---|---|
+| `--ids-foundation-color-success` | `#3f6a56` | `#7d9e8c` |
+| `--ids-foundation-color-warning` | `#8a6b3c` | `#c4a574` |
+| `--ids-foundation-color-danger` | `#9a4540` | `#c98b84` |
+| `--ids-foundation-color-info` | `#4a5c6e` | `#8a9bb0` |
+
+**Charts**
+
+| Token | Executive Light | Executive Dark |
+|---|---|---|
+| `--ids-foundation-color-chart-1` | `#3d5270` | `#7a90b0` |
+| `--ids-foundation-color-chart-2` | `#4a6b5c` | `#7da08c` |
+| `--ids-foundation-color-chart-3` | `#9a7f52` | `#c4b08a` |
+| `--ids-foundation-color-chart-4` | `#6a6570` | `#9a96a0` |
+| `--ids-foundation-color-chart-5` | `#7a4e52` | `#c08a8c` |
+| `--ids-foundation-color-chart-6` | `#5b6e7a` | `#8aa0b0` |
+| `--ids-foundation-color-chart-7` | `#8c7354` | `#c4a888` |
+| `--ids-foundation-color-chart-8` | `#3f4550` | `#a8adb8` |
+
+**Overlay**
+
+| Token | Executive Light | Executive Dark |
+|---|---|---|
+| `--ids-foundation-color-overlay` | `rgb(26 25 22 / 0.40)` | `rgb(8 10 14 / 0.58)` |
+
+Compatibility aliases (`foreground`, `surface-muted`, `muted`, `accent`, `accent-hover`, `accent-foreground`, `ring`) resolve to the official roles above. They remain valid. New screens should use the official names.
 
 Focus outline: `2px solid color-mix(in srgb, var(--ring) 55%, transparent)`, offset `2px`.
 
-Selection: `color-mix(in srgb, var(--accent) 18%, transparent)`.
+Selection: `color-mix(in srgb, var(--brand-primary) 18%, transparent)`.
 
 ### 2.2 Spacing
 
@@ -232,13 +274,51 @@ Former `vos-section` (0.8125rem / 600) is retired. Card section titles use Label
 
 ### 2.4 Shadows
 
-| Token | Light | Dark |
-|---|---|---|
-| `--ids-foundation-shadow-xs` | `0 1px 1px rgb(28 27 24 / 0.04)` | `0 1px 1px rgb(0 0 0 / 0.35)` |
-| `--ids-foundation-shadow-panel` | `0 1px 1px rgb(28 27 24 / 0.04), 0 10px 28px rgb(28 27 24 / 0.05)` | `0 1px 1px rgb(0 0 0 / 0.25), 0 12px 32px rgb(0 0 0 / 0.28)` |
-| `--ids-foundation-shadow-overlay` | `0 16px 40px rgb(28 27 24 / 0.12)` | `0 16px 48px rgb(0 0 0 / 0.45)` |
+Quiet, executive shadows. No Material elevation theatre.
 
-Controls: `shadow-xs`. Panels, cards, skip-link: `shadow-panel`. Dialogs and command palette: `shadow-overlay`.
+| Token | Executive Light | Executive Dark |
+|---|---|---|
+| `--ids-foundation-shadow-xs` | `0 1px 1px rgb(26 25 22 / 0.04)` | `0 1px 1px rgb(0 0 0 / 0.28)` |
+| `--ids-foundation-shadow-panel` | `0 1px 1px rgb(26 25 22 / 0.04), 0 6px 18px rgb(26 25 22 / 0.04)` | `0 1px 1px rgb(0 0 0 / 0.20), 0 8px 20px rgb(0 0 0 / 0.16)` |
+| `--ids-foundation-shadow-overlay` | `0 10px 28px rgb(26 25 22 / 0.08)` | `0 12px 32px rgb(0 0 0 / 0.28)` |
+
+Controls: `shadow-xs`. Panels and cards: `shadow-panel` (`--ids-foundation-surface-shadow-raised`). Dialogs, drawers, command palette: `shadow-overlay` (`--ids-foundation-surface-shadow-modal`).
+
+### 2.4a Executive Surface System
+
+Surfaces consume colour tokens. They do not invent hex.
+
+**Roles**
+
+| Role | Utility | Fill | Border | Radius | Shadow | Elevation |
+|---|---|---|---|---|---|---|
+| Surface | `ids-surface` | `--ids-foundation-surface-fill` | none | chrome (`0`) | none | base |
+| Elevated Surface | `ids-surface-elevated` | `--ids-foundation-surface-fill-elevated` | subtle (`divider`) | panel | none | base |
+| Panel | `ids-surface-panel`, `vos-panel` | fill | default | panel | raised | raised |
+| Card | `ids-surface-card` | fill | default | panel | raised | raised |
+| Modal | `ids-surface-modal`, `vos-dialog` | fill | default | panel | modal | modal |
+| Drawer | `ids-surface-drawer` | fill | inline-start | chrome (`0`) | overlay | modal |
+| Toolbar | `ids-surface-toolbar` | fill, glass when supported | bottom hairline | chrome (`0`) | none | raised |
+| Sidebar | `ids-surface-sidebar` | fill | inline-end hairline | chrome (`0`) | none | raised |
+| Section | `ids-surface-section` | transparent | none | chrome (`0`) | none | base |
+
+**States**
+
+| State | Token | Utility |
+|---|---|---|
+| Hover | `--ids-foundation-surface-hover` | `ids-surface-hover`, `bg-surface-hover` |
+| Selected | `--ids-foundation-surface-selected` + `--ids-foundation-surface-border-selected` | `ids-surface-selected`, `bg-surface-selected` |
+| Focus | `--ids-foundation-surface-focus` + `--ids-foundation-surface-border-focus` + `--ids-foundation-surface-focus-ring` | `ids-surface-focus` |
+
+**Glass**
+
+`--ids-foundation-surface-glass-fill` is `color-mix` of surface at 92% (88% in dark). `--ids-foundation-surface-glass-blur` is `12px`. Applied to toolbars where `backdrop-filter` is supported. Utility: `ids-surface-glass`. No large gradients.
+
+**Contrast**
+
+Canvas is `--ids-foundation-color-background`. Raised chrome and cards are `--ids-foundation-surface-fill`. Nested wells are `--ids-foundation-surface-fill-elevated`. Colour hex lives in the colour system; surfaces only compose those roles.
+
+Compatibility: `--surface-muted` remains an alias of elevated fill. `--shadow-panel` and `--shadow-overlay` remain valid.
 
 ### 2.5 Radius
 
@@ -399,7 +479,7 @@ Class contract: `vos-field`. Labels: `ids-label`, gap-1 column. Errors: `ids-bod
 
 Radius panel, border, surface, shadow-panel, padding `space-6` for executive sections, `space-4` for compact lists. Gap `space-5` between kicker block and body.
 
-Class contract: `vos-panel`; package `Card` must match panel shadow and radius. `SectionCard` owns padding and gap; a screen must not pass its own `p-*` or `gap-*` override, because per-card overrides are how a set of cards stops looking like one product.
+Class contract: `ids-surface-card` (alias `vos-panel` for panels). Package `Card` must match panel shadow and radius. `SectionCard` owns padding and gap; a screen must not pass its own `p-*` or `gap-*` override, because per-card overrides are how a set of cards stops looking like one product.
 
 ### 4.4 Tables
 
@@ -411,19 +491,19 @@ Workspace tabs and sidebar items: Label, muted at rest, foreground when current.
 
 ### 4.6 Sidebar
 
-Full-height, elevation raised, border-e, background. Width compact; labels use Label. Active item: surface-muted or foreground. Icons `icon-sm`. No Runtime calls.
+Full-height, `ids-surface-sidebar`, elevation raised. Width compact; labels use Label. Active item: `bg-surface-selected`. Hover: `bg-surface-hover`. Icons `icon-sm`. No Runtime calls.
 
 ### 4.7 Top bar
 
-Height sufficient for `h-8` controls. Border-b, surface. Contains workspace switcher, company switcher, appearance, command affordance. Controls: `vos-control`. Skip link is a sibling of the shell, not inside the bar.
+Height sufficient for `h-8` controls. `ids-surface-toolbar` (hairline border, optional glass). Contains workspace switcher, company switcher, appearance, command affordance. Controls: `vos-control`. Skip link is a sibling of the shell, not inside the bar.
 
 ### 4.8 Dialogs
 
-Elevation modal, z-dialog, overlay foundation overlay colour. Panel: radius panel, shadow-overlay, max-w-lg, padding space-6. Title: page or section. One primary action. Escape and focus trap required. Do not use dialogs to persist VIC.
+Elevation modal, z-dialog, overlay foundation overlay colour. Surface: `ids-surface-modal` (alias `vos-dialog`). Title: page or section. One primary action. Escape and focus trap required. Do not use dialogs to persist VIC.
 
 ### 4.9 Popovers
 
-Elevation overlay, z-popover, surface, border, radius control, padding space-2, width as needed (`w-72` for workspace). Close on outside click and Escape. Empty copy inside uses Empty State standard. Selectable entries use the row contract (`vos-row`), never bespoke padding.
+Elevation overlay, z-popover, `ids-surface-modal`, padding space-2, width as needed (`w-72` for workspace). Close on outside click and Escape. Empty copy inside uses Empty State standard. Selectable entries use the row contract (`vos-row`), never bespoke padding.
 
 ### 4.10 Empty states
 
@@ -513,9 +593,9 @@ No page-transition libraries. No Runtime-triggered animation.
 
 Layers, applied in order:
 
-1. Foundation climate (`:root` light, `.dark` dark) sets paper, ink, danger, shadows.
-2. Brand overlay (`data-ids-brand="ventureos|qualora|calviora|farmora"`) sets accent, hover, foreground, ring, optional atmosphere mix.
-3. Semantic aliases (`--background`, `--accent`, …) are what components read.
+1. Foundation climate (`:root` Executive Light, `.dark` Executive Dark) sets paper, ink, brand, semantic and chart colours, plus shadows.
+2. Brand overlay (`data-ids-brand="ventureos|qualora|calviora|farmora"`) sets brand primary, hover, active, inverse, ring, optional atmosphere mix.
+3. Semantic aliases (`--background`, `--text-primary`, `--brand-primary`, …) are what components read.
 
 Appearance control sets climate only (light | dark | system). Brand is not a founder appearance setting; it follows the active Venture Instance definition id when the Theme Engine exists.
 

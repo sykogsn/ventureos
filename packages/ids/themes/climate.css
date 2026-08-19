@@ -1,15 +1,46 @@
 :root {
   --background: var(--ids-foundation-color-background);
-  --foreground: var(--ids-foundation-color-foreground);
   --surface: var(--ids-foundation-color-surface);
-  --surface-muted: var(--ids-foundation-color-surface-muted);
+  --surface-elevated: var(--ids-foundation-color-surface-elevated);
+  --surface-muted: var(--ids-foundation-color-surface-elevated);
+  --surface-hover: var(--ids-foundation-surface-hover);
+  --surface-selected: var(--ids-foundation-surface-selected);
+  --surface-focus: var(--ids-foundation-surface-focus);
+  --surface-glass: var(--ids-foundation-surface-glass-fill);
   --border: var(--ids-foundation-color-border);
-  --muted: var(--ids-foundation-color-muted);
-  --accent: var(--ids-foundation-color-accent);
-  --accent-hover: var(--ids-foundation-color-accent-hover);
-  --accent-foreground: var(--ids-foundation-color-accent-foreground);
-  --ring: var(--ids-foundation-color-ring);
+  --divider: var(--ids-foundation-color-divider);
+
+  --text-primary: var(--ids-foundation-color-text-primary);
+  --text-secondary: var(--ids-foundation-color-text-secondary);
+  --text-muted: var(--ids-foundation-color-text-muted);
+  --text-disabled: var(--ids-foundation-color-text-disabled);
+  --text-inverse: var(--ids-foundation-color-text-inverse);
+  --foreground: var(--ids-foundation-color-text-primary);
+  --muted: var(--ids-foundation-color-text-muted);
+
+  --brand-primary: var(--ids-foundation-color-brand-primary);
+  --brand-primary-hover: var(--ids-foundation-color-brand-primary-hover);
+  --brand-primary-active: var(--ids-foundation-color-brand-primary-active);
+  --accent: var(--ids-foundation-color-brand-primary);
+  --accent-hover: var(--ids-foundation-color-brand-primary-hover);
+  --accent-active: var(--ids-foundation-color-brand-primary-active);
+  --accent-foreground: var(--ids-foundation-color-text-inverse);
+  --ring: var(--ids-foundation-color-brand-primary);
+
+  --success: var(--ids-foundation-color-success);
+  --warning: var(--ids-foundation-color-warning);
   --danger: var(--ids-foundation-color-danger);
+  --info: var(--ids-foundation-color-info);
+
+  --chart-1: var(--ids-foundation-color-chart-1);
+  --chart-2: var(--ids-foundation-color-chart-2);
+  --chart-3: var(--ids-foundation-color-chart-3);
+  --chart-4: var(--ids-foundation-color-chart-4);
+  --chart-5: var(--ids-foundation-color-chart-5);
+  --chart-6: var(--ids-foundation-color-chart-6);
+  --chart-7: var(--ids-foundation-color-chart-7);
+  --chart-8: var(--ids-foundation-color-chart-8);
+
   --radius: var(--ids-foundation-radius-panel);
   --radius-control: var(--ids-foundation-radius-control);
   --shadow-xs: var(--ids-foundation-shadow-xs);

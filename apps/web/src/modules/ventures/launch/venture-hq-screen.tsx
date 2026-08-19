@@ -17,7 +17,7 @@ export function VentureHqScreen({ company }: { company: FoundedCompany }) {
 
   return (
     <section className="flex min-h-full flex-1 flex-col">
-      <div className="vos-screen mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-8">
+      <div className="ids-surface-section vos-screen mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-8">
         <header className="flex flex-col gap-2">
           <p className="ids-kicker">
             Company HQ · {company.venture.genome.category} · {company.venture.genome.stage}

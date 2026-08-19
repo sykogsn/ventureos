@@ -130,7 +130,7 @@ export function ExecutiveOfficeCard({ company }: { company: FoundedCompany }) {
       ) : (
         <div className="grid gap-2">
           {seated.map((seat) => (
-            <div key={seat.id} className="rounded-lg border border-border bg-background p-3">
+            <div key={seat.id} className="ids-surface-elevated p-3">
               <p className="ids-label">{seat.label}</p>
               <p className="ids-caption mt-1">{seat.description}</p>
             </div>
@@ -194,7 +194,7 @@ export function KnowledgeBaseCard({ company }: { company: FoundedCompany }) {
       ) : (
         <ul className="flex flex-col gap-3">
           {notes.map((note) => (
-            <li key={note.id} className="rounded-lg border border-border bg-background p-3">
+            <li key={note.id} className="ids-surface-elevated p-3">
               <p className="ids-label">{note.title}</p>
               <p className="ids-caption mt-1">{note.body}</p>
             </li>
@@ -219,7 +219,7 @@ export function SuggestedDocumentsCard({ company }: { company: FoundedCompany })
           {company.venture.documents.documents.map((doc: IntelligentDocument) => (
             <li
               key={doc.id}
-              className="flex items-center justify-between rounded-lg border border-border bg-background p-3"
+              className="flex items-center justify-between ids-surface-elevated p-3"
             >
               <span className="ids-label">{doc.title}</span>
               <span className="ids-caption">{doc.kind}</span>

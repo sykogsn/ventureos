@@ -20,7 +20,7 @@ export function ExecutiveOfficeScreen({
 }) {
   return (
     <section className="flex min-h-full flex-1 flex-col">
-      <div className="vos-screen mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-8">
+      <div className="ids-surface-section vos-screen mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-8">
         <OfficeHeader
           executive={executive}
           basePath={basePath}
