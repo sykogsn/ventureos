@@ -12,7 +12,7 @@ export function ExecutiveMemory({ items }: { items: MemoryItem[] }) {
         </p>
       </div>
       {items.length === 0 ? (
-        <EmptyCopy title="Nothing to reopen">
+        <EmptyCopy title="No activity">
           This office will remember what you already decided — so you do not decide it twice.
         </EmptyCopy>
       ) : (

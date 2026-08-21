@@ -123,7 +123,14 @@ export function ExecutiveOfficeCard({ company }: { company: FoundedCompany }) {
         }
       />
       {seated.length === 0 ? (
-        <EmptyCopy title="No seats were filled">
+        <EmptyCopy
+          title="No seats were filled"
+          action={
+            <Link href="/dashboard" className="vos-btn-secondary w-fit">
+              Open Situation Room
+            </Link>
+          }
+        >
           The floor is closed until you seat executives at founding. Situation Room still runs the
           company.
         </EmptyCopy>

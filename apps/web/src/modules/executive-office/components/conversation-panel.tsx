@@ -12,7 +12,7 @@ export function ConversationPanel({ notes }: { notes: CorrespondenceNote[] }) {
         </p>
       </div>
       {notes.length === 0 ? (
-        <EmptyCopy title="A quiet floor">
+        <EmptyCopy title="No activity">
           Notes appear here as a record, never as a live chat.
         </EmptyCopy>
       ) : (

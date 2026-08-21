@@ -7,59 +7,72 @@ import { CommandPalette } from "@/core/shell/command-palette";
 import { Sidebar } from "@/core/shell/sidebar";
 import { TopNav } from "@/core/shell/top-nav";
 import { IdsBrandBinder } from "@/core/theme/ids-brand-binder";
+import {
+  SkipLink,
+  SplitView,
+  Stage,
+  Workspace,
+  WorkspaceMain,
+} from "@/core/layout";
 import type { WorkspaceRecord } from "@/modules/workspaces/service";
 import type { VentureRecord } from "@/modules/ventures/service";
+import type { ShellUser } from "@/core/context/shell-context";
 import "@/extensions";
 
 function VentureRouteSync() {
-  const params = useParams<{ ventureId?: string }>();
-  const { setActiveVentureId } = useShell();
+  const params = useParams<{ ventureId?: string; slug?: string }>();
+  const { setActiveVentureId, ventures } = useShell();
 
   useEffect(() => {
-    setActiveVentureId(params.ventureId ?? null);
-  }, [params.ventureId, setActiveVentureId]);
+    if (params.ventureId) {
+      setActiveVentureId(params.ventureId);
+      return;
+    }
+
+    if (params.slug) {
+      const match = ventures.find((item) => item.slug === params.slug);
+      setActiveVentureId(match?.id ?? null);
+      return;
+    }
+
+    setActiveVentureId(null);
+  }, [params.ventureId, params.slug, setActiveVentureId, ventures]);
 
   return null;
 }
 
 function ShellFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-full bg-background text-foreground">
-      <a
-        href="#main-content"
-        className="ids-label fixed left-4 top-4 z-skip -translate-y-[180%] rounded-md bg-accent px-3 py-2 text-accent-foreground shadow-panel focus:translate-y-0 focus:outline-none focus-visible:translate-y-0"
-      >
-        Skip to main content
-      </a>
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopNav />
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto"
-        >
-          {children}
-        </main>
-      </div>
+    <Workspace>
+      <SkipLink />
+      <SplitView>
+        <Sidebar />
+        <Stage>
+          <TopNav />
+          <WorkspaceMain>{children}</WorkspaceMain>
+        </Stage>
+      </SplitView>
       <CommandPalette />
-    </div>
+    </Workspace>
   );
 }
 
 export function OsShell({
   children,
+  user,
   workspaces,
   ventures,
   activeWorkspaceId,
 }: {
   children: ReactNode;
+  user: ShellUser;
   workspaces: WorkspaceRecord[];
   ventures: VentureRecord[];
   activeWorkspaceId: string | null;
 }) {
   return (
     <ShellProvider
+      user={user}
       workspaces={workspaces}
       ventures={ventures}
       initialWorkspaceId={activeWorkspaceId}

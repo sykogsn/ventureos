@@ -1,12 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bot, Brain, Building2, LayoutDashboard, Settings } from "lucide-react";
-import { cn } from "@/utils/cn";
+import { useShell } from "@/core/context/shell-context";
 import { listNavContributions } from "@/extensions";
 import type { ExtensionIcon, NavContribution } from "@/extensions/types";
 import type { NavSection } from "@/core/types";
+import { VentureMark } from "@/core/shell/venture-mark";
+import {
+  NavigationBrand,
+  NavigationItem,
+  NavigationMenu,
+  NavigationRail,
+  NavigationSection,
+} from "@/core/layout";
 
 const icons: Record<ExtensionIcon, typeof LayoutDashboard> = {
   "layout-dashboard": LayoutDashboard,
@@ -30,39 +39,47 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavLink({ item, pathname }: { item: NavContribution; pathname: string }) {
+function NavLink({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavContribution;
+  pathname: string;
+  onNavigate: () => void;
+}) {
   const Icon = icons[item.icon];
   const active = isActive(pathname, item.href);
 
   return (
-    <Link
-      href={item.href}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "ids-label ids-transition flex items-center gap-2 rounded-md px-2 py-2",
-        active
-          ? "bg-surface-selected text-foreground shadow-xs"
-          : "text-muted hover:bg-surface-hover hover:text-foreground",
-      )}
-    >
-      <Icon className="ids-icon-sm" />
+    <NavigationItem href={item.href} current={active} onNavigate={onNavigate}>
+      <Icon className="ids-icon-sm" aria-hidden="true" />
       {item.label}
-    </Link>
+    </NavigationItem>
   );
 }
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { isNavOpen, closeNav } = useShell();
   const items = listNavContributions();
 
+  useEffect(() => {
+    closeNav();
+  }, [pathname, closeNav]);
+
   return (
-    <aside className="ids-surface-sidebar z-sidebar flex w-[13.75rem] shrink-0 flex-col lg:w-60">
-      <div className="flex h-14 items-center border-b border-border px-4">
-        <Link href="/dashboard" className="ids-label">
-          VentureOS
+    <NavigationRail open={isNavOpen} onDismiss={closeNav}>
+      <NavigationBrand>
+        <Link
+          href="/dashboard"
+          className="ids-transition text-foreground"
+          onClick={closeNav}
+        >
+          <VentureMark compact />
         </Link>
-      </div>
-      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-3">
+      </NavigationBrand>
+      <NavigationMenu>
         {sections.map((section) => {
           const sectionItems = items.filter((item) => item.section === section.id);
 
@@ -71,17 +88,19 @@ export function Sidebar() {
           }
 
           return (
-            <div key={section.id} className="flex flex-col gap-1">
-              <p className="ids-kicker px-2 pb-1">
-                {section.label}
-              </p>
+            <NavigationSection key={section.id} label={section.label}>
               {sectionItems.map((item) => (
-                <NavLink key={item.id} item={item} pathname={pathname} />
+                <NavLink
+                  key={item.id}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={closeNav}
+                />
               ))}
-            </div>
+            </NavigationSection>
           );
         })}
-      </nav>
-    </aside>
+      </NavigationMenu>
+    </NavigationRail>
   );
 }

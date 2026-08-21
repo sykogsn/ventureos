@@ -34,7 +34,7 @@ export function LaunchSequence({
                 )}
               >
                 <span>{artefact.label}</span>
-                {done ? <Check className="ids-icon-sm" /> : null}
+                {done ? <Check className="ids-icon-sm" aria-hidden="true" /> : null}
                 {current ? <span className="ids-kicker">Creating</span> : null}
               </li>
             );

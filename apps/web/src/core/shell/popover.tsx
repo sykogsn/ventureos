@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { cn } from "@/utils/cn";
+import { OverlayPanel } from "@/core/layout";
 
 export function Popover({
   open,
   onClose,
   align = "start",
-  className,
+  size = "sm",
   children,
 }: {
   open: boolean;
   onClose: () => void;
   align?: "start" | "end";
-  className?: string;
+  size?: "sm" | "md" | "lg";
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -54,16 +54,8 @@ export function Popover({
   }
 
   return (
-    <div
-      ref={ref}
-      role="dialog"
-      className={cn(
-        "absolute top-[calc(100%+0.5rem)] z-popover w-64 ids-surface-modal p-2",
-        align === "end" ? "right-0" : "left-0",
-        className,
-      )}
-    >
+    <OverlayPanel ref={ref} align={align} size={size}>
       {children}
-    </div>
+    </OverlayPanel>
   );
 }

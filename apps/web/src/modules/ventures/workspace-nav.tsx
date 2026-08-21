@@ -23,7 +23,7 @@ export function VentureWorkspaceNav({
   ];
 
   return (
-    <nav className="ids-surface-toolbar flex gap-1 overflow-x-auto px-3 sm:px-4">
+    <nav aria-label="Company surfaces" className="ids-surface-toolbar flex gap-1 overflow-x-auto px-3 sm:px-4">
       {links.map((item) => {
         const active =
           item.match === "prefix"
@@ -34,6 +34,7 @@ export function VentureWorkspaceNav({
           <Link
             key={item.href}
             href={item.href}
+            aria-current={active ? "page" : undefined}
             className={cn(
               "ids-label ids-transition shrink-0 px-3 py-3",
               active

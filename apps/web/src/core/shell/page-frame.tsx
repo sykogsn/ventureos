@@ -1,23 +1,53 @@
 import type { ReactNode } from "react";
+import { PageHeader } from "@/core/shell/page-header";
+import {
+  Dashboard,
+  PageRoot,
+  StatusRegion,
+  WorkspaceCanvas,
+} from "@/core/layout";
 
 export function PageFrame({
+  page,
+  kicker,
   title,
+  lede,
+  description,
+  meta,
+  actions,
+  summary,
+  footer,
   ventureId,
   children,
 }: {
+  page?: string;
+  kicker?: string;
   title: string;
+  lede?: string;
+  description?: string;
+  meta?: string;
+  actions?: ReactNode;
+  summary?: ReactNode;
+  footer?: ReactNode;
   ventureId?: string;
   children?: ReactNode;
 }) {
   return (
-    <section
-      data-venture-id={ventureId}
-      className="flex min-h-full flex-1 flex-col"
-    >
-      <header className="ids-surface-toolbar px-4 py-5 sm:px-6">
-        <h1 className="ids-heading">{title}</h1>
-      </header>
-      <div className="vos-screen flex-1">{children}</div>
-    </section>
+    <PageRoot ventureId={ventureId}>
+      <WorkspaceCanvas>
+        <PageHeader
+          page={page ?? title}
+          kicker={kicker}
+          title={title}
+          lede={lede}
+          description={description}
+          meta={meta}
+          actions={actions}
+        />
+        {summary}
+        <Dashboard>{children}</Dashboard>
+        {footer ? <StatusRegion>{footer}</StatusRegion> : null}
+      </WorkspaceCanvas>
+    </PageRoot>
   );
 }

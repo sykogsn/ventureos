@@ -19,9 +19,8 @@ export function OperatingHealth({ health }: { health: OperatingHealth }) {
       </div>
       <p className="ids-body max-w-[42rem] text-muted">{health.verdict}</p>
       {health.watches.length === 0 ? (
-        <EmptyCopy title="Nothing is on watch">
-          Operating health will name companies that need attention once a company is in the
-          portfolio.
+        <EmptyCopy title="No situations detected">
+          Operating health will name companies that need attention once a constraint appears.
         </EmptyCopy>
       ) : (
         <ul className="flex flex-col divide-y divide-border border-t border-border">

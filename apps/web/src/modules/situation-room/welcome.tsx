@@ -1,25 +1,24 @@
 import Link from "next/link";
+import { PageFrame } from "@/core";
 
 export function FounderWelcome({ founderName }: { founderName: string }) {
   return (
-    <section className="flex min-h-full flex-1 flex-col">
-      <div className="ids-surface-section vos-screen mx-auto flex w-full max-w-lg flex-1 flex-col justify-center">
-        <p className="ids-kicker">VentureOS · {founderName}</p>
-        <h1 className="ids-display mt-5">Welcome to VentureOS</h1>
-        <p className="ids-lead mt-10">
-          Build.
-          <br />
-          Operate.
-          <br />
-          Grow.
-        </p>
-        <p className="ids-body mt-6 text-muted">
-          VentureOS becomes the operating system for every company you create.
-        </p>
-        <Link href="/ventures/launch" className="vos-btn-primary mt-10 w-fit">
+    <PageFrame
+      page="Desk"
+      kicker={`VentureOS · ${founderName}`}
+      title="Welcome to VentureOS"
+      lede="Build. Operate. Grow."
+      description="VentureOS becomes the operating system for every company you create."
+      actions={
+        <Link href="/ventures/launch" className="vos-btn-primary">
           Found Company
         </Link>
-      </div>
-    </section>
+      }
+    >
+      <p className="ids-body max-w-lg text-muted">
+        Found a company to open the Situation Room. The desk stays quiet until there is something
+        to operate.
+      </p>
+    </PageFrame>
   );
 }

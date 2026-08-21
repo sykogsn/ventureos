@@ -14,6 +14,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <OsShell
+      user={{ name: session.name, email: session.email }}
       workspaces={snapshot.workspaces}
       ventures={snapshot.ventures}
       activeWorkspaceId={snapshot.activeWorkspaceId}

@@ -13,7 +13,13 @@ import type { PaletteMode } from "@/core/types";
 import type { WorkspaceRecord } from "@/modules/workspaces/service";
 import type { VentureRecord } from "@/modules/ventures/service";
 
+export type ShellUser = {
+  name: string;
+  email: string;
+};
+
 type ShellContextValue = {
+  user: ShellUser;
   workspaces: WorkspaceRecord[];
   activeWorkspaceId: string | null;
   setActiveWorkspaceId: (id: string | null) => void;
@@ -28,17 +34,23 @@ type ShellContextValue = {
   openNotifications: () => void;
   closeNotifications: () => void;
   toggleNotifications: () => void;
+  isNavOpen: boolean;
+  openNav: () => void;
+  closeNav: () => void;
+  toggleNav: () => void;
 };
 
 const ShellContext = createContext<ShellContextValue | null>(null);
 
 export function ShellProvider({
   children,
+  user,
   workspaces,
   ventures,
   initialWorkspaceId,
 }: {
   children: ReactNode;
+  user: ShellUser;
   workspaces: WorkspaceRecord[];
   ventures: VentureRecord[];
   initialWorkspaceId: string | null;
@@ -50,6 +62,7 @@ export function ShellProvider({
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
+  const [isNavOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
     setActiveWorkspaceId(initialWorkspaceId);
@@ -59,6 +72,7 @@ export function ShellProvider({
     setPaletteMode(mode);
     setPaletteOpen(true);
     setNotificationsOpen(false);
+    setNavOpen(false);
   }, []);
 
   const closePalette = useCallback(() => {
@@ -68,6 +82,7 @@ export function ShellProvider({
   const openNotifications = useCallback(() => {
     setNotificationsOpen(true);
     setPaletteOpen(false);
+    setNavOpen(false);
   }, []);
 
   const closeNotifications = useCallback(() => {
@@ -78,6 +93,27 @@ export function ShellProvider({
     setNotificationsOpen((open) => {
       if (!open) {
         setPaletteOpen(false);
+        setNavOpen(false);
+      }
+      return !open;
+    });
+  }, []);
+
+  const openNav = useCallback(() => {
+    setNavOpen(true);
+    setPaletteOpen(false);
+    setNotificationsOpen(false);
+  }, []);
+
+  const closeNav = useCallback(() => {
+    setNavOpen(false);
+  }, []);
+
+  const toggleNav = useCallback(() => {
+    setNavOpen((open) => {
+      if (!open) {
+        setPaletteOpen(false);
+        setNotificationsOpen(false);
       }
       return !open;
     });
@@ -85,6 +121,7 @@ export function ShellProvider({
 
   const value = useMemo(
     () => ({
+      user,
       workspaces,
       activeWorkspaceId,
       setActiveWorkspaceId,
@@ -99,8 +136,13 @@ export function ShellProvider({
       openNotifications,
       closeNotifications,
       toggleNotifications,
+      isNavOpen,
+      openNav,
+      closeNav,
+      toggleNav,
     }),
     [
+      user,
       workspaces,
       ventures,
       activeWorkspaceId,
@@ -113,6 +155,10 @@ export function ShellProvider({
       openNotifications,
       closeNotifications,
       toggleNotifications,
+      isNavOpen,
+      openNav,
+      closeNav,
+      toggleNav,
     ],
   );
 

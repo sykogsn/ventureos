@@ -16,7 +16,7 @@ export function Recommendations({
         </p>
       </div>
       {items.length === 0 ? (
-        <EmptyCopy title="This desk is listening">
+        <EmptyCopy title="No intelligence available">
           Policy findings will arrive as recommendations. Until then, the brief above is the work.
         </EmptyCopy>
       ) : (

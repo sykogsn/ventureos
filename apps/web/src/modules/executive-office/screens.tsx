@@ -1,8 +1,9 @@
 import { ExecutiveCard } from "./components/executive-card";
-import { FloorHeader } from "./components/floor-header";
 import { formatBriefingDate } from "./format";
 import type { ExecutiveFloorModel } from "./types";
 import { EmptyCopy } from "@/core/shell/empty-copy";
+import { PageFrame } from "@/core";
+import Link from "next/link";
 
 export function ExecutiveOfficeFloorScreen({
   data,
@@ -14,30 +15,37 @@ export function ExecutiveOfficeFloorScreen({
   now?: Date;
 }) {
   return (
-    <section className="flex min-h-full flex-1 flex-col">
-      <div className="ids-surface-section vos-screen mx-auto flex w-full max-w-[1040px] flex-1 flex-col gap-8">
-        <FloorHeader
-          dateLabel={formatBriefingDate(now)}
-          posture={data.posture}
-          worldLine={data.worldLine}
-        />
-        {data.executives.length === 0 ? (
-          <EmptyCopy title="This floor is unseated">
-            This company does not use an Executive Office. Situation Room and Company HQ remain the
-            operating surfaces.
-          </EmptyCopy>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {data.executives.map((executive) => (
-              <ExecutiveCard
-                key={executive.id}
-                executive={executive}
-                basePath={basePath}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
+    <PageFrame
+      page="Executive Office"
+      kicker="Leadership floor"
+      title="Executive Office"
+      lede={data.posture}
+      description={data.worldLine}
+      meta={formatBriefingDate(now)}
+    >
+      {data.executives.length === 0 ? (
+        <EmptyCopy
+          title="This floor is unseated"
+          action={
+            <Link href="/dashboard" className="vos-btn-primary w-fit">
+              Return to the Situation Room
+            </Link>
+          }
+        >
+          No seated desks are on this floor. Situation Room and Company HQ remain the operating
+          surfaces.
+        </EmptyCopy>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
+          {data.executives.map((executive) => (
+            <ExecutiveCard
+              key={executive.id}
+              executive={executive}
+              basePath={basePath}
+            />
+          ))}
+        </div>
+      )}
+    </PageFrame>
   );
 }

@@ -14,12 +14,21 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
+  applicationName: "VentureOS",
   title: {
     default: "VentureOS",
     template: "%s · VentureOS",
   },
   description:
-    "AI-first operating system for creating, launching, and managing companies.",
+    "The operating system for companies. Found, operate, and decide from one desk.",
+  authors: [{ name: "VentureOS" }],
+  openGraph: {
+    title: "VentureOS",
+    description:
+      "The operating system for companies. Found, operate, and decide from one desk.",
+    siteName: "VentureOS",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -28,10 +37,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-ids-brand="ventureos" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-full font-sans`}
-      >
+    <html
+      lang="en"
+      data-ids-brand="ventureos"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable}`}
+    >
+      <body className="min-h-full font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

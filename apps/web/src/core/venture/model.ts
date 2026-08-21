@@ -414,14 +414,20 @@ export function projectExecutiveFloor(
   const officeEnabled = core.ventures.some((venture) =>
     ventureHasFeature(venture, "executive-office"),
   );
+  if (!officeEnabled) {
+    return {
+      posture: "Unseated.",
+      worldLine: "The Executive Office opens when a company on this desk uses this floor.",
+      executives: [],
+    };
+  }
+
   return {
     posture: core.office.posture,
     worldLine: core.office.worldLine,
-    executives: officeEnabled
-      ? core.office.desks
-          .map((desk) => projectExecutiveProfile(core, desk.seat.id))
-          .filter((profile): profile is ExecutiveProfileView => Boolean(profile))
-      : [],
+    executives: core.office.desks
+      .map((desk) => projectExecutiveProfile(core, desk.seat.id))
+      .filter((profile): profile is ExecutiveProfileView => Boolean(profile)),
   };
 }
 

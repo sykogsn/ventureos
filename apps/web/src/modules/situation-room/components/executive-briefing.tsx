@@ -14,9 +14,9 @@ export function ExecutiveBriefing({ briefing }: { briefing: ExecutiveBriefing })
         <p className="ids-body mt-3 text-muted">{briefing.narrative}</p>
       </div>
       {briefing.implications.length === 0 ? (
-        <EmptyCopy title="The briefing is still forming">
-          Policy evaluation writes implications after a company is in motion. Found a company to
-          begin the daily brief.
+        <EmptyCopy title="No intelligence available">
+          Policy evaluation writes implications after a company is in motion. The daily brief
+          will fill as the company operates.
         </EmptyCopy>
       ) : (
         <ol className="flex flex-col gap-3 border-t border-border pt-5">

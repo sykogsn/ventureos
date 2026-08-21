@@ -15,7 +15,7 @@ export function WizardNav({
   onNext: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+    <div className="flex items-center justify-between gap-3">
       <Button
         variant="secondary"
         className={cn(isFirst && "invisible")}

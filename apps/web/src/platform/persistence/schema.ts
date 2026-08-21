@@ -37,6 +37,19 @@ export const sessions = sqliteTable("sessions", {
   createdAt: text("created_at").notNull(),
 });
 
+export const passwordResetTokens = sqliteTable(
+  "password_reset_tokens",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    usedAt: text("used_at"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [uniqueIndex("password_reset_tokens_hash_idx").on(table.tokenHash)],
+);
+
 export const workspaces = sqliteTable(
   "workspaces",
   {
@@ -197,6 +210,7 @@ export const schema = {
   users,
   authIdentities,
   sessions,
+  passwordResetTokens,
   workspaces,
   workspaceMembers,
   workspaceCores,

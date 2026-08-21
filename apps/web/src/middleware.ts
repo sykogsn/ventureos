@@ -6,7 +6,13 @@ import { nowIso } from "@/platform";
 
 export const runtime = "nodejs";
 
-const publicPaths = new Set(["/login", "/signup"]);
+const publicPaths = new Set([
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/forgot-password/sent",
+  "/reset-password",
+]);
 
 function loginRedirect(request: NextRequest) {
   const login = new URL("/login", request.url);
@@ -23,6 +29,10 @@ export async function middleware(request: NextRequest) {
   const session = token
     ? await resolveSessionUser(token, lookupPersistedSession, nowIso())
     : null;
+
+  if (pathname.startsWith("/auth/google")) {
+    return NextResponse.next();
+  }
 
   if (publicPaths.has(pathname)) {
     if (session) {

@@ -7,6 +7,7 @@ import { useShell } from "@/core/context/shell-context";
 import { Popover } from "@/core/shell/popover";
 import { EmptyCopy } from "@/core/shell/empty-copy";
 import { companyHomeHref } from "@/modules/ventures/home";
+import { Anchor, Cluster, Inset, SwitcherBound } from "@/core/layout";
 
 export function VentureSwitcher() {
   const router = useRouter();
@@ -15,28 +16,33 @@ export function VentureSwitcher() {
   const active = ventures.find((venture) => venture.id === activeVentureId);
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="vos-control max-w-[12rem]"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        <span className="truncate text-foreground">
-          {active?.name ?? (activeVentureId ? activeVentureId : "Company")}
-        </span>
-        <ChevronsUpDown className="ids-icon-sm ml-auto shrink-0 text-muted" />
-      </button>
+    <Anchor>
+      <SwitcherBound size="md">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="vos-control"
+          aria-label="Company"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+        >
+          <Cluster justify="between" wrap={false}>
+            <span className="truncate text-foreground">
+              {active?.name ?? (activeVentureId ? activeVentureId : "Company")}
+            </span>
+            <ChevronsUpDown className="ids-icon-sm text-muted" />
+          </Cluster>
+        </button>
+      </SwitcherBound>
       <Popover open={open} onClose={() => setOpen(false)}>
         {ventures.length === 0 ? (
-          <div className="px-2 py-3">
-            <EmptyCopy title="No company in view">
+          <Inset>
+            <EmptyCopy title="No companies yet">
               Found a company to place it on this desk.
             </EmptyCopy>
-          </div>
+          </Inset>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul>
             {ventures.map((venture) => (
               <li key={venture.id}>
                 <button
@@ -55,6 +61,6 @@ export function VentureSwitcher() {
           </ul>
         )}
       </Popover>
-    </div>
+    </Anchor>
   );
 }

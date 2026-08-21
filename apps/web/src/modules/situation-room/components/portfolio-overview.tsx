@@ -25,9 +25,16 @@ export function PortfolioOverview({
         </Link>
       </div>
       {companies.length === 0 ? (
-        <EmptyCopy title="Your portfolio is ready">
-          Found a company and it will take its place here — not as a scoreboard, as a set of
-          operating judgements.
+        <EmptyCopy
+          title="No companies yet"
+          action={
+            <Link href="/ventures/launch" className="vos-btn-primary w-fit">
+              Found Company
+            </Link>
+          }
+        >
+          Found a company and it will take its place here — as operating judgement, not a
+          scoreboard.
         </EmptyCopy>
       ) : (
       <ul className="flex flex-col">

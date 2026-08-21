@@ -7,6 +7,7 @@ import { Popover } from "@/core/shell/popover";
 import { EmptyCopy } from "@/core/shell/empty-copy";
 import { selectWorkspaceAction } from "@/modules/workspaces/actions";
 import { CreateWorkspaceForm } from "@/modules/workspaces/create-form";
+import { Anchor, Cluster, Hairline, Inset, Stack, SwitcherBound } from "@/core/layout";
 
 export function WorkspaceSwitcher() {
   const { workspaces, activeWorkspaceId, setActiveWorkspaceId } = useShell();
@@ -15,51 +16,59 @@ export function WorkspaceSwitcher() {
   const active = workspaces.find((workspace) => workspace.id === activeWorkspaceId);
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="vos-control max-w-[11rem]"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        <span className="truncate text-foreground">
-          {active?.name ?? "Workspace"}
-        </span>
-        <ChevronsUpDown className="ids-icon-sm ml-auto shrink-0 text-muted" />
-      </button>
-      <Popover open={open} onClose={() => setOpen(false)} className="w-72">
+    <Anchor>
+      <SwitcherBound size="sm">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="vos-control"
+          aria-label="Workspace"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+        >
+          <Cluster justify="between" wrap={false}>
+            <span className="truncate text-foreground">
+              {active?.name ?? "Workspace"}
+            </span>
+            <ChevronsUpDown className="ids-icon-sm text-muted" />
+          </Cluster>
+        </button>
+      </SwitcherBound>
+      <Popover open={open} onClose={() => setOpen(false)} size="md">
         {workspaces.length === 0 ? (
-          <div className="px-2 py-3">
-            <EmptyCopy title="Create a workspace">
-              A workspace is the boundary for companies, membership and intelligence.
+          <Inset>
+            <EmptyCopy title="No workspace yet">
+              A workspace is the boundary for companies, membership and intelligence. Create one
+              below.
             </EmptyCopy>
-          </div>
+          </Inset>
         ) : (
-          <ul className="flex flex-col gap-1">
-            {workspaces.map((workspace) => (
-              <li key={workspace.id}>
-                <button
-                  type="button"
-                  className="vos-row"
-                  onClick={() => {
-                    setActiveWorkspaceId(workspace.id);
-                    startTransition(() => {
-                      void selectWorkspaceAction(workspace.id);
-                    });
-                    setOpen(false);
-                  }}
-                >
-                  {workspace.name}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <Stack gap="tight">
+            <ul>
+              {workspaces.map((workspace) => (
+                <li key={workspace.id}>
+                  <button
+                    type="button"
+                    className="vos-row"
+                    onClick={() => {
+                      setActiveWorkspaceId(workspace.id);
+                      startTransition(() => {
+                        void selectWorkspaceAction(workspace.id);
+                      });
+                      setOpen(false);
+                    }}
+                  >
+                    {workspace.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Stack>
         )}
-        <div className="mt-2 border-t border-border pt-2">
+        <Hairline>
           <CreateWorkspaceForm />
-        </div>
+        </Hairline>
       </Popover>
-    </div>
+    </Anchor>
   );
 }

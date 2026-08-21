@@ -55,6 +55,33 @@
   --ids-foundation-space-12: 3rem;
   --ids-foundation-space-16: 4rem;
 
+  --ids-foundation-layout-measure-sm: 28rem;
+  --ids-foundation-layout-measure-md: 32rem;
+  --ids-foundation-layout-measure-lg: 42rem;
+  --ids-foundation-layout-measure-xl: 72rem;
+
+  --ids-foundation-layout-sidebar-sm: 13.75rem;
+  --ids-foundation-layout-sidebar-md: 15rem;
+  --ids-foundation-layout-sidebar-lg: 17.5rem;
+
+  --ids-foundation-layout-panel-sm: 16rem;
+  --ids-foundation-layout-panel-md: 18rem;
+  --ids-foundation-layout-panel-lg: 20rem;
+
+  --ids-foundation-layout-grid-executive: repeat(2, minmax(0, 1fr));
+  --ids-foundation-layout-grid-analytics: repeat(4, minmax(0, 1fr));
+
+  --ids-foundation-layout-toolbar: 3.5rem;
+  --ids-foundation-layout-command-offset: 15vh;
+  --ids-foundation-layout-skip-shift: 180%;
+  --ids-foundation-layout-switcher-sm: 11rem;
+  --ids-foundation-layout-switcher-md: 12rem;
+
+  /* Authentication reference aliases */
+  --ids-foundation-layout-rail: var(--ids-foundation-layout-measure-sm);
+  --ids-foundation-layout-rail-wide: var(--ids-foundation-layout-measure-md);
+  --ids-foundation-layout-measure: var(--ids-foundation-layout-measure-sm);
+
   --ids-foundation-control-height-sm: 2rem;
   --ids-foundation-control-height-md: 2.25rem;
   --ids-foundation-control-height-lg: 2.5rem;

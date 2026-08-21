@@ -171,6 +171,7 @@ describe("Farmora projections", () => {
     assert.equal(ventureHasFeature(venture, "executive-office"), false);
     assert.ok(room.briefing.implications.length > 0);
     assert.equal(floor.executives.length, 0);
+    assert.equal(floor.posture, "Unseated.");
   });
 });
 

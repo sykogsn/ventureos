@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageFrame } from "@/core";
 import { EmptyCopy } from "@/core/shell/empty-copy";
+import { Fit } from "@/core/layout";
 
 export function DeferredOperatingScreen({
   title,
@@ -12,13 +13,26 @@ export function DeferredOperatingScreen({
   summary: string;
 }) {
   return (
-    <PageFrame title={title} ventureId={ventureId}>
-      <div className="flex max-w-xl flex-col gap-4">
-        <EmptyCopy>{summary}</EmptyCopy>
-        <Link href={`/ventures/${ventureId}`} className="vos-btn-primary w-fit">
-          Open Company HQ
-        </Link>
-      </div>
+    <PageFrame
+      page={title}
+      kicker="Reserved surface"
+      title={title}
+      description={summary}
+      ventureId={ventureId}
+    >
+      <EmptyCopy
+        title={`${title} is not live in Foundation`}
+        action={
+          <Fit>
+            <Link href={`/ventures/${ventureId}`} className="vos-btn-primary">
+              Open Company HQ
+            </Link>
+          </Fit>
+        }
+      >
+        Company HQ remains the operating record. This route is reserved so the desk does not grow a
+        second system.
+      </EmptyCopy>
     </PageFrame>
   );
 }

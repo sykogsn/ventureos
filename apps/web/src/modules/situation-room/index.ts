@@ -1,5 +1,4 @@
 export { SituationRoomScreen } from "./screens";
-export { SituationRoomHeader } from "./components/situation-room-header";
 export { TodaysMission } from "./components/todays-mission";
 export { ExecutiveBriefing } from "./components/executive-briefing";
 export { OperatingHealth } from "./components/operating-health";

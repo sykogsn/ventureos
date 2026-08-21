@@ -10,7 +10,7 @@ export function DecisionHistory({ items }: { items: DecisionRecord[] }) {
         <p className="ids-caption mt-1">Rulings this office already made.</p>
       </div>
       {items.length === 0 ? (
-        <EmptyCopy title="No rulings yet">
+        <EmptyCopy title="No activity">
           Decisions you make from this office will be recorded here.
         </EmptyCopy>
       ) : (

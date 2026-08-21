@@ -8,10 +8,13 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
+const SCHEMA_GENERATION = 2; // bump when ensureSchema DDL is extended
+
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
   __vosClient?: Client;
   __vosSchemaReady?: Promise<void>;
+  __vosSchemaGeneration?: number;
   __vosDatabaseUrl?: string;
 };
 
@@ -52,6 +55,7 @@ export async function resetDatabaseLifecycle(databaseUrl?: string) {
   globalStore.__vosClient = undefined;
   globalStore.__vosDb = undefined;
   globalStore.__vosSchemaReady = undefined;
+  globalStore.__vosSchemaGeneration = undefined;
   if (databaseUrl) {
     globalStore.__vosDatabaseUrl = databaseUrl;
   }
@@ -77,6 +81,11 @@ async function addColumn(table: string, column: string, definition: string) {
 }
 
 export async function ensureSchema() {
+  if (globalStore.__vosSchemaGeneration !== SCHEMA_GENERATION) {
+    globalStore.__vosSchemaReady = undefined;
+    globalStore.__vosSchemaGeneration = SCHEMA_GENERATION;
+  }
+
   if (!globalStore.__vosSchemaReady) {
     globalStore.__vosSchemaReady = (async () => {
       await exec(`
@@ -112,6 +121,20 @@ export async function ensureSchema() {
           created_at TEXT NOT NULL
         )
       `);
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          token_hash TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          used_at TEXT,
+          created_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS password_reset_tokens_hash_idx ON password_reset_tokens (token_hash)`,
+      );
 
       await exec(`
         CREATE TABLE IF NOT EXISTS workspaces (

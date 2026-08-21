@@ -26,6 +26,13 @@ registerExtension({
       icon: "bot",
     },
     {
+      id: "brain",
+      label: "Brain",
+      href: "/brain",
+      section: "intelligence",
+      icon: "brain",
+    },
+    {
       id: "settings",
       label: "Settings",
       href: "/settings",
@@ -54,6 +61,34 @@ registerExtension({
       group: "ai",
       href: "/agents",
       keywords: ["runtime", "tools", "agents", "leadership", "office"],
+    },
+    {
+      id: "nav.brain",
+      title: "Go to Brain",
+      group: "navigation",
+      href: "/brain",
+      keywords: ["knowledge", "constitution", "library", "intelligence"],
+    },
+    {
+      id: "nav.brain.library",
+      title: "Go to Knowledge Library",
+      group: "navigation",
+      href: "/brain/library",
+      keywords: ["brain", "objects", "catalogue"],
+    },
+    {
+      id: "nav.brain.decisions",
+      title: "Go to Decision Register",
+      group: "navigation",
+      href: "/brain/decisions",
+      keywords: ["brain", "adr", "rulings"],
+    },
+    {
+      id: "nav.brain.search",
+      title: "Search Brain",
+      group: "navigation",
+      href: "/brain/search",
+      keywords: ["brain", "find", "knowledge"],
     },
     {
       id: "nav.settings",

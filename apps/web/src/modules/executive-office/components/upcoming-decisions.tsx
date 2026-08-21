@@ -10,7 +10,7 @@ export function UpcomingDecisions({ items }: { items: UpcomingDecision[] }) {
         <p className="ids-caption mt-1">Calls still on this desk.</p>
       </div>
       {items.length === 0 ? (
-        <EmptyCopy title="Nothing is scheduled">
+        <EmptyCopy title="No call is waiting">
           When the office has a call for you, it will appear on this desk.
         </EmptyCopy>
       ) : (

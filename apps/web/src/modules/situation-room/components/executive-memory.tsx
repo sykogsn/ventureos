@@ -12,7 +12,7 @@ export function ExecutiveMemory({ items }: { items: MemoryItem[] }) {
         </p>
       </div>
       {items.length === 0 ? (
-        <EmptyCopy title="Memory is clear">
+        <EmptyCopy title="No activity">
           Recorded founder decisions will rest here so they are not reopened today.
         </EmptyCopy>
       ) : (

@@ -39,6 +39,15 @@ export type SessionRow = {
   createdAt: string;
 };
 
+export type PasswordResetTokenRow = {
+  id: string;
+  userId: UserId;
+  tokenHash: string;
+  expiresAt: string;
+  usedAt: string | null;
+  createdAt: string;
+};
+
 export type OrganisationRow = {
   id: WorkspaceId;
   name: string;
@@ -86,19 +95,30 @@ export type UserRepository = {
   findById(id: UserId): Promise<UserRow | null>;
   findByEmail(email: string): Promise<UserRow | null>;
   insert(row: UserRow): Promise<void>;
+  updatePasswordHash(id: UserId, passwordHash: string): Promise<void>;
 };
 
 export type IdentityRepository = {
   findByProvider(provider: AuthProvider, subject: string): Promise<AuthIdentityRow | null>;
   listForUser(userId: UserId): Promise<AuthIdentityRow[]>;
   insert(row: AuthIdentityRow): Promise<void>;
+  updateSecretHash(id: string, secretHash: string): Promise<void>;
 };
 
 export type SessionRepository = {
   insert(row: SessionRow): Promise<void>;
   findById(id: string): Promise<SessionRow | null>;
   deleteById(id: string): Promise<void>;
+  deleteByUserId(userId: UserId): Promise<void>;
   deleteExpired(nowIso: string): Promise<void>;
+};
+
+export type PasswordResetTokenRepository = {
+  insert(row: PasswordResetTokenRow): Promise<void>;
+  findByTokenHash(tokenHash: string): Promise<PasswordResetTokenRow | null>;
+  markUsed(id: string, usedAt: string): Promise<void>;
+  deleteExpired(nowIso: string): Promise<void>;
+  deleteUnusedForUser(userId: UserId): Promise<void>;
 };
 
 export type OrganisationRepository = {
@@ -229,6 +249,7 @@ export type Persistence = {
   users: UserRepository;
   identities: IdentityRepository;
   sessions: SessionRepository;
+  passwordResetTokens: PasswordResetTokenRepository;
   organisations: OrganisationRepository;
   memberships: MembershipRepository;
   ventures: VentureRepository;

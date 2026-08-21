@@ -1,4 +1,4 @@
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, isNull, lt } from "drizzle-orm";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import type { CompanyStory } from "@/core/company-story";
 import type { Decision } from "@/core/decision-engine";
@@ -23,6 +23,7 @@ import {
   knowledgeEdges,
   knowledgeNodes,
   operatingHealth,
+  passwordResetTokens,
   policyFindings,
   policyStates,
   recommendations,
@@ -47,6 +48,8 @@ import type {
   OperatingHealthRepository,
   OrganisationRepository,
   OrganisationRow,
+  PasswordResetTokenRepository,
+  PasswordResetTokenRow,
   Persistence,
   PersistedVenture,
   PolicyRepository,
@@ -134,6 +137,9 @@ function createUserRepository(): UserRepository {
     async insert(row) {
       await getDb().insert(users).values(row);
     },
+    async updatePasswordHash(id, passwordHash) {
+      await getDb().update(users).set({ passwordHash }).where(eq(users.id, id));
+    },
   };
 }
 
@@ -179,6 +185,12 @@ function createIdentityRepository(): IdentityRepository {
     async insert(row: AuthIdentityRow) {
       await getDb().insert(authIdentities).values(row);
     },
+    async updateSecretHash(id, secretHash) {
+      await getDb()
+        .update(authIdentities)
+        .set({ secretHash })
+        .where(eq(authIdentities.id, id));
+    },
   };
 }
 
@@ -206,8 +218,54 @@ function createSessionRepository(): SessionRepository {
     async deleteById(id) {
       await getDb().delete(sessions).where(eq(sessions.id, id));
     },
+    async deleteByUserId(userId) {
+      await getDb().delete(sessions).where(eq(sessions.userId, userId));
+    },
     async deleteExpired(nowIso) {
       await getDb().delete(sessions).where(lt(sessions.expiresAt, nowIso));
+    },
+  };
+}
+
+function mapResetToken(row: typeof passwordResetTokens.$inferSelect): PasswordResetTokenRow {
+  return {
+    id: row.id,
+    userId: row.userId as UserId,
+    tokenHash: row.tokenHash,
+    expiresAt: row.expiresAt,
+    usedAt: row.usedAt,
+    createdAt: row.createdAt,
+  };
+}
+
+function createPasswordResetTokenRepository(): PasswordResetTokenRepository {
+  return {
+    async insert(row) {
+      await getDb().insert(passwordResetTokens).values(row);
+    },
+    async findByTokenHash(tokenHash) {
+      const [row] = await getDb()
+        .select()
+        .from(passwordResetTokens)
+        .where(eq(passwordResetTokens.tokenHash, tokenHash))
+        .limit(1);
+      return row ? mapResetToken(row) : null;
+    },
+    async markUsed(id, usedAt) {
+      await getDb()
+        .update(passwordResetTokens)
+        .set({ usedAt })
+        .where(eq(passwordResetTokens.id, id));
+    },
+    async deleteExpired(nowIso) {
+      await getDb()
+        .delete(passwordResetTokens)
+        .where(lt(passwordResetTokens.expiresAt, nowIso));
+    },
+    async deleteUnusedForUser(userId) {
+      await getDb()
+        .delete(passwordResetTokens)
+        .where(and(eq(passwordResetTokens.userId, userId), isNull(passwordResetTokens.usedAt)));
     },
   };
 }
@@ -944,6 +1002,7 @@ export function createSqlitePersistence(): Persistence {
     users: createUserRepository(),
     identities: createIdentityRepository(),
     sessions: createSessionRepository(),
+    passwordResetTokens: createPasswordResetTokenRepository(),
     organisations: createOrganisationRepository(),
     memberships: createMembershipRepository(),
     ventures: createVentureRepository(),

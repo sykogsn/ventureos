@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { VentureHqScreen } from "@/modules/ventures/launch/venture-hq-screen";
 import { loadActiveIntelligence } from "@/modules/intelligence/request";
 import { getFoundedCompanyBySlug } from "@/modules/intelligence/service";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Company HQ",
+};
 
 export default async function LaunchedVenturePage({
   params,

@@ -3,9 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useShell } from "@/core/context/shell-context";
 import { useCommandExecutor } from "@/core/commands/use-command-executor";
+import { EmptyCopy } from "@/core/shell/empty-copy";
 import { listCommandContributions } from "@/extensions";
 import type { CommandContribution } from "@/extensions/types";
 import { cn } from "@/utils/cn";
+import {
+  CommandEmpty,
+  CommandField,
+  CommandGroup,
+  CommandList,
+  CommandRegion,
+} from "@/core/layout";
 
 const groupLabels = {
   ai: "Intelligence",
@@ -108,90 +116,81 @@ export function CommandPalette() {
   const flat = grouped.flatMap((entry) => entry.items);
 
   return (
-    <div className="fixed inset-0 z-dialog flex items-start justify-center ids-overlay px-4 pt-[15vh]">
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default"
-        aria-label="Close command palette"
-        onClick={closePalette}
+    <CommandRegion
+      label={paletteMode === "ai" ? "Ask VentureOS" : "Command palette"}
+      onDismiss={closePalette}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          closePalette();
+        }
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setActiveIndex((index) => Math.min(index + 1, Math.max(flat.length - 1, 0)));
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setActiveIndex((index) => Math.max(index - 1, 0));
+        }
+        if (event.key === "Enter") {
+          const command = flat[activeIndex];
+          if (command) {
+            event.preventDefault();
+            run(command);
+          }
+        }
+      }}
+    >
+      <CommandField
+        ref={inputRef}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={
+          paletteMode === "ai"
+            ? "Ask VentureOS or run an intelligence command"
+            : "Search commands and destinations"
+        }
+        aria-label={
+          paletteMode === "ai" ? "Ask VentureOS" : "Search commands and destinations"
+        }
       />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={paletteMode === "ai" ? "Ask VentureOS" : "Command palette"}
-        className="relative z-10 w-full max-w-xl overflow-hidden ids-surface-modal"
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            closePalette();
-          }
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            setActiveIndex((index) => Math.min(index + 1, Math.max(flat.length - 1, 0)));
-          }
-          if (event.key === "ArrowUp") {
-            event.preventDefault();
-            setActiveIndex((index) => Math.max(index - 1, 0));
-          }
-          if (event.key === "Enter") {
-            const command = flat[activeIndex];
-            if (command) {
-              event.preventDefault();
-              run(command);
-            }
-          }
-        }}
-      >
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={
-            paletteMode === "ai"
-              ? "Ask VentureOS or run an intelligence command"
-              : "Search commands and destinations"
-          }
-          className="ids-label h-12 w-full border-b border-border bg-transparent px-4 outline-none placeholder:text-muted focus-visible:ring-0"
-        />
-        <div className="max-h-80 overflow-y-auto p-2">
-          {flat.length === 0 ? (
-            <p className="ids-body px-2 py-8 text-center text-muted">
+      <CommandList>
+        {flat.length === 0 ? (
+          <CommandEmpty>
+            <EmptyCopy title={paletteMode === "ai" ? "No intelligence available" : "No matching command"}>
               {paletteMode === "ai"
                 ? "Ask remains a command surface until the intelligence runtime is connected. Situation Room is the live brief."
                 : "No destination matches. Try a company, a workspace, or a system command."}
-            </p>
-          ) : (
-            grouped.map((entry) => (
-              <div key={entry.group} className="mb-2">
-                <p className="ids-kicker px-2 py-2">
-                  {groupLabels[entry.group]}
-                </p>
-                <ul>
-                  {entry.items.map((command) => {
-                    const index = flat.indexOf(command);
-                    return (
-                      <li key={command.id}>
-                        <button
-                          type="button"
-                          onMouseEnter={() => setActiveIndex(index)}
-                          onClick={() => run(command)}
-                          className={cn(
-                            "vos-row",
-                            index === activeIndex
-                              ? "ids-surface-selected text-foreground"
-                              : "text-muted hover:text-foreground",
-                          )}
-                        >
-                          {command.title}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+            </EmptyCopy>
+          </CommandEmpty>
+        ) : (
+          grouped.map((entry) => (
+            <CommandGroup key={entry.group} label={groupLabels[entry.group]}>
+              <ul>
+                {entry.items.map((command) => {
+                  const index = flat.indexOf(command);
+                  return (
+                    <li key={command.id}>
+                      <button
+                        type="button"
+                        onMouseEnter={() => setActiveIndex(index)}
+                        onClick={() => run(command)}
+                        className={cn(
+                          "vos-row",
+                          index === activeIndex
+                            ? "ids-surface-selected text-foreground"
+                            : "text-muted hover:text-foreground",
+                        )}
+                      >
+                        {command.title}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CommandGroup>
+          ))
+        )}
+      </CommandList>
+    </CommandRegion>
   );
 }

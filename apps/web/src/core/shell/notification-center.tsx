@@ -1,34 +1,53 @@
 "use client";
 
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useShell } from "@/core/context/shell-context";
+import { EmptyCopy } from "@/core/shell/empty-copy";
 import { IconButton } from "@/core/shell/icon-button";
 import { Popover } from "@/core/shell/popover";
+import { Anchor, Fit, Inset } from "@/core/layout";
 
 export function NotificationCenter() {
   const { isNotificationsOpen, toggleNotifications, closeNotifications } =
     useShell();
 
   return (
-    <div className="relative">
+    <Anchor>
       <IconButton
         aria-label="Notifications"
+        aria-haspopup="dialog"
         aria-expanded={isNotificationsOpen}
         onClick={toggleNotifications}
       >
-        <Bell className="ids-icon-sm" />
+        <Bell className="ids-icon-sm" aria-hidden="true" />
       </IconButton>
       <Popover
         open={isNotificationsOpen}
         onClose={closeNotifications}
         align="end"
-        className="w-80"
+        size="lg"
       >
-        <div className="ids-kicker px-2 py-2">Notifications</div>
-        <p className="ids-body px-2 py-2 text-muted">
-          There is no OS inbox yet. Founder calls appear in the Situation Room.
-        </p>
+        <p className="ids-kicker">Notifications</p>
+        <Inset>
+          <EmptyCopy
+            title="No notifications"
+            action={
+              <Fit>
+                <Link
+                  href="/dashboard"
+                  className="vos-btn-secondary"
+                  onClick={closeNotifications}
+                >
+                  Open Situation Room
+                </Link>
+              </Fit>
+            }
+          >
+            Founder calls appear in the Situation Room, not a separate inbox.
+          </EmptyCopy>
+        </Inset>
       </Popover>
-    </div>
+    </Anchor>
   );
 }

@@ -17,7 +17,14 @@ export function CompanyStoryHighlights({
         </p>
       </div>
       {stories.length === 0 ? (
-        <EmptyCopy title="The story has not begun">
+        <EmptyCopy
+          title="No activity"
+          action={
+            <Link href="/ventures/launch" className="vos-btn-primary w-fit">
+              Found Company
+            </Link>
+          }
+        >
           Company narrative is written at founding. Open the wizard when you are ready to start.
         </EmptyCopy>
       ) : (
