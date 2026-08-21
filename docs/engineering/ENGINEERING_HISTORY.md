@@ -4,6 +4,17 @@
 **Authority.** Engineering Records. Does not rewrite Foundation Library sprint IDs used in older specification files.  
 **Last Updated.** 2026-08-21
 
+## Governance Foundation
+
+| Field | Record |
+|---|---|
+| Programmes | VS-008A, VS-008B, VS-008C |
+| Git commit | `ccb585cd54b068280e67401e47dfdbbf7aee0365` |
+| Completion date | 2026-08-21 |
+| Status | ✅ Governance Foundation Complete |
+
+Pushed to `origin/main`. No GitHub Release. No tag.
+
 ## Identifier note
 
 This timeline is the founder-named programme sequence for Engineering HQ (VS-001 through VS-008C).
@@ -104,7 +115,7 @@ Completion dates below are recorded only where a dated artefact exists. Earlier 
 | Sprint ID | VS-008A |
 | Title | Engineering Records Foundation |
 | Objective | Create the permanent Engineering Records structure and seed it with work completed so far. Do not build Engineering HQ. |
-| Status | Complete (documents seeded; commit awaits founder approval) |
+| Status | ✅ Governance Foundation Complete |
 | Completion Date | 2026-08-21 |
 | Summary | Added `docs/engineering/` as engineering memory and the future data source for Engineering HQ. No application code change. No GitHub Release. No tag. |
 
@@ -115,7 +126,7 @@ Completion dates below are recorded only where a dated artefact exists. Earlier 
 | Sprint ID | VS-008B |
 | Title | Engineering Governance Foundation |
 | Objective | Add the Engineering Constitution and Lessons Learned journal to Engineering Records. Do not build Engineering HQ. |
-| Status | Complete (documents seeded; commit awaits founder approval) |
+| Status | ✅ Governance Foundation Complete |
 | Completion Date | 2026-08-21 |
 | Summary | `ENGINEERING_CONSTITUTION.md` is the engineering rulebook (VES lifecycle, modes, definition of done). `LESSONS_LEARNED.md` records Foundation recovery lessons. README indexes both. No application code change. |
 
@@ -126,7 +137,7 @@ Completion dates below are recorded only where a dated artefact exists. Earlier 
 | Sprint ID | VS-008C |
 | Title | VentureOS Engineering Creed |
 | Objective | Write the cultural creed for everyone who builds VentureOS and every Venture on it. |
-| Status | Complete (document seeded; commit awaits founder approval) |
+| Status | ✅ Governance Foundation Complete |
 | Completion Date | 2026-08-21 |
 | Summary | `ENGINEERING_CREED.md` states how engineers think and what they refuse. It does not duplicate the VentureOS Creed or the Engineering Constitution. |
 

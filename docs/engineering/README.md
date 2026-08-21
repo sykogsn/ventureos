@@ -2,7 +2,7 @@
 
 **Purpose.** This folder is the engineering memory of VentureOS. It is the permanent record of sprints, certifications, decisions, debt, and releases that Engineering HQ will later read as data.
 
-**Status.** Seeded by VS-008A; governance extended by VS-008B; creed added by VS-008C  
+**Status.** Governance Foundation complete (VS-008A–C)  
 **Owner.** Engineering  
 **Last Updated.** 2026-08-21
 
