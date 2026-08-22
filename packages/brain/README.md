@@ -15,4 +15,4 @@ KnowledgeObject
   + scope[]
 ```
 
-Institutional types only in this sprint. Operating types are VC-011. The live desk catalogue in `apps/web/src/platform/brain` is unchanged.
+Institutional types remain in `KNOWLEDGE_TYPES`. Operating types are in `OPERATING_KNOWLEDGE_TYPES`. One `KnowledgeObject` union. Decision is one type; plane distinguishes governance from operating. The live desk catalogue in `apps/web/src/platform/brain` is unchanged.

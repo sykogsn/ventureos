@@ -1,8 +1,15 @@
 export {
   assertKnowledgeCatalogue,
   assertKnowledgeObject,
+  assertOperatingCatalogue,
 } from "./assert";
 export { normaliseRelationshipKind } from "./kind";
+export {
+  assertOperatingPayload,
+  isEvidenceWeightClass,
+  isOperatingDocumentStatus,
+  isOperatingKnowledgeObject,
+} from "./operating";
 export {
   isDecision,
   listByType,
@@ -13,6 +20,7 @@ export {
 export {
   BRAIN_VENTURE_SCOPES,
   DECISION_IMPACTS,
+  EVIDENCE_WEIGHT_CLASSES,
   KNOWLEDGE_OBJECT_KERNEL_FIELDS,
   KNOWLEDGE_OBJECT_SECTIONS,
   KNOWLEDGE_PLANES,
@@ -20,10 +28,22 @@ export {
   KNOWLEDGE_RELATIONSHIP_KINDS,
   KNOWLEDGE_STATUSES,
   KNOWLEDGE_TYPES,
+  OPERATING_DOCUMENT_STATUSES,
+  OPERATING_KNOWLEDGE_TYPES,
+  isOperatingKnowledgeType,
   type BrainVentureScope,
+  type CompanyKnowledgeObject,
+  type ContractKnowledgeObject,
+  type CustomerKnowledgeObject,
   type DecisionImpact,
   type DecisionKnowledgeObject,
   type DocumentKnowledgeObject,
+  type EvidenceKnowledgeObject,
+  type EvidenceWeightClass,
+  type GoalKnowledgeObject,
+  type IncidentKnowledgeObject,
+  type InspectionKnowledgeObject,
+  type InstitutionalKnowledgeType,
   type KnowledgeHistoryEntry,
   type KnowledgeObject,
   type KnowledgeObjectKernel,
@@ -34,4 +54,15 @@ export {
   type KnowledgeRelationshipKindAlias,
   type KnowledgeStatus,
   type KnowledgeType,
+  type MeetingKnowledgeObject,
+  type OperatingDocumentKnowledgeObject,
+  type OperatingDocumentStatus,
+  type OperatingKnowledgeObject,
+  type OperatingKnowledgeType,
+  type PersonKnowledgeObject,
+  type ProcedureKnowledgeObject,
+  type ProjectKnowledgeObject,
+  type ProviderKnowledgeObject,
+  type RiskKnowledgeObject,
+  type TaskKnowledgeObject,
 } from "./types";

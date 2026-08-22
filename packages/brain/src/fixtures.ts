@@ -1,8 +1,8 @@
 import type {
   DecisionKnowledgeObject,
   DocumentKnowledgeObject,
+  InstitutionalKnowledgeType,
   KnowledgeObject,
-  KnowledgeType,
 } from "./types";
 
 function history() {
@@ -11,7 +11,7 @@ function history() {
 
 function document(
   id: string,
-  type: Exclude<KnowledgeType, "Decision">,
+  type: Exclude<InstitutionalKnowledgeType, "Decision">,
   related: KnowledgeObject["relationships"],
 ): DocumentKnowledgeObject {
   return {

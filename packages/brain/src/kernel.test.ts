@@ -126,12 +126,11 @@ describe("Knowledge Object kernel", () => {
     );
   });
 
-  it("does not implement operating types, traversal, or Runtime", () => {
+  it("does not traverse a graph or import Runtime", () => {
     const source = ["src/types.ts", "src/assert.ts", "src/resolve.ts", "src/kind.ts", "src/index.ts"]
       .map(readSource)
       .join("\n");
-    assert.doesNotMatch(source, /"Company"|"Person"|"Procedure"|"Customer"/);
-    assert.doesNotMatch(source, /ReasonQuery|depth|runExecutiveIntelligenceRuntime/);
+    assert.doesNotMatch(source, /ReasonQuery|runExecutiveIntelligenceRuntime/);
     assert.doesNotMatch(source, /from ["']@\/core\/runtime|from ["']@\/core\/venture/);
   });
 });

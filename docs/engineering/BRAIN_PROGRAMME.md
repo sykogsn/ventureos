@@ -25,3 +25,7 @@ Evidence: [ADR-009](../foundation/architecture/ADR-009-VentureOS-Brain.md).
 ## VC-010 — Knowledge Object kernel
 
 Complete 2026-08-22. Universal kernel in `@repo/brain` (`packages/brain`). Institutional types, plane, typed relationships. No graph walk, reasoning, persistence, memory, products, or learning. No `apps/` change. VC-011 not opened.
+
+## VC-011 — Operating Knowledge Types
+
+Complete 2026-08-22. Operating payloads registered on the kernel. Decision unchanged. No graph, reasoning, persistence, Runtime, VIC, or UI. No `apps/` change. VC-020 not opened.

@@ -10,7 +10,35 @@ export const KNOWLEDGE_TYPES = [
   "Playbook",
 ] as const;
 
-export type KnowledgeType = (typeof KNOWLEDGE_TYPES)[number];
+export type InstitutionalKnowledgeType = (typeof KNOWLEDGE_TYPES)[number];
+
+export const OPERATING_KNOWLEDGE_TYPES = [
+  "Company",
+  "Person",
+  "Procedure",
+  "Evidence",
+  "Meeting",
+  "Risk",
+  "Task",
+  "Goal",
+  "Project",
+  "Incident",
+  "Provider",
+  "Inspection",
+  "Customer",
+  "Contract",
+  "Document",
+] as const;
+
+export type OperatingKnowledgeType = (typeof OPERATING_KNOWLEDGE_TYPES)[number];
+
+export type KnowledgeType = InstitutionalKnowledgeType | OperatingKnowledgeType;
+
+const operatingTypeSet = new Set<string>(OPERATING_KNOWLEDGE_TYPES);
+
+export function isOperatingKnowledgeType(type: string): type is OperatingKnowledgeType {
+  return operatingTypeSet.has(type);
+}
 
 export const KNOWLEDGE_PLANES = ["institutional", "operating"] as const;
 
@@ -132,7 +160,148 @@ export type DecisionKnowledgeObject = KnowledgeObjectKernel & {
 };
 
 export type DocumentKnowledgeObject = KnowledgeObjectKernel & {
-  type: Exclude<KnowledgeType, "Decision">;
+  type: Exclude<InstitutionalKnowledgeType, "Decision">;
 };
 
-export type KnowledgeObject = DecisionKnowledgeObject | DocumentKnowledgeObject;
+export const EVIDENCE_WEIGHT_CLASSES = [
+  "Primary",
+  "Supporting",
+  "Historical",
+  "Contested",
+] as const;
+
+export type EvidenceWeightClass = (typeof EVIDENCE_WEIGHT_CLASSES)[number];
+
+export const OPERATING_DOCUMENT_STATUSES = ["suggested", "draft", "live"] as const;
+
+export type OperatingDocumentStatus = (typeof OPERATING_DOCUMENT_STATUSES)[number];
+
+export type CompanyKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Company";
+  legalName: string;
+  operatingName: string;
+  definitionRef: string;
+  workspaceId: string;
+  stage: string;
+  genomePointers: string[];
+};
+
+export type PersonKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Person";
+  role: string;
+  remit: string;
+  companyId: string;
+  identityId?: string;
+};
+
+export type ProcedureKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Procedure";
+  steps: string[];
+};
+
+export type EvidenceKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Evidence";
+  source: string;
+  capturedAt: string;
+  supportsObjectId: string;
+  weightClass: EvidenceWeightClass;
+};
+
+export type MeetingKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Meeting";
+  occurredAt: string;
+  attendeeIds: string[];
+  decisionIds: string[];
+};
+
+export type RiskKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Risk";
+  headline: string;
+  signal: string;
+  mitigation: string;
+};
+
+export type TaskKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Task";
+  outcome: string;
+  blockerIds: string[];
+};
+
+export type GoalKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Goal";
+  objective: string;
+  horizon: string;
+  taskIds: string[];
+};
+
+export type ProjectKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Project";
+  companyId: string;
+  outcome: string;
+  goalIds: string[];
+};
+
+export type IncidentKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Incident";
+  whatBroke: string;
+  evidenceIds: string[];
+  followUpDecisionIds: string[];
+};
+
+export type ProviderKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Provider";
+  supplies: string;
+  contractIds: string[];
+  inspectionIds: string[];
+};
+
+export type InspectionKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Inspection";
+  subjectId: string;
+  outcome: string;
+  evidenceIds: string[];
+  nextDue: string;
+};
+
+export type CustomerKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Customer";
+  companyId: string;
+  relationship: string;
+};
+
+export type ContractKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Contract";
+  partyIds: string[];
+  term: string;
+  obligations: string;
+  evidenceIds: string[];
+};
+
+export type OperatingDocumentKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Document";
+  kind: string;
+  documentStatus: OperatingDocumentStatus;
+  evidenceOfIds: string[];
+};
+
+export type OperatingKnowledgeObject =
+  | CompanyKnowledgeObject
+  | PersonKnowledgeObject
+  | ProcedureKnowledgeObject
+  | EvidenceKnowledgeObject
+  | MeetingKnowledgeObject
+  | RiskKnowledgeObject
+  | TaskKnowledgeObject
+  | GoalKnowledgeObject
+  | ProjectKnowledgeObject
+  | IncidentKnowledgeObject
+  | ProviderKnowledgeObject
+  | InspectionKnowledgeObject
+  | CustomerKnowledgeObject
+  | ContractKnowledgeObject
+  | OperatingDocumentKnowledgeObject;
+
+export type KnowledgeObject =
+  | DecisionKnowledgeObject
+  | DocumentKnowledgeObject
+  | OperatingKnowledgeObject;

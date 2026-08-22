@@ -10,7 +10,7 @@
     "build": "tsc --noEmit",
     "lint": "eslint src --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "test": "tsx --test src/kernel.test.ts"
+    "test": "tsx --test src/kernel.test.ts src/operating.test.ts"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

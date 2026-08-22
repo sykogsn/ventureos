@@ -1,6 +1,12 @@
 import { normaliseRelationshipKind } from "./kind";
-import { KNOWLEDGE_OBJECT_KERNEL_FIELDS, KNOWLEDGE_TYPES } from "./types";
-import type { KnowledgeObject, KnowledgeType } from "./types";
+import { assertOperatingPayload, isOperatingKnowledgeObject } from "./operating";
+import {
+  isOperatingKnowledgeType,
+  KNOWLEDGE_OBJECT_KERNEL_FIELDS,
+  KNOWLEDGE_TYPES,
+  OPERATING_KNOWLEDGE_TYPES,
+} from "./types";
+import type { KnowledgeObject, KnowledgeType, OperatingKnowledgeType } from "./types";
 
 function requireText(id: string, field: string, value: string) {
   if (!value.trim()) {
@@ -26,7 +32,16 @@ export function assertKnowledgeObject(record: KnowledgeObject) {
   if (record.scopes.length === 0) {
     throw new Error(`Knowledge Object ${record.id} has no scopes.`);
   }
-  if (record.type !== "Decision" && record.plane !== "institutional") {
+  if (isOperatingKnowledgeType(record.type) && record.plane !== "operating") {
+    throw new Error(
+      `Knowledge Object ${record.id} of type ${record.type} must use the operating plane.`,
+    );
+  }
+  if (
+    !isOperatingKnowledgeType(record.type) &&
+    record.type !== "Decision" &&
+    record.plane !== "institutional"
+  ) {
     throw new Error(
       `Knowledge Object ${record.id} of type ${record.type} cannot use the operating plane.`,
     );
@@ -54,6 +69,47 @@ export function assertKnowledgeObject(record: KnowledgeObject) {
       throw new Error(
         `Knowledge Object ${record.id} must store relationship kind ${stored}, not ${rel.kind}.`,
       );
+    }
+  }
+
+  if (isOperatingKnowledgeObject(record)) {
+    assertOperatingPayload(record);
+  }
+}
+
+export function assertOperatingCatalogue(records: KnowledgeObject[]) {
+  const ids = new Set<string>();
+  const types = new Set<OperatingKnowledgeType>();
+
+  for (const record of records) {
+    if (ids.has(record.id)) {
+      throw new Error(`Duplicate Knowledge Object id ${record.id}.`);
+    }
+    ids.add(record.id);
+    assertKnowledgeObject(record);
+    if (isOperatingKnowledgeObject(record)) {
+      types.add(record.type);
+      continue;
+    }
+    if (record.type === "Decision" && record.plane === "operating") {
+      continue;
+    }
+    throw new Error(
+      `Operating catalogue cannot include ${record.id} of type ${record.type} on the ${record.plane} plane.`,
+    );
+  }
+
+  for (const type of OPERATING_KNOWLEDGE_TYPES) {
+    if (!types.has(type)) {
+      throw new Error(`Operating catalogue has no Knowledge Object of type ${type}.`);
+    }
+  }
+
+  for (const record of records) {
+    for (const rel of record.relationships) {
+      if (!ids.has(rel.objectId)) {
+        throw new Error(`Broken relationship ${record.id} → ${rel.objectId}.`);
+      }
     }
   }
 }
