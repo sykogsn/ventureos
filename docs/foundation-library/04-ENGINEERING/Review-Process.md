@@ -31,7 +31,7 @@ Every review follows the [Master Engineering Prompt](../../engineering/MASTER_EN
 
 ## Evidence
 
-Prefer tests at the correct layer, plus a short live path for auth and desk surfaces. Cursor-browser hydration artefacts are not product bugs.
+Prefer tests at the correct layer, plus a short live path for auth and desk surfaces. Cursor-browser hydration artefacts are not product bugs. Named instances: [Known development artefacts](../../foundation/KNOWN-DEVELOPMENT-ARTEFACTS.md).
 
 ## Outcome
 

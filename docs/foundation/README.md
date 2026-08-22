@@ -19,4 +19,10 @@ This tree remains the specification register for Foundation v1.0/v1.1. It does n
 | `certification/` | Certification records and freeze conditions | Programme certification artefacts. Index: `docs/foundation/release/03-CERTIFICATION-INDEX.md` |
 | `release/` | Foundation v1.0 product-development release pack | Release notes, capability register, certification index, debt, limitations, roadmap |
 
+Companion record (not a second architecture, not a product limitation):
+
+| File | Owns |
+|---|---|
+| [`KNOWN-DEVELOPMENT-ARTEFACTS.md`](./KNOWN-DEVELOPMENT-ARTEFACTS.md) | Confirmed non-application issues from Foundation v1.0 certification (Cursor inspector, Grammarly, Next.js Dev Tools, other extension hydration diffs) |
+
 The Executive Intelligence Runtime remains the only orchestrator. The Capability Registry remains governance, not dispatch. The Definition Registry remains the only product-definition system. IDS is presentation. It does not execute, persist, or instantiate.

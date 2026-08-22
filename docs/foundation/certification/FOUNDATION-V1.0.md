@@ -23,7 +23,7 @@ Closed in this certification:
 - Next.js session gate as `apps/web/src/proxy.ts` (TD-006 / ERT-005 / RM-011)
 - `<body suppressHydrationWarning>` so browser extensions cannot raise a false hydration overlay
 
-Cursor IDE `data-cursor-ref` attributes can still produce a hydration warning **inside the Cursor browser inspector**. That is inspector injection, not application HTML.
+Inspector and extension overlays that are **not** application HTML are recorded in [`docs/foundation/KNOWN-DEVELOPMENT-ARTEFACTS.md`](../KNOWN-DEVELOPMENT-ARTEFACTS.md) (Cursor `data-cursor-ref`, Grammarly attributes, Next.js Dev Tools badge, other extension hydration diffs).
 
 ---
 
