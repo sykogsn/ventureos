@@ -823,4 +823,4 @@ Already decided by constitutions (do not reopen):
 
 **Remaining risk.** Starting VC-010 before C0, or implementing two sprints at once.
 
-C0 is VC-003 (ADR-009). The first code sprint remains VC-010 and is not opened by governance.
+C0 is VC-003 (ADR-009). VC-010 landed the kernel in `packages/brain` without changing `apps/`. VC-011 is not opened.

@@ -21,3 +21,7 @@ Approved 2026-08-22. FD-B0 accepted. [BRAIN-002](../foundation/architecture/BRAI
 Complete 2026-08-22. ADR-009 accepted. Brain Rule 001 registered. Foundation v1.0 remains frozen. No `apps/` change. VC-010 not opened.
 
 Evidence: [ADR-009](../foundation/architecture/ADR-009-VentureOS-Brain.md).
+
+## VC-010 — Knowledge Object kernel
+
+Complete 2026-08-22. Universal kernel in `@repo/brain` (`packages/brain`). Institutional types, plane, typed relationships. No graph walk, reasoning, persistence, memory, products, or learning. No `apps/` change. VC-011 not opened.
