@@ -8,6 +8,8 @@
 
 This file is the engineering-memory copy of the VS-007 certification. It does not replace `docs/foundation/release/03-CERTIFICATION-INDEX.md` (layer map) or `docs/foundation-library/` (teaching and governance).
 
+**Engineering standard.** Later work on this certified foundation follows the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Index: [Engineering Index](./README.md).
+
 ---
 
 ## Quality Gates

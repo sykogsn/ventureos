@@ -2,6 +2,8 @@
 
 Web application for VentureOS — the operating system for companies.
 
+The supreme governing document is [`docs/PROJECT_CONSTITUTION.md`](../../docs/PROJECT_CONSTITUTION.md). Read it, then [`docs/engineering/MASTER_ENGINEERING_PROMPT.md`](../../docs/engineering/MASTER_ENGINEERING_PROMPT.md), before changing this application. The [Engineering Index](../../docs/engineering/README.md) maps the Foundation Runbook and process standards.
+
 ## Develop
 
 From the repository root:

@@ -15,46 +15,42 @@
   --default-font-family: var(--ids-foundation-font-sans);
   --default-mono-font-family: var(--ids-foundation-font-mono);
   --spacing: var(--ids-foundation-space-1);
-  --breakpoint-sm: var(--ids-foundation-breakpoint-sm);
-  --breakpoint-md: var(--ids-foundation-breakpoint-md);
-  --breakpoint-lg: var(--ids-foundation-breakpoint-lg);
-  --breakpoint-xl: var(--ids-foundation-breakpoint-xl);
-  --color-background: var(--ids-foundation-color-background);
-  --color-foreground: var(--ids-foundation-color-text-primary);
-  --color-surface: var(--ids-foundation-color-surface);
-  --color-surface-muted: var(--ids-foundation-color-surface-elevated);
-  --color-surface-elevated: var(--ids-foundation-color-surface-elevated);
-  --color-surface-hover: var(--ids-foundation-surface-hover);
-  --color-surface-selected: var(--ids-foundation-surface-selected);
-  --color-surface-focus: var(--ids-foundation-surface-focus);
-  --color-border: var(--ids-foundation-color-border);
-  --color-divider: var(--ids-foundation-color-divider);
-  --color-muted: var(--ids-foundation-color-text-muted);
-  --color-text-primary: var(--ids-foundation-color-text-primary);
-  --color-text-secondary: var(--ids-foundation-color-text-secondary);
-  --color-text-muted: var(--ids-foundation-color-text-muted);
-  --color-text-disabled: var(--ids-foundation-color-text-disabled);
-  --color-text-inverse: var(--ids-foundation-color-text-inverse);
-  --color-accent: var(--ids-foundation-color-brand-primary);
-  --color-accent-hover: var(--ids-foundation-color-brand-primary-hover);
-  --color-accent-active: var(--ids-foundation-color-brand-primary-active);
-  --color-accent-foreground: var(--ids-foundation-color-text-inverse);
-  --color-brand-primary: var(--ids-foundation-color-brand-primary);
-  --color-brand-primary-hover: var(--ids-foundation-color-brand-primary-hover);
-  --color-brand-primary-active: var(--ids-foundation-color-brand-primary-active);
-  --color-ring: var(--ids-foundation-color-brand-primary);
-  --color-success: var(--ids-foundation-color-success);
-  --color-warning: var(--ids-foundation-color-warning);
-  --color-danger: var(--ids-foundation-color-danger);
-  --color-info: var(--ids-foundation-color-info);
-  --color-chart-1: var(--ids-foundation-color-chart-1);
-  --color-chart-2: var(--ids-foundation-color-chart-2);
-  --color-chart-3: var(--ids-foundation-color-chart-3);
-  --color-chart-4: var(--ids-foundation-color-chart-4);
-  --color-chart-5: var(--ids-foundation-color-chart-5);
-  --color-chart-6: var(--ids-foundation-color-chart-6);
-  --color-chart-7: var(--ids-foundation-color-chart-7);
-  --color-chart-8: var(--ids-foundation-color-chart-8);
+  --color-background: var(--background);
+  --color-foreground: var(--text-primary);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-elevated);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-selected: var(--surface-selected);
+  --color-surface-focus: var(--surface-focus);
+  --color-border: var(--border);
+  --color-divider: var(--divider);
+  --color-muted: var(--text-muted);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-inverse: var(--text-inverse);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-primary-active: var(--brand-primary-active);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
   --radius-lg: var(--ids-foundation-radius-panel);
   --radius-md: var(--ids-foundation-radius-control);
   --shadow-xs: var(--ids-foundation-shadow-xs);
@@ -294,9 +290,8 @@
 @utility vos-list-item {
   display: block;
   border-radius: var(--ids-foundation-surface-radius);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
-  background: var(--ids-foundation-surface-fill);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
+  background: var(--surface);
   padding: var(--ids-foundation-space-3);
   font-size: var(--ids-foundation-type-label-size);
   font-weight: var(--ids-foundation-type-label-weight);
@@ -318,9 +313,8 @@
 
 @utility vos-kbd {
   border-radius: var(--ids-foundation-surface-radius-control);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
-  background: var(--ids-foundation-surface-fill);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
+  background: var(--surface);
   padding-inline: var(--ids-foundation-space-2);
   padding-block: var(--ids-foundation-space-1);
   font-size: var(--ids-foundation-type-kicker-size);
@@ -353,9 +347,8 @@
   height: var(--ids-foundation-control-height-lg);
   width: 100%;
   border-radius: var(--ids-foundation-surface-radius-control);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
-  background: var(--ids-foundation-surface-fill);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
+  background: var(--surface);
   padding-inline: var(--ids-foundation-space-3);
   font-size: var(--ids-foundation-type-label-size);
   font-weight: var(--ids-foundation-type-label-weight);
@@ -374,9 +367,8 @@
   align-items: center;
   gap: var(--ids-foundation-space-2);
   border-radius: var(--ids-foundation-surface-radius-control);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
-  background: var(--ids-foundation-surface-fill);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
+  background: var(--surface);
   padding-inline: var(--ids-foundation-space-2);
   text-align: left;
   font-size: var(--ids-foundation-type-label-size);
@@ -391,78 +383,71 @@
 
 @utility vos-dialog {
   border-radius: var(--ids-foundation-surface-radius);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
-  background: var(--ids-foundation-surface-fill);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
+  background: var(--surface);
   box-shadow: var(--ids-foundation-surface-shadow-modal);
 }
 
 @utility ids-surface {
-  background: var(--ids-foundation-surface-fill);
+  background: var(--surface);
   border-radius: var(--ids-foundation-surface-radius-chrome);
   box-shadow: var(--ids-foundation-surface-shadow-none);
 }
 
 @utility ids-surface-elevated {
-  background: var(--ids-foundation-surface-fill-elevated);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border-subtle);
+  background: var(--surface-elevated);
+  border: var(--ids-foundation-surface-border-width) solid var(--divider);
   border-radius: var(--ids-foundation-surface-radius);
   box-shadow: var(--ids-foundation-surface-shadow-none);
 }
 
 @utility ids-surface-panel {
-  background: var(--ids-foundation-surface-fill);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
+  background: var(--surface);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
   border-radius: var(--ids-foundation-surface-radius);
   box-shadow: var(--ids-foundation-surface-shadow-raised);
 }
 
 @utility ids-surface-card {
-  background: var(--ids-foundation-surface-fill);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
+  background: var(--card);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
   border-radius: var(--ids-foundation-surface-radius);
   box-shadow: var(--ids-foundation-surface-shadow-raised);
 }
 
 @utility vos-panel {
-  background: var(--ids-foundation-surface-fill);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
+  background: var(--surface);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
   border-radius: var(--ids-foundation-surface-radius);
   box-shadow: var(--ids-foundation-surface-shadow-raised);
 }
 
 @utility ids-surface-modal {
-  background: var(--ids-foundation-surface-fill);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
+  background: var(--surface);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
   border-radius: var(--ids-foundation-surface-radius);
   box-shadow: var(--ids-foundation-surface-shadow-modal);
 }
 
 @utility ids-surface-drawer {
-  background: var(--ids-foundation-surface-fill);
+  background: var(--sidebar);
   border-inline-start: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
+    var(--border);
   border-radius: var(--ids-foundation-surface-radius-chrome);
   box-shadow: var(--ids-foundation-surface-shadow-overlay);
 }
 
 @utility ids-surface-toolbar {
-  background: var(--ids-foundation-surface-fill);
-  border-bottom: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
+  background: var(--toolbar);
+  border-bottom: var(--ids-foundation-surface-border-width) solid var(--border);
   border-radius: var(--ids-foundation-surface-radius-chrome);
   box-shadow: var(--ids-foundation-surface-shadow-none);
 }
 
 @utility ids-surface-sidebar {
-  background: var(--ids-foundation-surface-fill);
+  background: var(--sidebar);
   border-inline-end: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
+    var(--border);
   border-radius: var(--ids-foundation-surface-radius-chrome);
   box-shadow: var(--ids-foundation-surface-shadow-none);
 }
@@ -474,22 +459,22 @@
 }
 
 @utility ids-surface-hover {
-  background: var(--ids-foundation-surface-hover);
+  background: var(--surface-hover);
 }
 
 @utility ids-surface-selected {
-  background: var(--ids-foundation-surface-selected);
+  background: var(--surface-selected);
   border-color: var(--ids-foundation-surface-border-selected);
 }
 
 @utility ids-surface-focus {
-  background: var(--ids-foundation-surface-focus);
-  border-color: var(--ids-foundation-surface-border-focus);
-  box-shadow: 0 0 0 2px var(--ids-foundation-surface-focus-ring);
+  background: var(--surface-focus);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 55%, transparent);
 }
 
 @utility ids-surface-glass {
-  background: var(--ids-foundation-surface-glass-fill);
+  background: var(--surface-glass);
 }
 
 @utility vos-btn-primary {
@@ -517,9 +502,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--ids-foundation-surface-radius-control);
-  border: var(--ids-foundation-surface-border-width) solid
-    var(--ids-foundation-surface-border);
-  background: var(--ids-foundation-surface-fill);
+  border: var(--ids-foundation-surface-border-width) solid var(--border);
+  background: var(--surface);
   padding-inline: var(--ids-foundation-space-4);
   font-family: var(--ids-foundation-type-label-family);
   font-size: var(--ids-foundation-type-label-size);
@@ -548,7 +532,7 @@
 
 @utility ids-chip {
   border-radius: var(--ids-foundation-surface-radius-control);
-  background: var(--ids-foundation-surface-fill-elevated);
+  background: var(--surface-elevated);
   padding-inline: var(--ids-foundation-space-2);
   padding-block: var(--ids-foundation-space-1);
   font-family: var(--ids-foundation-type-caption-family);
@@ -561,13 +545,13 @@
 
 @utility ids-skeleton {
   border-radius: var(--ids-foundation-surface-radius-control);
-  background: var(--ids-foundation-surface-fill-elevated);
+  background: var(--surface-elevated);
   animation: ids-pulse var(--ids-foundation-motion-duration-skeleton)
     var(--ids-foundation-motion-ease-standard) infinite;
 }
 
 @utility ids-overlay {
-  background: var(--ids-foundation-color-overlay);
+  background: var(--overlay);
 }
 
 @utility ids-status-healthy {
@@ -591,7 +575,7 @@
 }
 
 @utility ids-status-quiet {
-  background: var(--ids-foundation-surface-fill-elevated);
+  background: var(--surface-elevated);
   color: var(--text-muted);
 }
 
@@ -611,7 +595,7 @@ body {
 }
 
 body {
-  background: var(--background);
+  background: var(--workspace);
   color: var(--text-primary);
   font-family: var(--ids-foundation-font-sans);
   -webkit-font-smoothing: antialiased;
@@ -640,9 +624,8 @@ select:focus-visible {
 }
 
 .vos-field:focus-visible {
-  border-color: var(--ids-foundation-surface-border-focus);
-  box-shadow: 0 0 0 2px
-    color-mix(in srgb, var(--ids-foundation-surface-border-focus) 25%, transparent);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 25%, transparent);
 }
 
 .vos-field::placeholder {
@@ -650,12 +633,12 @@ select:focus-visible {
 }
 
 .vos-control:hover {
-  background: var(--ids-foundation-surface-hover);
+  background: var(--surface-hover);
 }
 
 .vos-control:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--ids-foundation-surface-focus-ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 55%, transparent);
 }
 
 .vos-btn-primary:hover {
@@ -668,7 +651,7 @@ select:focus-visible {
 }
 
 .vos-btn-secondary:hover {
-  background: var(--ids-foundation-surface-hover);
+  background: var(--surface-hover);
 }
 
 .vos-btn-primary:disabled,
@@ -684,7 +667,7 @@ select:focus-visible {
 
 .vos-row:hover,
 .vos-list-item:hover {
-  background: var(--ids-foundation-surface-hover);
+  background: var(--surface-hover);
 }
 
 .vos-link:hover {
@@ -692,9 +675,14 @@ select:focus-visible {
 }
 
 @supports (backdrop-filter: blur(1px)) {
-  .ids-surface-toolbar,
+  .ids-surface-toolbar {
+    background: color-mix(in srgb, var(--toolbar) 88%, transparent);
+    backdrop-filter: blur(var(--ids-foundation-surface-glass-blur));
+    -webkit-backdrop-filter: blur(var(--ids-foundation-surface-glass-blur));
+  }
+
   .ids-surface-glass {
-    background: var(--ids-foundation-surface-glass-fill);
+    background: var(--surface-glass);
     backdrop-filter: blur(var(--ids-foundation-surface-glass-blur));
     -webkit-backdrop-filter: blur(var(--ids-foundation-surface-glass-blur));
   }

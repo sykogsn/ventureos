@@ -2,13 +2,13 @@
 
 **Purpose.** Define how VentureOS relates to the products that run on it, and how a founder meets a product without meeting a second architecture.
 
-**Authority.** Product law for Foundation v1.1. Compatible with the Definition Registry. It does not create a Product Registry.
+**Authority.** Product law for Foundation v1.1. Subordinate to the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md). Compatible with the Definition Registry. It does not create a Product Registry.
 
 **Audience.** Product, design, and engineering.
 
 **Dependencies.** [VentureOS Creed](./VentureOS-Creed.md)
 
-**Related Documents.** [Twelve Founding Principles](./Twelve-Founding-Principles.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md) · [Products](../06-PRODUCTS/README.md) · [IDS](../03-DESIGN/IDS.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Twelve Founding Principles](./Twelve-Founding-Principles.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md) · [Products](../06-PRODUCTS/README.md) · [IDS](../03-DESIGN/IDS.md)
 
 **Status.** Approved
 

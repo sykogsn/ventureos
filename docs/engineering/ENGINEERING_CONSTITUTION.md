@@ -6,9 +6,13 @@
 **Programme.** VS-008B  
 **Owner.** Engineering
 
-This document is the official engineering rulebook for VentureOS and every future Venture built on it.
+This document is the official engineering lifecycle rulebook for VentureOS and every future Venture built on it.
 
-It does not replace the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md). It does not restate locked architecture. Sprint shape remains in the Foundation Library [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Accepted method decisions remain in [DECISION_REGISTER.md](./DECISION_REGISTER.md).
+It is subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) and the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md). The Project Constitution is the supreme governing document of the repository. If this Constitution and a higher constitution conflict, the higher document wins.
+
+The authoritative engineering standard is the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. It binds pre-flight, development rules, root-cause policy, validation, git practice, completion, and reporting. If this Constitution and the Master Engineering Prompt appear to conflict on those subjects, the Master Engineering Prompt wins. Index: [Engineering Index](./README.md).
+
+It does not replace the Project Constitution or the Platform Constitution. It does not restate locked architecture. Sprint shape remains in the Foundation Library [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Accepted method decisions remain in [DECISION_REGISTER.md](./DECISION_REGISTER.md).
 
 ---
 
@@ -72,7 +76,7 @@ Release
 | **GitHub Push** | Publish the verified history to the remote. Not a substitute for verification. |
 | **Release** | Declare a named release only when the Release Process and founder require it. Tags and GitHub Releases are not automatic with a push. |
 
-Sprint write-up shape (context, objective, constraints, validation, A/B close) stays in the [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Git branch and commit practice stays in [Git Workflow](../foundation-library/04-ENGINEERING/Git-Workflow.md). Release declaration stays in [Release Process](../foundation-library/04-ENGINEERING/Release-Process.md) and [RELEASE_HISTORY.md](./RELEASE_HISTORY.md).
+Pre-flight, validation, completion, and reporting stay in the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Sprint write-up shape (context, objective, constraints, validation, A/B close) stays in the [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Git branch and commit practice stays in [Git Workflow](../foundation-library/04-ENGINEERING/Git-Workflow.md). Release declaration stays in [Release Process](../foundation-library/04-ENGINEERING/Release-Process.md) and [RELEASE_HISTORY.md](./RELEASE_HISTORY.md). Index: [Engineering Index](./README.md).
 
 ---
 
@@ -149,8 +153,12 @@ Permanent. Not optional inside a feature crunch.
 
 ## 7. Relationship to the VentureOS Constitution
 
+The [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) is the supreme governing document of the repository.
+
 The [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) defines **the platform**: one desk, one Runtime, Capability Registry, Definition Registry, persistence ownership, IDS as presentation.
 
-This Engineering Constitution defines **how the platform is built**: diagnose, design, approve, implement, verify, then commit, push, and release.
+This Engineering Constitution defines the VES lifecycle: diagnose, design, approve, implement, verify, then commit, push, and release.
 
-If the two appear to conflict, architecture wins on *what may exist*. This document wins on *whether work may proceed*. Neither may be used to override a named implementation source of truth (`FOUNDATION.md`, Runtime README, IDS specifications) when a technical fact is in dispute — amend the Constitution that is wrong.
+The [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) defines pre-flight, development rules, root-cause policy, validation, completion, and reporting for every sprint, implementation, review, refactor, and bug fix.
+
+If documents appear to conflict, the Project Constitution wins first. Architecture wins on *what may exist*. The Master Engineering Prompt wins on checklist, validation, completion, and reporting. This document wins on lifecycle and mode sequence. Neither may be used to override a named implementation source of truth (`FOUNDATION.md`, Runtime README, IDS specifications) when a technical fact is in dispute — amend the Constitution that is wrong.

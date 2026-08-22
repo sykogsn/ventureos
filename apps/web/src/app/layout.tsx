@@ -40,10 +40,11 @@ export default function RootLayout({
     <html
       lang="en"
       data-ids-brand="ventureos"
+      data-ids-atmosphere="ventureos"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body className="min-h-full font-sans">
+      <body className="min-h-full font-sans" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

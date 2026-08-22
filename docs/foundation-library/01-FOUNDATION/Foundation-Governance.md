@@ -8,7 +8,7 @@
 
 **Dependencies.** [Twelve Founding Principles](./Twelve-Founding-Principles.md) · [Legacy Charter](./Legacy-Charter.md)
 
-**Related Documents.** [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md) · [Review Process](../04-ENGINEERING/Review-Process.md) · [Release Process](../04-ENGINEERING/Release-Process.md) · [Source Map](../99-APPENDIX/Source-Map.md)
+**Related Documents.** [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](../../engineering/README.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md) · [Review Process](../04-ENGINEERING/Review-Process.md) · [Release Process](../04-ENGINEERING/Release-Process.md) · [Source Map](../99-APPENDIX/Source-Map.md)
 
 **Status.** Approved
 
@@ -16,9 +16,11 @@
 
 **Owner.** Foundation
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
+
+The supreme governing document is the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md). How work proceeds on this locked foundation is the [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md). How the foundation is kept healthy is the [Foundation Runbook](../../engineering/FOUNDATION_RUNBOOK.md). Architecture may change only with explicit founder approval.
 
 ## Ownership
 

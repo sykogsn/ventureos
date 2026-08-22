@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Cluster, Grid, Stack } from "@/core/layout";
+import { SectionCard } from "@/modules/dashboard/components/section-card";
 import { governanceInstruments } from "@/platform/brain";
 import { BrainFrame } from "./components/brain-frame";
 import { StatusMark } from "./components/status-mark";
@@ -10,34 +12,32 @@ export function BrainGovernanceScreen() {
       title="Governance"
       description="The instruments the desk is bound to. Open an object to read the record."
     >
-      <div className="grid gap-4 md:grid-cols-2">
+      <Grid variant="pair">
         {governanceInstruments.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            className="ids-surface-card ids-transition flex flex-col gap-4 p-6 hover:bg-surface-hover"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="ids-label text-foreground">{item.title}</h2>
-              <StatusMark>{item.status}</StatusMark>
-            </div>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-              <div>
-                <dt className="ids-kicker">Version</dt>
-                <dd className="ids-body mt-1 text-muted">{item.version}</dd>
-              </div>
-              <div>
-                <dt className="ids-kicker">Owner</dt>
-                <dd className="ids-body mt-1 text-muted">{item.owner}</dd>
-              </div>
-              <div className="col-span-2">
-                <dt className="ids-kicker">Last review</dt>
-                <dd className="ids-body mt-1 text-muted">{item.lastReview}</dd>
-              </div>
-            </dl>
+          <Link key={item.id} href={item.href} className="ids-transition">
+            <SectionCard className="hover:bg-surface-hover">
+              <Cluster justify="between">
+                <h2 className="ids-label text-foreground">{item.title}</h2>
+                <StatusMark>{item.status}</StatusMark>
+              </Cluster>
+              <Grid variant="pair">
+                <Stack gap="tight">
+                  <p className="ids-kicker">Version</p>
+                  <p className="ids-body text-muted">{item.version}</p>
+                </Stack>
+                <Stack gap="tight">
+                  <p className="ids-kicker">Owner</p>
+                  <p className="ids-body text-muted">{item.owner}</p>
+                </Stack>
+              </Grid>
+              <Stack gap="tight">
+                <p className="ids-kicker">Last review</p>
+                <p className="ids-body text-muted">{item.lastReview}</p>
+              </Stack>
+            </SectionCard>
           </Link>
         ))}
-      </div>
+      </Grid>
     </BrainFrame>
   );
 }

@@ -3,6 +3,7 @@ import { formatBriefingDate } from "./format";
 import type { ExecutiveFloorModel } from "./types";
 import { EmptyCopy } from "@/core/shell/empty-copy";
 import { PageFrame } from "@/core";
+import { Fit, Grid } from "@/core/layout";
 import Link from "next/link";
 
 export function ExecutiveOfficeFloorScreen({
@@ -27,16 +28,18 @@ export function ExecutiveOfficeFloorScreen({
         <EmptyCopy
           title="This floor is unseated"
           action={
-            <Link href="/dashboard" className="vos-btn-primary w-fit">
-              Return to the Situation Room
-            </Link>
+            <Fit>
+              <Link href="/dashboard" className="vos-btn-primary">
+                Return to the Situation Room
+              </Link>
+            </Fit>
           }
         >
           No seated desks are on this floor. Situation Room and Company HQ remain the operating
           surfaces.
         </EmptyCopy>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
+        <Grid variant="executive">
           {data.executives.map((executive) => (
             <ExecutiveCard
               key={executive.id}
@@ -44,7 +47,7 @@ export function ExecutiveOfficeFloorScreen({
               basePath={basePath}
             />
           ))}
-        </div>
+        </Grid>
       )}
     </PageFrame>
   );

@@ -6,7 +6,7 @@
 **Foundation.** v1.1 (locked)  
 **Owner.** Architecture
 
-This document is the highest governing specification for **architectural decisions** on VentureOS.
+This document is the highest governing specification for **architectural decisions** on VentureOS. It is subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). The Project Constitution is the supreme governing document of the repository. If this Constitution and the Project Constitution conflict, the Project Constitution wins.
 
 It is not a README.  
 It is not an implementation guide.  
@@ -410,6 +410,7 @@ Supersession is explicit. Deleting a locked rule without a dated replacement is 
 
 This Constitution restates, and does not replace:
 
+- VentureOS Project Constitution (`docs/PROJECT_CONSTITUTION.md`) — supreme governing document of the repository
 - VentureOS Creed
 - Product Philosophy
 - Twelve Founding Principles
@@ -417,6 +418,8 @@ This Constitution restates, and does not replace:
 - Architecture Overview, Runtime, Capability Framework, Venture Definitions
 - Situation Room, Company HQ, Executive Office
 - IDS, Visual Constitution, Interaction Constitution
+- Master Engineering Prompt (`docs/engineering/MASTER_ENGINEERING_PROMPT.md`) — permanent engineering constitution of the repository
+- Engineering Index (`docs/engineering/README.md`)
 - Engineering Standards, Review Process, Sprint Standard
 - ADR-001 through ADR-008
 - `apps/web/src/FOUNDATION.md`

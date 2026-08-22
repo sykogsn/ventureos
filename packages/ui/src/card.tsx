@@ -3,6 +3,6 @@ import { cn } from "./cn";
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("ids-surface-card p-4 text-foreground", className)} {...props} />
+    <div className={cn("ids-surface-card text-foreground", className)} {...props} />
   );
 }

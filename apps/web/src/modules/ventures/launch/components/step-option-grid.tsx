@@ -1,5 +1,6 @@
 import { OptionCard } from "./option-card";
 import type { SelectOption } from "../types";
+import { Grid } from "@/core/layout";
 
 export function StepOptionGrid<T extends string>({
   options,
@@ -11,7 +12,7 @@ export function StepOptionGrid<T extends string>({
   onChange: (id: T) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <Grid variant="pair">
       {options.map((option) => (
         <OptionCard
           key={option.id}
@@ -21,6 +22,6 @@ export function StepOptionGrid<T extends string>({
           onSelect={() => onChange(option.id)}
         />
       ))}
-    </div>
+    </Grid>
   );
 }

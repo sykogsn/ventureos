@@ -1,3 +1,5 @@
+import { Field, Form, ReadingRegion } from "@/core/layout";
+
 export function CatalogueSearchForm({
   action,
   defaultValue,
@@ -10,22 +12,24 @@ export function CatalogueSearchForm({
   placeholder: string;
 }) {
   return (
-    <form method="get" action={action} className="flex max-w-xl flex-col gap-3">
-      <label className="ids-label flex flex-col gap-2">
-        {label}
-        <input
-          className="vos-field"
-          type="search"
-          name="q"
-          defaultValue={defaultValue}
-          placeholder={placeholder}
-        />
-      </label>
-      <div>
-        <button type="submit" className="vos-btn-secondary">
-          Search
-        </button>
-      </div>
-    </form>
+    <ReadingRegion size="lg">
+      <Form gap="compact" method="get" action={action}>
+        <Field>
+          {label}
+          <input
+            className="vos-field"
+            type="search"
+            name="q"
+            defaultValue={defaultValue}
+            placeholder={placeholder}
+          />
+        </Field>
+        <div>
+          <button type="submit" className="vos-btn-secondary">
+            Search
+          </button>
+        </div>
+      </Form>
+    </ReadingRegion>
   );
 }

@@ -2,6 +2,7 @@
 
 **Purpose.** Living engineering journal.  
 **Authority.** Engineering Records. Outcomes stay in [DECISION_REGISTER.md](./DECISION_REGISTER.md); this file records what the work taught.  
+**Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
 **Last Updated.** 2026-08-21
 
 Grow this document after every major sprint. Do not invent lessons. Do not copy ADR/FD tables here — link them.

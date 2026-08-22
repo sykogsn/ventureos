@@ -8,7 +8,7 @@
 
 **Dependencies.** [Twelve Founding Principles](../01-FOUNDATION/Twelve-Founding-Principles.md) · [Architecture Overview](../02-ARCHITECTURE/Architecture-Overview.md)
 
-**Related Documents.** [Visual Constitution](./Visual-Constitution.md) · [Interaction Constitution](./Interaction-Constitution.md) · [Writing Constitution](./Writing-Constitution.md) · [Accessibility](./Accessibility.md) · [Executive Environment Framework](../02-ARCHITECTURE/Executive-Environment-Framework.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Visual Constitution](./Visual-Constitution.md) · [Interaction Constitution](./Interaction-Constitution.md) · [Writing Constitution](./Writing-Constitution.md) · [Accessibility](./Accessibility.md) · [Executive Environment Framework](../02-ARCHITECTURE/Executive-Environment-Framework.md)
 
 **Status.** Approved (constitution locked; atmosphere not implemented)
 

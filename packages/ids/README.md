@@ -2,6 +2,8 @@
 
 Presentation tokens and theme binding for VentureOS.
 
+Token generation and CSS validation follow the [Master Engineering Prompt](../../docs/engineering/MASTER_ENGINEERING_PROMPT.md). Do not emit `@custom-media` or `var()` inside `@media`.
+
 Constitution: `docs/foundation/design-system/IDS-001-IntelligenceOS-Design-System-Foundation.md`  
 Specification: `docs/foundation/design-system/IDS-002-IntelligenceOS-Design-System-Technical-Specification.md`
 

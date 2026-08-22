@@ -8,7 +8,7 @@
 
 **Dependencies.** [Product Philosophy](../01-FOUNDATION/Product-Philosophy.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md)
 
-**Related Documents.** [Qualora](./Qualora/README.md) · [Calviora](./Calviora/README.md) · [Farmora](./Farmora/README.md) · [Future](./Future/README.md) · [IDS](../03-DESIGN/IDS.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Qualora](./Qualora/README.md) · [Calviora](./Calviora/README.md) · [Farmora](./Farmora/README.md) · [Future](./Future/README.md) · [IDS](../03-DESIGN/IDS.md)
 
 **Status.** Approved
 

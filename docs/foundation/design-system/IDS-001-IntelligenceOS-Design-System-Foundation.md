@@ -1,6 +1,6 @@
 # IDS-001 — IntelligenceOS Design System Foundation
 
-Constitutional document for the IntelligenceOS Design System (IDS).
+Constitutional document for the IntelligenceOS Design System (IDS). Subordinate to the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md).
 
 This document defines **why** IDS exists. It does not prescribe CSS, component files, or a Theme Engine implementation. Technical contract: `IDS-002-IntelligenceOS-Design-System-Technical-Specification.md`.
 

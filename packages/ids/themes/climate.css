@@ -46,4 +46,12 @@
   --shadow-xs: var(--ids-foundation-shadow-xs);
   --shadow-panel: var(--ids-foundation-shadow-panel);
   --shadow-overlay: var(--ids-foundation-shadow-overlay);
+
+  --workspace: var(--background);
+  --sidebar: var(--ids-foundation-surface-fill);
+  --toolbar: var(--ids-foundation-surface-fill);
+  --header: transparent;
+  --card: var(--surface-elevated);
+  --overlay: var(--ids-foundation-color-overlay);
+  --atmosphere-texture: none;
 }

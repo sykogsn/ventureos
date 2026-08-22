@@ -1,3 +1,5 @@
+import { SectionCard } from "@/modules/dashboard/components/section-card";
+
 export function MetricCard({
   kicker,
   value,
@@ -8,10 +10,10 @@ export function MetricCard({
   note: string;
 }) {
   return (
-    <article className="ids-surface-card flex flex-col gap-3 p-6">
+    <SectionCard>
       <p className="ids-kicker">{kicker}</p>
       <p className="ids-metric">{value}</p>
       <p className="ids-body text-muted">{note}</p>
-    </article>
+    </SectionCard>
   );
 }

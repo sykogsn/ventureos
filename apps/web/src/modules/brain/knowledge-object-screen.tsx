@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyCopy } from "@/core/shell/empty-copy";
+import { Fit } from "@/core/layout";
 import type { KnowledgeObject } from "@/platform/brain";
 import { BrainFrame } from "./components/brain-frame";
 import { KnowledgeObjectLayout } from "./components/knowledge-object-layout";
@@ -19,9 +20,11 @@ export function BrainKnowledgeObjectScreen({
         <EmptyCopy
           title="Not in this catalogue"
           action={
-            <Link href="/brain/library" className="vos-btn-primary w-fit">
-              Browse the library
-            </Link>
+            <Fit>
+              <Link href="/brain/library" className="vos-btn-primary">
+                Browse the library
+              </Link>
+            </Fit>
           }
         >
           Open the library to choose an object the desk already holds.
@@ -52,9 +55,11 @@ export function BrainComposeScreen() {
       <EmptyCopy
         title="The editor is not part of this release"
         action={
-          <Link href="/brain/library" className="vos-btn-primary w-fit">
-            Browse the library
-          </Link>
+          <Fit>
+            <Link href="/brain/library" className="vos-btn-primary">
+              Browse the library
+            </Link>
+          </Fit>
         }
       >
         Knowledge objects are authored against the catalogue. Markdown editing belongs to a later sprint.

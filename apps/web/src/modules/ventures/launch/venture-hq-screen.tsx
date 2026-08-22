@@ -12,6 +12,7 @@ import {
   VentureGenomeCard,
 } from "./hq/artefact-cards";
 import { PageFrame } from "@/core";
+import { Grid } from "@/core/layout";
 
 export function VentureHqScreen({ company }: { company: FoundedCompany }) {
   const office = ventureHasFeature(company.venture, "executive-office");
@@ -28,17 +29,17 @@ export function VentureHqScreen({ company }: { company: FoundedCompany }) {
       <FounderHqCard company={company} />
       <VentureGenomeCard company={company} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <Grid variant="executive">
         <OperatingHealthArtefact company={company} />
         {office ? <ExecutiveOfficeCard company={company} /> : null}
-      </div>
+      </Grid>
 
       <SprintOneCard company={company} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <Grid variant="executive">
         <CompanyStoryCard company={company} />
         <KnowledgeBaseCard company={company} />
-      </div>
+      </Grid>
 
       <SuggestedDocumentsCard company={company} />
     </PageFrame>

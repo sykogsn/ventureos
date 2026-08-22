@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/utils/cn";
 import { companyHomeHref } from "@/modules/ventures/home";
+import { SurfaceTabFace, SurfaceTabs } from "@/core/layout";
 
 export function VentureWorkspaceNav({
   ventureId,
@@ -23,7 +23,7 @@ export function VentureWorkspaceNav({
   ];
 
   return (
-    <nav aria-label="Company surfaces" className="ids-surface-toolbar flex gap-1 overflow-x-auto px-3 sm:px-4">
+    <SurfaceTabs label="Company surfaces">
       {links.map((item) => {
         const active =
           item.match === "prefix"
@@ -35,17 +35,11 @@ export function VentureWorkspaceNav({
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={cn(
-              "ids-label ids-transition shrink-0 px-3 py-3",
-              active
-                ? "border-b-2 border-accent text-foreground"
-                : "text-muted hover:text-foreground",
-            )}
           >
-            {item.label}
+            <SurfaceTabFace active={active}>{item.label}</SurfaceTabFace>
           </Link>
         );
       })}
-    </nav>
+    </SurfaceTabs>
   );
 }

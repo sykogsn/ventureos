@@ -2,13 +2,13 @@
 
 **Purpose.** Bind how the founder moves through the desk: focus, commands, interruption, and primary action.
 
-**Authority.** Library constitution derived from IDS-001 component philosophy and the live shell.
+**Authority.** Library constitution derived from IDS-001 component philosophy and the live shell. Subordinate to the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md).
 
 **Audience.** Designers and engineers adding controls, dialogs, or commands.
 
 **Dependencies.** [IDS](./IDS.md) · [Visual Constitution](./Visual-Constitution.md)
 
-**Related Documents.** [Writing Constitution](./Writing-Constitution.md) · [Accessibility](./Accessibility.md) · [Situation Room](../02-ARCHITECTURE/Situation-Room.md) · [Sprint Standard](../04-ENGINEERING/Sprint-Standard.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Writing Constitution](./Writing-Constitution.md) · [Accessibility](./Accessibility.md) · [Situation Room](../02-ARCHITECTURE/Situation-Room.md) · [Sprint Standard](../04-ENGINEERING/Sprint-Standard.md)
 
 **Status.** Approved
 

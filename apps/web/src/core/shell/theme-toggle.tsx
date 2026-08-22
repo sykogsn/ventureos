@@ -18,7 +18,9 @@ export function ThemeToggle() {
 
   return (
     <IconButton
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={
+        isDark ? "Switch to Executive Light" : "Switch to Executive Dark"
+      }
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {isDark ? <Sun className="ids-icon-sm" aria-hidden="true" /> : <Moon className="ids-icon-sm" aria-hidden="true" />}

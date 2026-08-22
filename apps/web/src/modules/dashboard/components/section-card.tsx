@@ -1,5 +1,5 @@
 import { Card } from "@repo/ui/card";
-import { cn } from "@/utils/cn";
+import { Cluster, Stack, SurfaceBody } from "@/core/layout";
 import type { HTMLAttributes, ReactNode } from "react";
 
 export function SectionHeading({
@@ -12,13 +12,13 @@ export function SectionHeading({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
+    <Cluster justify="between">
+      <Stack gap="tight">
         <p className="ids-kicker">{title}</p>
-        {subtitle ? <p className="ids-caption mt-1">{subtitle}</p> : null}
-      </div>
+        {subtitle ? <p className="ids-caption">{subtitle}</p> : null}
+      </Stack>
       {action}
-    </div>
+    </Cluster>
   );
 }
 
@@ -35,11 +35,15 @@ export function SectionCard({
   actions?: ReactNode;
 }) {
   return (
-    <Card className={cn("flex flex-col gap-5 p-6", className)} {...props}>
-      {title ? (
-        <SectionHeading title={title} subtitle={description} action={actions} />
-      ) : null}
-      {children}
+    <Card className={className} {...props}>
+      <SurfaceBody>
+        <Stack gap="compact">
+          {title ? (
+            <SectionHeading title={title} subtitle={description} action={actions} />
+          ) : null}
+          {children}
+        </Stack>
+      </SurfaceBody>
     </Card>
   );
 }

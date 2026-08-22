@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyCopy } from "@/core/shell/empty-copy";
+import { Cluster, ReadingRegion, Stack, StackList } from "@/core/layout";
 import type { KnowledgeFilter, KnowledgeObject } from "@/platform/brain";
 import { BrainFrame } from "./components/brain-frame";
 import { KnowledgeFilterForm } from "./components/knowledge-filter-form";
@@ -24,28 +25,29 @@ export function BrainLibraryScreen({
           Clear the filters or search a title the catalogue already holds.
         </EmptyCopy>
       ) : (
-        <ul className="flex flex-col">
+        <StackList>
           {items.map((item) => (
-            <li
-              key={item.id}
-              className="border-t border-border py-5 first:border-t-0 first:pt-0 last:pb-0"
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <StatusMark>{item.status}</StatusMark>
-                <p className="ids-caption">{item.type}</p>
-                <p className="ids-caption">{item.owner}</p>
-                <p className="ids-caption">{item.scopes.join(" · ")}</p>
-              </div>
-              <Link
-                href={`/brain/library/${item.id}`}
-                className="ids-label mt-2 block ids-transition underline-offset-4 hover:underline"
-              >
-                {item.title}
-              </Link>
-              <p className="ids-body mt-2 max-w-[42rem] text-muted">{item.summary}</p>
+            <li key={item.id}>
+              <Stack gap="tight">
+                <Cluster justify="start">
+                  <StatusMark>{item.status}</StatusMark>
+                  <p className="ids-caption">{item.type}</p>
+                  <p className="ids-caption">{item.owner}</p>
+                  <p className="ids-caption">{item.scopes.join(" · ")}</p>
+                </Cluster>
+                <Link
+                  href={`/brain/library/${item.id}`}
+                  className="ids-label ids-transition underline-offset-4 hover:underline"
+                >
+                  {item.title}
+                </Link>
+                <ReadingRegion size="lg">
+                  <p className="ids-body text-muted">{item.summary}</p>
+                </ReadingRegion>
+              </Stack>
             </li>
           ))}
-        </ul>
+        </StackList>
       )}
     </BrainFrame>
   );

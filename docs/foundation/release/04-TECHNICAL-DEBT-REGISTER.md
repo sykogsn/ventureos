@@ -16,7 +16,7 @@ This is the release snapshot. New debt must be added here and in the library reg
 | TD-003 | Server session TTL is 14 days even when the cookie is session-scoped | Identity | Remember me is cookie policy; the server row may outlive the browser. |
 | TD-004 | `policy_findings` denormalized recovery path | Persistence | `loadState` falls back for pre-H2 rows. |
 | TD-005 | Empty HTTP API barrels | Platform | Unused facades. Not a second application layer. |
-| TD-006 | Next.js 16 middleware file convention | Engineering | Logged toward `proxy.ts`. Not a Runtime change. |
+| TD-006 | Next.js 16 middleware file convention | Engineering | Closed 2026-08-22. Session gate is `apps/web/src/proxy.ts`. |
 | TD-007 | `FOUNDATION.md` still notes no OAuth login route | Knowledge | Google sign-in exists. Update the code-adjacent comment in an application sprint. Do not treat the stale sentence as architecture. |
 | TD-008 | Product rooms still compose Tailwind layout | Presentation | 46 inventoried files. Layout v2 is certified; those rooms are not migrated. Allowlist must not grow. |
 | TD-009 | Brain catalogue is in-memory | Platform knowledge | Not persistence. Not a document manager. Knowledge Object layout programme was paused. |

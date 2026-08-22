@@ -50,6 +50,13 @@ const requiredAliases = [
   "--info",
   "--chart-1",
   "--chart-8",
+  "--workspace",
+  "--sidebar",
+  "--toolbar",
+  "--header",
+  "--card",
+  "--overlay",
+  "--atmosphere-texture",
 ];
 
 function block(css: string, selector: string): string {

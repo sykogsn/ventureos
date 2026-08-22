@@ -46,13 +46,13 @@ export type LayoutStackGap = keyof typeof stackGap;
 export type LayoutClusterJustify = keyof typeof clusterJustify;
 export type LayoutMeasureSize = keyof typeof measureWidth;
 export type LayoutPanelSize = keyof typeof panelWidth;
-export type LayoutGridVariant = "executive" | "analytics";
+export type LayoutGridVariant = "executive" | "analytics" | "pair";
 export type LayoutReveal = keyof typeof revealClass;
 export type ExecutiveStackGap = LayoutStackGap;
 
 export function Workspace({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-full bg-background text-foreground">{children}</div>
+    <div className="flex min-h-full bg-[var(--workspace)] text-foreground">{children}</div>
   );
 }
 
@@ -375,7 +375,9 @@ export function Grid({
       className={
         variant === "executive"
           ? "grid w-full gap-[var(--ids-foundation-space-4)] lg:grid-cols-[var(--ids-foundation-layout-grid-executive)]"
-          : "grid w-full gap-[var(--ids-foundation-space-4)] md:grid-cols-[var(--ids-foundation-layout-grid-executive)] xl:grid-cols-[var(--ids-foundation-layout-grid-analytics)]"
+          : variant === "pair"
+            ? "grid w-full gap-[var(--ids-foundation-space-2)] sm:grid-cols-[var(--ids-foundation-layout-grid-executive)]"
+            : "grid w-full gap-[var(--ids-foundation-space-4)] md:grid-cols-[var(--ids-foundation-layout-grid-executive)] xl:grid-cols-[var(--ids-foundation-layout-grid-analytics)]"
       }
     >
       {children}
@@ -425,6 +427,41 @@ export function Cluster({
 
 export function SplitView({ children }: { children: ReactNode }) {
   return <Fragment>{children}</Fragment>;
+}
+
+export function Desk({ children }: { children: ReactNode }) {
+  return (
+    <div className="grid w-full items-start gap-[var(--ids-foundation-space-8)] lg:grid-cols-[minmax(0,1fr)_var(--ids-foundation-layout-sidebar-lg)]">
+      {children}
+    </div>
+  );
+}
+
+export function Stretch({ children }: { children: ReactNode }) {
+  return <div className="h-full">{children}</div>;
+}
+
+export function ChoiceFace({
+  selected = false,
+  children,
+  ...props
+}: Omit<ComponentPropsWithoutRef<"button">, "className"> & {
+  selected?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={
+        selected
+          ? "ids-surface-card ids-surface-selected ids-transition flex flex-col gap-[var(--ids-foundation-space-1)] p-[var(--ids-foundation-space-3)] text-left"
+          : "ids-surface-card ids-transition flex flex-col gap-[var(--ids-foundation-space-1)] p-[var(--ids-foundation-space-3)] text-left hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background"
+      }
+      {...props}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function Reveal({
@@ -590,7 +627,7 @@ export function Rule({ children }: { children: ReactNode }) {
 
 export function HeaderRule({ children }: { children: ReactNode }) {
   return (
-    <header className="flex flex-col gap-[var(--ids-foundation-space-5)] border-b border-border pb-[var(--ids-foundation-space-8)]">
+    <header className="flex flex-col gap-[var(--ids-foundation-space-5)] border-b border-border bg-[var(--header)] pb-[var(--ids-foundation-space-8)]">
       {children}
     </header>
   );
@@ -612,12 +649,20 @@ export function Inset({ children }: { children: ReactNode }) {
   );
 }
 
-export function Hairline({ children }: { children: ReactNode }) {
-  return (
-    <div className="border-t border-border pt-[var(--ids-foundation-space-2)]">
-      {children}
-    </div>
-  );
+export function Hairline({
+  space = "tight",
+  children,
+}: {
+  space?: "tight" | "compact" | "section";
+  children: ReactNode;
+}) {
+  const pad = {
+    tight: "pt-[var(--ids-foundation-space-2)]",
+    compact: "pt-[var(--ids-foundation-space-4)]",
+    section: "pt-[var(--ids-foundation-space-5)]",
+  }[space];
+
+  return <div className={`border-t border-border ${pad}`}>{children}</div>;
 }
 
 export function ControlButton({
@@ -672,6 +717,213 @@ export function Pulse({
 
 export function SurfaceBody({ children }: { children: ReactNode }) {
   return <div className="p-[var(--ids-foundation-space-6)]">{children}</div>;
+}
+
+export function StackList({
+  as: Tag = "ul",
+  children,
+}: {
+  as?: "ul" | "ol" | "div";
+  children: ReactNode;
+}) {
+  return (
+    <Tag className="flex flex-col [&>*]:border-t [&>*]:border-border [&>*]:py-[var(--ids-foundation-space-5)] [&>*:first-child]:border-t-0 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+      {children}
+    </Tag>
+  );
+}
+
+export function RankedList({ children }: { children: ReactNode }) {
+  return (
+    <ol className="flex flex-col gap-[var(--ids-foundation-space-3)]">{children}</ol>
+  );
+}
+
+export function MetricPair({ children }: { children: ReactNode }) {
+  return (
+    <dl className="grid w-full gap-[var(--ids-foundation-space-4)] border-t border-border pt-[var(--ids-foundation-space-5)] sm:grid-cols-[var(--ids-foundation-layout-grid-executive)]">
+      {children}
+    </dl>
+  );
+}
+
+export function Ledger({ children }: { children: ReactNode }) {
+  return (
+    <ul className="flex flex-col [&>li]:grid [&>li]:gap-[var(--ids-foundation-space-1)] [&>li]:border-t [&>li]:border-border [&>li]:py-[var(--ids-foundation-space-4)] [&>li]:first:border-t-0 [&>li]:first:pt-0 sm:[&>li]:grid-cols-[var(--ids-foundation-layout-grid-ledger)] sm:[&>li]:items-baseline sm:[&>li]:gap-[var(--ids-foundation-space-4)]">
+      {children}
+    </ul>
+  );
+}
+
+export function InsetSurface({ children }: { children: ReactNode }) {
+  return (
+    <div className="ids-surface-elevated p-[var(--ids-foundation-space-3)]">{children}</div>
+  );
+}
+
+export function SettingsBand({ children }: { children: ReactNode }) {
+  return (
+    <section className="flex max-w-[var(--ids-foundation-layout-measure-md)] flex-col gap-[var(--ids-foundation-space-2)] border-b border-border pb-[var(--ids-foundation-space-6)] last:border-b-0 last:pb-0">
+      {children}
+    </section>
+  );
+}
+
+export function WizardBody({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-[var(--ids-foundation-layout-sidebar-lg)] max-w-[var(--ids-foundation-layout-measure-lg)] flex-col gap-[var(--ids-foundation-space-4)]">
+      {children}
+    </div>
+  );
+}
+
+export function SurfaceTabs({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <nav
+      aria-label={label}
+      className="ids-surface-toolbar flex gap-[var(--ids-foundation-space-1)] overflow-x-auto px-[var(--ids-foundation-space-3)] sm:px-[var(--ids-foundation-space-4)]"
+    >
+      {children}
+    </nav>
+  );
+}
+
+export function SurfaceTabFace({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={
+        active
+          ? "ids-label ids-transition shrink-0 border-b-2 border-accent px-[var(--ids-foundation-space-3)] py-[var(--ids-foundation-space-3)] text-foreground"
+          : "ids-label ids-transition shrink-0 px-[var(--ids-foundation-space-3)] py-[var(--ids-foundation-space-3)] text-muted hover:text-foreground"
+      }
+    >
+      {children}
+    </span>
+  );
+}
+
+export function Sequence({ children }: { children: ReactNode }) {
+  return (
+    <ol className="flex items-start gap-[var(--ids-foundation-space-1)] overflow-x-auto pb-[var(--ids-foundation-space-1)]">
+      {children}
+    </ol>
+  );
+}
+
+export function SequenceStep({ children }: { children: ReactNode }) {
+  return (
+    <li className="flex min-w-0 flex-1 items-center gap-[var(--ids-foundation-space-1)]">
+      {children}
+    </li>
+  );
+}
+
+export function SequenceMark({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col items-center gap-[var(--ids-foundation-space-2)]">
+      {children}
+    </div>
+  );
+}
+
+export function SequenceMarkBadge({
+  state,
+  children,
+}: {
+  state: "current" | "complete" | "skipped" | "idle";
+  children: ReactNode;
+}) {
+  const tone = {
+    current: "bg-accent text-accent-foreground",
+    complete: "bg-accent/20 text-foreground",
+    skipped: "bg-surface-hover text-muted line-through",
+    idle: "bg-surface-hover text-muted",
+  }[state];
+
+  return (
+    <span
+      className={`ids-kicker ids-transition flex h-[var(--ids-foundation-control-height-sm)] w-[var(--ids-foundation-control-height-sm)] items-center justify-center rounded-full ${tone}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+export function SequenceRail({ complete }: { complete: boolean }) {
+  return (
+    <span
+      className={
+        complete
+          ? "mb-[var(--ids-foundation-space-5)] hidden h-px flex-1 bg-foreground/40 sm:block"
+          : "mb-[var(--ids-foundation-space-5)] hidden h-px flex-1 bg-border sm:block"
+      }
+      aria-hidden
+    />
+  );
+}
+
+export function SequenceCaption({
+  current,
+  children,
+}: {
+  current: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={
+        current
+          ? "ids-caption hidden truncate sm:block ids-label text-foreground"
+          : "ids-caption hidden truncate sm:block text-muted"
+      }
+    >
+      {children}
+    </span>
+  );
+}
+
+export function ModalStage({ children }: { children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-dialog flex items-center justify-center ids-overlay px-[var(--ids-foundation-space-4)]">
+      {children}
+    </div>
+  );
+}
+
+export function ModalMeasure({ children }: { children: ReactNode }) {
+  return (
+    <div className="ids-surface-modal w-full max-w-[var(--ids-foundation-layout-measure-sm)]">
+      {children}
+    </div>
+  );
+}
+
+export function DefinitionRow({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-[var(--ids-foundation-space-4)] border-b border-border py-[var(--ids-foundation-space-3)] last:border-b-0">
+      {children}
+    </div>
+  );
+}
+
+export function TaskRow({ children }: { children: ReactNode }) {
+  return (
+    <li className="flex items-start justify-between gap-[var(--ids-foundation-space-3)] border-b border-border py-[var(--ids-foundation-space-3)] last:border-b-0">
+      {children}
+    </li>
+  );
 }
 
 export const ExecutiveFrame = Workspace;

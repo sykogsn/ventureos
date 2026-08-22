@@ -5,6 +5,8 @@ import {
   knowledgeObjects,
   recentActivity,
 } from "@/platform/brain";
+import { Cluster, Desk, Fit, Grid, Inspector, Stack, StackList } from "@/core/layout";
+import { SectionCard } from "@/modules/dashboard/components/section-card";
 import { BrainFrame } from "./components/brain-frame";
 import { HealthBand } from "./components/health-band";
 import { MetricCard } from "./components/metric-card";
@@ -38,17 +40,17 @@ export function BrainDashboardScreen() {
       description="Institutional intelligence for the desk. Not a document store."
       meta="v0.1"
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <article className="ids-surface-card flex flex-col gap-3 p-6">
+      <Grid variant="analytics">
+        <SectionCard>
           <p className="ids-kicker">Knowledge health</p>
-          <div className="flex items-center gap-3">
+          <Cluster justify="start">
             <p className="ids-metric capitalize">{band}</p>
             <HealthBand band={band} />
-          </div>
+          </Cluster>
           <p className="ids-body text-muted">
             {coverage?.judgement ?? "Coverage is the current judgement of this catalogue."}
           </p>
-        </article>
+        </SectionCard>
         <MetricCard
           kicker="Total knowledge objects"
           value={String(knowledgeObjects.length)}
@@ -64,50 +66,44 @@ export function BrainDashboardScreen() {
           value={String(decisions.length)}
           note="Each ruling is a Knowledge Object of type Decision."
         />
-      </div>
+      </Grid>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,1fr)]">
-        <article className="ids-surface-card flex flex-col gap-5 p-6">
-          <div>
-            <p className="ids-kicker">Recent activity</p>
-            <p className="ids-caption mt-1">What entered the catalogue.</p>
-          </div>
-          <ul className="flex flex-col">
+      <Desk>
+        <SectionCard title="Recent activity" description="What entered the catalogue.">
+          <StackList>
             {recentActivity.map((item) => (
-              <li
-                key={item.id}
-                className="border-t border-border py-4 first:border-t-0 first:pt-0 last:pb-0"
-              >
-                <p className="ids-caption">{item.at}</p>
-                <Link
-                  href={item.href}
-                  className="ids-label mt-2 block ids-transition underline-offset-4 hover:underline"
-                >
-                  {item.note}
-                </Link>
+              <li key={item.id}>
+                <Stack gap="tight">
+                  <p className="ids-caption">{item.at}</p>
+                  <Link
+                    href={item.href}
+                    className="ids-label ids-transition underline-offset-4 hover:underline"
+                  >
+                    {item.note}
+                  </Link>
+                </Stack>
               </li>
             ))}
-          </ul>
-        </article>
+          </StackList>
+        </SectionCard>
 
-        <article className="ids-surface-card flex flex-col gap-5 p-6">
-          <div>
-            <p className="ids-kicker">Quick actions</p>
-            <p className="ids-caption mt-1">Recording is not open in v0.1.</p>
-          </div>
-          <div className="flex flex-col items-start gap-3">
-            {quickActions.map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className={action.primary ? "vos-btn-primary" : "vos-btn-secondary"}
-              >
-                {action.label}
-              </Link>
-            ))}
-          </div>
-        </article>
-      </section>
+        <Inspector>
+          <SectionCard title="Quick actions" description="Recording is not open in v0.1.">
+            <Stack gap="compact">
+              {quickActions.map((action) => (
+                <Fit key={action.href}>
+                  <Link
+                    href={action.href}
+                    className={action.primary ? "vos-btn-primary" : "vos-btn-secondary"}
+                  >
+                    {action.label}
+                  </Link>
+                </Fit>
+              ))}
+            </Stack>
+          </SectionCard>
+        </Inspector>
+      </Desk>
     </BrainFrame>
   );
 }

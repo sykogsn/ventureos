@@ -1,14 +1,13 @@
 import { SectionCard } from "@/modules/dashboard/components/section-card";
 import type { TodaysMission } from "../types";
 import { FounderCallAction } from "@/modules/intelligence/founder-call-action";
+import { MetricPair, ReadingRegion, Stack } from "@/core/layout";
 
 export function TodaysMission({ mission }: { mission: TodaysMission }) {
   return (
     <SectionCard>
-      <div className="flex flex-col gap-1">
-        <p className="ids-kicker">
-          Today’s mission
-        </p>
+      <Stack gap="tight">
+        <p className="ids-kicker">Today’s mission</p>
         <p className="ids-caption">
           {mission.company} · {mission.timeNeeded}
         </p>
@@ -19,33 +18,29 @@ export function TodaysMission({ mission }: { mission: TodaysMission }) {
             {mission.policySeverity ? ` · ${mission.policySeverity}` : ""}
           </p>
         ) : null}
-      </div>
-      <div className="max-w-[40rem]">
-        <h2 className="ids-lead">{mission.title}</h2>
-        <p className="ids-body mt-3 text-foreground">{mission.ask}</p>
-        {mission.finding ? (
-          <p className="ids-body mt-3 text-muted">
-            <span className="ids-emphasis text-foreground">Finding. </span>
-            {mission.finding}
-          </p>
-        ) : null}
-      </div>
-      <dl className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
+      </Stack>
+      <ReadingRegion size="lg">
+        <Stack gap="compact">
+          <h2 className="ids-lead">{mission.title}</h2>
+          <p className="ids-body text-foreground">{mission.ask}</p>
+          {mission.finding ? (
+            <p className="ids-body text-muted">
+              <span className="ids-emphasis text-foreground">Finding. </span>
+              {mission.finding}
+            </p>
+          ) : null}
+        </Stack>
+      </ReadingRegion>
+      <MetricPair>
         <div>
-          <dt className="ids-kicker">
-            Why now
-          </dt>
-          <dd className="ids-body mt-2 text-muted">{mission.whyNow}</dd>
+          <dt className="ids-kicker">Why now</dt>
+          <dd className="ids-body text-muted">{mission.whyNow}</dd>
         </div>
         <div>
-          <dt className="ids-kicker">
-            If you defer
-          </dt>
-          <dd className="ids-body mt-2 text-muted">
-            {mission.ifDeferred}
-          </dd>
+          <dt className="ids-kicker">If you defer</dt>
+          <dd className="ids-body text-muted">{mission.ifDeferred}</dd>
         </div>
-      </dl>
+      </MetricPair>
       <FounderCallAction
         href={mission.actionHref}
         decisionId={mission.decisionId}

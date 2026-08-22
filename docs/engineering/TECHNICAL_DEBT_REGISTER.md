@@ -2,6 +2,7 @@
 
 **Purpose.** Follow-up items named at Foundation Certification v1.1.  
 **Authority.** Engineering Records. Foundation-layer debt also lives in `docs/foundation-library/05-GOVERNANCE/Technical-Debt-Register.md` and `docs/foundation/release/04-TECHNICAL-DEBT-REGISTER.md`.  
+**Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
 **Last Updated.** 2026-08-21
 
 This register starts with certification follow-ups only. It does not copy TD-001–TD-011 unless they appeared in the VS-007 remaining list.
@@ -63,4 +64,4 @@ Planned sprint is recorded only when a named programme already exists. Unknown m
 | Description | Next.js 16 deprecates the `middleware` file convention in favour of `proxy`. Already TD-006 / RM-011 in Foundation registers. |
 | Impact | Dev-server deprecation warning. Not a Runtime or IDS failure. |
 | Planned Sprint | RM-011 (Foundation Library roadmap). No VS id assigned. |
-| Status | Open |
+| Status | Closed 2026-08-22. Session gate is `apps/web/src/proxy.ts`. |

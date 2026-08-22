@@ -8,7 +8,7 @@
 
 **Dependencies.** [Foundation Governance](../01-FOUNDATION/Foundation-Governance.md) · [Engineering Standards](./Engineering-Standards.md)
 
-**Related Documents.** [Review Process](./Review-Process.md) · [Release Process](./Release-Process.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md)
+**Related Documents.** [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](../../engineering/README.md) · [Review Process](./Review-Process.md) · [Release Process](./Release-Process.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md)
 
 **Status.** Approved
 
@@ -16,11 +16,13 @@
 
 **Owner.** Engineering
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
 
 A sprint is a named programme with a locked context, an objective, constraints, validation, and a single recommendation.
+
+Every sprint is subordinate to the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md). Every sprint follows the [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) by default. This page remains the write-up shape (context, objective, constraints, validation, A/B close). If the two appear to conflict on checklist, validation, completion, or reporting, the Master Engineering Prompt wins. If either conflicts with the Project Constitution, the Project Constitution wins.
 
 ## Required shape
 

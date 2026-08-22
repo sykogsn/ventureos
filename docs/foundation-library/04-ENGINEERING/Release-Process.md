@@ -6,7 +6,7 @@
 
 **Dependencies.** [Review Process](./Review-Process.md) · [Foundation Governance](../01-FOUNDATION/Foundation-Governance.md)
 
-**Related Documents.** [Release Register](../05-GOVERNANCE/Release-Register.md) · [Git Workflow](./Git-Workflow.md)
+**Related Documents.** [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](../../engineering/README.md) · [Release Register](../05-GOVERNANCE/Release-Register.md) · [Git Workflow](./Git-Workflow.md)
 
 **Status.** Approved
 
@@ -14,9 +14,11 @@
 
 **Owner.** Engineering
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
+
+Release work follows the [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md). Never release without verification in the running application when the release claims a running desk.
 
 ## Before release
 

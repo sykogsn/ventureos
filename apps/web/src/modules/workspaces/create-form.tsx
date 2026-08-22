@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { createWorkspaceAction, type WorkspaceActionState } from "@/modules/workspaces/actions";
 import { Button } from "@repo/ui/button";
+import { Form } from "@/core/layout";
 
 export function CreateWorkspaceForm() {
   const [state, formAction, pending] = useActionState(
@@ -11,7 +12,7 @@ export function CreateWorkspaceForm() {
   );
 
   return (
-    <form action={formAction} className="flex flex-col gap-2 p-1">
+    <Form action={formAction} gap="tight">
       <input
         name="name"
         required
@@ -20,11 +21,11 @@ export function CreateWorkspaceForm() {
         className="vos-field"
       />
       {state.error ? (
-        <p className="ids-caption px-1 text-danger">{state.error}</p>
+        <p className="ids-caption text-danger">{state.error}</p>
       ) : null}
       <Button type="submit" disabled={pending}>
         {pending ? "Creating…" : "Create workspace"}
       </Button>
-    </form>
+    </Form>
   );
 }

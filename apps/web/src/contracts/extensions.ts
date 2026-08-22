@@ -5,7 +5,8 @@ export type ExtensionIcon =
   | "building-2"
   | "bot"
   | "brain"
-  | "settings";
+  | "settings"
+  | "drafting-compass";
 
 export type NavContribution = {
   id: string;

@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { recordFounderDecisionAction } from "@/modules/intelligence/actions";
 import { cn } from "@/utils/cn";
+import { Stack } from "@/core/layout";
 
 const actionClassName =
-  "ids-label ids-transition inline-flex items-center text-foreground underline-offset-4 hover:underline";
+  "ids-label ids-transition text-foreground underline-offset-4 hover:underline";
 
 export function FounderCallAction({
   decisionId,
@@ -73,7 +74,7 @@ function RecordFounderCall({
   }
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <Stack gap="tight">
       <button
         type="button"
         onClick={() => void record()}
@@ -83,6 +84,6 @@ function RecordFounderCall({
         {children}
       </button>
       {error ? <p className="ids-caption">{error}</p> : null}
-    </div>
+    </Stack>
   );
 }

@@ -33,7 +33,7 @@ v1.1 onward does **not** include a second orchestrator, a Product Registry, or a
 | RM-007 | Decide fate of empty `src/api/*` HTTP facades | Extension points or removal. Not a stealth application layer. |
 | RM-009 | Resume Brain Knowledge Object programme only with a named sprint | Currently paused. Not persistence. Not a second Runtime. |
 | RM-010 | Align `FOUNDATION.md` OAuth comment with live Google sign-in | Knowledge debt TD-007. Not a behaviour change. |
-| RM-011 | Next.js 16 `proxy.ts` migration | Engineering. Not a Runtime change (TD-006). |
+| RM-011 | Next.js 16 `proxy.ts` migration | Closed 2026-08-22. Session gate is `apps/web/src/proxy.ts`. |
 | RM-012 | Schema bootstrap generation bump when tables are added | Persistence hygiene (TD-002). |
 
 ## Product development (parallel, on v1.0)

@@ -1,4 +1,4 @@
-const inputClass = "vos-field h-11";
+import { Field } from "@/core/layout";
 
 export function StepName({
   value,
@@ -10,10 +10,10 @@ export function StepName({
   onSubmit?: () => void;
 }) {
   return (
-    <label className="flex flex-col gap-2">
-      <span className="ids-label">Company name</span>
+    <Field>
+      <span>Company name</span>
       <input
-        className={inputClass}
+        className="vos-field"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
@@ -26,6 +26,6 @@ export function StepName({
         autoFocus
         maxLength={80}
       />
-    </label>
+    </Field>
   );
 }

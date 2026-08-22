@@ -1,7 +1,8 @@
 import type { KnowledgeFilter } from "@/platform/brain";
 import { BRAIN_VENTURE_SCOPES, KNOWLEDGE_STATUSES, KNOWLEDGE_TYPES, listOwners } from "@/platform/brain";
+import { Field, Form, Grid, ReadingRegion } from "@/core/layout";
 
-function Field({
+function FilterSelect({
   label,
   name,
   value,
@@ -13,7 +14,7 @@ function Field({
   options: readonly string[];
 }) {
   return (
-    <label className="ids-label flex min-w-[10rem] flex-1 flex-col gap-2">
+    <Field>
       {label}
       <select name={name} defaultValue={value} className="vos-field">
         <option value="">All</option>
@@ -23,39 +24,41 @@ function Field({
           </option>
         ))}
       </select>
-    </label>
+    </Field>
   );
 }
 
 export function KnowledgeFilterForm({ filter }: { filter: KnowledgeFilter }) {
   return (
-    <form method="get" className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-4">
-        <Field label="Type" name="type" value={filter.type ?? ""} options={KNOWLEDGE_TYPES} />
-        <Field label="Owner" name="owner" value={filter.owner ?? ""} options={listOwners()} />
-        <Field label="Status" name="status" value={filter.status ?? ""} options={KNOWLEDGE_STATUSES} />
-        <Field
+    <Form gap="compact" method="get">
+      <Grid variant="analytics">
+        <FilterSelect label="Type" name="type" value={filter.type ?? ""} options={KNOWLEDGE_TYPES} />
+        <FilterSelect label="Owner" name="owner" value={filter.owner ?? ""} options={listOwners()} />
+        <FilterSelect label="Status" name="status" value={filter.status ?? ""} options={KNOWLEDGE_STATUSES} />
+        <FilterSelect
           label="Venture"
           name="venture"
           value={filter.venture ?? ""}
           options={BRAIN_VENTURE_SCOPES}
         />
-      </div>
-      <label className="ids-label flex max-w-xl flex-col gap-2">
-        Search
-        <input
-          className="vos-field"
-          type="search"
-          name="q"
-          defaultValue={filter.q ?? ""}
-          placeholder="Title or summary"
-        />
-      </label>
+      </Grid>
+      <ReadingRegion size="lg">
+        <Field>
+          Search
+          <input
+            className="vos-field"
+            type="search"
+            name="q"
+            defaultValue={filter.q ?? ""}
+            placeholder="Title or summary"
+          />
+        </Field>
+      </ReadingRegion>
       <div>
         <button type="submit" className="vos-btn-secondary">
           Apply
         </button>
       </div>
-    </form>
+    </Form>
   );
 }

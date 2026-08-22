@@ -8,7 +8,7 @@
 
 **Dependencies.** [Legacy Charter](../01-FOUNDATION/Legacy-Charter.md) · [Foundation Governance](../01-FOUNDATION/Foundation-Governance.md)
 
-**Related Documents.** [Start Here](../00-START-HERE.md) · [IDS](../03-DESIGN/IDS.md) · [Runtime](../02-ARCHITECTURE/Runtime.md)
+**Related Documents.** [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](../../engineering/README.md) · [Start Here](../00-START-HERE.md) · [IDS](../03-DESIGN/IDS.md) · [Runtime](../02-ARCHITECTURE/Runtime.md)
 
 **Status.** Approved
 
@@ -16,7 +16,7 @@
 
 **Owner.** Foundation
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
 
@@ -36,6 +36,10 @@ DOC-001 did not move locked specifications. Git history on IDS-001, IDS-002, EAS
 | `docs/foundation/design-system/IDS-002-…md` | [IDS](../03-DESIGN/IDS.md) |
 | `docs/foundation/design-system/EAS-001-…md` | [Executive Environment Framework](../02-ARCHITECTURE/Executive-Environment-Framework.md) |
 | `docs/foundation/README.md` and domain READMEs | Pointers into this library; specs remain in place |
+| `docs/PROJECT_CONSTITUTION.md` | Supreme governing document of the repository |
+| `docs/engineering/MASTER_ENGINEERING_PROMPT.md` | Authoritative engineering standard. [Engineering Standards](../04-ENGINEERING/Engineering-Standards.md), [Sprint Standard](../04-ENGINEERING/Sprint-Standard.md) |
+| `docs/engineering/README.md` | Engineering Index |
+| `docs/engineering/FOUNDATION_RUNBOOK.md` | Foundation Runbook |
 | Definition catalogue in `catalog.ts` | [Products](../06-PRODUCTS/README.md) |
 
 ## Newly authored in this library

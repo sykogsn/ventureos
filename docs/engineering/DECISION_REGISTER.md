@@ -2,6 +2,7 @@
 
 **Purpose.** Engineering method and recovery decisions that Engineering HQ should remember.  
 **Authority.** Engineering Records. Does not replace Architecture Decision Register (ADR) or Founder Decisions (FD).  
+**Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
 **Last Updated.** 2026-08-21
 
 Cross-links:

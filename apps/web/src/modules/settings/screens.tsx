@@ -7,6 +7,7 @@ import { SettingsAppearance } from "./appearance";
 import type { WorkspaceRecord } from "@/modules/workspaces/service";
 import { getAiRuntime } from "@/ai/runtime";
 import { aiRuntimeStatusLabel } from "@/ai/status-label";
+import { Form, SettingsBand, Stack } from "@/core/layout";
 
 function SettingsSection({
   title,
@@ -16,10 +17,10 @@ function SettingsSection({
   children: ReactNode;
 }) {
   return (
-    <section className="flex max-w-xl flex-col gap-2 border-b border-border pb-6 last:border-b-0 last:pb-0">
+    <SettingsBand>
       <h2 className="ids-kicker">{title}</h2>
       {children}
-    </section>
+    </SettingsBand>
   );
 }
 
@@ -42,11 +43,11 @@ export function SettingsScreen({
       <SettingsSection title="Account">
         <p className="ids-body text-foreground">{session.name}</p>
         <p className="ids-caption">{session.email}</p>
-        <form action={logoutAction} className="pt-2">
+        <Form action={logoutAction}>
           <button type="submit" className="vos-btn-primary">
             Sign out
           </button>
-        </form>
+        </Form>
       </SettingsSection>
 
       <SettingsSection title="Workspace">
@@ -63,7 +64,11 @@ export function SettingsScreen({
       </SettingsSection>
 
       <SettingsSection title="Appearance">
-        <EmptyCopy>Theme applies to this browser. The same controls are in the header.</EmptyCopy>
+        <EmptyCopy>
+          Climate applies immediately, persists in this browser, and survives
+          refresh. The same Light and Dark control is in the header. System
+          follows the device.
+        </EmptyCopy>
         <SettingsAppearance />
       </SettingsSection>
 
@@ -74,14 +79,16 @@ export function SettingsScreen({
       </SettingsSection>
 
       <SettingsSection title="Intelligence">
-        <p className="ids-body text-foreground">
-          Runtime status:{" "}
-          <span className="ids-code">{aiRuntimeStatusLabel(runtime.status)}</span>
-        </p>
-        <EmptyCopy>
-          Executive Intelligence Runtime is not a chat. Live intelligence is the Situation Room,
-          Company HQ, and Executive Office.
-        </EmptyCopy>
+        <Stack gap="tight">
+          <p className="ids-body text-foreground">
+            Runtime status:{" "}
+            <span className="ids-code">{aiRuntimeStatusLabel(runtime.status)}</span>
+          </p>
+          <EmptyCopy>
+            Executive Intelligence Runtime is not a chat. Live intelligence is the Situation Room,
+            Company HQ, and Executive Office.
+          </EmptyCopy>
+        </Stack>
       </SettingsSection>
     </PageFrame>
   );

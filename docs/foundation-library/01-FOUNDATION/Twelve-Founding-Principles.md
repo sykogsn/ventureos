@@ -2,13 +2,13 @@
 
 **Purpose.** Name the twelve non-negotiables of Foundation v1.1 so a sprint cannot quietly violate them.
 
-**Authority.** Constitutional. A change to any principle is a Foundation amendment, not a ticket.
+**Authority.** Constitutional. Subordinate to the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md). A change to any principle is a Foundation amendment, not a ticket.
 
 **Audience.** Anyone proposing a change to the desk, the Runtime, IDS, or a product.
 
 **Dependencies.** [VentureOS Creed](./VentureOS-Creed.md) · [Product Philosophy](./Product-Philosophy.md)
 
-**Related Documents.** [Foundation Governance](./Foundation-Governance.md) · [Architecture Overview](../02-ARCHITECTURE/Architecture-Overview.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md) · [Engineering Standards](../04-ENGINEERING/Engineering-Standards.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Foundation Governance](./Foundation-Governance.md) · [Architecture Overview](../02-ARCHITECTURE/Architecture-Overview.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md) · [Engineering Standards](../04-ENGINEERING/Engineering-Standards.md)
 
 **Status.** Approved
 

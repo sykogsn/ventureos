@@ -3,6 +3,7 @@ import { WizardNav } from "./wizard-nav";
 import { WizardStepper } from "./wizard-stepper";
 import type { ReactNode } from "react";
 import { PageFrame } from "@/core";
+import { WizardBody } from "@/core/layout";
 
 export function WizardShell({
   currentIndex,
@@ -40,7 +41,7 @@ export function WizardShell({
         />
       }
     >
-      <div className="flex min-h-[280px] max-w-3xl flex-col gap-4">{children}</div>
+      <WizardBody>{children}</WizardBody>
       {error ? <p className="ids-body text-danger">{error}</p> : null}
     </PageFrame>
   );

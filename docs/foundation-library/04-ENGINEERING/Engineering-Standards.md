@@ -8,7 +8,7 @@
 
 **Dependencies.** [Twelve Founding Principles](../01-FOUNDATION/Twelve-Founding-Principles.md) · [Architecture Overview](../02-ARCHITECTURE/Architecture-Overview.md)
 
-**Related Documents.** [Sprint Standard](./Sprint-Standard.md) · [Git Workflow](./Git-Workflow.md) · [Review Process](./Review-Process.md) · [Runtime](../02-ARCHITECTURE/Runtime.md) · [IDS](../03-DESIGN/IDS.md)
+**Related Documents.** [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](../../engineering/README.md) · [Sprint Standard](./Sprint-Standard.md) · [Git Workflow](./Git-Workflow.md) · [Review Process](./Review-Process.md) · [Runtime](../02-ARCHITECTURE/Runtime.md) · [IDS](../03-DESIGN/IDS.md)
 
 **Status.** Approved
 
@@ -16,9 +16,11 @@
 
 **Owner.** Engineering
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
+
+The supreme governing document is the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md). Every sprint, implementation, review, refactor, and bug fix follows the [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) by default. This page is the coding-standard companion. It does not override those constitutions.
 
 ## Workspace
 

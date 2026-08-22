@@ -16,7 +16,7 @@ describe("IDS theme bind", () => {
     assert.equal(brandFromDefinitionId("farmora"), "farmora");
   });
 
-  it("writes data-ids-brand on the target element", () => {
+  it("writes data-ids-brand and data-ids-atmosphere on the target element", () => {
     const target = { attributes: {} as Record<string, string> };
     applyIdsBrand(
       {
@@ -27,5 +27,6 @@ describe("IDS theme bind", () => {
       "qualora",
     );
     assert.equal(target.attributes["data-ids-brand"], "qualora");
+    assert.equal(target.attributes["data-ids-atmosphere"], "qualora");
   });
 });

@@ -1,0 +1,56 @@
+html[data-ids-atmosphere="farmora"],
+html[data-ids-brand="farmora"] {
+  --ids-atmosphere-farmora-background: color-mix(
+    in srgb,
+    var(--ids-brand-farmora-accent) 5%,
+    var(--ids-foundation-color-background)
+  );
+  --ids-atmosphere-farmora-workspace: var(--ids-atmosphere-farmora-background);
+  --ids-atmosphere-farmora-sidebar: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface) 96%,
+    var(--ids-brand-farmora-accent) 4%
+  );
+  --ids-atmosphere-farmora-toolbar: var(--ids-atmosphere-farmora-sidebar);
+  --ids-atmosphere-farmora-header: transparent;
+  --ids-atmosphere-farmora-surface: var(--ids-foundation-color-surface);
+  --ids-atmosphere-farmora-surface-elevated: var(--ids-foundation-color-surface-elevated);
+  --ids-atmosphere-farmora-border: var(--ids-foundation-color-border);
+  --ids-atmosphere-farmora-divider: var(--ids-foundation-color-divider);
+  --ids-atmosphere-farmora-accent: var(--ids-brand-farmora-accent);
+  --ids-atmosphere-farmora-accent-hover: var(--ids-brand-farmora-accent-hover);
+  --ids-atmosphere-farmora-accent-active: var(--ids-brand-farmora-accent-active);
+  --ids-atmosphere-farmora-accent-foreground: var(--ids-brand-farmora-accent-foreground);
+  --ids-atmosphere-farmora-texture: none;
+
+  --background: var(--ids-atmosphere-farmora-background);
+  --workspace: var(--ids-atmosphere-farmora-workspace);
+  --sidebar: var(--ids-atmosphere-farmora-sidebar);
+  --toolbar: var(--ids-atmosphere-farmora-toolbar);
+  --header: var(--ids-atmosphere-farmora-header);
+  --surface: var(--ids-atmosphere-farmora-surface);
+  --surface-elevated: var(--ids-atmosphere-farmora-surface-elevated);
+  --card: var(--ids-atmosphere-farmora-surface-elevated);
+  --border: var(--ids-atmosphere-farmora-border);
+  --divider: var(--ids-atmosphere-farmora-divider);
+  --atmosphere-texture: var(--ids-atmosphere-farmora-texture);
+  --accent: var(--ids-atmosphere-farmora-accent);
+  --accent-hover: var(--ids-atmosphere-farmora-accent-hover);
+  --accent-active: var(--ids-atmosphere-farmora-accent-active);
+  --accent-foreground: var(--ids-atmosphere-farmora-accent-foreground);
+  --ring: var(--ids-brand-farmora-ring);
+  --brand-primary: var(--ids-atmosphere-farmora-accent);
+  --brand-primary-hover: var(--ids-atmosphere-farmora-accent-hover);
+  --brand-primary-active: var(--ids-atmosphere-farmora-accent-active);
+  --text-inverse: var(--ids-atmosphere-farmora-accent-foreground);
+}
+
+html.dark[data-ids-atmosphere="farmora"],
+html.dark[data-ids-brand="farmora"] {
+  --ids-atmosphere-farmora-background: color-mix(
+    in srgb,
+    var(--ids-brand-farmora-accent) 7%,
+    var(--ids-foundation-color-background)
+  );
+  --ids-atmosphere-farmora-workspace: var(--ids-atmosphere-farmora-background);
+}

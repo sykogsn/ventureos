@@ -70,6 +70,7 @@
 
   --ids-foundation-layout-grid-executive: repeat(2, minmax(0, 1fr));
   --ids-foundation-layout-grid-analytics: repeat(4, minmax(0, 1fr));
+  --ids-foundation-layout-grid-ledger: minmax(0, 8.5rem) 5.5rem minmax(0, 1fr);
 
   --ids-foundation-layout-toolbar: 3.5rem;
   --ids-foundation-layout-command-offset: 15vh;

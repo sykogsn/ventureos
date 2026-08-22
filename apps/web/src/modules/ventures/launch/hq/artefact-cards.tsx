@@ -12,6 +12,16 @@ import { FounderCallAction } from "@/modules/intelligence/founder-call-action";
 import { SectionCard, SectionHeading } from "@/modules/dashboard/components/section-card";
 import { HealthPill } from "@/modules/dashboard/components/pills";
 import { EmptyCopy } from "@/core/shell/empty-copy";
+import {
+  Cluster,
+  Fit,
+  Grid,
+  Hairline,
+  InsetSurface,
+  Stack,
+  Stretch,
+  TaskRow,
+} from "@/core/layout";
 
 export function FounderHqCard({ company }: { company: FoundedCompany }) {
   const recommendation = sortRecommendations(company.venture.recommendations.items)[0];
@@ -21,25 +31,25 @@ export function FounderHqCard({ company }: { company: FoundedCompany }) {
       <SectionHeading title="Founder HQ" subtitle="Live" />
       <p className="ids-body text-muted">{company.venture.identity.hqSummary}</p>
       {recommendation ? (
-        <div className="border-t border-border pt-4">
-          <p className="ids-kicker">Recommendation Engine</p>
-          <p className="ids-caption mt-1">
-            {recommendation.originatingPolicyTitle} · {recommendation.policySeverity} ·{" "}
-            {recommendation.policyOwner}
-          </p>
-          <p className="ids-label mt-2">{recommendation.title}</p>
-          <p className="ids-body mt-2 text-muted">
-            <span className="ids-emphasis text-foreground">Finding. </span>
-            {recommendation.finding}
-          </p>
-          <p className="ids-body mt-2 text-foreground">{recommendation.recommendedAction}</p>
-          <p className="ids-body mt-2 text-muted">{recommendation.reason}</p>
-          <p className="ids-caption mt-2">
-            {recommendation.confidenceLabel} · {recommendation.confidence}% ·{" "}
-            {recommendation.estimatedEffort} · consensus{" "}
-            {recommendation.executiveConsensus.label}
-          </p>
-          <div className="mt-3">
+        <Hairline space="compact">
+          <Stack gap="tight">
+            <p className="ids-kicker">Recommendation Engine</p>
+            <p className="ids-caption">
+              {recommendation.originatingPolicyTitle} · {recommendation.policySeverity} ·{" "}
+              {recommendation.policyOwner}
+            </p>
+            <p className="ids-label">{recommendation.title}</p>
+            <p className="ids-body text-muted">
+              <span className="ids-emphasis text-foreground">Finding. </span>
+              {recommendation.finding}
+            </p>
+            <p className="ids-body text-foreground">{recommendation.recommendedAction}</p>
+            <p className="ids-body text-muted">{recommendation.reason}</p>
+            <p className="ids-caption">
+              {recommendation.confidenceLabel} · {recommendation.confidence}% ·{" "}
+              {recommendation.estimatedEffort} · consensus{" "}
+              {recommendation.executiveConsensus.label}
+            </p>
             <FounderCallAction
               href={recommendation.actionHref}
               decisionId={
@@ -52,8 +62,8 @@ export function FounderHqCard({ company }: { company: FoundedCompany }) {
             >
               {recommendation.actionLabel}
             </FounderCallAction>
-          </div>
-        </div>
+          </Stack>
+        </Hairline>
       ) : null}
     </SectionCard>
   );
@@ -66,7 +76,7 @@ export function VentureGenomeCard({ company }: { company: FoundedCompany }) {
     <SectionCard>
       <SectionHeading title="Venture Genome" subtitle="Inferred at founding" />
       <p className="ids-label">{genome.thesis}</p>
-      <dl className="grid gap-4 sm:grid-cols-2">
+      <Grid variant="pair">
         {[
           ["Category", genome.category],
           ["Stage", genome.stage],
@@ -77,10 +87,10 @@ export function VentureGenomeCard({ company }: { company: FoundedCompany }) {
         ].map(([label, value]) => (
           <div key={label}>
             <dt className="ids-kicker">{label}</dt>
-            <dd className="ids-body mt-1">{value}</dd>
+            <dd className="ids-body">{value}</dd>
           </div>
         ))}
-      </dl>
+      </Grid>
       <p className="ids-body text-muted">{genome.motion}</p>
     </SectionCard>
   );
@@ -90,17 +100,19 @@ export function OperatingHealthArtefact({ company }: { company: FoundedCompany }
   const health = company.venture.health;
 
   return (
-    <SectionCard className="h-full">
-      <SectionHeading title="Operating Health" />
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="ids-metric">{health.score}</p>
-          <p className="ids-caption mt-1">{health.label}</p>
-        </div>
-        <HealthPill band={health.band} />
-      </div>
-      <p className="ids-body text-muted">{health.summary}</p>
-    </SectionCard>
+    <Stretch>
+      <SectionCard>
+        <SectionHeading title="Operating Health" />
+        <Cluster justify="between">
+          <Stack gap="tight">
+            <p className="ids-metric">{health.score}</p>
+            <p className="ids-caption">{health.label}</p>
+          </Stack>
+          <HealthPill band={health.band} />
+        </Cluster>
+        <p className="ids-body text-muted">{health.summary}</p>
+      </SectionCard>
+    </Stretch>
   );
 }
 
@@ -109,42 +121,48 @@ export function ExecutiveOfficeCard({ company }: { company: FoundedCompany }) {
   const seated = seatedOfficeViews(office);
 
   return (
-    <SectionCard className="h-full">
-      <SectionHeading
-        title="Executive Office"
-        subtitle={office.enabled ? "Seated at founding" : "Closed at founding"}
-        action={
-          <Link
-            href={`/ventures/${company.venture.identity.id}/agents`}
-            className="ids-caption vos-link shrink-0"
-          >
-            Open floor
-          </Link>
-        }
-      />
-      {seated.length === 0 ? (
-        <EmptyCopy
-          title="No seats were filled"
+    <Stretch>
+      <SectionCard>
+        <SectionHeading
+          title="Executive Office"
+          subtitle={office.enabled ? "Seated at founding" : "Closed at founding"}
           action={
-            <Link href="/dashboard" className="vos-btn-secondary w-fit">
-              Open Situation Room
+            <Link
+              href={`/ventures/${company.venture.identity.id}/agents`}
+              className="ids-caption vos-link"
+            >
+              Open floor
             </Link>
           }
-        >
-          The floor is closed until you seat executives at founding. Situation Room still runs the
-          company.
-        </EmptyCopy>
-      ) : (
-        <div className="grid gap-2">
-          {seated.map((seat) => (
-            <div key={seat.id} className="ids-surface-elevated p-3">
-              <p className="ids-label">{seat.label}</p>
-              <p className="ids-caption mt-1">{seat.description}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </SectionCard>
+        />
+        {seated.length === 0 ? (
+          <EmptyCopy
+            title="No seats were filled"
+            action={
+              <Fit>
+                <Link href="/dashboard" className="vos-btn-secondary">
+                  Open Situation Room
+                </Link>
+              </Fit>
+            }
+          >
+            The floor is closed until you seat executives at founding. Situation Room still runs the
+            company.
+          </EmptyCopy>
+        ) : (
+          <Stack gap="tight">
+            {seated.map((seat) => (
+              <InsetSurface key={seat.id}>
+                <Stack gap="tight">
+                  <p className="ids-label">{seat.label}</p>
+                  <p className="ids-caption">{seat.description}</p>
+                </Stack>
+              </InsetSurface>
+            ))}
+          </Stack>
+        )}
+      </SectionCard>
+    </Stretch>
   );
 }
 
@@ -155,18 +173,15 @@ export function SprintOneCard({ company }: { company: FoundedCompany }) {
     <SectionCard>
       <SectionHeading title="Sprint 1" subtitle={sprint.name} />
       <p className="ids-body">{sprint.objective}</p>
-      <ul className="flex flex-col">
+      <ul>
         {sprint.tasks.map((task: MissionTask, index: number) => (
-          <li
-            key={task.id}
-            className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0"
-          >
+          <TaskRow key={task.id}>
             <span className="ids-body">
               <span className="text-muted">{index + 1}. </span>
               {task.title}
             </span>
-            <span className="ids-caption shrink-0">{task.owner}</span>
-          </li>
+            <span className="ids-caption">{task.owner}</span>
+          </TaskRow>
         ))}
       </ul>
     </SectionCard>
@@ -177,14 +192,16 @@ export function CompanyStoryCard({ company }: { company: FoundedCompany }) {
   const story = company.venture.story;
 
   return (
-    <SectionCard className="h-full">
-      <SectionHeading title="Company Story" />
-      <div className="flex flex-col gap-3">
-        <p className="ids-body">{story.origin}</p>
-        <p className="ids-body text-muted">{story.thesis}</p>
-        <p className="ids-body text-muted">{story.promise}</p>
-      </div>
-    </SectionCard>
+    <Stretch>
+      <SectionCard>
+        <SectionHeading title="Company Story" />
+        <Stack gap="compact">
+          <p className="ids-body">{story.origin}</p>
+          <p className="ids-body text-muted">{story.thesis}</p>
+          <p className="ids-body text-muted">{story.promise}</p>
+        </Stack>
+      </SectionCard>
+    </Stretch>
   );
 }
 
@@ -192,23 +209,27 @@ export function KnowledgeBaseCard({ company }: { company: FoundedCompany }) {
   const notes = knowledgeNoteViews(company.venture);
 
   return (
-    <SectionCard className="h-full">
-      <SectionHeading title="Knowledge Base" />
-      {notes.length === 0 ? (
-        <EmptyCopy title="Knowledge will accumulate">
-          Founding notes and later judgements will be kept here as the company learns.
-        </EmptyCopy>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {notes.map((note) => (
-            <li key={note.id} className="ids-surface-elevated p-3">
-              <p className="ids-label">{note.title}</p>
-              <p className="ids-caption mt-1">{note.body}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </SectionCard>
+    <Stretch>
+      <SectionCard>
+        <SectionHeading title="Knowledge Base" />
+        {notes.length === 0 ? (
+          <EmptyCopy title="Knowledge will accumulate">
+            Founding notes and later judgements will be kept here as the company learns.
+          </EmptyCopy>
+        ) : (
+          <Stack gap="compact">
+            {notes.map((note) => (
+              <InsetSurface key={note.id}>
+                <Stack gap="tight">
+                  <p className="ids-label">{note.title}</p>
+                  <p className="ids-caption">{note.body}</p>
+                </Stack>
+              </InsetSurface>
+            ))}
+          </Stack>
+        )}
+      </SectionCard>
+    </Stretch>
   );
 }
 
@@ -222,17 +243,16 @@ export function SuggestedDocumentsCard({ company }: { company: FoundedCompany })
           system.
         </EmptyCopy>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2">
+        <Grid variant="pair">
           {company.venture.documents.documents.map((doc: IntelligentDocument) => (
-            <li
-              key={doc.id}
-              className="flex items-center justify-between ids-surface-elevated p-3"
-            >
-              <span className="ids-label">{doc.title}</span>
-              <span className="ids-caption">{doc.kind}</span>
-            </li>
+            <InsetSurface key={doc.id}>
+              <Cluster justify="between">
+                <span className="ids-label">{doc.title}</span>
+                <span className="ids-caption">{doc.kind}</span>
+              </Cluster>
+            </InsetSurface>
           ))}
-        </ul>
+        </Grid>
       )}
     </SectionCard>
   );
@@ -253,13 +273,13 @@ export function ArtefactIndex({ company }: { company: FoundedCompany }) {
   return (
     <SectionCard>
       <SectionHeading title="Launch sequence" subtitle="Every artefact is live" />
-      <ul className="flex flex-wrap gap-2">
+      <Cluster justify="start">
         {items.map((item) => (
-          <li key={item} className="ids-chip">
+          <span key={item} className="ids-chip">
             {item}
-          </li>
+          </span>
         ))}
-      </ul>
+      </Cluster>
     </SectionCard>
   );
 }

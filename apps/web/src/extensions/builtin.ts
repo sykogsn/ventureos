@@ -33,6 +33,13 @@ registerExtension({
       icon: "brain",
     },
     {
+      id: "engineering",
+      label: "Engineering HQ",
+      href: "/engineering",
+      section: "system",
+      icon: "drafting-compass",
+    },
+    {
       id: "settings",
       label: "Settings",
       href: "/settings",
@@ -89,6 +96,20 @@ registerExtension({
       group: "navigation",
       href: "/brain/search",
       keywords: ["brain", "find", "knowledge"],
+    },
+    {
+      id: "nav.engineering",
+      title: "Go to Engineering HQ",
+      group: "navigation",
+      href: "/engineering",
+      keywords: ["engineering", "hq", "sprints", "records", "constitution"],
+    },
+    {
+      id: "nav.engineering.sprints",
+      title: "Go to Sprint Centre",
+      group: "navigation",
+      href: "/engineering/sprints",
+      keywords: ["engineering", "timeline", "vs"],
     },
     {
       id: "nav.settings",

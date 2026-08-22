@@ -2,13 +2,13 @@
 
 **Purpose.** Bind the voice of the desk so copy cannot drift into SaaS template language.
 
-**Authority.** Library constitution derived from IDS-001, the Creed, and live empty-state practice.
+**Authority.** Library constitution derived from IDS-001, the Creed, and live empty-state practice. Subordinate to the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md).
 
 **Audience.** Anyone writing UI copy, sprint briefs, or library documents.
 
 **Dependencies.** [VentureOS Creed](../01-FOUNDATION/VentureOS-Creed.md) · [IDS](./IDS.md)
 
-**Related Documents.** [Interaction Constitution](./Interaction-Constitution.md) · [Situation Room](../02-ARCHITECTURE/Situation-Room.md) · [Executive Office](../02-ARCHITECTURE/Executive-Office.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Interaction Constitution](./Interaction-Constitution.md) · [Situation Room](../02-ARCHITECTURE/Situation-Room.md) · [Executive Office](../02-ARCHITECTURE/Executive-Office.md)
 
 **Status.** Approved
 

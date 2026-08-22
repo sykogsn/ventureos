@@ -6,7 +6,7 @@
 
 **Dependencies.** [Sprint Standard](./Sprint-Standard.md) · [Foundation Governance](../01-FOUNDATION/Foundation-Governance.md)
 
-**Related Documents.** [Git Workflow](./Git-Workflow.md) · [Engineering Standards](./Engineering-Standards.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md)
+**Related Documents.** [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](../../engineering/README.md) · [Git Workflow](./Git-Workflow.md) · [Engineering Standards](./Engineering-Standards.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md)
 
 **Status.** Approved
 
@@ -14,9 +14,11 @@
 
 **Owner.** Engineering
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
+
+Every review follows the [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) by default. A change that skipped pre-flight, patched a symptom, bypassed validation, or was not verified in the running application is not ready to approve.
 
 ## Checks every review must make
 

@@ -2,6 +2,8 @@
 
 Reading system: [`docs/foundation-library/00-START-HERE.md`](../foundation-library/00-START-HERE.md).
 
+The supreme governing document is the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). Before any sprint, implementation, review, refactor, or bug fix, read that constitution, then the [Master Engineering Prompt](../engineering/MASTER_ENGINEERING_PROMPT.md). The [Engineering Index](../engineering/README.md) maps the Foundation Runbook and process standards.
+
 This tree remains the specification register for Foundation v1.0/v1.1. It does not replace source-of-truth documents that live beside the code. It is the home for constitutional and specification writing that must outlive a sprint. Do not delete these files because the library now explains them.
 
 ## Ownership

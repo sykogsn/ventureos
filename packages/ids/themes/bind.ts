@@ -19,6 +19,9 @@ export function brandFromDefinitionId(
   return definitionToBrand[definitionId] ?? "ventureos";
 }
 
+export const atmosphereFromDefinitionId = brandFromDefinitionId;
+
 export function applyIdsBrand(target: HTMLElement, brand: IdsBrand): void {
   target.setAttribute("data-ids-brand", brand);
+  target.setAttribute("data-ids-atmosphere", brand);
 }

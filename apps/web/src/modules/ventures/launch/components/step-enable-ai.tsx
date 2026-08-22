@@ -1,4 +1,5 @@
 import { OptionCard } from "./option-card";
+import { Grid } from "@/core/layout";
 
 export function StepEnableAi({
   value,
@@ -8,7 +9,7 @@ export function StepEnableAi({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <Grid variant="pair">
       <OptionCard
         title="Open the Executive Office"
         description="Seat operators, brief you daily, and run the operating cadence."
@@ -21,6 +22,6 @@ export function StepEnableAi({
         selected={value === false}
         onSelect={() => onChange(false)}
       />
-    </div>
+    </Grid>
   );
 }

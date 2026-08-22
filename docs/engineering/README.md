@@ -1,16 +1,22 @@
-# VentureOS Engineering Records
+# VentureOS Engineering Index
 
-**Purpose.** This folder is the engineering memory of VentureOS. It is the permanent record of sprints, certifications, decisions, debt, and releases that Engineering HQ will later read as data.
+**Purpose.** This folder is the engineering memory of VentureOS and the index of how engineering work is allowed to proceed.
 
-**Status.** Governance Foundation complete (VS-008A–C)  
+**Status.** Governance Foundation complete (VS-008A–C). Project Constitution registered as supreme law (2026-08-22).  
 **Owner.** Engineering  
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-08-22
 
-These records do not replace the Foundation Library, code-adjacent READMEs, or Runtime/IDS/Definition implementation sources. They index completed engineering work so the desk can remember it.
+These records do not replace the Foundation Library, code-adjacent READMEs, or Runtime/IDS/Definition implementation sources. They index completed engineering work so the desk can remember it. They also name the standard every future change must follow.
 
-How work is allowed to proceed is defined here in the [Engineering Constitution](./ENGINEERING_CONSTITUTION.md). How engineers are expected to think is defined here in the [Engineering Creed](./ENGINEERING_CREED.md). What the platform *is* remains the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) and the [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md).
+## Before you change the tree
 
-The Engineering Constitution defines the rules. The Engineering Creed defines the culture.
+Read the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). It is the supreme governing document of the repository.
+
+Then read the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. Do not start work on an unhealthy foundation. Do not tell the founder a task is complete until it has been verified in the running application.
+
+How the VES lifecycle and modes proceed remains in the [Engineering Constitution](./ENGINEERING_CONSTITUTION.md). How engineers are expected to think remains in the [Engineering Creed](./ENGINEERING_CREED.md). What the platform *is* remains the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) and the [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md).
+
+The Project Constitution is supreme. The Platform Constitution defines architecture. The Master Engineering Prompt is the sprint operating standard. The Engineering Constitution defines the lifecycle. The Engineering Creed defines the culture.
 
 Locked architecture and teaching documents remain at:
 
@@ -19,12 +25,32 @@ Locked architecture and teaching documents remain at:
 - `apps/web/src/FOUNDATION.md` — ownership and boundaries in code
 - `packages/ids/` — IntelligenceOS tokens and bind
 
-## What lives here
+## Operating standards
+
+Every future sprint, implementation, review, refactor, and bug fix uses this index.
+
+| Standard | Document |
+|---|---|
+| Supreme governing document | [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) |
+| Architecture Constitution | [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) |
+| Authoritative engineering standard | [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) |
+| Foundation Runbook | [FOUNDATION_RUNBOOK.md](./FOUNDATION_RUNBOOK.md) |
+| Architecture documentation | [Architecture Overview](../foundation-library/02-ARCHITECTURE/Architecture-Overview.md) · [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) |
+| Coding standards | [Engineering Standards](../foundation-library/04-ENGINEERING/Engineering-Standards.md) |
+| Branch strategy | [Git Workflow](../foundation-library/04-ENGINEERING/Git-Workflow.md) |
+| Release process | [Release Process](../foundation-library/04-ENGINEERING/Release-Process.md) |
+| Sprint process | [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md) |
+
+If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wins first. Architecture wins on *what may exist*. On checklist, validation, completion, or reporting, the Master Engineering Prompt wins over process pages.
+
+## Engineering memory
 
 | Document | Role |
 |---|---|
+| [MASTER_ENGINEERING_PROMPT.md](./MASTER_ENGINEERING_PROMPT.md) | Permanent engineering constitution: pre-flight, rules, validation, completion, reporting |
+| [FOUNDATION_RUNBOOK.md](./FOUNDATION_RUNBOOK.md) | How to keep the certified foundation healthy |
 | [ENGINEERING_CREED.md](./ENGINEERING_CREED.md) | Culture: how we think, what we refuse, what we vow |
-| [ENGINEERING_CONSTITUTION.md](./ENGINEERING_CONSTITUTION.md) | Rulebook: principles, VES lifecycle, modes, definition of done |
+| [ENGINEERING_CONSTITUTION.md](./ENGINEERING_CONSTITUTION.md) | Rulebook: VES lifecycle, modes, definition of done |
 | [LESSONS_LEARNED.md](./LESSONS_LEARNED.md) | Living journal; grows after each major sprint |
 | [ENGINEERING_HISTORY.md](./ENGINEERING_HISTORY.md) | Master sprint timeline |
 | [FOUNDATION_CERTIFICATION_v1.1.md](./FOUNDATION_CERTIFICATION_v1.1.md) | Permanent Foundation v1.1 certification record |
@@ -32,7 +58,7 @@ Locked architecture and teaching documents remain at:
 | [TECHNICAL_DEBT_REGISTER.md](./TECHNICAL_DEBT_REGISTER.md) | Follow-up items from Foundation Certification v1.1 |
 | [RELEASE_HISTORY.md](./RELEASE_HISTORY.md) | Declared Foundation releases as engineering history |
 
-The Creed is culture. The Constitution is standing law. The Decision Register is the dated acceptances of that law. Lessons Learned is what the sprints taught. History, certification, debt, and releases are the memory HQ will query. Do not copy those tables into the Creed or the Constitution.
+The Project Constitution is supreme. The Master Engineering Prompt is the default sprint standard. The Creed is culture. The Constitution is lifecycle law. The Decision Register is the dated acceptances of that law. Lessons Learned is what the sprints taught. History, certification, debt, and releases are the memory HQ will query. Do not copy those tables into the Creed, the Constitution, or the Master Engineering Prompt.
 
 ## How to maintain these records
 
@@ -49,8 +75,11 @@ Engineering HQ is not built in VS-008A.
 
 When it is built, it should consume these files directly as the engineering workspace data source:
 
+- Project Constitution → supreme governing document
+- Master Engineering Prompt → authoritative engineering standard
+- Foundation Runbook → how the certified foundation is kept healthy
 - Creed → how builders are expected to think
-- Constitution → how work is allowed to proceed
+- Constitution → VES lifecycle and modes
 - Lessons learned → what not to repeat
 - History → timeline / sprint memory
 - Certification → foundation status on the desk

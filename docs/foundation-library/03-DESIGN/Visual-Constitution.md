@@ -2,13 +2,13 @@
 
 **Purpose.** Bind visual rank, climate, surface, and colour so screens cannot invent a second grammar.
 
-**Authority.** Library constitution derived from IDS-001 and IDS-002. Token values live in `packages/ids/tokens/`.
+**Authority.** Library constitution derived from IDS-001 and IDS-002. Subordinate to the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md). Token values live in `packages/ids/tokens/`.
 
 **Audience.** Designers and engineers implementing screens.
 
 **Dependencies.** [IDS](./IDS.md)
 
-**Related Documents.** [Interaction Constitution](./Interaction-Constitution.md) · [Accessibility](./Accessibility.md) · [Executive Environment Framework](../02-ARCHITECTURE/Executive-Environment-Framework.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Interaction Constitution](./Interaction-Constitution.md) · [Accessibility](./Accessibility.md) · [Executive Environment Framework](../02-ARCHITECTURE/Executive-Environment-Framework.md)
 
 **Status.** Approved
 

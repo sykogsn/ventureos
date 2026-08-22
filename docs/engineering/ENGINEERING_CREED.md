@@ -2,11 +2,11 @@
 
 **Purpose.** State how people who build VentureOS think, decide, and leave the work.
 
-**Authority.** Cultural creed. Compatible with the [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md). It does not amend architecture, Runtime, or IDS. It does not replace the [Engineering Constitution](./ENGINEERING_CONSTITUTION.md).
+**Authority.** Cultural creed. Subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). Compatible with the [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md). It does not amend architecture, Runtime, or IDS. It does not replace the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) or the [Engineering Constitution](./ENGINEERING_CONSTITUTION.md).
 
 **Audience.** Everyone who engineers VentureOS, and everyone who engineers a Venture on this OS.
 
-**Related Documents.** [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md) · [Engineering Constitution](./ENGINEERING_CONSTITUTION.md) · [Decision Register](./DECISION_REGISTER.md)
+**Related Documents.** [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) · [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md) · [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md) · [Engineering Constitution](./ENGINEERING_CONSTITUTION.md) · [Decision Register](./DECISION_REGISTER.md)
 
 **Status.** Approved  
 **Version.** 1.0.0  

@@ -2,13 +2,13 @@
 
 **Purpose.** State what VentureOS is, who it serves, and what it refuses to become.
 
-**Authority.** Foundational creed. Product copy, sprint briefs, and design language must be compatible with this page. It does not amend Runtime or IDS.
+**Authority.** Foundational creed. Subordinate to the [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md), which restates this Creed in full as the philosophical foundation of the repository. Product copy, sprint briefs, and design language must be compatible with this page. It does not amend Runtime or IDS.
 
 **Audience.** Everyone who writes, designs, or decides on the desk.
 
 **Dependencies.** None beyond [Start Here](../00-START-HERE.md).
 
-**Related Documents.** [Product Philosophy](./Product-Philosophy.md) · [Twelve Founding Principles](./Twelve-Founding-Principles.md) · [Writing Constitution](../03-DESIGN/Writing-Constitution.md) · [Situation Room](../02-ARCHITECTURE/Situation-Room.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Product Philosophy](./Product-Philosophy.md) · [Twelve Founding Principles](./Twelve-Founding-Principles.md) · [Writing Constitution](../03-DESIGN/Writing-Constitution.md) · [Situation Room](../02-ARCHITECTURE/Situation-Room.md)
 
 **Status.** Approved
 

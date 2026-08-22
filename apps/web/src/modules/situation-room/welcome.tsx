@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageFrame } from "@/core";
+import { ReadingRegion } from "@/core/layout";
 
 export function FounderWelcome({ founderName }: { founderName: string }) {
   return (
@@ -15,10 +16,12 @@ export function FounderWelcome({ founderName }: { founderName: string }) {
         </Link>
       }
     >
-      <p className="ids-body max-w-lg text-muted">
-        Found a company to open the Situation Room. The desk stays quiet until there is something
-        to operate.
-      </p>
+      <ReadingRegion size="md">
+        <p className="ids-body text-muted">
+          Found a company to open the Situation Room. The desk stays quiet until there is something
+          to operate.
+        </p>
+      </ReadingRegion>
     </PageFrame>
   );
 }

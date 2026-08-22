@@ -3,6 +3,7 @@ import { PageFrame } from "@/core";
 import { EmptyCopy } from "@/core/shell/empty-copy";
 import { companyHomeHref } from "@/modules/ventures/home";
 import type { VentureRecord } from "@/modules/ventures/service";
+import { Fit, ReadingRegion, Stack } from "@/core/layout";
 
 export function VenturesScreen({ ventures }: { ventures: VentureRecord[] }) {
   return (
@@ -21,23 +22,29 @@ export function VenturesScreen({ ventures }: { ventures: VentureRecord[] }) {
         <EmptyCopy
           title="No companies yet"
           action={
-            <Link href="/ventures/launch" className="vos-btn-primary w-fit">
-              Found Company
-            </Link>
+            <Fit>
+              <Link href="/ventures/launch" className="vos-btn-primary">
+                Found Company
+              </Link>
+            </Fit>
           }
         >
           Found a company to open Company HQ and start the daily brief.
         </EmptyCopy>
       ) : (
-        <ul className="flex max-w-xl flex-col gap-2">
-          {ventures.map((venture) => (
-            <li key={venture.id}>
-              <Link href={companyHomeHref(venture.slug)} className="vos-list-item">
+        <ReadingRegion size="md">
+          <Stack gap="tight">
+            {ventures.map((venture) => (
+              <Link
+                key={venture.id}
+                href={companyHomeHref(venture.slug)}
+                className="vos-list-item"
+              >
                 {venture.name}
               </Link>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </Stack>
+        </ReadingRegion>
       )}
     </PageFrame>
   );

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { VentureWorkspaceNav } from "./workspace-nav";
+import { Flow, Stage } from "@/core/layout";
 
 export function VentureWorkspace({
   ventureId,
@@ -11,9 +12,9 @@ export function VentureWorkspace({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <Stage>
       <VentureWorkspaceNav ventureId={ventureId} slug={slug} />
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-    </div>
+      <Flow>{children}</Flow>
+    </Stage>
   );
 }

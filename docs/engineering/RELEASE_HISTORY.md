@@ -2,6 +2,7 @@
 
 **Purpose.** Engineering-facing lineage of declared Foundation releases.  
 **Authority.** Engineering Records. The living Foundation version table remains `docs/foundation-library/05-GOVERNANCE/Release-Register.md`.  
+**Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
 **Last Updated.** 2026-08-21
 
 No Git tag and no GitHub Release was created for Foundation Certification v1.1.

@@ -71,6 +71,30 @@ export function assertIdsSourceGraph(webRoot: string, idsRoot: string): void {
       "globals.css does not import @repo/ids/tokens.css. The Executive Design System is disconnected.",
     );
   }
+  if (/--color-background:\s*var\(--ids-foundation-color-background\)/.test(globals)) {
+    throw new IdsDevGuardError(
+      "globals.css @theme binds Tailwind --color-background to foundation tokens, bypassing climate aliases. Brand and atmosphere cannot retint the desk.",
+    );
+  }
+  if (!globals.includes("--color-background: var(--background)")) {
+    throw new IdsDevGuardError(
+      "globals.css @theme does not project --color-background through the climate alias --background.",
+    );
+  }
+  if (globals.includes("var(--ids-foundation-surface-fill)")) {
+    throw new IdsDevGuardError(
+      "globals.css still paints fills with --ids-foundation-surface-fill. Surfaces must consume climate aliases so brand and atmosphere can retint them.",
+    );
+  }
+  if (
+    !globals.includes("background: var(--surface)") ||
+    !globals.includes("background: var(--card)") ||
+    !globals.includes("background: var(--workspace)")
+  ) {
+    throw new IdsDevGuardError(
+      "globals.css does not paint surface, card, and workspace through climate aliases.",
+    );
+  }
   if (!layout.includes('import "./globals.css"')) {
     throw new IdsDevGuardError(
       "Root layout does not import globals.css. Design tokens cannot load.",
@@ -86,6 +110,11 @@ export function assertIdsSourceGraph(webRoot: string, idsRoot: string): void {
       "ThemeProvider is not configured to apply climate via html class.",
     );
   }
+  if (!theme.includes('storageKey="theme"')) {
+    throw new IdsDevGuardError(
+      'ThemeProvider must persist climate in localStorage under the key "theme".',
+    );
+  }
   if (!themeToggle.includes("useTheme") || !themeToggle.includes("setTheme")) {
     throw new IdsDevGuardError(
       "Header ThemeToggle is not connected to next-themes.",
@@ -94,6 +123,14 @@ export function assertIdsSourceGraph(webRoot: string, idsRoot: string): void {
   if (!appearance.includes("useTheme") || !appearance.includes("setTheme")) {
     throw new IdsDevGuardError(
       "Settings Appearance selector is not connected to next-themes.",
+    );
+  }
+  if (
+    !appearance.includes("Executive Light") ||
+    !appearance.includes("Executive Dark")
+  ) {
+    throw new IdsDevGuardError(
+      "Settings Appearance must name the two climates Executive Light and Executive Dark.",
     );
   }
   if (!tokensIndex.includes('./generated/breakpoints.css')) {

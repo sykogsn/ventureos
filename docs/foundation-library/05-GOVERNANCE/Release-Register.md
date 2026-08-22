@@ -16,13 +16,14 @@
 
 **Owner.** Foundation
 
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-08-22
 
 ---
 
 | Version | Name | Notes |
 |---|---|---|
 | 1.0.0 | Foundation v1.0 Baseline | Runtime, capability framework, venture definitions, persistence ownership, IDS-001/IDS-002 published. Commit lineage includes `Foundation v1.0 Baseline`. |
+| 1.0.0-certified | Foundation v1.0 certification | 2026-08-22. Running desk certified. Git tag `v1.0.0`. Record: `docs/foundation/certification/FOUNDATION-V1.0.md`. |
 | 1.1.0 | Foundation v1.1 | Desk language and IDS climate/surfaces in application; EAS-001 specified (design only); authentication experience (password, Google, reset, Remember me); this Foundation Library. Architecture lock held. |
 | 1.0-PD | Foundation v1.0 ready for product development | 2026-08-21. Declares the locked foundation ready for product development. Runtime unchanged. Pack: `docs/foundation/release/`. |
 

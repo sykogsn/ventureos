@@ -3,43 +3,48 @@ import { HealthPill } from "@/modules/dashboard/components/pills";
 import { SectionCard } from "@/modules/dashboard/components/section-card";
 import { EmptyCopy } from "@/core/shell/empty-copy";
 import type { OperatingHealth } from "../types";
+import { Cluster, ReadingRegion, Stack, StackList } from "@/core/layout";
 
 export function OperatingHealth({ health }: { health: OperatingHealth }) {
   return (
     <SectionCard>
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <Cluster justify="between">
+        <Stack gap="tight">
           <p className="ids-kicker">Operating health</p>
-          <p className="ids-label mt-2 text-foreground">{health.posture}</p>
-        </div>
-        <div className="flex items-center gap-2">
+          <p className="ids-label text-foreground">{health.posture}</p>
+        </Stack>
+        <Cluster justify="end" wrap={false}>
           <span className="ids-caption tabular-nums">{health.score}</span>
           <HealthPill band={health.band} />
-        </div>
-      </div>
-      <p className="ids-body max-w-[42rem] text-muted">{health.verdict}</p>
+        </Cluster>
+      </Cluster>
+      <ReadingRegion size="lg">
+        <p className="ids-body text-muted">{health.verdict}</p>
+      </ReadingRegion>
       {health.watches.length === 0 ? (
         <EmptyCopy title="No situations detected">
           Operating health will name companies that need attention once a constraint appears.
         </EmptyCopy>
       ) : (
-        <ul className="flex flex-col divide-y divide-border border-t border-border">
+        <StackList>
           {health.watches.map((watch) => (
-            <li key={watch.id} className="flex flex-col gap-1 py-4 first:pt-4 last:pb-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  href={watch.companyHref}
-                  className="ids-label ids-transition underline-offset-4 hover:underline"
-                >
-                  {watch.company}
-                </Link>
-                <HealthPill band={watch.band} />
-              </div>
-              <p className="ids-body text-muted">{watch.judgement}</p>
-              <p className="ids-body text-foreground">{watch.ask}</p>
+            <li key={watch.id}>
+              <Stack gap="tight">
+                <Cluster justify="start">
+                  <Link
+                    href={watch.companyHref}
+                    className="ids-label ids-transition underline-offset-4 hover:underline"
+                  >
+                    {watch.company}
+                  </Link>
+                  <HealthPill band={watch.band} />
+                </Cluster>
+                <p className="ids-body text-muted">{watch.judgement}</p>
+                <p className="ids-body text-foreground">{watch.ask}</p>
+              </Stack>
             </li>
           ))}
-        </ul>
+        </StackList>
       )}
     </SectionCard>
   );

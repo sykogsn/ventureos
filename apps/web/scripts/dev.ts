@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { join } from "node:path";
 import {
   IdsDevGuardError,
   assertExecutiveRuntimeHtml,
@@ -88,12 +89,12 @@ async function main() {
   const webRoot = webRootFrom();
   prepareIdsDevelopment(webRoot);
 
-  const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const child = spawn(pnpmBin, ["exec", "next", "dev", "--port", "3000"], {
+  const nextBin = join(webRoot, "node_modules/next/dist/bin/next");
+  const child = spawn(process.execPath, [nextBin, "dev", "--port", "3000"], {
     cwd: webRoot,
     stdio: "inherit",
-    shell: true,
     env: process.env,
+    windowsHide: true,
   });
 
   const fail = (error: unknown) => {

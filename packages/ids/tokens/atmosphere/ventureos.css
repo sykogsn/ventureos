@@ -1,0 +1,89 @@
+html[data-ids-atmosphere="ventureos"],
+html[data-ids-brand="ventureos"] {
+  --ids-atmosphere-ventureos-background: color-mix(
+    in srgb,
+    var(--ids-foundation-color-background) 94%,
+    #2f333c 6%
+  );
+  --ids-atmosphere-ventureos-workspace: var(--ids-atmosphere-ventureos-background);
+  --ids-atmosphere-ventureos-sidebar: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface) 90%,
+    var(--ids-foundation-color-brand-primary) 10%
+  );
+  --ids-atmosphere-ventureos-toolbar: color-mix(
+    in srgb,
+    var(--ids-atmosphere-ventureos-workspace) 86%,
+    var(--ids-foundation-color-surface) 14%
+  );
+  --ids-atmosphere-ventureos-header: transparent;
+  --ids-atmosphere-ventureos-surface: var(--ids-foundation-color-surface);
+  --ids-atmosphere-ventureos-surface-elevated: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface-elevated) 92%,
+    var(--ids-foundation-color-brand-primary) 8%
+  );
+  --ids-atmosphere-ventureos-border: color-mix(
+    in srgb,
+    var(--ids-foundation-color-border) 88%,
+    #2f333c 12%
+  );
+  --ids-atmosphere-ventureos-divider: var(--ids-foundation-color-divider);
+  --ids-atmosphere-ventureos-accent: var(--ids-foundation-color-brand-primary);
+  --ids-atmosphere-ventureos-accent-hover: var(--ids-foundation-color-brand-primary-hover);
+  --ids-atmosphere-ventureos-accent-active: var(--ids-foundation-color-brand-primary-active);
+  --ids-atmosphere-ventureos-accent-foreground: var(--ids-foundation-color-text-inverse);
+  --ids-atmosphere-ventureos-texture: none;
+
+  --background: var(--ids-atmosphere-ventureos-background);
+  --workspace: var(--ids-atmosphere-ventureos-workspace);
+  --sidebar: var(--ids-atmosphere-ventureos-sidebar);
+  --toolbar: var(--ids-atmosphere-ventureos-toolbar);
+  --header: var(--ids-atmosphere-ventureos-header);
+  --surface: var(--ids-atmosphere-ventureos-surface);
+  --surface-elevated: var(--ids-atmosphere-ventureos-surface-elevated);
+  --card: var(--ids-atmosphere-ventureos-surface-elevated);
+  --border: var(--ids-atmosphere-ventureos-border);
+  --divider: var(--ids-atmosphere-ventureos-divider);
+  --atmosphere-texture: var(--ids-atmosphere-ventureos-texture);
+  --accent: var(--ids-atmosphere-ventureos-accent);
+  --accent-hover: var(--ids-atmosphere-ventureos-accent-hover);
+  --accent-active: var(--ids-atmosphere-ventureos-accent-active);
+  --accent-foreground: var(--ids-atmosphere-ventureos-accent-foreground);
+  --ring: var(--ids-atmosphere-ventureos-accent);
+  --brand-primary: var(--ids-atmosphere-ventureos-accent);
+  --brand-primary-hover: var(--ids-atmosphere-ventureos-accent-hover);
+  --brand-primary-active: var(--ids-atmosphere-ventureos-accent-active);
+  --text-inverse: var(--ids-atmosphere-ventureos-accent-foreground);
+}
+
+html.dark[data-ids-atmosphere="ventureos"],
+html.dark[data-ids-brand="ventureos"] {
+  --ids-atmosphere-ventureos-background: color-mix(
+    in srgb,
+    var(--ids-foundation-color-background) 88%,
+    #07080c 12%
+  );
+  --ids-atmosphere-ventureos-workspace: var(--ids-atmosphere-ventureos-background);
+  --ids-atmosphere-ventureos-sidebar: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface) 94%,
+    var(--ids-foundation-color-brand-primary) 6%
+  );
+  --ids-atmosphere-ventureos-toolbar: color-mix(
+    in srgb,
+    var(--ids-atmosphere-ventureos-workspace) 82%,
+    var(--ids-foundation-color-surface) 18%
+  );
+  --ids-atmosphere-ventureos-surface: var(--ids-foundation-color-surface);
+  --ids-atmosphere-ventureos-surface-elevated: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface-elevated) 94%,
+    var(--ids-foundation-color-brand-primary) 6%
+  );
+  --ids-atmosphere-ventureos-border: color-mix(
+    in srgb,
+    var(--ids-foundation-color-border) 90%,
+    var(--ids-foundation-color-brand-primary) 10%
+  );
+}

@@ -6,7 +6,7 @@
 
 **Dependencies.** [Engineering Standards](./Engineering-Standards.md)
 
-**Related Documents.** [Review Process](./Review-Process.md) · [Release Process](./Release-Process.md) · [Legacy Charter](../01-FOUNDATION/Legacy-Charter.md)
+**Related Documents.** [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](../../engineering/README.md) · [Review Process](./Review-Process.md) · [Release Process](./Release-Process.md) · [Legacy Charter](../01-FOUNDATION/Legacy-Charter.md)
 
 **Status.** Approved
 
@@ -14,9 +14,11 @@
 
 **Owner.** Engineering
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
+
+Branch strategy for every sprint, implementation, review, refactor, and bug fix follows the [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md). This page remains the Foundation Library detail.
 
 ## Branches
 

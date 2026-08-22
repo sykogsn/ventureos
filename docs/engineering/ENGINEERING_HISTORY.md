@@ -2,6 +2,7 @@
 
 **Purpose.** Master timeline of VentureOS engineering sprints.  
 **Authority.** Engineering Records. Does not rewrite Foundation Library sprint IDs used in older specification files.  
+**Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
 **Last Updated.** 2026-08-21
 
 ## Governance Foundation

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Brain, Building2, LayoutDashboard, Settings } from "lucide-react";
+import { Bot, Brain, Building2, DraftingCompass, LayoutDashboard, Settings } from "lucide-react";
 import { useShell } from "@/core/context/shell-context";
 import { listNavContributions } from "@/extensions";
 import type { ExtensionIcon, NavContribution } from "@/extensions/types";
@@ -23,6 +23,7 @@ const icons: Record<ExtensionIcon, typeof LayoutDashboard> = {
   bot: Bot,
   brain: Brain,
   settings: Settings,
+  "drafting-compass": DraftingCompass,
 };
 
 const sections: { id: NavSection; label: string }[] = [

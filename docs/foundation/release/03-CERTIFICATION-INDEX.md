@@ -17,8 +17,8 @@ This index is the release map of what is certified, what is locked, and what is 
 | Venture Definitions | Locked | `apps/web/src/core/venture-definition/README.md` · Definition tests · ADR-003 | Atmosphere painted |
 | Persistence ownership | Locked | `apps/web/src/platform/persistence/README.md` · Repository tests · ADR-005 | Intelligence quality |
 | Platform identity | Implemented on the desk | Auth module and tests · ADR-006 | Production OAuth/email credentials |
-| IntelligenceOS (IDS) | Specified and live as tokens | IDS-001 · IDS-002 · `packages/ids/` · ADR-004, ADR-007, ADR-008 | Runtime or capabilities |
-| Climate (Light / Dark) | Live | Theme provider · Appearance Settings | Executive Atmosphere |
+| IntelligenceOS (IDS) | Consumption complete as presentation | IDS-001 · IDS-002 · `packages/ids/` · [VS-008](../certification/VS-008-EXECUTIVE-DESIGN-SYSTEM.md) · ADR-004, ADR-007, ADR-008 | Runtime or capabilities |
+| Climate (Light / Dark / System) | Live and persisted | Theme provider · Appearance Settings · VS-008 | A third climate (Midnight / Slate) |
 | Platform Constitution | Approved | `docs/architecture/VENTUREOS_PLATFORM_CONSTITUTION.md` | Implementation facts when they disagree with named sources |
 | Executive Layout v1 | Certified reference | Authentication (`BrandRail`, `ExecutiveMeasure`) | OS-wide layout |
 | Executive Layout v2 | Certified as platform layout foundation | [EXECUTIVE-LAYOUT-V2.md](../certification/EXECUTIVE-LAYOUT-V2.md) | Migration of every product room |
@@ -38,6 +38,7 @@ This index is the release map of what is certified, what is locked, and what is 
 | Concern | Warnings |
 |---|---|
 | Executive Layout v2 | 46 product-room files still compose Tailwind layout. Inspector and Grid are unused by Situation Room, Office, Brain, and HQ. Command dialog uses measure.md (32rem). |
+| Executive Design System (VS-008) | Authenticated rooms inherit OsShell but were not session-walked in the certification browser. Dev hydration overlay on VentureMark. Midnight and Slate are not climates. |
 
 ## Not certified
 

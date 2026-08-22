@@ -1,3 +1,5 @@
+import { Cluster, Grid, ReadingRegion } from "@/core/layout";
+import { SectionCard } from "@/modules/dashboard/components/section-card";
 import { brainHealth } from "@/platform/brain";
 import { BrainFrame } from "./components/brain-frame";
 import { HealthBand } from "./components/health-band";
@@ -9,18 +11,20 @@ export function BrainHealthScreen() {
       title="Brain health"
       description="Placeholder judgement of the catalogue. These metrics are not computed from a backend."
     >
-      <div className="grid gap-4 md:grid-cols-2">
+      <Grid variant="pair">
         {brainHealth.map((item) => (
-          <article key={item.id} className="ids-surface-card flex flex-col gap-4 p-6">
-            <div className="flex items-start justify-between gap-3">
+          <SectionCard key={item.id}>
+            <Cluster justify="between">
               <h2 className="ids-kicker">{item.title}</h2>
               <HealthBand band={item.band} />
-            </div>
+            </Cluster>
             <p className="ids-metric">{item.value}</p>
-            <p className="ids-body max-w-[42rem] text-muted">{item.judgement}</p>
-          </article>
+            <ReadingRegion size="lg">
+              <p className="ids-body text-muted">{item.judgement}</p>
+            </ReadingRegion>
+          </SectionCard>
         ))}
-      </div>
+      </Grid>
     </BrainFrame>
   );
 }

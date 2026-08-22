@@ -4,8 +4,6 @@ import { lookupPersistedSession } from "@/lib/auth/session-store";
 import { resolveSessionUser } from "@/lib/auth/session-token";
 import { nowIso } from "@/platform";
 
-export const runtime = "nodejs";
-
 const publicPaths = new Set([
   "/login",
   "/signup",
@@ -23,7 +21,7 @@ function loginRedirect(request: NextRequest) {
   return response;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token

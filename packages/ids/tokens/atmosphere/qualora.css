@@ -1,0 +1,56 @@
+html[data-ids-atmosphere="qualora"],
+html[data-ids-brand="qualora"] {
+  --ids-atmosphere-qualora-background: color-mix(
+    in srgb,
+    var(--ids-brand-qualora-accent) 4%,
+    var(--ids-foundation-color-background)
+  );
+  --ids-atmosphere-qualora-workspace: var(--ids-atmosphere-qualora-background);
+  --ids-atmosphere-qualora-sidebar: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface) 96%,
+    var(--ids-brand-qualora-accent) 4%
+  );
+  --ids-atmosphere-qualora-toolbar: var(--ids-atmosphere-qualora-sidebar);
+  --ids-atmosphere-qualora-header: transparent;
+  --ids-atmosphere-qualora-surface: var(--ids-foundation-color-surface);
+  --ids-atmosphere-qualora-surface-elevated: var(--ids-foundation-color-surface-elevated);
+  --ids-atmosphere-qualora-border: var(--ids-foundation-color-border);
+  --ids-atmosphere-qualora-divider: var(--ids-foundation-color-divider);
+  --ids-atmosphere-qualora-accent: var(--ids-brand-qualora-accent);
+  --ids-atmosphere-qualora-accent-hover: var(--ids-brand-qualora-accent-hover);
+  --ids-atmosphere-qualora-accent-active: var(--ids-brand-qualora-accent-active);
+  --ids-atmosphere-qualora-accent-foreground: var(--ids-brand-qualora-accent-foreground);
+  --ids-atmosphere-qualora-texture: none;
+
+  --background: var(--ids-atmosphere-qualora-background);
+  --workspace: var(--ids-atmosphere-qualora-workspace);
+  --sidebar: var(--ids-atmosphere-qualora-sidebar);
+  --toolbar: var(--ids-atmosphere-qualora-toolbar);
+  --header: var(--ids-atmosphere-qualora-header);
+  --surface: var(--ids-atmosphere-qualora-surface);
+  --surface-elevated: var(--ids-atmosphere-qualora-surface-elevated);
+  --card: var(--ids-atmosphere-qualora-surface-elevated);
+  --border: var(--ids-atmosphere-qualora-border);
+  --divider: var(--ids-atmosphere-qualora-divider);
+  --atmosphere-texture: var(--ids-atmosphere-qualora-texture);
+  --accent: var(--ids-atmosphere-qualora-accent);
+  --accent-hover: var(--ids-atmosphere-qualora-accent-hover);
+  --accent-active: var(--ids-atmosphere-qualora-accent-active);
+  --accent-foreground: var(--ids-atmosphere-qualora-accent-foreground);
+  --ring: var(--ids-brand-qualora-ring);
+  --brand-primary: var(--ids-atmosphere-qualora-accent);
+  --brand-primary-hover: var(--ids-atmosphere-qualora-accent-hover);
+  --brand-primary-active: var(--ids-atmosphere-qualora-accent-active);
+  --text-inverse: var(--ids-atmosphere-qualora-accent-foreground);
+}
+
+html.dark[data-ids-atmosphere="qualora"],
+html.dark[data-ids-brand="qualora"] {
+  --ids-atmosphere-qualora-background: color-mix(
+    in srgb,
+    var(--ids-brand-qualora-accent) 6%,
+    var(--ids-foundation-color-background)
+  );
+  --ids-atmosphere-qualora-workspace: var(--ids-atmosphere-qualora-background);
+}

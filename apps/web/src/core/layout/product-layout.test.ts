@@ -53,6 +53,7 @@ const layoutTokens = [
   "--ids-foundation-layout-panel-lg",
   "--ids-foundation-layout-grid-executive",
   "--ids-foundation-layout-grid-analytics",
+  "--ids-foundation-layout-grid-ledger",
   "--ids-foundation-layout-toolbar",
   "--ids-foundation-layout-command-offset",
   "--ids-foundation-layout-rail",
@@ -90,6 +91,7 @@ const productRoomRoots = [
   join(webSrc, "modules/ventures"),
   join(webSrc, "modules/settings"),
   join(webSrc, "modules/dashboard"),
+  join(webSrc, "modules/engineering-hq"),
 ];
 
 const layoutAtom =
@@ -117,7 +119,7 @@ function walk(dir: string, files: string[] = []): string[] {
 
 function classLiterals(source: string): string[] {
   const matches = source.matchAll(/className\s*=\s*(?:\{)?["'`]([^"'`]+)["'`]/g);
-  return [...matches].map((match) => match[1]);
+  return [...matches].flatMap((match) => (match[1] ? [match[1]] : []));
 }
 
 function layoutHits(source: string): string[] {
@@ -222,63 +224,13 @@ describe("Platform chrome consumes Workspace Layout primitives", () => {
 });
 
 describe("Remaining product rooms", () => {
-  const allowedDebt = new Set([
-    "modules/brain/components/brain-nav.tsx",
-    "modules/brain/components/catalogue-search-form.tsx",
-    "modules/brain/components/knowledge-filter-form.tsx",
-    "modules/brain/components/knowledge-object-layout.tsx",
-    "modules/brain/components/metric-card.tsx",
-    "modules/brain/dashboard-screen.tsx",
-    "modules/brain/decisions-screen.tsx",
-    "modules/brain/governance-screen.tsx",
-    "modules/brain/health-screen.tsx",
-    "modules/brain/knowledge-object-screen.tsx",
-    "modules/brain/library-screen.tsx",
-    "modules/brain/search-screen.tsx",
-    "modules/dashboard/components/section-card.tsx",
-    "modules/executive-office/components/conversation-panel.tsx",
-    "modules/executive-office/components/decision-history.tsx",
-    "modules/executive-office/components/executive-card.tsx",
-    "modules/executive-office/components/executive-memory.tsx",
-    "modules/executive-office/components/recommendations.tsx",
-    "modules/executive-office/components/todays-brief.tsx",
-    "modules/executive-office/components/upcoming-decisions.tsx",
-    "modules/executive-office/office-screen.tsx",
-    "modules/executive-office/screens.tsx",
-    "modules/settings/appearance.tsx",
-    "modules/settings/screens.tsx",
-    "modules/situation-room/components/company-story-highlights.tsx",
-    "modules/situation-room/components/critical-decisions.tsx",
-    "modules/situation-room/components/executive-briefing.tsx",
-    "modules/situation-room/components/executive-memory.tsx",
-    "modules/situation-room/components/operating-health.tsx",
-    "modules/situation-room/components/portfolio-overview.tsx",
-    "modules/situation-room/components/todays-mission.tsx",
-    "modules/situation-room/welcome.tsx",
-    "modules/ventures/launch/components/launch-sequence.tsx",
-    "modules/ventures/launch/components/step-enable-ai.tsx",
-    "modules/ventures/launch/components/step-executive-team.tsx",
-    "modules/ventures/launch/components/step-mission-control.tsx",
-    "modules/ventures/launch/components/step-name.tsx",
-    "modules/ventures/launch/components/step-option-grid.tsx",
-    "modules/ventures/launch/components/wizard-nav.tsx",
-    "modules/ventures/launch/components/wizard-shell.tsx",
-    "modules/ventures/launch/components/wizard-stepper.tsx",
-    "modules/ventures/launch/hq/artefact-cards.tsx",
-    "modules/ventures/launch/venture-hq-screen.tsx",
-    "modules/ventures/screens.tsx",
-    "modules/ventures/workspace-nav.tsx",
-    "modules/ventures/workspace.tsx",
-  ]);
-
   const files = productRoomRoots.flatMap((dir) => walk(dir));
   const debt = files
     .filter((file) => layoutHits(readFileSync(file, "utf8")).length > 0)
     .map((file) => relative(webSrc, file).replaceAll("\\", "/"))
     .sort();
 
-  it("does not add new product files that compose Tailwind layout utilities", () => {
-    const unexpected = debt.filter((file) => !allowedDebt.has(file));
-    assert.deepEqual(unexpected, []);
+  it("does not compose Tailwind layout utilities", () => {
+    assert.deepEqual(debt, []);
   });
 });

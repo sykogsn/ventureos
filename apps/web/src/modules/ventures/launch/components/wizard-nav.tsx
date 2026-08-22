@@ -1,5 +1,5 @@
 import { Button } from "@repo/ui/button";
-import { cn } from "@/utils/cn";
+import { Cluster } from "@/core/layout";
 
 export function WizardNav({
   isFirst,
@@ -15,10 +15,10 @@ export function WizardNav({
   onNext: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <Cluster justify="between">
       <Button
         variant="secondary"
-        className={cn(isFirst && "invisible")}
+        className={isFirst ? "invisible" : undefined}
         onClick={onBack}
         disabled={isFirst || launching}
       >
@@ -27,6 +27,6 @@ export function WizardNav({
       <Button onClick={onNext} disabled={launching}>
         {isLast ? (launching ? "Founding…" : "Found Company") : "Next"}
       </Button>
-    </div>
+    </Cluster>
   );
 }

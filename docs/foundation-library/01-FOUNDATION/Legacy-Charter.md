@@ -8,7 +8,7 @@
 
 **Dependencies.** [VentureOS Creed](./VentureOS-Creed.md) · [Foundation Governance](./Foundation-Governance.md)
 
-**Related Documents.** [Start Here](../00-START-HERE.md) · [Source Map](../99-APPENDIX/Source-Map.md) · [Sprint Standard](../04-ENGINEERING/Sprint-Standard.md)
+**Related Documents.** [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](../../engineering/README.md) · [Start Here](../00-START-HERE.md) · [Source Map](../99-APPENDIX/Source-Map.md) · [Sprint Standard](../04-ENGINEERING/Sprint-Standard.md)
 
 **Status.** Approved
 

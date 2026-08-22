@@ -1,6 +1,7 @@
 import { OptionCard } from "./option-card";
 import { executiveOptions } from "../options";
 import type { AiExecutiveId } from "../types";
+import { Grid } from "@/core/layout";
 
 export function StepExecutiveTeam({
   enabled,
@@ -21,7 +22,7 @@ export function StepExecutiveTeam({
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <Grid variant="pair">
       {executiveOptions.map((option) => (
         <OptionCard
           key={option.id}
@@ -31,6 +32,6 @@ export function StepExecutiveTeam({
           onSelect={() => onToggle(option.id)}
         />
       ))}
-    </div>
+    </Grid>
   );
 }

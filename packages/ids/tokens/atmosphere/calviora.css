@@ -1,0 +1,54 @@
+/* Overlay only. Hold FD-006 / A-001 — do not expand Calviora chrome until product and IDS name the same headquarters. */
+
+html[data-ids-atmosphere="calviora"],
+html[data-ids-brand="calviora"] {
+  --ids-atmosphere-calviora-background: color-mix(
+    in srgb,
+    var(--ids-brand-calviora-accent) 5%,
+    var(--ids-foundation-color-background)
+  );
+  --ids-atmosphere-calviora-workspace: var(--ids-atmosphere-calviora-background);
+  --ids-atmosphere-calviora-sidebar: var(--ids-foundation-surface-fill);
+  --ids-atmosphere-calviora-toolbar: var(--ids-foundation-surface-fill);
+  --ids-atmosphere-calviora-header: transparent;
+  --ids-atmosphere-calviora-surface: var(--ids-foundation-color-surface);
+  --ids-atmosphere-calviora-surface-elevated: var(--ids-foundation-color-surface-elevated);
+  --ids-atmosphere-calviora-border: var(--ids-foundation-color-border);
+  --ids-atmosphere-calviora-divider: var(--ids-foundation-color-divider);
+  --ids-atmosphere-calviora-accent: var(--ids-brand-calviora-accent);
+  --ids-atmosphere-calviora-accent-hover: var(--ids-brand-calviora-accent-hover);
+  --ids-atmosphere-calviora-accent-active: var(--ids-brand-calviora-accent-active);
+  --ids-atmosphere-calviora-accent-foreground: var(--ids-brand-calviora-accent-foreground);
+  --ids-atmosphere-calviora-texture: none;
+
+  --background: var(--ids-atmosphere-calviora-background);
+  --workspace: var(--ids-atmosphere-calviora-workspace);
+  --sidebar: var(--ids-atmosphere-calviora-sidebar);
+  --toolbar: var(--ids-atmosphere-calviora-toolbar);
+  --header: var(--ids-atmosphere-calviora-header);
+  --surface: var(--ids-atmosphere-calviora-surface);
+  --surface-elevated: var(--ids-atmosphere-calviora-surface-elevated);
+  --card: var(--ids-atmosphere-calviora-surface-elevated);
+  --border: var(--ids-atmosphere-calviora-border);
+  --divider: var(--ids-atmosphere-calviora-divider);
+  --atmosphere-texture: var(--ids-atmosphere-calviora-texture);
+  --accent: var(--ids-atmosphere-calviora-accent);
+  --accent-hover: var(--ids-atmosphere-calviora-accent-hover);
+  --accent-active: var(--ids-atmosphere-calviora-accent-active);
+  --accent-foreground: var(--ids-atmosphere-calviora-accent-foreground);
+  --ring: var(--ids-brand-calviora-ring);
+  --brand-primary: var(--ids-atmosphere-calviora-accent);
+  --brand-primary-hover: var(--ids-atmosphere-calviora-accent-hover);
+  --brand-primary-active: var(--ids-atmosphere-calviora-accent-active);
+  --text-inverse: var(--ids-atmosphere-calviora-accent-foreground);
+}
+
+html.dark[data-ids-atmosphere="calviora"],
+html.dark[data-ids-brand="calviora"] {
+  --ids-atmosphere-calviora-background: color-mix(
+    in srgb,
+    var(--ids-brand-calviora-accent) 7%,
+    var(--ids-foundation-color-background)
+  );
+  --ids-atmosphere-calviora-workspace: var(--ids-atmosphere-calviora-background);
+}
