@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getSession, setActiveWorkspaceCookie } from "@/lib/auth/session";
+import {
+  getActiveWorkspaceId,
+  getSession,
+  setActiveWorkspaceCookie,
+} from "@/lib/auth/session";
 import { canAccessWorkspace, createWorkspace } from "@/modules/workspaces/service";
 import type { WorkspaceId } from "@/contracts";
 
@@ -32,6 +36,7 @@ export async function createWorkspaceAction(
     const workspace = await createWorkspace({
       userId: session.id,
       name: parsed.data.name,
+      scopeWorkspaceId: await getActiveWorkspaceId(),
     });
     await setActiveWorkspaceCookie(workspace.id);
   } catch (error) {

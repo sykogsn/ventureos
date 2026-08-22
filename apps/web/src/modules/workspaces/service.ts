@@ -1,7 +1,12 @@
-import type { UserId, WorkspaceId } from "@/contracts";
+import type { Role, UserId, WorkspaceId } from "@/contracts";
 import { getPlatform, createEvent, createId, nowIso, slugify, ensureSchema, getPersistence } from "@/platform";
 import { membershipAllowsWorkspaceSelection } from "@/modules/workspaces/membership";
 import { seedWorkspaceIntelligence } from "@/modules/intelligence/service";
+import {
+  assertCanCreateWorkspace,
+  assertWorkspaceKnown,
+  type WorkspaceRegistryEntry,
+} from "@/core/workspace-registry";
 
 export type WorkspaceRecord = {
   id: WorkspaceId;
@@ -23,11 +28,46 @@ async function uniqueSlug(base: string) {
   return slug;
 }
 
+export async function listWorkspaceCatalogue(
+  userId: UserId,
+): Promise<WorkspaceRegistryEntry[]> {
+  await ensureSchema();
+  const store = getPersistence();
+  const platform = getPlatform();
+  const rows = await store.organisations.listForUser(userId);
+  const entries: WorkspaceRegistryEntry[] = [];
+
+  for (const row of rows) {
+    const role = await platform.permissions.roleFor(userId, row.id);
+    if (!membershipAllowsWorkspaceSelection(role)) {
+      continue;
+    }
+
+    entries.push({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      role: role as Role,
+    });
+  }
+
+  return entries;
+}
+
 export async function createWorkspace(input: {
   userId: UserId;
   name: string;
+  scopeWorkspaceId?: string | null;
 }): Promise<WorkspaceRecord> {
   await ensureSchema();
+  const catalogue = await listWorkspaceCatalogue(input.userId);
+  await assertCanCreateWorkspace({
+    userId: input.userId,
+    workspaces: catalogue,
+    scopeWorkspaceId: input.scopeWorkspaceId ?? null,
+    permissions: getPlatform().permissions,
+  });
+
   const store = getPersistence();
   const platform = getPlatform();
   const id = createId<WorkspaceId>();
@@ -78,12 +118,11 @@ export async function createWorkspace(input: {
 }
 
 export async function listWorkspaces(userId: UserId): Promise<WorkspaceRecord[]> {
-  await ensureSchema();
-  const rows = await getPersistence().organisations.listForUser(userId);
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
+  const catalogue = await listWorkspaceCatalogue(userId);
+  return catalogue.map((workspace) => ({
+    id: workspace.id,
+    name: workspace.name,
+    slug: workspace.slug,
   }));
 }
 
@@ -91,6 +130,11 @@ export async function canAccessWorkspace(
   userId: UserId,
   workspaceId: WorkspaceId,
 ): Promise<boolean> {
-  const role = await getPlatform().permissions.roleFor(userId, workspaceId);
-  return membershipAllowsWorkspaceSelection(role);
+  const catalogue = await listWorkspaceCatalogue(userId);
+  try {
+    assertWorkspaceKnown(catalogue, workspaceId);
+    return true;
+  } catch {
+    return false;
+  }
 }
