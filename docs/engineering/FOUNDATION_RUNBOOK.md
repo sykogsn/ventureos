@@ -44,7 +44,7 @@ Never continue on an unhealthy foundation. The Master Engineering Prompt pre-fli
 | Generated CSS | `tokens/generated/breakpoints.css` exists, is imported, and contains static `@theme` lengths only |
 | Types | `pnpm check-types` |
 | Lint | `pnpm lint` |
-| Tests | `pnpm exec turbo run test` until ERT-001 is closed |
+| Tests | `pnpm test` |
 | Build | `pnpm build` |
 | Stale Next process | `pnpm recover-dev` when the running process disagrees with source |
 | Application startup | `pnpm dev` starts without CSS parse errors or a crash |

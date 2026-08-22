@@ -14,6 +14,14 @@ const theme = readFileSync(
   join(webRoot, "src/core/theme/theme-provider.tsx"),
   "utf8",
 );
+const authShell = readFileSync(
+  join(webRoot, "src/modules/auth/executive-auth-shell.tsx"),
+  "utf8",
+);
+const topNav = readFileSync(
+  join(webRoot, "src/core/shell/top-nav.tsx"),
+  "utf8",
+);
 
 describe("IDS consumption", () => {
   it("projects Tailwind colour roles through climate aliases", () => {
@@ -48,5 +56,11 @@ describe("IDS consumption", () => {
     assert.match(theme, /attribute="class"/);
     assert.match(theme, /storageKey="theme"/);
     assert.match(theme, /enableSystem/);
+  });
+
+  it("exposes the theme selector on auth and in the header at every width", () => {
+    assert.match(authShell, /ThemeToggle/);
+    assert.match(topNav, /<ThemeToggle \/>/);
+    assert.doesNotMatch(topNav, /<Reveal[^>]*>\s*<ThemeToggle \/>\s*<\/Reveal>/);
   });
 });

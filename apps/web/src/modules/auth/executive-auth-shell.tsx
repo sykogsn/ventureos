@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { VentureMark } from "@/core/shell/venture-mark";
+import { ThemeToggle } from "@/core/shell/theme-toggle";
 import {
+  Cluster,
   ExecutiveBanner,
   ExecutiveFrame,
   ExecutiveMain,
@@ -16,7 +18,10 @@ export function ExecutiveAuthShell({ children }: { children: ReactNode }) {
     <ExecutiveFrame>
       <ExecutiveSplit>
         <ExecutiveRail>
-          <VentureMark />
+          <Cluster justify="between" wrap={false}>
+            <VentureMark />
+            <ThemeToggle />
+          </Cluster>
           <ExecutiveStack gap="form">
             <p className="ids-display">The operating system for companies.</p>
             <p className="ids-lead">Found, operate, and decide from one desk.</p>
@@ -29,7 +34,10 @@ export function ExecutiveAuthShell({ children }: { children: ReactNode }) {
 
         <ExecutiveStage>
           <ExecutiveBanner>
-            <VentureMark compact />
+            <Cluster justify="between" wrap={false}>
+              <VentureMark compact />
+              <ThemeToggle />
+            </Cluster>
           </ExecutiveBanner>
           <ExecutiveMain>
             <ExecutiveMeasure>{children}</ExecutiveMeasure>

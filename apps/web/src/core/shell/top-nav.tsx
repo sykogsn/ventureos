@@ -80,9 +80,7 @@ export function TopNav() {
           </span>
         </Reveal>
         <NotificationCenter />
-        <Reveal on="show-md">
-          <ThemeToggle />
-        </Reveal>
+        <ThemeToggle />
         <ProfileMenu />
       </Trailing>
     </Toolbar>

@@ -127,7 +127,7 @@ A sprint is complete only when all of the following that apply to that sprint ar
 | Build passes | `pnpm build` (or the sprint’s stated build) |
 | TypeScript passes | `pnpm check-types` |
 | Lint passes | `pnpm lint` |
-| Tests pass | Workspace tests (`turbo run test` until ERT-001 is closed) |
+| Tests pass | Workspace tests (`pnpm test`) |
 | Runtime verified | The running app matches the claim (for example login 200) |
 | UI verified | Where the sprint claims a visible change |
 | Git committed | After verification, and after founder approval to commit |

@@ -195,8 +195,8 @@ These remain **application or process** concerns. They are not artefacts:
 | CSS parse / `@custom-media` / `Can't resolve` generated tokens | Application or stale `next dev`. Recover; do not file here. |
 | Login HTTP 500 | Application. |
 | `middleware` file deprecation | Framework migration. Closed in v1.0 as `apps/web/src/proxy.ts` (ERT-005). |
-| Missing Light/Dark control on `/login` | Product gap (ERT-002). Not a hydration artefact. |
-| `pnpm test` missing at repo root | Tooling debt (ERT-001). |
+| Missing Light/Dark control on `/login` | Closed in F-001 (ERT-002). Auth rail and banner render `ThemeToggle`. |
+| `pnpm test` missing at repo root | Closed in F-002 (ERT-001). Root script is `turbo run test`. |
 | next-themes `light` / `dark` on `<html>` | Intended climate class. Not an overlay by itself. |
 
 Earlier ticket **ERT-003** blamed `VentureMark` / next-themes `html` class. The v1.0 overlay diffs showed **KA-001**, not a climate-class mismatch. Do not reopen Theme Provider or `VentureMark` to close ERT-003 unless a clean Chromium profile produces a non-artefact diff.

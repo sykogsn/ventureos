@@ -63,6 +63,10 @@ export function assertIdsSourceGraph(webRoot: string, idsRoot: string): void {
     join(webRoot, "src/modules/settings/appearance.tsx"),
     "utf8",
   );
+  const authShell = readFileSync(
+    join(webRoot, "src/modules/auth/executive-auth-shell.tsx"),
+    "utf8",
+  );
   const tokensIndex = readFileSync(join(idsRoot, "tokens/index.css"), "utf8");
   const generatedPath = join(idsRoot, "tokens/generated/breakpoints.css");
 
@@ -131,6 +135,11 @@ export function assertIdsSourceGraph(webRoot: string, idsRoot: string): void {
   ) {
     throw new IdsDevGuardError(
       "Settings Appearance must name the two climates Executive Light and Executive Dark.",
+    );
+  }
+  if (!authShell.includes("ThemeToggle")) {
+    throw new IdsDevGuardError(
+      "Auth shell has no ThemeToggle. Climate cannot be selected on /login.",
     );
   }
   if (!tokensIndex.includes('./generated/breakpoints.css')) {

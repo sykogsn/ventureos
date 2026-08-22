@@ -49,7 +49,7 @@ Never continue on an unhealthy foundation. Verify every item below before implem
 | Generated CSS | Generated CSS is present, imported, and valid. No `@custom-media`. No `var()` inside `@media`. No `--breakpoint-*: var(...)`. |
 | TypeScript | `pnpm check-types` (or the sprint’s stated type gate) passes. |
 | ESLint | `pnpm lint` passes. |
-| Tests | Workspace tests pass (`pnpm exec turbo run test` until ERT-001 is closed). |
+| Tests | Workspace tests pass (`pnpm test`). |
 | Build | `pnpm build` (or the sprint’s stated build) passes. |
 | Next.js health | The application starts without CSS parse errors, missing generated files, or server crash. |
 | Running processes | No stale `next dev` or leftover lock PID serving a failed graph. Recover with `pnpm recover-dev` when the running process disagrees with source. |

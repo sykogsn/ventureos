@@ -3,7 +3,7 @@
 **Purpose.** Follow-up items named at Foundation Certification v1.1.  
 **Authority.** Engineering Records. Foundation-layer debt also lives in `docs/foundation-library/05-GOVERNANCE/Technical-Debt-Register.md` and `docs/foundation/release/04-TECHNICAL-DEBT-REGISTER.md`.  
 **Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-08-22
 
 This register starts with certification follow-ups only. It does not copy TD-001–TD-011 unless they appeared in the VS-007 remaining list.
 
@@ -19,8 +19,8 @@ Planned sprint is recorded only when a named programme already exists. Unknown m
 | Priority | Low |
 | Description | Repository `package.json` has no `test` script. `pnpm test` exits `ERR_PNPM_NO_SCRIPT`. Workspace tests pass via `turbo run test` / `pnpm --filter web test` and `pnpm --filter @repo/ids test`. |
 | Impact | Certification checklists that say `pnpm test` look like a failed gate. |
-| Planned Sprint | Not assigned |
-| Status | Open |
+| Planned Sprint | F-002 |
+| Status | Closed 2026-08-22. Root `package.json` runs `turbo run test`. |
 
 ## ERT-002 — Auth shell has no theme selector
 
@@ -30,8 +30,8 @@ Planned sprint is recorded only when a named programme already exists. Unknown m
 | Priority | Medium |
 | Description | Login and other auth layouts do not render `ThemeToggle` or Settings Appearance. Header toggle is `Reveal on="show-md"` inside authenticated chrome. |
 | Impact | Climate can be proven via Theme Provider class/storage, but a founder on `/login` cannot click Light/Dark. |
-| Planned Sprint | Not assigned |
-| Status | Open |
+| Planned Sprint | F-001 |
+| Status | Closed 2026-08-22. Auth rail and banner render `ThemeToggle`. Header toggle is visible at every width. |
 
 ## ERT-003 — Hydration mismatch overlay on login
 
@@ -41,8 +41,8 @@ Planned sprint is recorded only when a named programme already exists. Unknown m
 | Priority | Medium |
 | Description | After climate persistence (`localStorage.theme=dark`), Next.js reported 2 console hydration errors attributed to `apps/web/src/core/shell/venture-mark.tsx`. Login still rendered. Likely next-themes `html` class vs SSR, not a missing token file. |
 | Impact | “No browser console errors” is not clean. Overlay can be mistaken for a broken Foundation. |
-| Planned Sprint | Not assigned |
-| Status | Open |
+| Planned Sprint | F-002 |
+| Status | Closed 2026-08-22. Live diffs were Cursor `data-cursor-ref` (KA-001), not Theme Provider or `VentureMark`. |
 
 ## ERT-004 — `127.0.0.1` blocked from Next HMR
 
@@ -52,8 +52,8 @@ Planned sprint is recorded only when a named programme already exists. Unknown m
 | Priority | Low |
 | Description | Next.js 16 blocked cross-origin dev resources from `127.0.0.1` (`allowedDevOrigins`). `http://localhost:3000` served the app correctly. |
 | Impact | Agents or browsers that use the loopback IP see blocked HMR / incomplete pages. |
-| Planned Sprint | Not assigned |
-| Status | Open |
+| Planned Sprint | F-002 |
+| Status | Closed 2026-08-22. `apps/web/next.config.js` includes `allowedDevOrigins: ["127.0.0.1"]`. |
 
 ## ERT-005 — Next.js middleware file convention
 

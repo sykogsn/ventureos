@@ -6,6 +6,7 @@
     "dev": "turbo run dev",
     "recover-dev": "pnpm --filter web recover-dev",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "doctor": "pnpm --filter web run doctor"
