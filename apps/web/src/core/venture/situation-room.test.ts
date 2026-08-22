@@ -70,4 +70,38 @@ describe("Situation Room morning projection", () => {
     assert.equal(room.briefing.implications.length, 3);
     assert.equal(room.stories.length, 1);
   });
+
+  it("projects the selected company when desk boot names it", () => {
+    const first = runExecutiveIntelligenceRuntime(
+      emptyCore(),
+      createCompanyFounded({ occurredAt: NOW, venture: northStar() }),
+    );
+    const secondVenture = createVentureFromFounding({
+      id: "south-star",
+      slug: "south-star",
+      name: "South Star",
+      foundedAt: NOW,
+      owner: "Sonny",
+      genome: {
+        thesis: "South Star is the second company on this desk.",
+        category: "SaaS",
+        stage: "Idea",
+        goal: "Ship an MVP",
+        posture: "human-led",
+        risk: "focused",
+        motion: "Operate the second company.",
+        cadence: "Weekly",
+      },
+      officeEnabled: true,
+      seatedRoleIds: ["founder"],
+    });
+    const snapshot = runExecutiveIntelligenceRuntime(
+      first.core,
+      createCompanyFounded({ occurredAt: NOW, venture: secondVenture }),
+    );
+    const room = projectSituationRoom(snapshot.core, {
+      activeVentureId: "south-star",
+    });
+    assert.equal(room.mission.company, "South Star");
+  });
 });

@@ -4,6 +4,7 @@ import {
   GOOGLE_LINK_COOKIE,
   OAUTH_COOKIE,
   SESSION_COOKIE,
+  VENTURE_COOKIE,
   WORKSPACE_COOKIE,
 } from "@/lib/auth/cookies";
 import { sessionCookieOptions } from "@/lib/auth/session-cookie";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/auth/session-token";
 import { ensureSchema, getPersistence, nowIso } from "@/platform";
 
-export { SESSION_COOKIE, WORKSPACE_COOKIE };
+export { SESSION_COOKIE, VENTURE_COOKIE, WORKSPACE_COOKIE };
 export type { SessionUser } from "@/lib/auth/session-token";
 
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
@@ -86,6 +87,7 @@ export async function clearSessionCookie() {
   }
   jar.delete(SESSION_COOKIE);
   jar.delete(WORKSPACE_COOKIE);
+  jar.delete(VENTURE_COOKIE);
   jar.delete(OAUTH_COOKIE);
   jar.delete(GOOGLE_LINK_COOKIE);
 }
@@ -104,4 +106,25 @@ export async function setActiveWorkspaceCookie(workspaceId: string) {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
+}
+
+export async function getActiveVentureId() {
+  const jar = await cookies();
+  return jar.get(VENTURE_COOKIE)?.value ?? null;
+}
+
+export async function setActiveVentureCookie(ventureId: string) {
+  const jar = await cookies();
+  jar.set(VENTURE_COOKIE, ventureId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
+export async function clearActiveVentureCookie() {
+  const jar = await cookies();
+  jar.delete(VENTURE_COOKIE);
 }

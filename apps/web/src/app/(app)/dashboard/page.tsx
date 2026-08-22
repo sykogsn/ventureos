@@ -21,5 +21,11 @@ export default async function DashboardPage() {
     return <FounderWelcome founderName={active.core.founder.name} />;
   }
 
-  return <SituationRoomScreen data={projectSituationRoom(active.core)} />;
+  return (
+    <SituationRoomScreen
+      data={projectSituationRoom(active.core, {
+        activeVentureId: active.activeVenture?.id,
+      })}
+    />
+  );
 }

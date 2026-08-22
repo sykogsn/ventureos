@@ -18,7 +18,9 @@ export default async function AgentsPage() {
 
   return (
     <ExecutiveOfficeFloorScreen
-      data={projectExecutiveFloor(active.core)}
+      data={projectExecutiveFloor(active.core, {
+        activeVentureId: active.activeVenture?.id,
+      })}
       basePath="/agents"
     />
   );

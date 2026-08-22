@@ -123,9 +123,14 @@ function projectMemory(core: VentureIntelligenceCore) {
 
 export function projectSituationRoom(
   core: VentureIntelligenceCore,
+  options?: { activeVentureId?: string | null },
 ): SituationRoomModel {
   const morning = assembleMorningIntelligence(core);
+  const selected =
+    options?.activeVentureId &&
+    core.ventures.find((venture) => venture.identity.id === options.activeVentureId);
   const activeVenture =
+    selected ??
     core.ventures.find((venture) => venture.identity.id === morning.action?.ventureId) ??
     core.ventures.find((venture) => venture.mission.today.active) ??
     core.ventures[0];
@@ -410,8 +415,12 @@ export function projectExecutiveProfile(
 
 export function projectExecutiveFloor(
   core: VentureIntelligenceCore,
+  options?: { activeVentureId?: string | null },
 ): ExecutiveFloorModel {
-  const officeEnabled = core.ventures.some((venture) =>
+  const scoped = options?.activeVentureId
+    ? core.ventures.filter((venture) => venture.identity.id === options.activeVentureId)
+    : core.ventures;
+  const officeEnabled = scoped.some((venture) =>
     ventureHasFeature(venture, "executive-office"),
   );
   if (!officeEnabled) {

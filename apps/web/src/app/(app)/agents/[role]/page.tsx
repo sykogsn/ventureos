@@ -25,7 +25,9 @@ export async function generateMetadata({
   }
 
   const executive = findExecutive(
-    projectExecutiveFloor(active.core).executives,
+    projectExecutiveFloor(active.core, {
+      activeVentureId: active.activeVenture?.id,
+    }).executives,
     role,
   );
 
@@ -48,7 +50,9 @@ export default async function ExecutiveOfficePage({
   }
 
   const executive = findExecutive(
-    projectExecutiveFloor(active.core).executives,
+    projectExecutiveFloor(active.core, {
+      activeVentureId: active.activeVenture?.id,
+    }).executives,
     role,
   );
 
