@@ -5,6 +5,7 @@
 **Owner.** Engineering  
 **Applies to.** Runtime verification of the running desk during development  
 **Certification.** [Foundation v1.0](./certification/FOUNDATION-V1.0.md)  
+**Related.** [ADR-009](./architecture/ADR-009-VentureOS-Brain.md) · [BRAIN-001](./architecture/BRAIN-001-VentureOS-Brain-Architecture.md) · [BRAIN-002](./architecture/BRAIN-002-VentureOS-Brain-Implementation-Roadmap.md) · [Review Process](../foundation-library/04-ENGINEERING/Review-Process.md)  
 **Not this document.** Product honesty lives in [Known Limitations](./release/05-KNOWN-LIMITATIONS.md). Named follow-up work lives in the [Technical Debt Register](../engineering/TECHNICAL_DEBT_REGISTER.md).
 
 This register records confirmed **non-application** issues encountered while certifying Foundation v1.0. They appear in `next dev`, Cursor’s embedded browser, or extension-equipped profiles. They are not VentureOS defects. They are not permission to redesign Runtime, IDS, Theme Provider, or `VentureMark`.

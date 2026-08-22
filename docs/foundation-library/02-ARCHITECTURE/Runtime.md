@@ -8,7 +8,7 @@
 
 **Dependencies.** [Architecture Overview](./Architecture-Overview.md)
 
-**Related Documents.** [Capability Framework](./Capability-Framework.md) · [Venture Definitions](./Venture-Definitions.md) · [Situation Room](./Situation-Room.md) · [Engineering Standards](../04-ENGINEERING/Engineering-Standards.md)
+**Related Documents.** [Capability Framework](./Capability-Framework.md) · [Venture Definitions](./Venture-Definitions.md) · [Situation Room](./Situation-Room.md) · [Engineering Standards](../04-ENGINEERING/Engineering-Standards.md) · [ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)
 
 **Status.** Approved (locked)
 
@@ -50,4 +50,4 @@ The intelligence service writes repositories from mutation snapshots. Repositori
 
 ## Locked rule
 
-Do not add a stage, an alternate entry, or a persist stage without a Foundation amendment recorded in the [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md).
+Do not add a stage, an alternate entry, or a persist stage without a Foundation amendment recorded in the [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md). Brain engines may grow behind existing stages. They do not become stages ([ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)).

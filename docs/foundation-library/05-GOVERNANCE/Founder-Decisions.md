@@ -16,7 +16,7 @@
 
 **Owner.** Founder
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
 
@@ -28,5 +28,8 @@
 | FD-004 | The founder is the principal of all copy and primary action | Accepted |
 | FD-005 | Foundation v1.1 is locked | Accepted |
 | FD-006 | Calviora identity (livestock vs healthcare headquarters) is not ratified | Open |
+| FD-B0 | Accept BRAIN-002 as the Brain implementation sequence | Accepted |
 
 FD-006 blocks painting Calviora atmosphere. The live definition remains livestock operating cadence. See [Assumption Register](./Assumption-Register.md) A-001 and [Calviora](../06-PRODUCTS/Calviora/README.md).
+
+FD-B0 accepts [BRAIN-002](../../foundation/architecture/BRAIN-002-VentureOS-Brain-Implementation-Roadmap.md). Governance is [ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md). The first code sprint is VC-010 and is not opened by FD-B0.

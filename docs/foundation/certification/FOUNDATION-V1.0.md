@@ -25,6 +25,8 @@ Closed in this certification:
 
 Inspector and extension overlays that are **not** application HTML are recorded in [`docs/foundation/KNOWN-DEVELOPMENT-ARTEFACTS.md`](../KNOWN-DEVELOPMENT-ARTEFACTS.md) (Cursor `data-cursor-ref`, Grammarly attributes, Next.js Dev Tools badge, other extension hydration diffs).
 
+After this gate, [ADR-009](../architecture/ADR-009-VentureOS-Brain.md) registers the VentureOS Brain as the intelligence substrate. That decision does not unfreeze this certification, change Runtime, or certify Brain as implemented. Architecture: [BRAIN-001](../architecture/BRAIN-001-VentureOS-Brain-Architecture.md). Plan: [BRAIN-002](../architecture/BRAIN-002-VentureOS-Brain-Implementation-Roadmap.md). Review: [Review Process](../../foundation-library/04-ENGINEERING/Review-Process.md).
+
 ---
 
 ## Evidence
@@ -48,3 +50,4 @@ Inspector and extension overlays that are **not** application HTML are recorded 
 - Any product (Qualora, Calviora, Farmora) as a finished headquarters
 - Accessibility Layer 3 founder overrides
 - Production OAuth / email credentials
+- VentureOS Brain as implemented (ADR-009 is governance; VC-010 is the first code sprint)

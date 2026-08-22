@@ -8,7 +8,7 @@
 
 **Dependencies.** [Twelve Founding Principles](../01-FOUNDATION/Twelve-Founding-Principles.md) · [Foundation Governance](../01-FOUNDATION/Foundation-Governance.md)
 
-**Related Documents.** [Runtime](./Runtime.md) · [Capability Framework](./Capability-Framework.md) · [Venture Definitions](./Venture-Definitions.md) · [IDS](../03-DESIGN/IDS.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md)
+**Related Documents.** [Runtime](./Runtime.md) · [Capability Framework](./Capability-Framework.md) · [Venture Definitions](./Venture-Definitions.md) · [IDS](../03-DESIGN/IDS.md) · [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md) · [ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)
 
 **Status.** Approved
 
@@ -16,7 +16,7 @@
 
 **Owner.** Architecture
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
 
@@ -26,7 +26,7 @@ Founder
     → Definition Registry
       → Venture Instance (VIC + definition ref)
         → Runtime (only orchestrator)
-          → engines (policy, recommendation, health, graph, …)
+          → engines (policy, recommendation, health, graph, Brain substrate, …)
         → intelligence service persists snapshots
       → IDS binds atmosphere from definition id
   → Platform (identity, session, workspace, membership)
@@ -44,6 +44,7 @@ Founder
 | Platform identity | Users, sessions, workspaces, membership, permissions | Import Runtime |
 | IDS | Tokens, climate, brand overlay | Execute, persist, instantiate |
 | Shell and modules | Project Runtime output onto the desk | Become a second application layer |
+| Brain | Intelligence substrate: knowledge, relationships, memory, reasoning, executive products ([ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)) | Orchestrate, dispatch capabilities, own pipeline stages, own rooms, authenticate |
 
 Empty `src/api/*` barrels are unused HTTP facades retained as future extension points. They are not a second application layer.
 
@@ -69,4 +70,4 @@ Executive Atmosphere (Foundation v1.1) is specified in EAS-001 and is not yet ap
 
 ## Where to go next
 
-Read [Runtime](./Runtime.md), then [Capability Framework](./Capability-Framework.md), then [Venture Definitions](./Venture-Definitions.md), then the three rooms of the desk.
+Read [Runtime](./Runtime.md), then [Capability Framework](./Capability-Framework.md), then [Venture Definitions](./Venture-Definitions.md), then the three rooms of the desk. Brain architecture: [ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md) · [BRAIN-001](../../foundation/architecture/BRAIN-001-VentureOS-Brain-Architecture.md). The Brain desk remains shell. The Brain never orchestrates.

@@ -8,7 +8,7 @@
 
 **Dependencies.** [Foundation Governance](../01-FOUNDATION/Foundation-Governance.md) · [Architecture Overview](../02-ARCHITECTURE/Architecture-Overview.md)
 
-**Related Documents.** [Founder Decisions](./Founder-Decisions.md) · [Runtime](../02-ARCHITECTURE/Runtime.md) · [Capability Framework](../02-ARCHITECTURE/Capability-Framework.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md)
+**Related Documents.** [Founder Decisions](./Founder-Decisions.md) · [Runtime](../02-ARCHITECTURE/Runtime.md) · [Capability Framework](../02-ARCHITECTURE/Capability-Framework.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md) · [ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)
 
 **Status.** Living
 
@@ -16,7 +16,7 @@
 
 **Owner.** Architecture
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-08-22
 
 ---
 
@@ -30,6 +30,7 @@
 | ADR-006 | Platform identity does not import Runtime | Accepted |
 | ADR-007 | Two climates only; brand is overlay; atmosphere specified separately (EAS-001) | Accepted |
 | ADR-008 | Unknown atmosphere/brand ids fail closed to VentureOS | Accepted |
+| ADR-009 | VentureOS Brain is the intelligence substrate; Runtime remains the sole orchestrator | Accepted |
 
 ### ADR-001 — One orchestrator
 
@@ -62,3 +63,11 @@ Climate is live (Light/Dark). Executive Atmosphere is specified in EAS-001 and i
 ### ADR-008 — Fail closed
 
 Unknown definition-to-brand mapping uses VentureOS. Pre-definition rows map to `ventureos.company@1.0.0`.
+
+### ADR-009 — Brain is substrate
+
+The VentureOS Brain provides knowledge, relationships, memory, reasoning, and executive intelligence products. It never orchestrates. Runtime remains the sole orchestrator. The Brain evolves existing systems; it does not create a second Runtime, graph, Decision system, memory system, or orchestration layer.
+
+**Brain Rule 001.** Every Brain output must be traceable to deterministic evidence. No recommendation may exist without named supporting Knowledge Objects. Language models may explain reasoning but never determine evidence, confidence, or recommendations.
+
+Full text: [ADR-009 — VentureOS Brain](../../foundation/architecture/ADR-009-VentureOS-Brain.md). Architecture: [BRAIN-001](../../foundation/architecture/BRAIN-001-VentureOS-Brain-Architecture.md). Roadmap: [BRAIN-002](../../foundation/architecture/BRAIN-002-VentureOS-Brain-Implementation-Roadmap.md).

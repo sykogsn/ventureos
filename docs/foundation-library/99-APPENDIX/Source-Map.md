@@ -36,6 +36,9 @@ DOC-001 did not move locked specifications. Git history on IDS-001, IDS-002, EAS
 | `docs/foundation/design-system/IDS-002-…md` | [IDS](../03-DESIGN/IDS.md) |
 | `docs/foundation/design-system/EAS-001-…md` | [Executive Environment Framework](../02-ARCHITECTURE/Executive-Environment-Framework.md) |
 | `docs/foundation/README.md` and domain READMEs | Pointers into this library; specs remain in place |
+| `docs/foundation/architecture/ADR-009-VentureOS-Brain.md` | [Architecture Decision Register](../05-GOVERNANCE/Architecture-Decision-Register.md) · [Architecture Overview](../02-ARCHITECTURE/Architecture-Overview.md) |
+| `docs/foundation/architecture/BRAIN-001-…md` | ADR-009. Approved Brain architecture |
+| `docs/foundation/architecture/BRAIN-002-…md` | ADR-009. Approved Brain implementation sequence |
 | `docs/PROJECT_CONSTITUTION.md` | Supreme governing document of the repository |
 | `docs/engineering/MASTER_ENGINEERING_PROMPT.md` | Authoritative engineering standard. [Engineering Standards](../04-ENGINEERING/Engineering-Standards.md), [Sprint Standard](../04-ENGINEERING/Sprint-Standard.md) |
 | `docs/engineering/README.md` | Engineering Index |

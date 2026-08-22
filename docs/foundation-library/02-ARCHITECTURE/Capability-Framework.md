@@ -8,7 +8,7 @@
 
 **Dependencies.** [Architecture Overview](./Architecture-Overview.md) · [Runtime](./Runtime.md)
 
-**Related Documents.** [Venture Definitions](./Venture-Definitions.md) · [Twelve Founding Principles](../01-FOUNDATION/Twelve-Founding-Principles.md) · [Products](../06-PRODUCTS/README.md)
+**Related Documents.** [Venture Definitions](./Venture-Definitions.md) · [Twelve Founding Principles](../01-FOUNDATION/Twelve-Founding-Principles.md) · [Products](../06-PRODUCTS/README.md) · [ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)
 
 **Status.** Approved (locked)
 
@@ -24,7 +24,7 @@ A capability is a reusable organisational building block. It is not a route, a p
 
 The registry is the source of truth. Rendered catalogue: `capabilityCatalogue()`. Dependency order: `capabilityDependencyMap()`.
 
-The Executive Intelligence Runtime remains the only orchestrator. This framework does not dispatch, persist, or load modules. IDS does not declare capabilities.
+The Executive Intelligence Runtime remains the only orchestrator. This framework does not dispatch, persist, or load modules. IDS does not declare capabilities. There is no `brain.*` dispatch id ([ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)).
 
 ## Catalogue (Foundation v1.1)
 

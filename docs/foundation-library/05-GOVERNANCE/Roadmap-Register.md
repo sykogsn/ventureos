@@ -16,7 +16,7 @@
 
 **Owner.** Product
 
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-08-22
 
 ---
 
@@ -30,7 +30,8 @@
 | RM-006 | Production Google OAuth + transactional email | Auth experience is in the app; environment credentials required. |
 | RM-007 | Empty `src/api/*` HTTP facades | Retained as extension points. Not a current product surface. |
 | RM-008 | Migrate remaining rooms onto Executive Layout v2 | After Foundation v1.0 product-development gate. Do not restyle. |
-| RM-009 | Resume Brain Knowledge Object programme only with a named sprint | Currently paused. |
+| RM-009 | Resume Brain Knowledge Object programme only with a named sprint | Desk layout only (VC-080). Still paused. Not kernel. Not a second Runtime. |
+| RM-013 | VentureOS Brain implementation | ADR-009 · BRAIN-002. First code sprint is VC-010. Do not start from this register row. |
 | RM-010 | Align `FOUNDATION.md` OAuth comment | Knowledge debt TD-007. |
 | RM-011 | Next.js 16 `proxy.ts` migration | Closed 2026-08-22. Session gate is `apps/web/src/proxy.ts`. |
 | RM-012 | Schema bootstrap generation bump when tables are added | Persistence hygiene. |

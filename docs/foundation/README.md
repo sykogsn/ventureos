@@ -15,7 +15,7 @@ This tree remains the specification register for Foundation v1.0/v1.1. It does n
 | `capabilities/` | Shared Capability Framework | `apps/web/src/core/capability/README.md` |
 | `venture-definitions/` | Venture Definition Framework | `apps/web/src/core/venture-definition/README.md` |
 | `design-system/` | IntelligenceOS Design System (IDS) | IDS-001 and IDS-002 in this folder. Foundation v1.1 atmosphere architecture: `EAS-001-Executive-Atmosphere-Architecture.md` (does not amend IDS) |
-| `architecture/` | Cross-cutting platform maps | `apps/web/src/FOUNDATION.md`, `apps/web/src/platform/persistence/README.md` |
+| `architecture/` | Cross-cutting platform maps. Brain substrate: ADR-009, BRAIN-001, BRAIN-002 | `apps/web/src/FOUNDATION.md`, `apps/web/src/platform/persistence/README.md`. Index: [`architecture/README.md`](./architecture/README.md) |
 | `certification/` | Certification records and freeze conditions | Programme certification artefacts. Index: `docs/foundation/release/03-CERTIFICATION-INDEX.md` |
 | `release/` | Foundation v1.0 product-development release pack | Release notes, capability register, certification index, debt, limitations, roadmap |
 
@@ -25,4 +25,4 @@ Companion record (not a second architecture, not a product limitation):
 |---|---|
 | [`KNOWN-DEVELOPMENT-ARTEFACTS.md`](./KNOWN-DEVELOPMENT-ARTEFACTS.md) | Confirmed non-application issues from Foundation v1.0 certification (Cursor inspector, Grammarly, Next.js Dev Tools, other extension hydration diffs) |
 
-The Executive Intelligence Runtime remains the only orchestrator. The Capability Registry remains governance, not dispatch. The Definition Registry remains the only product-definition system. IDS is presentation. It does not execute, persist, or instantiate.
+The Executive Intelligence Runtime remains the only orchestrator. The VentureOS Brain is the intelligence substrate ([ADR-009](./architecture/ADR-009-VentureOS-Brain.md)). It never orchestrates. The Capability Registry remains governance, not dispatch. The Definition Registry remains the only product-definition system. IDS is presentation. It does not execute, persist, or instantiate.

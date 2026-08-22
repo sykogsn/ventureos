@@ -105,6 +105,7 @@ Do not treat this library as permission to change:
 - Venture Definition Registry behaviour
 - Persistence ownership
 - Executive Environments implementation (EAS-001 is design-only)
+- A second orchestrator. The Brain is substrate ([ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)); it never runs the pipeline.
 
 Those boundaries are restated in [Foundation Governance](./01-FOUNDATION/Foundation-Governance.md).
 

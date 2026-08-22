@@ -31,7 +31,8 @@ v1.1 onward does **not** include a second orchestrator, a Product Registry, or a
 | RM-005 | Accessibility Layer 3 Settings | Motion and contrast founder overrides (`data-ids-motion`, `data-ids-contrast`). |
 | RM-006 | Production Google OAuth and transactional email | Auth experience already exists. Credentials and mail transport only. |
 | RM-007 | Decide fate of empty `src/api/*` HTTP facades | Extension points or removal. Not a stealth application layer. |
-| RM-009 | Resume Brain Knowledge Object programme only with a named sprint | Currently paused. Not persistence. Not a second Runtime. |
+| RM-009 | Resume Brain Knowledge Object programme only with a named sprint | Desk layout only (VC-080). Still paused. Not persistence. Not a second Runtime. |
+| RM-013 | VentureOS Brain implementation | [ADR-009](../architecture/ADR-009-VentureOS-Brain.md) · [BRAIN-002](../architecture/BRAIN-002-VentureOS-Brain-Implementation-Roadmap.md). First code sprint is VC-010. Do not start from this row. |
 | RM-010 | Align `FOUNDATION.md` OAuth comment with live Google sign-in | Knowledge debt TD-007. Not a behaviour change. |
 | RM-011 | Next.js 16 `proxy.ts` migration | Closed 2026-08-22. Session gate is `apps/web/src/proxy.ts`. |
 | RM-012 | Schema bootstrap generation bump when tables are added | Persistence hygiene (TD-002). |

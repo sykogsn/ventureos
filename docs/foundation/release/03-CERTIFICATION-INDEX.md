@@ -23,7 +23,7 @@ This index is the release map of what is certified, what is locked, and what is 
 | Executive Layout v1 | Certified reference | Authentication (`BrandRail`, `ExecutiveMeasure`) | OS-wide layout |
 | Executive Layout v2 | Certified as platform layout foundation | [EXECUTIVE-LAYOUT-V2.md](../certification/EXECUTIVE-LAYOUT-V2.md) | Migration of every product room |
 | Twelve Founding Principles | Constitutional | Foundation Library | A sprint ticket |
-| Architecture decisions ADR-001–008 | Accepted | Architecture Decision Register | Future amendments |
+| Architecture decisions ADR-001–009 | Accepted | Architecture Decision Register · [ADR-009](../architecture/ADR-009-VentureOS-Brain.md) | Brain as implemented |
 
 ## Specified, not certified as implemented
 
@@ -32,6 +32,7 @@ This index is the release map of what is certified, what is locked, and what is 
 | Executive Atmosphere | Design only | EAS-001 |
 | Accessibility Layer 3 (motion / contrast founder overrides) | Specified | Innovation Register IN-002 |
 | Chrome split for atmosphere | Specified | EAS-001 · IN-003 |
+| VentureOS Brain | Architecture and governance accepted. Not implemented | [ADR-009](../architecture/ADR-009-VentureOS-Brain.md) · [BRAIN-001](../architecture/BRAIN-001-VentureOS-Brain-Architecture.md) · [BRAIN-002](../architecture/BRAIN-002-VentureOS-Brain-Implementation-Roadmap.md) |
 
 ## Certified with named warnings
 

@@ -3,7 +3,7 @@
 **Purpose.** Master timeline of VentureOS engineering sprints.  
 **Authority.** Engineering Records. Does not rewrite Foundation Library sprint IDs used in older specification files.  
 **Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-08-22
 
 ## Governance Foundation
 
@@ -147,3 +147,5 @@ Completion dates below are recorded only where a dated artefact exists. Earlier 
 ## Not on this ledger yet
 
 Engineering HQ (the product workspace) is not started. Qualora, Calviora, and Farmora visual programmes remain on the Foundation Library roadmap (RM-002–RM-004) and are not opened by this history.
+
+The VentureOS Brain programme (VC-001, VC-002, VC-003) is recorded in [BRAIN_PROGRAMME.md](./BRAIN_PROGRAMME.md). The history parser on this page remains the VS-001–VS-008C ledger. VC-010 is not opened.
