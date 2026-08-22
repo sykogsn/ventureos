@@ -8,9 +8,11 @@
     "./themes/bind": "./themes/bind.ts"
   },
   "scripts": {
+    "generate": "tsx tokens/generate.ts",
+    "build": "tsx tokens/generate.ts",
     "lint": "eslint themes/bind.ts --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "test": "tsx --test themes/bind.test.ts tokens/color.test.ts tokens/surface.test.ts"
+    "test": "tsx tokens/generate.ts --check && tsx --test themes/bind.test.ts tokens/color.test.ts tokens/surface.test.ts tokens/css-media.test.ts"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

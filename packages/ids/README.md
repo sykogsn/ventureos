@@ -7,6 +7,8 @@ Specification: `docs/foundation/design-system/IDS-002-IntelligenceOS-Design-Syst
 
 This package does not execute intelligence. It does not import Runtime, the Capability Registry, or the Definition Registry.
 
+Breakpoint media queries are generated from `tokens/foundation.css` into `tokens/generated/breakpoints.css` as static `@theme` lengths. CSS variables must not appear in `@media` conditions.
+
 - `tokens/` — foundation, surface, and brand custom properties (colour hex lives in foundation colour tokens only)
 - `themes/climate.css` — semantic aliases (`--background`, `--text-primary`, `--brand-primary`, `--surface-hover`, …)
 - `themes/bind.ts` — maps a Venture Instance `definition.id` to `data-ids-brand`
