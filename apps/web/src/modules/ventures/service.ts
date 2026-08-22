@@ -1,4 +1,9 @@
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
+import {
+  assertVentureInWorkspace,
+  toVentureRegistryEntry,
+  type VentureRegistryEntry,
+} from "@/core/venture-registry";
 import { persistFoundedCompany } from "@/modules/intelligence/service";
 import { emptyLaunchDraft } from "@/modules/ventures/launch/types";
 import { ensureSchema, getPersistence } from "@/platform";
@@ -10,7 +15,19 @@ export type VentureRecord = {
   name: string;
   slug: string;
   definitionId: string;
+  definitionVersion: string;
 };
+
+function toRecord(entry: VentureRegistryEntry): VentureRecord {
+  return {
+    id: entry.id,
+    workspaceId: entry.workspaceId,
+    name: entry.name,
+    slug: entry.slug,
+    definitionId: entry.definition.id,
+    definitionVersion: entry.definition.version,
+  };
+}
 
 export async function createVenture(input: {
   userId: UserId;
@@ -38,13 +55,14 @@ export async function createVenture(input: {
     name: company.venture.identity.name,
     slug: company.slug,
     definitionId: company.venture.definition?.id ?? "ventureos.company",
+    definitionVersion: company.venture.definition?.version ?? "1.0.0",
   };
 }
 
-export async function listVentures(
+export async function listVentureCatalogue(
   userId: UserId,
   workspaceId: WorkspaceId,
-): Promise<VentureRecord[]> {
+): Promise<VentureRegistryEntry[]> {
   await ensureSchema();
   const platform = getPlatform();
   const allowed = await platform.permissions.can({
@@ -58,13 +76,24 @@ export async function listVentures(
   }
 
   const rows = await getPersistence().ventures.listByWorkspace(workspaceId);
-  return rows.map((row) => ({
-    id: row.id,
-    workspaceId: row.workspaceId,
-    name: row.name,
-    slug: row.slug,
-    definitionId: row.definitionId,
-  }));
+  return rows.map((row) =>
+    toVentureRegistryEntry({
+      id: row.id,
+      workspaceId: row.workspaceId,
+      name: row.name,
+      slug: row.slug,
+      definitionId: row.definitionId,
+      definitionVersion: row.definitionVersion,
+    }),
+  );
+}
+
+export async function listVentures(
+  userId: UserId,
+  workspaceId: WorkspaceId,
+): Promise<VentureRecord[]> {
+  const catalogue = await listVentureCatalogue(userId, workspaceId);
+  return catalogue.map(toRecord);
 }
 
 export async function getVenture(
@@ -77,22 +106,10 @@ export async function getVenture(
     return null;
   }
 
-  const platform = getPlatform();
-  const allowed = await platform.permissions.can({
-    userId,
-    permission: "venture.read",
-    resource: { type: "workspace", id: row.workspaceId },
-  });
-
-  if (!allowed) {
+  const catalogue = await listVentureCatalogue(userId, row.workspaceId);
+  try {
+    return toRecord(assertVentureInWorkspace(catalogue, ventureId, row.workspaceId));
+  } catch {
     return null;
   }
-
-  return {
-    id: row.id,
-    workspaceId: row.workspaceId,
-    name: row.name,
-    slug: row.slug,
-    definitionId: row.definitionId,
-  };
 }
