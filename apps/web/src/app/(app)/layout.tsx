@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       workspaces={snapshot.workspaces}
       ventures={snapshot.ventures}
       activeWorkspaceId={snapshot.activeWorkspaceId}
+      activeVentureId={snapshot.activeVentureId}
     >
       {children}
     </OsShell>

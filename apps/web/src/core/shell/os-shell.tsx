@@ -6,6 +6,7 @@ import { ShellProvider, useShell } from "@/core/context/shell-context";
 import { CommandPalette } from "@/core/shell/command-palette";
 import { Sidebar } from "@/core/shell/sidebar";
 import { TopNav } from "@/core/shell/top-nav";
+import { resolveRouteVentureId } from "@/core/shell/venture-route";
 import { IdsBrandBinder } from "@/core/theme/ids-brand-binder";
 import {
   SkipLink,
@@ -24,18 +25,14 @@ function VentureRouteSync() {
   const { setActiveVentureId, ventures } = useShell();
 
   useEffect(() => {
-    if (params.ventureId) {
-      setActiveVentureId(params.ventureId);
-      return;
+    const next = resolveRouteVentureId({
+      routeVentureId: params.ventureId,
+      routeSlug: params.slug,
+      ventures,
+    });
+    if (next) {
+      setActiveVentureId(next);
     }
-
-    if (params.slug) {
-      const match = ventures.find((item) => item.slug === params.slug);
-      setActiveVentureId(match?.id ?? null);
-      return;
-    }
-
-    setActiveVentureId(null);
   }, [params.ventureId, params.slug, setActiveVentureId, ventures]);
 
   return null;
@@ -63,12 +60,14 @@ export function OsShell({
   workspaces,
   ventures,
   activeWorkspaceId,
+  activeVentureId,
 }: {
   children: ReactNode;
   user: ShellUser;
   workspaces: WorkspaceRecord[];
   ventures: VentureRecord[];
   activeWorkspaceId: string | null;
+  activeVentureId: string | null;
 }) {
   return (
     <ShellProvider
@@ -76,6 +75,7 @@ export function OsShell({
       workspaces={workspaces}
       ventures={ventures}
       initialWorkspaceId={activeWorkspaceId}
+      initialVentureId={activeVentureId}
     >
       <VentureRouteSync />
       <IdsBrandBinder />

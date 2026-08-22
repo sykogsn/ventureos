@@ -48,17 +48,21 @@ export function ShellProvider({
   workspaces,
   ventures,
   initialWorkspaceId,
+  initialVentureId,
 }: {
   children: ReactNode;
   user: ShellUser;
   workspaces: WorkspaceRecord[];
   ventures: VentureRecord[];
   initialWorkspaceId: string | null;
+  initialVentureId: string | null;
 }) {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(
     initialWorkspaceId,
   );
-  const [activeVentureId, setActiveVentureId] = useState<string | null>(null);
+  const [activeVentureId, setActiveVentureId] = useState<string | null>(
+    initialVentureId,
+  );
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
@@ -67,6 +71,10 @@ export function ShellProvider({
   useEffect(() => {
     setActiveWorkspaceId(initialWorkspaceId);
   }, [initialWorkspaceId]);
+
+  useEffect(() => {
+    setActiveVentureId(initialVentureId);
+  }, [initialVentureId]);
 
   const openPalette = useCallback((mode: PaletteMode = "command") => {
     setPaletteMode(mode);

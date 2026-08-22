@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { ChevronsUpDown } from "lucide-react";
 import { useShell } from "@/core/context/shell-context";
 import { Popover } from "@/core/shell/popover";
@@ -10,6 +11,8 @@ import { CreateWorkspaceForm } from "@/modules/workspaces/create-form";
 import { Anchor, Cluster, Hairline, Inset, Stack, SwitcherBound } from "@/core/layout";
 
 export function WorkspaceSwitcher() {
+  const router = useRouter();
+  const pathname = usePathname();
   const { workspaces, activeWorkspaceId, setActiveWorkspaceId } = useShell();
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
@@ -53,7 +56,16 @@ export function WorkspaceSwitcher() {
                     onClick={() => {
                       setActiveWorkspaceId(workspace.id);
                       startTransition(() => {
-                        void selectWorkspaceAction(workspace.id);
+                        void selectWorkspaceAction(workspace.id).then(() => {
+                          if (
+                            pathname.startsWith("/ventures/hq") ||
+                            /^\/ventures\/[^/]+\//.test(pathname)
+                          ) {
+                            router.push("/dashboard");
+                          } else {
+                            router.refresh();
+                          }
+                        });
                       });
                       setOpen(false);
                     }}

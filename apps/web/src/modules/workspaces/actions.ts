@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
+  clearActiveVentureCookie,
   getActiveWorkspaceId,
   getSession,
   setActiveWorkspaceCookie,
@@ -39,6 +41,7 @@ export async function createWorkspaceAction(
       scopeWorkspaceId: await getActiveWorkspaceId(),
     });
     await setActiveWorkspaceCookie(workspace.id);
+    await clearActiveVentureCookie();
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Could not create workspace.",
@@ -46,7 +49,7 @@ export async function createWorkspaceAction(
   }
 
   revalidatePath("/", "layout");
-  return {};
+  redirect("/dashboard");
 }
 
 export async function selectWorkspaceAction(workspaceId: string) {
@@ -64,5 +67,6 @@ export async function selectWorkspaceAction(workspaceId: string) {
   }
 
   await setActiveWorkspaceCookie(workspaceId);
+  await clearActiveVentureCookie();
   revalidatePath("/", "layout");
 }

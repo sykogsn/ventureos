@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronsUpDown } from "lucide-react";
 import { useShell } from "@/core/context/shell-context";
 import { Popover } from "@/core/shell/popover";
 import { EmptyCopy } from "@/core/shell/empty-copy";
+import { selectVentureAction } from "@/modules/ventures/actions";
 import { companyHomeHref } from "@/modules/ventures/home";
 import { Anchor, Cluster, Inset, SwitcherBound } from "@/core/layout";
 
@@ -13,6 +14,7 @@ export function VentureSwitcher() {
   const router = useRouter();
   const { ventures, activeVentureId, setActiveVentureId } = useShell();
   const [open, setOpen] = useState(false);
+  const [, startTransition] = useTransition();
   const active = ventures.find((venture) => venture.id === activeVentureId);
 
   return (
@@ -50,6 +52,9 @@ export function VentureSwitcher() {
                   className="vos-row"
                   onClick={() => {
                     setActiveVentureId(venture.id);
+                    startTransition(() => {
+                      void selectVentureAction(venture.id);
+                    });
                     router.push(companyHomeHref(venture.slug));
                     setOpen(false);
                   }}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { VentureHqScreen } from "@/modules/ventures/launch/venture-hq-screen";
 import { loadActiveIntelligence } from "@/modules/intelligence/request";
 import { getFoundedCompanyBySlug } from "@/modules/intelligence/service";
+import { persistActiveVentureSelection } from "@/modules/ventures/select";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,10 @@ export default async function LaunchedVenturePage({
 
   if (!company) {
     notFound();
+  }
+
+  if (company.venture.identity.id !== active.activeVenture?.id) {
+    await persistActiveVentureSelection(company.venture.identity.id);
   }
 
   return <VentureHqScreen company={company} />;

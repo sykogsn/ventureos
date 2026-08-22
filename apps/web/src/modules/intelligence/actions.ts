@@ -1,7 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { WorkspaceId } from "@/contracts";
-import { getActiveWorkspaceId, getSession } from "@/lib/auth/session";
+import {
+  getActiveWorkspaceId,
+  getSession,
+  setActiveVentureCookie,
+} from "@/lib/auth/session";
 import {
   persistFoundedCompany,
   recordFounderDecision,
@@ -46,6 +51,8 @@ export async function foundCompanyAction(
       workspaceId: workspace.id as WorkspaceId,
       draft,
     });
+    await setActiveVentureCookie(company.venture.identity.id);
+    revalidatePath("/", "layout");
     return { slug: company.slug };
   } catch (error) {
     return {
