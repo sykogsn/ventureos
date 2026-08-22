@@ -18,15 +18,21 @@ The Shared Capability Registry catalogues reusable capabilities. The Runtime ass
 
 The Definition Registry is the only product-definition system. Product Bootstrap maps founder-facing product ids onto definition ids. There is no Product Registry. Instantiation validates capability, runtime, and governance profiles. See `core/venture-definition/README.md`.
 
+## Platform catalogues
+
+Workspace Registry catalogues organisations the founder may enter. Venture Registry catalogues companies in the active workspace and carries Definition Registry refs. Both are governance over existing persistence. They are not databases, bounded contexts, or a Product Registry. See `core/workspace-registry/README.md` and `core/venture-registry/README.md`.
+
+Desk boot (`modules/intelligence/boot.ts`) resolves session, workspace, and company before intelligence. It does not import Runtime. The intelligence service remains the only Runtime caller.
+
 ## Platform boundaries
 
-Identity, sessions, workspace cookies, membership, and permissions live in platform services. They do not import Runtime. Navigation (`OsShell`, extensions) is presentation and routing only.
+Identity, sessions, workspace and company cookies, membership, and permissions live in platform services. They do not import Runtime. Navigation (`OsShell`, extensions) is presentation and routing only.
 
 Empty `src/api/*` barrels are unused HTTP facades retained as future extension points. They are not a second application layer.
 
-`workspace.create` remains on owner/admin role maps. Workspace creation today grants the creator `owner` after session check; the permission is not separately asserted.
+`workspace.create` remains on owner/admin role maps. The Workspace Registry asserts it after the first workspace: founding the first workspace is session-only; later creates require `workspace.create` on the scoped workspace (owner/admin). Members are denied.
 
-OAuth providers exist on identity rows (`google`, `github`, `apple`). `linkAuthIdentity` can persist a link. There is no OAuth login route.
+OAuth providers exist on identity rows (`google`, `github`, `apple`). Google sign-in is a login route. `linkAuthIdentity` can persist a link.
 
 ## Governance boundaries
 

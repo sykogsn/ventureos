@@ -16,7 +16,7 @@ describe("Engineering Records catalogue", () => {
     assert.equal(catalogue.certification.version, "v1.1");
     assert.equal(catalogue.decisions.length, 7);
     assert.equal(catalogue.debt.length, 5);
-    assert.equal(catalogue.lessons.length, 7);
+    assert.equal(catalogue.lessons.length, 9);
     assert.match(catalogue.certification.status, /CERTIFIED/);
     assert.ok(catalogue.releases.some((item) => item.name.includes("1.1")));
     assert.ok(catalogue.releases.some((item) => item.name.includes("1.0")));

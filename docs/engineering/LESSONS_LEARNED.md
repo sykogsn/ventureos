@@ -3,7 +3,7 @@
 **Purpose.** Living engineering journal.  
 **Authority.** Engineering Records. Outcomes stay in [DECISION_REGISTER.md](./DECISION_REGISTER.md); this file records what the work taught.  
 **Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-08-22
 
 Grow this document after every major sprint. Do not invent lessons. Do not copy ADR/FD tables here — link them.
 
@@ -69,3 +69,19 @@ Definition of Done: [ENGINEERING_CONSTITUTION.md](./ENGINEERING_CONSTITUTION.md)
 Killing PID 3076 once would have restored login until the next missing generate. Guards (stamp, lock, generate, login assert) cost less than diagnosing the same 500 again.
 
 See [ERD-002](./DECISION_REGISTER.md#erd-002--never-fix-the-same-bug-twice).
+
+## LL-008 — Company selection is desk boot, not chrome state
+
+**Sprint.** VC-012  
+**Date.** 2026-08-22
+
+A client-only company id on the shell is stale the moment Situation Room or Executive Office project from Runtime. Persist the selection through the Venture Registry and desk boot cookie, then project rooms from that boot. Clearing the shell company on every non-HQ route is a defect, not a cleanup.
+
+See [PLATFORM_PROGRAMME.md](./PLATFORM_PROGRAMME.md).
+
+## LL-009 — Capabilities stay product-agnostic
+
+**Sprint.** VC-012  
+**Date.** 2026-08-22
+
+Naming a Venture inside a capability document teaches the next sprint to put product logic in the capability. Product names belong in the Definition Registry. Capability sources must not mention them.

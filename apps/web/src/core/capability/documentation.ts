@@ -62,7 +62,7 @@ export const CAPABILITY_DESIGN_STANDARD = [
   "## Rules",
   "",
   "1. Single responsibility. One purpose, one owner, one version.",
-  "2. No venture-specific logic (Qualora, Calviora, Farmora consume; they do not live inside the capability).",
+  "2. No venture-specific logic. Venture-specific behaviour resolves only through the Definition Registry. A capability must not name a Venture.",
   "3. Independently testable. Registry tests must not require UI.",
   "4. Documented in the catalogue with purpose, guarantees and limitations.",
   "5. Versioned with major.minor.patch.",

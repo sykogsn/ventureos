@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { createEmptyIntelligenceCore } from "../venture/model";
 import { runExecutiveIntelligenceRuntime } from "../runtime";
 import { CAPABILITY_CONTRACTS } from "./contracts";
@@ -18,6 +21,7 @@ import { RUNTIME_REQUIRED_CAPABILITIES } from "./types";
 import type { CapabilityManifest } from "./types";
 
 const C = CAPABILITY_CONTRACTS;
+const here = dirname(fileURLToPath(import.meta.url));
 
 function stub(partial: Partial<CapabilityManifest> & Pick<CapabilityManifest, "id">): CapabilityManifest {
   return createCapabilityManifest({
@@ -168,6 +172,15 @@ describe("Capability documentation", () => {
     assert.match(catalogue, /Venture Intelligence Core/);
     assert.match(map, /intelligence\.runtime/);
     assert.match(CAPABILITY_DESIGN_STANDARD, /Executive Intelligence Runtime remains the only orchestrator/);
+    assert.match(CAPABILITY_DESIGN_STANDARD, /must not name a Venture/);
     assert.equal(platformCapabilityCatalog.length, platformCapabilityRegistry.list().length);
+  });
+
+  it("does not name a Venture inside capability sources", () => {
+    const files = ["catalog.ts", "documentation.ts", "README.md", "types.ts"];
+    for (const file of files) {
+      const source = readFileSync(join(here, file), "utf8");
+      assert.doesNotMatch(source, /Qualora|Calviora|Farmora/);
+    }
   });
 });

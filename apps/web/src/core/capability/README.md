@@ -32,7 +32,7 @@ Initial shared capabilities:
 | `governance.executive-office` | Executive Office | Governance | stable |
 | `governance.founder-decision` | Founder Decision Recording | Governance | stable |
 
-Classifications with no entries yet: AI, Security, Communication, Infrastructure. They exist in the taxonomy for Qualora, Calviora and Farmora.
+Classifications with no entries yet: AI, Security, Communication, Infrastructure. They exist in the taxonomy for future capabilities. They do not encode a Venture by name.
 
 ## 2. Capability Dependency Map
 
