@@ -2,8 +2,8 @@
 
 **Document.** VentureOS Frontend Backend Contract Register  
 **Date.** 2026-08-23  
-**Status.** Seeded from Integration Discovery. No contracts implemented in this change.  
-**Decision.** Lovable presentation stays inside `apps/web`. See [VENTUREOS_FRONTEND_INTEGRATION_DECISION.md](./VENTUREOS_FRONTEND_INTEGRATION_DECISION.md).  
+**Status.** Reviewed against Blueprint v1.1.1 Foundation reconciliation. No contracts implemented in this change.  
+**Decision.** Lovable presentation stays inside `apps/web`. Existing VentureOS authentication retained. See [VENTUREOS_FRONTEND_INTEGRATION_DECISION.md](./VENTUREOS_FRONTEND_INTEGRATION_DECISION.md).  
 **Governance.** Subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md)
 
 Allowed statuses: `OPEN` · `PARTIALLY RESOLVED` · `RESOLVED` · `DEFERRED` · `NOT REQUIRED`
@@ -68,12 +68,17 @@ This register does **not** implement APIs. It records what a replacement present
 
 **ID.** BCR-005  
 **STATUS.** PARTIALLY RESOLVED  
-**FRONTEND REQUIREMENT.** Session / cross-origin contract.  
+**FRONTEND REQUIREMENT.** Authentication presentation over the existing VentureOS session.  
 **EXISTING IMPLEMENTATION.** jose JWT in `vos_session` plus SQLite session rows. `apps/web/src/lib/auth/`, `apps/web/src/proxy.ts`. Google OAuth routes under `apps/web/src/app/auth/google/`.  
 **AUTHORITATIVE OWNER.** Cursor / auth  
-**DECISION REQUIRED.** Founder decision on Blueprint §16 naming Supabase Auth versus the live jose/SQLite architecture. See alignment conflict.  
+**DECISION REQUIRED.** None for architecture. A smaller written frontend/auth **presentation** contract (refresh, expiry modal copy) remains useful for Sprint 0 and is distinct from the resolved architecture question.  
 **PRIORITY.** P0  
-**NOTES.** Cross-origin session is **not required** for this programme because Lovable stays in `apps/web`. The existing same-origin cookie session remains. A written session contract for Sprint 0 (refresh, expiry UX) is still outstanding. Microsoft, magic link, and MFA named in Blueprint §16 are **not** in the repository.
+**NOTES.**
+
+- **Architecture — RESOLVED.** Existing VentureOS authentication is retained. Supabase Auth is rejected. Authentication presentation consumes the existing Cursor-owned implementation. Authentication is not redesigned.
+- **Cross-origin requirement — NOT REQUIRED.** Lovable remains inside `apps/web`. Same-origin `vos_session` is sufficient. The detached/cross-origin authentication problem does not apply.
+- **Presentation contract — still useful, not an architecture conflict.** Session refresh / expiry UX copy may still be written down. That does not reopen provider choice.
+- Microsoft, magic link, and MFA named in earlier Blueprint text are **not** in the repository and must not be invented.
 
 ---
 
@@ -132,13 +137,13 @@ This register does **not** implement APIs. It records what a replacement present
 ## BCR-010
 
 **ID.** BCR-010  
-**STATUS.** PARTIALLY RESOLVED  
+**STATUS.** RESOLVED  
 **FRONTEND REQUIREMENT.** IDS consumption for new presentation.  
 **EXISTING IMPLEMENTATION.** `packages/ids`, `apps/web/src/core/theme/`, `globals.css` Tailwind v4 `@source`.  
 **AUTHORITATIVE OWNER.** Cursor / IDS  
-**DECISION REQUIRED.** None for host: Lovable-in-`apps/web` can import existing CSS variables. Token-only lint remains a sprint gate.  
+**DECISION REQUIRED.** None. Lovable stays inside the existing Next.js host and consumes the existing IDS package directly. No second design-system host. No external-bundle contract.  
 **PRIORITY.** P0  
-**NOTES.** External-bundle IDS story is **not required**. Forking IDS remains forbidden.
+**NOTES.** Architectural question is closed. Token-only lint remains a Sprint 0 implementation gate, not an open architecture question. Forking IDS remains forbidden.
 
 ---
 
@@ -164,15 +169,17 @@ This register does **not** implement APIs. It records what a replacement present
 **AUTHORITATIVE OWNER.** Founder / Cursor  
 **DECISION REQUIRED.** None. Approved 2026-08-23: Lovable presentation stays in `apps/web`. No second production SPA. No second backend. Empty API barrels stay empty unless a later Cursor programme defines a real contract.  
 **PRIORITY.** P0  
-**NOTES.** This is the only BCR closed by the integration decision. Other BCRs are not automatically resolved.
+**NOTES.** Lovable stays inside `apps/web`. No second API host. No second production SPA. Empty API barrels stay empty unless a later Cursor programme defines a real contract.
 
 ---
 
-## Host-decision effect
+## Host-decision and Foundation-reconciliation effect
 
-| ID | Effect of in-`apps/web` decision |
+| ID | Status after v1.1.1 |
 |---|---|
-| BCR-012 | Resolved |
-| BCR-005 | Cross-origin half not required; session write-up and Blueprint §16 conflict remain |
-| BCR-010 | External-bundle half not required; token consumption inside Next remains |
-| BCR-001–004, BCR-006–009, BCR-011 | Still required or deferred as written. Transport stays RSC/server actions, not a new HTTP API |
+| BCR-012 | RESOLVED — Lovable stays in `apps/web`; no second API host |
+| BCR-005 | Architecture RESOLVED; cross-origin NOT REQUIRED; written presentation/session UX contract still useful |
+| BCR-010 | RESOLVED — consume `packages/ids` in-host |
+| BCR-001–004, BCR-006–007, BCR-011 | OPEN — written contracts still required |
+| BCR-008 | DEFERRED |
+| BCR-009 | PARTIALLY RESOLVED — shell remount forbidden; command-palette pulse still to write down |

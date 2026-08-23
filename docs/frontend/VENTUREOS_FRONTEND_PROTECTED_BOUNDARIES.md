@@ -19,6 +19,8 @@ These are visual and interaction surfaces. They are not a grant to rewrite the m
 
 ### Auth experience (screens only)
 
+Lovable may modify authentication **presentation**. Lovable may **not** modify session implementation, the auth service, OAuth implementation, the proxy, role maps, permission enforcement, or persistence.
+
 - `apps/web/src/modules/auth/screens.tsx`
 - `apps/web/src/modules/auth/executive-auth-shell.tsx`
 - `apps/web/src/modules/auth/messages.ts`
@@ -30,7 +32,7 @@ These are visual and interaction surfaces. They are not a grant to rewrite the m
 - `apps/web/src/app/(auth)/layout.tsx`
 - `apps/web/src/app/(auth)/loading.tsx`
 
-Do **not** treat `apps/web/src/modules/auth/` as wholly replaceable. `actions.ts`, `service.ts`, `google-oauth.ts`, `google-account.ts`, and `password-reset.ts` are protected.
+Do **not** treat `apps/web/src/modules/auth/` as wholly replaceable. `actions.ts`, `service.ts`, `google-oauth.ts`, `google-account.ts`, and `password-reset.ts` are protected. `apps/web/src/lib/auth/` (session, cookie, origin), `apps/web/src/proxy.ts`, `apps/web/src/platform/permissions/`, and persistence remain Cursor-owned.
 
 ### Shell chrome (visual files only)
 
@@ -188,6 +190,8 @@ Lovable must not modify these paths without explicit architectural approval.
 - `apps/web/data/`
 
 ### Security, permissions, authentication implementation
+
+Lovable must not modify session implementation, the auth service, OAuth implementation, the proxy, role maps, permission enforcement, or persistence.
 
 - `apps/web/src/platform/permissions/`
 - `apps/web/src/platform/kernel.ts`

@@ -103,6 +103,47 @@ Each approved frontend increment must remain independently reversible through Gi
 
 ---
 
-## Known registration conflict
+## Foundation mappings (approved 2026-08-23)
 
-[VentureOS Frontend Master Blueprint v1.1](./VENTUREOS_FRONTEND_MASTER_BLUEPRINT.md) §16 and related passages name **Supabase Auth** as the identity provider of record. The live repository and this decision do not. Identity in `apps/web` is custom jose session cookies plus libSQL/SQLite (`apps/web/src/lib/auth/`, `apps/web/src/modules/auth/`, `apps/web/src/proxy.ts`, `apps/web/src/FOUNDATION.md`). This file does not amend the Blueprint text and does not amend Foundation law. The conflict is recorded for founder decision. See the alignment report heading **ARCHITECTURAL CONFLICT REQUIRES FOUNDER DECISION**.
+These founder decisions reconcile Blueprint assumptions to the verified VentureOS Foundation. Foundation is not modified. The frontend adapts to VentureOS.
+
+### Authentication
+
+Existing VentureOS authentication is retained. Supabase Auth is rejected and must not be introduced.
+
+Authoritative implementation remains:
+
+- custom VentureOS authentication
+- jose-based JWT/session handling
+- httpOnly `vos_session` cookie
+- existing SQLite/libSQL persistence
+- existing session table
+- existing Google OAuth
+- existing proxy/route protection
+- existing server-side role and permission enforcement
+
+Lovable owns authentication **presentation** only. Cursor owns authentication implementation and integration.
+
+### Company / Venture Instance
+
+Company is a frontend **presentation label** mapped to the existing Venture / Venture Instance architecture:
+
+- Venture Registry
+- Venture Definition Registry
+- Venture Registry entries representing founded companies / Venture instances
+- existing Venture services and instantiation path
+
+Do not create a Company Registry. Do not create another entity. Do not change the Venture Definition or Venture Instance Framework.
+
+### Workspace
+
+Workspace maps to the existing Workspace Registry architecture:
+
+- Workspace Registry
+- existing workspace records
+- workspace membership
+- `bootDesk`
+- existing workspace context
+- existing workspace selection behaviour
+
+**Executive Workspace** remains a presentation / environment concept. It must not become a second backend Workspace entity.

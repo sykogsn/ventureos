@@ -1,18 +1,21 @@
 # VentureOS Frontend Master Blueprint
 
-**Version:** 1.1
-**Status:** AUTHORITATIVE / APPROVED FOR INTEGRATION PLANNING
+**Version:** 1.1.1
+**Status:** AUTHORITATIVE / ARCHITECTURALLY RECONCILED
 **Registered:** 2026-08-23
+**Supersedes:** v1.1 (23 August 2026); v1.0 (20 August 2026)
 **Governance.** Subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). Locked implementation sources remain the technical fact for Runtime, Capability Registry, Definition Registry, persistence, and IDS token values.
 
-This file replaces the 2026-08-23 repository scaffold (Version Unset). The specification body below is Blueprint v1.1 as received. It is not rewritten.
+**Revision note (v1.1.1).** Reconciles frontend assumptions with the verified VentureOS Foundation regarding authentication, Company / Venture Instance mapping, and Workspace authority. The frontend adapts to VentureOS. Foundation is not modified to accommodate the Blueprint.
+
+This file replaces the 2026-08-23 repository scaffold (Version Unset). The specification body below is Blueprint v1.1 as received, with v1.1.1 reconciliation applied only where Blueprint assumptions conflicted with Foundation.
 
 ---
-**Version 1.1 — Architecturally hardened. Supersedes v1.0 in full.**
+**Version 1.1.1 — Architecturally reconciled to the VentureOS Foundation. Supersedes v1.1 and v1.0.**
 
-Scope note: this blueprint governs the **presentation layer only**. The Executive Intelligence Runtime (EIR), Venture Intelligence Core (VIC), Shared Capability Framework, Venture Definition Framework, Venture Instance Framework, Runtime Orchestration, Knowledge architecture, Executive Office, Situation Room, Company HQ, the existing architecture and the existing GitHub repository remain the source of truth. The frontend consumes them; it never re-defines them.
+Scope note: this blueprint governs the **presentation layer only**. The Executive Intelligence Runtime (EIR), Venture Intelligence Core (VIC), Shared Capability Framework, Venture Definition Framework, Venture Instance Framework, Runtime Orchestration, Knowledge architecture, Executive Office, Situation Room, Company HQ, the existing architecture and the existing GitHub repository remain the source of truth. The frontend consumes them; it never re-defines them. Where this document and the existing VentureOS Foundation conflict, the existing Foundation wins.
 
-Status of v1.1: architectural hardening pass before implementation. No code, React, Tailwind, or Supabase change has been produced as part of this revision.
+Status of v1.1.1: **AUTHORITATIVE / ARCHITECTURALLY RECONCILED**. Authentication, Company / Venture Instance mapping, and Workspace authority now follow the verified Foundation. This does not authorise Sprint 0 implementation, screen construction, or token generation.
 
 Convention used throughout: **BACKEND CONTRACT REQUIRED** marks a dependency where the authoritative backend contract is not currently known to the frontend and must be supplied by the runtime/architecture owner before the dependent surface is implemented. No endpoint, table, field, or entity has been invented to fill such a gap.
 
@@ -137,7 +140,7 @@ Header never scrolls, never changes height, never re-mounts.
 - Switching preserves the current *route shape* where valid (e.g. Reports stays Reports) and falls back to Situation Room when the route has no equivalent.
 - Workspace is encoded in the URL so links are unambiguous and shareable.
 - Recent workspaces surface first; search filters beyond five.
-- **BACKEND CONTRACT REQUIRED** — the authoritative definition, membership, and permission scope of a Workspace object (or the runtime concept it maps to) must be supplied; the frontend must not persist its own workspace registry.
+- Authoritative source: the existing Workspace Registry, workspace membership, `bootDesk` workspace context, and existing workspace selection (`vos_workspace`). The frontend must not persist its own workspace registry or invent a second Workspace domain object.
 
 ### 2.6 Venture / company switching
 - Venture context feeds Company HQ, Executive Office, Knowledge, Reports, and the active Venture Brand Layer.
@@ -179,9 +182,9 @@ The frontend must not invent a parallel domain model. Every frontend concept bel
 
 | Frontend term | Classification | Meaning in the frontend | Authoritative source | Explicitly NOT allowed to redefine |
 |---|---|---|---|---|
-| **VentureOS Workspace** | CONTRACT PENDING | The operating scope: which Ventures/companies, capabilities and intelligence the user is currently operating over. | **BACKEND CONTRACT REQUIRED** — scope/tenancy object owned by the runtime and permission model. | Tenancy, membership, permission scope, data visibility. The frontend may not create, merge, or infer workspaces. |
-| **Executive Workspace** | PRESENTATION-ONLY | The executive's primary operating environment: a composed destination assembling decisions, briefings and assignments for the active scope (§4.2). | Composition over EIR outputs, Knowledge Objects, capability runs, and assignment data. | It is not a container, not a tenancy boundary, and holds no state of its own beyond user view preferences. |
-| **Company** | DOMAIN-MAPPED | An operating entity the executive governs. | Venture Instance Framework / entity registry. **BACKEND CONTRACT REQUIRED** for the exact company↔Venture-instance relationship (1:1, 1:N, or distinct registries). | Entity identity, lifecycle, ownership, hierarchy. |
+| **VentureOS Workspace** | DOMAIN-MAPPED | The operating scope: which Ventures/companies, capabilities and intelligence the user is currently operating over. Presentation term for the existing Workspace Registry record. | Existing Workspace Registry (`apps/web/src/core/workspace-registry/`), workspace membership, `bootDesk` workspace context, and existing workspace selection. | Tenancy, membership, permission scope, data visibility. The frontend may not create, merge, or infer workspaces. Do not invent a second Workspace domain object. |
+| **Executive Workspace** | PRESENTATION-ONLY | The executive's primary operating environment: a composed destination assembling decisions, briefings and assignments for the active scope (§4.2). | Composition over EIR outputs, Knowledge Objects, capability runs, and assignment data. | It is not a container, not a tenancy boundary, not a second backend Workspace entity, and holds no state of its own beyond user view preferences. |
+| **Company** | DOMAIN-MAPPED | A **presentation label** for a founded company / Venture instance. Shown as "Company" where that improves executive comprehension. Must not invent a Company domain model, Company Registry, or additional entity. | Existing Venture Registry entry representing a founded company / Venture instance, plus Venture Definition Registry and existing Venture services / instantiation. Maps to Venture / Venture Instance architecture. | Entity identity, lifecycle, ownership, hierarchy. Do not change the Venture Definition or Venture Instance Framework. |
 | **Venture** | DOMAIN-MAPPED | A VentureOS product/business defined by the Venture Definition Framework and instantiated by the Venture Instance Framework (e.g. Qualora, Calviora, Farmora). | Venture Definition Framework + Venture Instance Framework. | Definition schema, capability entitlement, lifecycle stages, instance state. |
 | **Portfolio** | PRESENTATION-ONLY | A multi-Venture view produced by the current Workspace scope. | Derived from Workspace scope + Venture Instances. | It is not a stored grouping entity unless the backend already defines one. The frontend must not persist ad-hoc portfolios. |
 | **Division** | CONTRACT PENDING | An organisational sub-scope beneath a company, used only for filtering and grouping. | **BACKEND CONTRACT REQUIRED** — no division entity is assumed to exist. | If no backend concept exists, Division is removed from the UI rather than invented. |
@@ -195,7 +198,7 @@ The frontend must not invent a parallel domain model. Every frontend concept bel
 | **Insight / Judgement** | DOMAIN-MAPPED | An intelligence statement with confidence, provenance, freshness. | EIR / VIC. | Content, confidence, provenance, reasoning. Never synthesised client-side. |
 | **Report** | DOMAIN-MAPPED | A generated executive document. | Reporting/runtime output. **BACKEND CONTRACT REQUIRED** for scheduling and template contracts. | Generation, content authority, distribution. |
 | **Runtime run / trace** | DOMAIN-MAPPED | Read-only observability of orchestration. | Runtime Orchestration. | Run state, retries, step semantics. |
-| **User / Team / Role** | DOMAIN-MAPPED | Identity and access presentation. | Supabase Auth + server-side authorisation model. | Authoritative permissions, role definitions, enforcement (§17.5). |
+| **User / Team / Role** | DOMAIN-MAPPED | Identity and access presentation. Authentication presentation only on the frontend. | Existing VentureOS authentication (custom jose JWT, httpOnly `vos_session`, SQLite/libSQL session table, existing Google OAuth, `proxy.ts`) plus `platform/permissions` (`owner` / `admin` / `member`). Supabase Auth is not part of VentureOS. | Authoritative permissions, role definitions, enforcement (§17.5). Session implementation, auth service, OAuth, proxy, and persistence remain Cursor-owned. |
 | **View / Saved view / Filter state** | PRESENTATION-ONLY | UI state, URL-encoded; optionally persisted as user preference. | Frontend + user-preference store. **BACKEND CONTRACT REQUIRED** if saved views must sync across devices. | Must never encode business rules or permission logic. |
 | **Appearance mode / Brand Layer** | PRESENTATION-ONLY | Executive Light / Executive Dark + Venture identity properties (§9, §10). | Venture Definition metadata for brand properties. **BACKEND CONTRACT REQUIRED** for the brand-property source. | Must not alter behaviour, permissions, or data. |
 
@@ -215,7 +218,7 @@ v1.0 used "workspace" both as an operating scope and, implicitly, as a place. v1
 - Definition: the **scope** in which the executive is operating — which Ventures, companies, capabilities, knowledge and intelligence are in view, and under which permissions.
 - It is a *context*, not a *destination*. There is no route named "Workspace".
 - It is selected in the sidebar selector, encoded in the URL, and applied to every data request as scope.
-- It is authoritative-backed: **BACKEND CONTRACT REQUIRED** (§3.1).
+- It is authoritative-backed by the existing Workspace Registry, workspace membership, `bootDesk` workspace context, and existing workspace selection. Do not invent a new Workspace domain object.
 - Changing it changes what every screen shows; it never changes which screen you are on (where a route equivalent exists).
 
 ### 4.2 Executive Workspace (the executive's primary operating environment)
@@ -223,6 +226,7 @@ v1.0 used "workspace" both as an operating scope and, implicitly, as a place. v1
 - Route: `/workspace`.
 - It is a composed surface, presentation-only, assembling: today's briefing, decisions assigned to the executive, active engagements they own, drafts, pinned objects, and follow-ups.
 - It is scoped by the active VentureOS Workspace and Venture context.
+- It is **not** a backend object and must not become a second Workspace entity. The backend object is the existing Workspace Registry record (the scope). Executive Workspace remains a presentation / environment concept.
 
 ### 4.3 Resolution of Executive Desk
 Assessment: Executive Desk (v1.0 §3.5) and Executive Workspace serve the same user need — the executive's personal queue. Maintaining both produces two destinations with near-identical content, violating the "one decision per surface" and "avoid overlapping screens" principles.
@@ -679,7 +683,7 @@ XL: three-column with inline panel. Desktop: two-column. Laptop: single column w
 
 **Identity** Routes: `/users`, `/users/:id`, `/teams`, `/teams/:id`, `/admin/*`. Purpose: manage people, access presentation and system observability. Permissions: strictly role-gated, server-enforced; the UI shows only what the server permits and never decides authority itself (§17.5).
 
-**Data Dependencies** Authoritative: identity provider (Supabase Auth), server-side role/permission model, audit log, runtime observability, capability registry, Venture configuration. **BACKEND CONTRACT REQUIRED** — role matrix read/write, invitation contract, audit query contract, Venture configuration read/write, Brand Layer property store.
+**Data Dependencies** Authoritative: existing VentureOS authentication (jose JWT, `vos_session`, session table), server-side role/permission model (`platform/permissions`), audit log, runtime observability, capability registry, Venture configuration. **BACKEND CONTRACT REQUIRED** — role matrix read/write, invitation contract, audit query contract, Venture configuration read/write, Brand Layer property store. Supabase Auth is not part of VentureOS.
 
 **Information Hierarchy** Users: list with role, teams, status, MFA state, last active → detail. Teams: list → detail (members, permissions, assigned Ventures). Admin overview: tenancy health → usage → runtime status → incidents.
 
@@ -707,7 +711,7 @@ XL: three-column with inline panel. Desktop: two-column. Laptop: single column w
 
 **Context** No workspace or Venture context exists pre-authentication. Appearance follows system preference until a user preference is known. Brand Layer is **not** applied to sign-in unless the entry point is a Venture-specific invitation, in which case only the mark and name may appear.
 
-**Data Dependencies** Authoritative: Supabase Auth (sessions, providers, MFA, magic links, invitations). **BACKEND CONTRACT REQUIRED** — invitation payload (organisation, role, scope) and forced-enrolment signalling. Freshness: n/a.
+**Data Dependencies** Authoritative: existing Cursor-owned VentureOS authentication (jose JWT, httpOnly `vos_session`, SQLite/libSQL session table, email+password, existing Google OAuth). Presentation consumes that implementation; it does not own it. **BACKEND CONTRACT REQUIRED** — invitation payload (organisation, role, scope) if invitations are later authorised. Microsoft, magic link, and MFA are not in the current implementation and must not be introduced via Supabase. Freshness: n/a.
 
 **Information Hierarchy** Provider buttons → email/password → secondary paths (magic link, forgot). No marketing content anywhere.
 
@@ -733,7 +737,7 @@ XL: three-column with inline panel. Desktop: two-column. Laptop: single column w
 
 **Identity** Routes: `/settings/*`, `/profile`. Purpose: control personal and workspace preferences. Permissions: personal always; workspace-level sections role-gated.
 
-**Data Dependencies** Authoritative: user preference store, workspace configuration, Supabase Auth (sessions, MFA), integrations registry. **BACKEND CONTRACT REQUIRED** — preference persistence contract (server-side, cross-device) and integration/API-key contracts.
+**Data Dependencies** Authoritative: user preference store, workspace configuration, existing VentureOS authentication (sessions), integrations registry. **BACKEND CONTRACT REQUIRED** — preference persistence contract (server-side, cross-device) and integration/API-key contracts. MFA is not in the current authentication implementation.
 
 **Information Hierarchy** Section rail → section title and description → grouped settings → danger zone last.
 
@@ -1151,14 +1155,23 @@ Rules: never hide functionality at smaller sizes without an equivalent path; ori
 
 ## 16. Authentication
 
-Provider: **Supabase Auth** (existing backend of record). The frontend implements the experience only; identity, sessions, and policy remain server-owned.
+Provider: **existing VentureOS authentication**. The authoritative implementation remains custom VentureOS authentication: jose-based JWT/session handling; httpOnly `vos_session` cookie; existing SQLite/libSQL persistence; existing session table; existing Google OAuth; existing proxy/route protection; existing server-side role and permission enforcement.
+
+Supabase Auth is **not** part of VentureOS and must not be introduced to satisfy frontend assumptions.
+
+Lovable owns authentication **presentation** only. Cursor owns authentication implementation and integration.
+
+The frontend implements the experience only; identity, sessions, and policy remain server-owned.
 
 ### 16.1 Methods
-- **Email + password** — strength guidance, breached-password messaging surfaced from the backend, rate-limit feedback.
-- **Google** — OAuth, domain hint where configured.
-- **Microsoft** — OAuth/Entra ID, work and school accounts.
-- **Magic link** — passwordless; sent/confirm screen, resend cooldown, expiry messaging, same- and cross-device handling.
-- **MFA** — TOTP enrolment and challenge, recovery codes, optional trusted-device period; organisation-mandated enforcement handled including forced enrolment on next sign-in.
+**Current implementation (authoritative — do not redesign):**
+- **Email + password** — existing VentureOS credentials. Strength guidance, breached-password messaging, and rate-limit feedback are presentation over the existing service.
+- **Google** — existing OAuth implementation under `apps/web/src/app/auth/google/` and `modules/auth/google-oauth.ts`.
+
+**Not in the current architecture.** Do not invent these as backend methods and do not introduce them via Supabase:
+- **Microsoft** — not implemented.
+- **Magic link** — not implemented.
+- **MFA** — not implemented.
 
 ### 16.2 Experience rules
 - Single unified sign-in screen; provider buttons above the fold, email below, no marketing content.
@@ -1178,7 +1191,7 @@ Provider: **Supabase Auth** (existing backend of record). The frontend implement
 ### 17.1 Ownership split (permanent)
 
 **Lovable owns**
-React frontend; Tailwind presentation; pages; dashboards; forms; authentication presentation; navigation; layouts; responsive design; design system; frontend interaction behaviour; Supabase frontend integration where authorised; visual iteration.
+React frontend; Tailwind presentation; pages; dashboards; forms; authentication presentation; navigation; layouts; responsive design; design system; frontend interaction behaviour; visual iteration. Lovable must not introduce Supabase or modify authentication implementation.
 
 **Cursor owns**
 VentureOS Runtime; EIR; VIC; APIs; backend services; business logic; AI reasoning; orchestration; capability execution; architecture; performance engineering (backend); backend testing; security; optimisation; authoritative permissions.
@@ -1192,7 +1205,7 @@ VentureOS Runtime; EIR; VIC; APIs; backend services; business logic; AI reasonin
 | **API contracts** | Cursor | Frontend consumes documented contracts only. No undocumented endpoint may be called. **BACKEND CONTRACT REQUIRED** wherever a screen depends on an undocumented surface. |
 | **Frontend adapters** | Lovable | Every backend call passes through a thin adapter layer that maps transport payloads to view models. Components never call transport directly. Adapters contain mapping only — no business rules, no scoring, no derivation of intelligence. |
 | **TypeScript/domain types** | Cursor generates, Lovable consumes | Domain types are generated from the backend contract and imported. The frontend may define view-model types that compose them but never re-declares a domain type by hand. |
-| **Authentication/session** | Cursor (Supabase config), Lovable (experience) | Token handling follows the documented session contract; the frontend never mints, extends, or re-interprets a session. |
+| **Authentication/session** | Cursor (implementation and integration), Lovable (presentation only) | Presentation consumes the existing jose / `vos_session` / SQLite session architecture. The frontend never mints, extends, or re-interprets a session. Supabase Auth is not used. |
 | **Permissions** | Cursor | The server returns the user's effective capability/visibility set. The frontend uses it to show, hide, or disable — never to authorise. Every privileged action is re-checked server-side. |
 | **Error contracts** | Cursor | Errors carry a machine code, a human-safe message, and a reference ID. The frontend maps codes to states; it never invents error semantics or guesses at causes. |
 | **Intelligence payloads** | Cursor | Every intelligence payload carries content, confidence, provenance (source object ids), freshness, and reasoning access. The frontend renders these fields; missing fields render as "not supplied", never as an assumed value. |
@@ -1217,7 +1230,7 @@ The frontend may **display, request, and orchestrate user interaction with** int
 Frontend permission visibility is **UX only**. Authoritative access control remains server-side. Hiding a control is never a security measure; every privileged operation is enforced by the server regardless of what the UI shows.
 
 ### 17.6 Pending integration contracts
-The following are marked **BACKEND CONTRACT REQUIRED** and consolidated in §23: workspace/scope object; decision queue read and resolve/defer/delegate; signal stream transport; scan-now trigger; runtime health read model; user pins/drafts/follow-ups; briefing generation/refresh; assignment model; capability invocation shape; engagement lifecycle states; approval action; trace streaming; advisor/agent roster; metric definitions; capability coverage computation; activity timeline; knowledge facet/pagination; lineage and usage references; report templates/generation/scheduling/export; notification read model and mutations; role matrix and invitation; audit query; Venture configuration and Brand Layer property store; preference persistence; unified search; company↔Venture-instance relationship; division concept (or its removal).
+The following remain marked **BACKEND CONTRACT REQUIRED** and consolidated in §23: decision queue read and resolve/defer/delegate; signal stream transport; scan-now trigger; runtime health read model; user pins/drafts/follow-ups; briefing generation/refresh; assignment model; capability invocation shape; engagement lifecycle states; approval action; trace streaming; advisor/agent roster; metric definitions; capability coverage computation; activity timeline; knowledge facet/pagination; lineage and usage references; report templates/generation/scheduling/export; notification read model and mutations; role matrix and invitation; audit query; Venture configuration and Brand Layer property store; preference persistence; unified search; division concept (or its removal). Workspace scope maps to the existing Workspace Registry. Company is a presentation label for an existing Venture Registry entry / Venture instance. Those two are no longer unknown architecture questions.
 
 ---
 
@@ -1264,10 +1277,10 @@ Universal per-sprint requirements (apply to all sprints): zero console errors/wa
 
 ### Sprint 1 — Authentication
 - **Objective:** complete authentication experience end to end.
-- **Included:** all §6.10 surfaces; session refresh and expiry modal; invitation acceptance; forced MFA enrolment; no-access screen.
-- **Excluded:** administration of MFA policy (Sprint 9); Brand Layer on general sign-in.
-- **Backend dependencies:** Supabase Auth configuration; invitation payload (**BACKEND CONTRACT REQUIRED**); forced-enrolment signalling (**BACKEND CONTRACT REQUIRED**).
-- **Acceptance criteria:** all five methods function end to end including enrolment, recovery, forced enrolment, and expiry re-auth without work loss; no blank interim screen; no account enumeration; password-manager compatible.
+- **Included:** authentication presentation for the existing methods (email + password, Google); session refresh and expiry modal; no-access screen.
+- **Excluded:** administration of MFA policy; Brand Layer on general sign-in; inventing Microsoft, magic link, or MFA to satisfy earlier Blueprint method lists.
+- **Backend dependencies:** existing Cursor-owned VentureOS authentication implementation (presentation only); invitation payload (**BACKEND CONTRACT REQUIRED** if invitations are authorised); forced-enrolment signalling is not in the current architecture.
+- **Acceptance criteria:** email + password and Google function end to end including recovery and expiry re-auth without work loss; no blank interim screen; no account enumeration; password-manager compatible.
 - **Testing:** end-to-end per method; keyboard-only pass; error-path matrix.
 - **Architectural checks:** no client-side authorisation decisions; no token handling outside the documented contract.
 - **Completion gate:** authentication journeys certified; security review of the client session handling.
@@ -1522,8 +1535,8 @@ Product Vision and executive experience principles (§1); decision-first UX phil
 9. The implication that company switching could imply or force a theme — removed.
 
 ### 23.5 BACKEND CONTRACT REQUIRED items identified
-1. VentureOS Workspace/scope object: definition, membership, permission scope.
-2. Company ↔ Venture Instance relationship and registry.
+1. **RECONCILED (v1.1.1).** VentureOS Workspace maps to the existing Workspace Registry, workspace membership, `bootDesk` workspace context, and existing workspace selection. A written shell DTO remains BCR-001; the Workspace object itself is not an unknown architecture question.
+2. **RECONCILED (v1.1.1).** Company is a frontend presentation label for an existing Venture Registry entry / founded company / Venture instance. No Company Registry. No additional entity. The Venture Definition and Venture Instance Framework are unchanged.
 3. Division concept — existence to be confirmed or the concept dropped.
 4. EIR decision queue read model and resolve/defer/delegate/dismiss actions.
 5. Signal stream transport (SSE/websocket/poll) and event schema.
@@ -1556,29 +1569,29 @@ Product Vision and executive experience principles (§1); decision-first UX phil
 32. Generated domain TypeScript types and contract versioning policy.
 
 ### 23.6 Unresolved decisions
-1. **Company vs Venture Instance** — whether "company" is the same object as a Venture Instance, a parent of it, or a separate registry. This determines the Company HQ route shape and the switcher model.
-2. **Workspace authority** — whether VentureOS Workspace is an existing runtime/tenancy concept or must be introduced backend-side. The entire scoping model, URL structure, and permission filtering depend on it.
+1. **RESOLVED (v1.1.1).** Company is a presentation label mapped to the existing Venture Registry / Venture Instance architecture. No Company Registry. No additional entity.
+2. **RESOLVED (v1.1.1).** Workspace authority is the existing Workspace Registry architecture. Executive Workspace remains presentation-only and does not create a backend entity.
 3. **Division** — retain (with a backend contract) or drop from the product vocabulary entirely.
 4. **Personal state ownership** — whether pins, drafts, follow-ups and saved views are runtime-owned, a user-preference service, or out of scope for v1.
 5. **Decision authority model** — who may resolve, defer, delegate or dismiss a decision, and what audit obligations attach.
 6. **Intelligence streaming transport** — the agreed transport and cancellation semantics for signals, AI answers, and orchestration traces.
 7. **Brand Layer property source** — whether brand properties live in the Venture Definition, the Venture Instance, or a separate configuration store, and who administers them.
-8. **Existing frontend preservation** — the Sprint 0 assessment of the current repository has not yet been performed, so the reuse/retire boundary is unknown.
+8. **Existing frontend preservation** — Integration Discovery (2026-08-23) recorded the live repository inventory. Sprint 0 still signs off the reuse/retire boundary before any existing presentation is deleted.
 
 ### 23.7 Readiness recommendation
 
 **NOT READY FOR FRONTEND IMPLEMENTATION**
 
-Reason: the specification itself is complete and internally coherent, but eight architectural questions (§23.6) and thirty-two backend contracts (§23.5) remain unresolved. Building screens against them now would force exactly the outcome this revision exists to prevent — a frontend-invented parallel domain model.
+Reason: v1.1.1 reconciles the three Foundation conflicts (authentication, Company / Venture Instance, Workspace authority). Remaining §23.6 questions (Division, personal state, decision authority, streaming, Brand Layer source) and remaining written backend contracts must still be closed before product-screen implementation. Building screens against those now would force a frontend-invented parallel domain model.
 
 Recommended path to READY:
-1. Resolve unresolved decisions 1, 2 and 4 (company/Venture, workspace authority, personal state ownership) — these are blocking for Sprints 2 and 3.
-2. Publish the canonical error contract, the effective-permission contract, the session contract, and generated domain types — blocking for Sprint 0 completion.
-3. Complete the Sprint 0 existing-frontend preservation assessment.
+1. **Done in v1.1.1.** Company / Venture Instance mapping and Workspace authority follow the existing Foundation.
+2. Publish remaining written contracts (canonical error contract, effective-permission UX set, session presentation contract, generated domain types) — blocking for Sprint 0 completion.
+3. Complete the Sprint 0 existing-frontend preservation sign-off against the Integration Discovery inventory.
 4. Confirm or drop Division and the Brand Layer property source.
 
-**Sprint 0 may begin immediately.** It depends only on items 2 and 3 above and produces no product screens, so the foundation, the two appearance modes and the Venture Brand Layer mechanism can be built while the remaining contracts are settled. Sprints 1 onward are gated on their listed dependencies.
+**Sprint 0 planning may begin.** Sprint 0 implementation is not authorised by this reconciliation. It produces no product screens and remains gated on remaining written contracts and the preservation sign-off. Sprints 1 onward are gated on their listed dependencies.
 
 ---
 
-*End of VentureOS Frontend Master Blueprint v1.1. This document supersedes v1.0 in full. No code, React, Tailwind, or Supabase change has been produced. All subsequent frontend generation must conform to this document.*
+*End of VentureOS Frontend Master Blueprint v1.1.1. This document supersedes v1.1 and v1.0. Foundation wins where frontend assumptions conflicted. No application code, React, Tailwind, or Supabase change has been produced as part of this revision. All subsequent frontend generation must conform to this document and to the VentureOS Foundation.*
