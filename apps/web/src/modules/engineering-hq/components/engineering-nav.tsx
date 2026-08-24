@@ -13,6 +13,7 @@ const items: { href: string; label: string; exact?: boolean }[] = [
   { href: "/engineering/debt", label: "Debt" },
   { href: "/engineering/lessons", label: "Lessons" },
   { href: "/engineering/foundation", label: "Foundation" },
+  { href: "/engineering/gallery", label: "Gallery" },
   { href: "/engineering/releases", label: "Releases" },
 ];
 

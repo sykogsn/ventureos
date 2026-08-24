@@ -63,4 +63,11 @@ describe("IDS consumption", () => {
     assert.match(topNav, /<ThemeToggle \/>/);
     assert.doesNotMatch(topNav, /<Reveal[^>]*>\s*<ThemeToggle \/>\s*<\/Reveal>/);
   });
+
+  it("does not load Google Fonts", () => {
+    const layout = readFileSync(join(webRoot, "src/app/layout.tsx"), "utf8");
+    assert.doesNotMatch(globals, /fonts\.googleapis/);
+    assert.doesNotMatch(layout, /fonts\.googleapis/);
+    assert.doesNotMatch(layout, /next\/font\/google/);
+  });
 });

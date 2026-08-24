@@ -92,6 +92,7 @@ const productRoomRoots = [
   join(webSrc, "modules/settings"),
   join(webSrc, "modules/dashboard"),
   join(webSrc, "modules/engineering-hq"),
+  join(webSrc, "modules/frontend-foundation"),
 ];
 
 const layoutAtom =

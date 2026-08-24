@@ -218,6 +218,8 @@ export function Inspector({
 }) {
   return (
     <aside
+      id="context-panel"
+      aria-label="Context panel"
       className={
         sticky
           ? "w-full shrink-0 lg:w-[var(--ids-foundation-layout-sidebar-lg)] lg:sticky lg:top-[var(--ids-foundation-space-6)]"

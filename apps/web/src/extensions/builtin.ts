@@ -112,6 +112,13 @@ registerExtension({
       keywords: ["engineering", "timeline", "vs"],
     },
     {
+      id: "nav.engineering.gallery",
+      title: "Go to Foundation Gallery",
+      group: "navigation",
+      href: "/engineering/gallery",
+      keywords: ["gallery", "foundation", "presentation", "ids"],
+    },
+    {
       id: "nav.settings",
       title: "Go to Settings",
       group: "system",
