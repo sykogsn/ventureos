@@ -39,12 +39,12 @@ export function NotificationCenter() {
                   className="vos-btn-secondary"
                   onClick={closeNotifications}
                 >
-                  Open Situation Room
+                  Open Executive Workspace
                 </Link>
               </Fit>
             }
           >
-            Founder calls appear in the Situation Room, not a separate inbox.
+            Founder calls appear in the Executive Workspace, not a separate inbox.
           </EmptyCopy>
         </Inset>
       </Popover>

@@ -18,7 +18,7 @@ export function FounderWelcome({ founderName }: { founderName: string }) {
     >
       <ReadingRegion size="md">
         <p className="ids-body text-muted">
-          Found a company to open the Situation Room. The desk stays quiet until there is something
+          Found a company to open the Executive Workspace. The desk stays quiet until there is something
           to operate.
         </p>
       </ReadingRegion>

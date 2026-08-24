@@ -30,12 +30,12 @@ export function ExecutiveOfficeFloorScreen({
           action={
             <Fit>
               <Link href="/dashboard" className="vos-btn-primary">
-                Return to the Situation Room
+                Return to the Executive Workspace
               </Link>
             </Fit>
           }
         >
-          No seated desks are on this floor. Situation Room and Company HQ remain the operating
+          No seated desks are on this floor. Executive Workspace and Company HQ remain the operating
           surfaces.
         </EmptyCopy>
       ) : (

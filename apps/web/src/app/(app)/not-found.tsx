@@ -19,11 +19,11 @@ export default function AppNotFound() {
         title="This desk is not here"
         action={
           <Link href="/dashboard" className="vos-btn-primary w-fit">
-            Return to the Situation Room
+            Return to the Executive Workspace
           </Link>
         }
       >
-        Open the Situation Room to continue from the live brief.
+        Open the Executive Workspace to continue from the live brief.
       </EmptyCopy>
     </PageFrame>
   );
