@@ -9,10 +9,11 @@ import {
   Cluster,
   Desk,
   Flow,
+  Hairline,
   Inspector,
-  InsetSurface,
   ReadingRegion,
   Stack,
+  StackList,
 } from "@/core/layout";
 import { ConfidenceMeter } from "@/modules/frontend-foundation/signal";
 import { PresentationRegion } from "@/modules/frontend-foundation/region";
@@ -22,6 +23,7 @@ import type {
   AttentionMatter,
   ExecutiveWorkspacePresentation,
   JudgementPresentation,
+  PresentationEvidence,
   WatchPresentation,
 } from "./types";
 
@@ -69,24 +71,29 @@ export function ExecutiveWorkspaceDesk({
             {model.founderName} · {model.posture}
           </MetaCopy>
 
-          <PresentationRegion title="Executive brief" note="What should I know right now?">
+          <PresentationRegion
+            title="Executive Brief"
+            note="What requires my attention or decision now?"
+          >
             <ReadingRegion size="lg">
               <Stack gap="compact">
-                <GroupTitle>{model.brief.headline}</GroupTitle>
+                <p className="ids-subhead">{model.brief.headline}</p>
                 <BodyCopy>{model.brief.narrative}</BodyCopy>
                 {model.brief.implications.length > 0 ? (
-                  <Stack gap="tight">
-                    {model.brief.implications.map((point) => (
-                      <MetaCopy key={point}>{point}</MetaCopy>
-                    ))}
-                  </Stack>
+                  <Hairline space="tight">
+                    <Stack gap="tight">
+                      {model.brief.implications.map((point) => (
+                        <MetaCopy key={point}>{point}</MetaCopy>
+                      ))}
+                    </Stack>
+                  </Hairline>
                 ) : null}
               </Stack>
             </ReadingRegion>
           </PresentationRegion>
 
           <PresentationRegion
-            title="Requires your judgement"
+            title="Primary Judgement"
             note="VentureOS presents the decision. It does not make it."
           >
             {model.primary ? (
@@ -105,10 +112,10 @@ export function ExecutiveWorkspaceDesk({
 
           {model.attention.length > 0 ? (
             <PresentationRegion
-              title="Matters requiring attention"
+              title="Also Requires Awareness"
               note="Real recommendations. Not founder judgements."
             >
-              <Stack gap="compact">
+              <StackList as="div">
                 {model.attention.map((item) => (
                   <AttentionItem
                     key={item.id}
@@ -117,20 +124,20 @@ export function ExecutiveWorkspaceDesk({
                     onSelect={() => setSelection({ kind: "attention", id: item.id })}
                   />
                 ))}
-              </Stack>
+              </StackList>
             </PresentationRegion>
           ) : null}
 
           <PresentationRegion
-            title="Items to watch"
-            note="Attention only. No judgement is required yet."
+            title="Watches"
+            note="Monitoring only. No judgement is required yet."
           >
             {model.watches.length === 0 ? (
               <EmptyCopy title="Nothing is on watch">
                 Companies that need attention will appear here when operating health names them.
               </EmptyCopy>
             ) : (
-              <Stack gap="compact">
+              <StackList as="div">
                 {model.watches.map((item) => (
                   <WatchItem
                     key={item.id}
@@ -139,9 +146,13 @@ export function ExecutiveWorkspaceDesk({
                     onSelect={() => setSelection({ kind: "watch", id: item.id })}
                   />
                 ))}
-              </Stack>
+              </StackList>
             )}
           </PresentationRegion>
+
+          {selectedJudgement ? (
+            <EvidenceRegion matter={selectedJudgement} />
+          ) : null}
         </Stack>
       </Flow>
       <Inspector>
@@ -173,9 +184,10 @@ function PrimaryJudgement({
       <ChoiceFace selected={selected} aria-pressed={selected} onClick={onSelect}>
         <MatterSignals matter={matter} />
         <p className="ids-heading">{matter.issue}</p>
+        <MetaCopy>{matter.company}</MetaCopy>
         {matter.significance ? <BodyCopy>{matter.significance}</BodyCopy> : null}
       </ChoiceFace>
-      <InsetSurface>
+      <Hairline space="compact">
         <Stack gap="compact">
           <p className="ids-kicker">Decision required</p>
           <p className="ids-label text-foreground">{matter.decision}</p>
@@ -191,7 +203,7 @@ function PrimaryJudgement({
             {matter.actionLabel}
           </FounderCallAction>
         </Stack>
-      </InsetSurface>
+      </Hairline>
     </Stack>
   );
 }
@@ -209,7 +221,10 @@ function AttentionItem({
     <ChoiceFace selected={selected} aria-pressed={selected} onClick={onSelect}>
       <MatterSignals matter={matter} />
       <p className="ids-label text-foreground">{matter.issue}</p>
-      <MetaCopy>{matter.company}</MetaCopy>
+      <MetaCopy>
+        {matter.company}
+        {matter.significance ? ` · ${matter.significance}` : ""}
+      </MetaCopy>
     </ChoiceFace>
   );
 }
@@ -245,6 +260,48 @@ function MatterSignals({
   );
 }
 
+function EvidenceRegion({
+  matter,
+}: {
+  matter: JudgementPresentation | AttentionMatter;
+}) {
+  return (
+    <PresentationRegion
+      title="Evidence & Trust"
+      note="Recorded production fields only. Provenance and freshness are not invented."
+    >
+      <Stack gap="compact">
+        {matter.confidence ? <ConfidenceMeter level={matter.confidence} /> : null}
+        <EvidenceList evidence={matter.evidence} />
+      </Stack>
+    </PresentationRegion>
+  );
+}
+
+function EvidenceList({ evidence }: { evidence: PresentationEvidence[] }) {
+  if (evidence.length === 0) {
+    return (
+      <EmptyCopy title="No recorded supporting evidence">
+        Confidence is shown when policy recorded it. Provenance, freshness, and contradiction
+        are omitted because production does not supply them.
+      </EmptyCopy>
+    );
+  }
+
+  return (
+    <Stack gap="compact">
+      {evidence.map((item) => (
+        <Stack key={item.id} gap="tight">
+          <p className="ids-label text-foreground">{item.label}</p>
+          <MetaCopy>
+            {item.source} · {item.detail}
+          </MetaCopy>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
 function JudgementInspector({
   matter,
   founderCall,
@@ -255,36 +312,42 @@ function JudgementInspector({
   return (
     <Stack gap="section">
       <Stack gap="compact">
+        <p className="ids-kicker">Selected matter</p>
         <MatterSignals matter={matter} />
         <GroupTitle>{matter.issue}</GroupTitle>
         <MetaCopy>{matter.company}</MetaCopy>
       </Stack>
       {matter.significance ? (
+        <Hairline space="tight">
+          <Stack gap="tight">
+            <p className="ids-kicker">Significance</p>
+            <BodyCopy>{matter.significance}</BodyCopy>
+          </Stack>
+        </Hairline>
+      ) : null}
+      <Hairline space="tight">
         <Stack gap="tight">
-          <p className="ids-kicker">Significance</p>
-          <BodyCopy>{matter.significance}</BodyCopy>
+          <p className="ids-kicker">Decision context</p>
+          <BodyCopy>{matter.decision}</BodyCopy>
+          {"costOfInaction" in matter && matter.costOfInaction ? (
+            <MetaCopy>If you wait. {matter.costOfInaction}</MetaCopy>
+          ) : null}
         </Stack>
-      ) : null}
-      <Stack gap="tight">
-        <p className="ids-kicker">Decision context</p>
-        <BodyCopy>{matter.decision}</BodyCopy>
-        {"costOfInaction" in matter && matter.costOfInaction ? (
-          <MetaCopy>If you wait. {matter.costOfInaction}</MetaCopy>
-        ) : null}
-      </Stack>
+      </Hairline>
       {matter.evidence.length > 0 ? (
-        <Stack gap="compact">
-          <p className="ids-kicker">Evidence and trust</p>
-          {matter.evidence.map((item) => (
-            <Stack key={item.id} gap="tight">
-              <p className="ids-label text-foreground">{item.label}</p>
-              <MetaCopy>
-                {item.source} · {item.detail}
-              </MetaCopy>
-            </Stack>
-          ))}
-        </Stack>
-      ) : null}
+        <Hairline space="tight">
+          <Stack gap="compact">
+            <p className="ids-kicker">Evidence & Trust</p>
+            <EvidenceList evidence={matter.evidence} />
+          </Stack>
+        </Hairline>
+      ) : (
+        <Hairline space="tight">
+          <p className="ids-caption">
+            No recorded supporting evidence is attached to this matter.
+          </p>
+        </Hairline>
+      )}
       {founderCall && "actionHref" in matter ? (
         <FounderCallAction
           href={matter.actionHref}
@@ -296,7 +359,7 @@ function JudgementInspector({
         </FounderCallAction>
       ) : (
         <Link href={matter.actionHref} className="ids-caption ids-transition hover:text-foreground">
-          {matter.actionLabel}
+          Inspect
         </Link>
       )}
     </Stack>
@@ -306,7 +369,7 @@ function JudgementInspector({
 function WatchInspector({ item }: { item: WatchPresentation }) {
   return (
     <Stack gap="compact">
-      <p className="ids-kicker">Watch item</p>
+      <p className="ids-kicker">Watch</p>
       <StatusIndicator level={item.band} />
       <GroupTitle>{item.company}</GroupTitle>
       <BodyCopy>{item.judgement}</BodyCopy>

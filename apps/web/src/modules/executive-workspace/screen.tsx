@@ -10,7 +10,7 @@ export function ExecutiveWorkspaceScreen({
   return (
     <PageFrame
       page="Executive Workspace"
-      kicker={`Daily judgement · ${model.founderName}`}
+      kicker={`What requires my attention or decision now? · ${model.founderName}`}
       title="Executive Workspace"
       lede={model.posture}
       description={model.worldLine}
