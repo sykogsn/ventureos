@@ -12,6 +12,19 @@ import {
 const LOGIN = "http://127.0.0.1:3000/login";
 const READY_TIMEOUT_MS = 90_000;
 
+/** Local `next dev` only: use the Windows CA store. Does not disable TLS verification. */
+function developmentEnvWithSystemCa(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const current = env.NODE_OPTIONS ?? "";
+  if (/(?:^|\s)--use-system-ca(?:\s|$)/.test(current)) {
+    return env;
+  }
+
+  return {
+    ...env,
+    NODE_OPTIONS: current.trim() ? `${current.trim()} --use-system-ca` : "--use-system-ca",
+  };
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -90,12 +103,16 @@ async function main() {
   prepareIdsDevelopment(webRoot);
 
   const nextBin = join(webRoot, "node_modules/next/dist/bin/next");
-  const child = spawn(process.execPath, [nextBin, "dev", "--port", "3000"], {
-    cwd: webRoot,
-    stdio: "inherit",
-    env: process.env,
-    windowsHide: true,
-  });
+  const child = spawn(
+    process.execPath,
+    ["--use-system-ca", nextBin, "dev", "--port", "3000"],
+    {
+      cwd: webRoot,
+      stdio: "inherit",
+      env: developmentEnvWithSystemCa(process.env),
+      windowsHide: true,
+    },
+  );
 
   const fail = (error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
