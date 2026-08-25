@@ -19,6 +19,7 @@ export default async function LoginPage({
   return (
     <LoginScreen
       next={next}
+      errorCode={reset ? undefined : error || undefined}
       error={reset ? undefined : error ? loginMessages[error] : undefined}
       notice={reset ? loginMessages.reset : undefined}
     />

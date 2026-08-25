@@ -1,0 +1,117 @@
+/**
+ * Authentication-scoped presentation tokens.
+ * Sourced from sykogsn/ventureos-frontend-workshop@cf900cc (src/styles.css).
+ * These override climate/atmosphere only under [data-auth-entrance].
+ * They do not change packages/ids foundation values or Executive Workspace.
+ */
+
+html[data-ids-atmosphere="ventureos"] [data-auth-entrance],
+html[data-ids-brand="ventureos"] [data-auth-entrance] {
+  --ease-executive: cubic-bezier(0.2, 0, 0, 1);
+
+  --surface-primary: oklch(0.972 0.0022 250);
+  --surface-secondary: oklch(0.953 0.0028 250);
+  --surface-elevated: oklch(0.995 0.0012 250);
+  --surface-sunken: oklch(0.932 0.0035 250);
+  --surface-selected: oklch(0.925 0.0075 250);
+  --surface-interactive: oklch(0.944 0.0032 250);
+
+  --text-primary: oklch(0.235 0.011 260);
+  --text-secondary: oklch(0.452 0.01 260);
+  --text-muted: oklch(0.605 0.009 260);
+  --text-inverse: oklch(0.985 0.002 250);
+
+  --border-subtle: oklch(0.235 0.011 260 / 9%);
+  --border-strong: oklch(0.235 0.011 260 / 17%);
+
+  --accent: oklch(0.5 0.115 252);
+  --accent-quiet: oklch(0.94 0.024 252);
+  --accent-contrast: oklch(0.99 0.002 250);
+  --venture-accent: var(--accent);
+
+  --status-critical: oklch(0.505 0.175 25);
+  --status-high: oklch(0.58 0.13 55);
+  --status-medium: oklch(0.6 0.095 90);
+  --status-positive: oklch(0.49 0.095 155);
+  --status-neutral: oklch(0.58 0.008 260);
+  --focus-ring: oklch(0.55 0.13 252);
+
+  --background: var(--surface-secondary);
+  --workspace: var(--surface-secondary);
+  --sidebar: var(--surface-secondary);
+  --toolbar: var(--surface-secondary);
+  --header: transparent;
+  --surface: var(--surface-elevated);
+  --surface-hover: var(--surface-interactive);
+  --card: var(--surface-elevated);
+  --foreground: var(--text-primary);
+  --muted: var(--text-muted);
+  --border: var(--border-subtle);
+  --divider: var(--border-subtle);
+  --accent-hover: var(--accent);
+  --accent-active: var(--accent);
+  --accent-foreground: var(--text-inverse);
+  --ring: var(--focus-ring);
+  --brand-primary: var(--text-primary);
+  --brand-primary-hover: var(--text-primary);
+  --brand-primary-active: var(--text-primary);
+  --warning: var(--status-high);
+  --success: var(--status-positive);
+  --danger: var(--status-critical);
+
+  color: var(--text-primary);
+  background-color: var(--surface-secondary);
+  font-feature-settings: "cv05", "ss01";
+  text-rendering: optimizeLegibility;
+}
+
+html.dark[data-ids-atmosphere="ventureos"] [data-auth-entrance],
+html.dark[data-ids-brand="ventureos"] [data-auth-entrance] {
+  --surface-primary: oklch(0.185 0.005 262);
+  --surface-secondary: oklch(0.208 0.0055 262);
+  --surface-elevated: oklch(0.234 0.006 262);
+  --surface-sunken: oklch(0.163 0.005 262);
+  --surface-selected: oklch(0.276 0.009 262);
+  --surface-interactive: oklch(0.252 0.007 262);
+
+  --text-primary: oklch(0.935 0.003 250);
+  --text-secondary: oklch(0.762 0.007 258);
+  --text-muted: oklch(0.618 0.008 258);
+  --text-inverse: oklch(0.185 0.006 262);
+
+  --border-subtle: oklch(1 0 0 / 7%);
+  --border-strong: oklch(1 0 0 / 14%);
+
+  --accent: oklch(0.72 0.11 252);
+  --accent-quiet: oklch(0.32 0.045 252);
+  --accent-contrast: oklch(0.16 0.01 262);
+  --venture-accent: var(--accent);
+
+  --status-critical: oklch(0.66 0.15 25);
+  --status-high: oklch(0.73 0.12 60);
+  --status-medium: oklch(0.78 0.1 92);
+  --status-positive: oklch(0.7 0.1 158);
+  --status-neutral: oklch(0.66 0.009 260);
+  --focus-ring: oklch(0.74 0.11 252);
+
+  --background: var(--surface-secondary);
+  --workspace: var(--surface-secondary);
+  --sidebar: var(--surface-secondary);
+  --toolbar: var(--surface-secondary);
+  --surface: var(--surface-elevated);
+  --surface-hover: var(--surface-interactive);
+  --card: var(--surface-elevated);
+  --foreground: var(--text-primary);
+  --muted: var(--text-muted);
+  --border: var(--border-subtle);
+  --divider: var(--border-subtle);
+  --ring: var(--focus-ring);
+  --brand-primary: var(--text-primary);
+  --brand-primary-hover: var(--text-primary);
+  --brand-primary-active: var(--text-primary);
+  --warning: var(--status-high);
+  --success: var(--status-positive);
+  --danger: var(--status-critical);
+
+  background-color: var(--surface-secondary);
+}

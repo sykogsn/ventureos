@@ -10,6 +10,7 @@ import { takeAuthMailOutbox } from "./mail";
 import {
   authenticateUser,
   completeGoogleSignIn,
+  issueSession,
   linkGoogleAfterPassword,
   registerUser,
   requestPasswordReset,
@@ -162,5 +163,21 @@ describe("password reset and Google linking", () => {
       identities.some((item) => item.provider === "google" && item.providerSubject === "google-sub-5"),
       true,
     );
+  });
+
+  it("deletes a persisted session so its id cannot be reused after logout", async () => {
+    const user = await registerUser({
+      email: "logout@ventureos.test",
+      password: "desk-password",
+      name: "Logout",
+    });
+    await authenticateUser({
+      email: user.email,
+      password: "desk-password",
+    });
+    const sessionId = await issueSession(user);
+    assert.ok(await getPersistence().sessions.findById(sessionId));
+    await getPersistence().sessions.deleteById(sessionId);
+    assert.equal(await getPersistence().sessions.findById(sessionId), null);
   });
 });

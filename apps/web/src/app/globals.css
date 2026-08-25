@@ -1,5 +1,6 @@
 @import "@repo/ids/tokens.css";
 @import "tailwindcss";
+@import "../modules/auth/presentation/entrance.css";
 @source "../../../../packages/ui/src";
 @source "../../../../packages/ids";
 @custom-variant dark (&:where(.dark, .dark *));
@@ -23,6 +24,15 @@
   --color-surface-hover: var(--surface-hover);
   --color-surface-selected: var(--surface-selected);
   --color-surface-focus: var(--surface-focus);
+  /* Auth-entrance plumbing. Values are set only under [data-auth-entrance]. */
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-interactive: var(--surface-interactive);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-venture-accent: var(--venture-accent);
+  --color-status-high: var(--status-high);
+  --color-status-positive: var(--status-positive);
   --color-border: var(--border);
   --color-divider: var(--divider);
   --color-muted: var(--text-muted);

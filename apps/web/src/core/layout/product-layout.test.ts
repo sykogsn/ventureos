@@ -195,14 +195,34 @@ describe("Layout primitives use tokens instead of arbitrary values", () => {
   });
 });
 
+/** Founder-authorised exception: Lovable auth presentation may compose Tailwind
+ *  so the approved entrance is not reinterpreted through Executive Layout primitives.
+ *  Scope is modules/auth/presentation only. Other auth product files stay primitive-composed. */
+function isAuthPresentation(file: string) {
+  return relative(webSrc, file).replaceAll("\\", "/").startsWith("modules/auth/presentation/");
+}
+
 describe("Authentication product layout", () => {
   const files = authRoots.flatMap((dir) => walk(dir));
+  const productFiles = files.filter((file) => !isAuthPresentation(file));
+  const presentationFiles = files.filter(isAuthPresentation);
 
   it("scans authentication product files", () => {
-    assert.ok(files.length > 0);
+    assert.ok(productFiles.length > 0);
   });
 
-  for (const file of files) {
+  it("keeps the Lovable presentation exception inside modules/auth/presentation", () => {
+    assert.ok(presentationFiles.length > 0);
+    for (const file of presentationFiles) {
+      const rel = relative(webSrc, file).replaceAll("\\", "/");
+      assert.ok(
+        rel.startsWith("modules/auth/presentation/"),
+        `${rel} is not inside the auth presentation exception`,
+      );
+    }
+  });
+
+  for (const file of productFiles) {
     it(`${relative(root, file)} does not compose Tailwind layout utilities`, () => {
       const source = readFileSync(file, "utf8");
       assert.deepEqual(layoutHits(source), []);

@@ -57,6 +57,22 @@ function ShellFrame({ children }: { children: ReactNode }) {
   );
 }
 
+function RejectPersistedAuthenticatedView() {
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) {
+        return;
+      }
+      window.location.reload();
+    };
+
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
+  return null;
+}
+
 export function OsShell({
   children,
   user,
@@ -78,6 +94,7 @@ export function OsShell({
       initialWorkspaceId={activeWorkspaceId}
     >
       <VentureRouteSync />
+      <RejectPersistedAuthenticatedView />
       <IdsBrandBinder />
       <ShellFrame>{children}</ShellFrame>
     </ShellProvider>

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, WORKSPACE_COOKIE } from "@/lib/auth/cookies";
+import { applyAuthNavigationHeaders } from "@/lib/auth/navigation-headers";
 import { lookupPersistedSession } from "@/lib/auth/session-store";
 import { resolveSessionUser } from "@/lib/auth/session-token";
 import { nowIso } from "@/platform";
@@ -18,7 +19,7 @@ function loginRedirect(request: NextRequest) {
   const response = NextResponse.redirect(login);
   response.cookies.delete(SESSION_COOKIE);
   response.cookies.delete(WORKSPACE_COOKIE);
-  return response;
+  return applyAuthNavigationHeaders(response);
 }
 
 export async function proxy(request: NextRequest) {
@@ -29,21 +30,23 @@ export async function proxy(request: NextRequest) {
     : null;
 
   if (pathname.startsWith("/auth/google")) {
-    return NextResponse.next();
+    return applyAuthNavigationHeaders(NextResponse.next());
   }
 
   if (publicPaths.has(pathname)) {
     if (session) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return applyAuthNavigationHeaders(
+        NextResponse.redirect(new URL("/dashboard", request.url)),
+      );
     }
-    return NextResponse.next();
+    return applyAuthNavigationHeaders(NextResponse.next());
   }
 
   if (!session) {
     return loginRedirect(request);
   }
 
-  return NextResponse.next();
+  return applyAuthNavigationHeaders(NextResponse.next());
 }
 
 export const config = {
