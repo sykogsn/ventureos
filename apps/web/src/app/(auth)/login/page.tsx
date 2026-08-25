@@ -15,7 +15,12 @@ export default async function LoginPage({
   const next = typeof params.next === "string" ? params.next : "";
   const error = typeof params.error === "string" ? params.error : "";
   const reset = params.reset === "1";
-  const message = reset ? loginMessages.reset : error ? loginMessages[error] : undefined;
 
-  return <LoginScreen next={next} message={message} />;
+  return (
+    <LoginScreen
+      next={next}
+      error={reset ? undefined : error ? loginMessages[error] : undefined}
+      notice={reset ? loginMessages.reset : undefined}
+    />
+  );
 }

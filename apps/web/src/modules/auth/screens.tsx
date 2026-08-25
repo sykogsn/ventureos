@@ -4,6 +4,7 @@ import { useActionState, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import {
+  Cluster,
   ExecutiveCluster,
   ExecutiveDocument,
   ExecutiveField,
@@ -12,6 +13,7 @@ import {
   ExecutiveInline,
   ExecutiveRule,
   ExecutiveStack,
+  Hairline,
 } from "@/core/layout";
 import {
   forgotPasswordAction,
@@ -22,6 +24,31 @@ import {
 } from "@/modules/auth/actions";
 
 const inputClass = "vos-field";
+const LOGIN_ERROR_ID = "login-error";
+const FORM_ERROR_ID = "auth-form-error";
+
+function AuthAlert({
+  id,
+  children,
+}: {
+  id?: string;
+  children: string;
+}) {
+  return (
+    <div id={id} role="alert">
+      <Cluster justify="start">
+        <span className="ids-caption" aria-hidden="true">
+          ▲
+        </span>
+        <p className="ids-body">{children}</p>
+      </Cluster>
+    </div>
+  );
+}
+
+function AuthNotice({ children }: { children: string }) {
+  return <p className="ids-body text-foreground">{children}</p>;
+}
 
 function AuthForm({
   kicker,
@@ -49,6 +76,7 @@ function AuthForm({
   footer: ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+  const invalid = Boolean(state.error);
 
   return (
     <ExecutiveStack gap="section">
@@ -64,6 +92,8 @@ function AuthForm({
             autoComplete="email"
             required
             defaultValue=""
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? FORM_ERROR_ID : undefined}
           />
         </ExecutiveField>
         <ExecutiveField>
@@ -76,11 +106,13 @@ function AuthForm({
             minLength={8}
             required
             defaultValue=""
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? FORM_ERROR_ID : undefined}
           />
         </ExecutiveField>
         {afterPassword}
-        {state.error ? <p className="ids-body text-danger">{state.error}</p> : null}
-        {state.notice ? <p className="ids-body text-foreground">{state.notice}</p> : null}
+        {state.error ? <AuthAlert id={FORM_ERROR_ID}>{state.error}</AuthAlert> : null}
+        {state.notice ? <AuthNotice>{state.notice}</AuthNotice> : null}
         <ExecutiveFill>
           <Button type="submit" disabled={pending}>
             {pending ? pendingLabel : submitLabel}
@@ -93,7 +125,15 @@ function AuthForm({
   );
 }
 
-function GoogleContinue({ next, remember }: { next: string; remember: boolean }) {
+function GoogleContinue({
+  next,
+  remember,
+  primary = false,
+}: {
+  next: string;
+  remember: boolean;
+  primary?: boolean;
+}) {
   const params = new URLSearchParams();
   if (next) {
     params.set("next", next);
@@ -106,7 +146,7 @@ function GoogleContinue({ next, remember }: { next: string; remember: boolean })
     <ExecutiveFill>
       <a
         href={`/auth/google${params.toString() ? `?${params.toString()}` : ""}`}
-        className="vos-btn-secondary"
+        className={primary ? "vos-btn-primary" : "vos-btn-secondary"}
       >
         Continue with Google
       </a>
@@ -116,56 +156,89 @@ function GoogleContinue({ next, remember }: { next: string; remember: boolean })
 
 export function LoginScreen({
   next = "",
-  message,
+  error,
+  notice,
 }: {
   next?: string;
-  message?: string;
+  error?: string;
+  notice?: string;
 }) {
   const [remember, setRemember] = useState(false);
+  const [state, formAction, pending] = useActionState(loginAction, {});
+  const invalid = Boolean(state.error);
 
   return (
-    <AuthForm
-      kicker="Authentication"
-      title="Sign in"
-      description="Open your desk to operate companies from this workspace."
-      mode="login"
-      action={loginAction}
-      submitLabel="Open desk"
-      pendingLabel="Opening desk…"
-      extra={
-        <>
-          <input type="hidden" name="next" value={next} />
-          {message ? <p className="ids-body text-foreground">{message}</p> : null}
-        </>
-      }
-      afterPassword={
-        <ExecutiveCluster>
-          <ExecutiveInline>
-            <input
-              type="checkbox"
-              name="remember"
-              value="1"
-              checked={remember}
-              onChange={(event) => setRemember(event.target.checked)}
-            />
-            Remember me
-          </ExecutiveInline>
-          <Link
-            className="ids-label ids-transition text-foreground underline underline-offset-4"
-            href="/forgot-password"
-          >
-            Forgot password?
-          </Link>
-        </ExecutiveCluster>
-      }
-      afterSubmit={
-        <>
-          <ExecutiveRule>or</ExecutiveRule>
-          <GoogleContinue next={next} remember={remember} />
-        </>
-      }
-      footer={
-        <>
+    <ExecutiveStack gap="section">
+      <ExecutiveStack gap="tight">
+        <h1 className="ids-heading">Sign in to VentureOS</h1>
+        <p className="ids-body text-muted">Continue to the desk.</p>
+      </ExecutiveStack>
+
+      {notice ? <AuthNotice>{notice}</AuthNotice> : null}
+      {error ? <AuthAlert>{error}</AuthAlert> : null}
+
+      <ExecutiveInline>
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={(event) => setRemember(event.target.checked)}
+        />
+        Remember me
+      </ExecutiveInline>
+
+      <GoogleContinue next={next} remember={remember} primary />
+
+      <Hairline space="compact">
+        <ExecutiveRule>or sign in with email</ExecutiveRule>
+      </Hairline>
+
+      <ExecutiveForm action={formAction}>
+        <input type="hidden" name="next" value={next} />
+        {remember ? <input type="hidden" name="remember" value="1" /> : null}
+        <ExecutiveField>
+          Email
+          <input
+            className={inputClass}
+            type="email"
+            name="email"
+            autoComplete="email"
+            required
+            defaultValue=""
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? LOGIN_ERROR_ID : undefined}
+          />
+        </ExecutiveField>
+        <ExecutiveField>
+          Password
+          <input
+            className={inputClass}
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            minLength={8}
+            required
+            defaultValue=""
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? LOGIN_ERROR_ID : undefined}
+          />
+        </ExecutiveField>
+        {state.error ? <AuthAlert id={LOGIN_ERROR_ID}>{state.error}</AuthAlert> : null}
+        {state.notice ? <AuthNotice>{state.notice}</AuthNotice> : null}
+        <ExecutiveFill>
+          <Button type="submit" variant="secondary" disabled={pending}>
+            {pending ? "Signing in…" : "Sign in"}
+          </Button>
+        </ExecutiveFill>
+      </ExecutiveForm>
+
+      <ExecutiveCluster>
+        <Link
+          className="ids-label ids-transition text-foreground underline underline-offset-4"
+          href="/forgot-password"
+        >
+          Forgot password?
+        </Link>
+        <p className="ids-body text-muted">
           No account?{" "}
           <Link
             className="ids-label ids-transition text-foreground underline underline-offset-4"
@@ -173,9 +246,11 @@ export function LoginScreen({
           >
             Create one
           </Link>
-        </>
-      }
-    />
+        </p>
+      </ExecutiveCluster>
+
+      <p className="ids-caption">For the founder of this desk.</p>
+    </ExecutiveStack>
   );
 }
 
@@ -197,7 +272,9 @@ export function SignupScreen() {
       }
       afterSubmit={
         <>
-          <ExecutiveRule>or</ExecutiveRule>
+          <Hairline space="compact">
+            <ExecutiveRule>or</ExecutiveRule>
+          </Hairline>
           <GoogleContinue next="/dashboard" remember />
         </>
       }
@@ -218,6 +295,7 @@ export function SignupScreen() {
 
 export function ForgotPasswordScreen() {
   const [state, formAction, pending] = useActionState(forgotPasswordAction, {});
+  const invalid = Boolean(state.error);
 
   return (
     <ExecutiveStack gap="section">
@@ -229,9 +307,17 @@ export function ForgotPasswordScreen() {
       <ExecutiveForm action={formAction}>
         <ExecutiveField>
           Email
-          <input className={inputClass} type="email" name="email" autoComplete="email" required />
+          <input
+            className={inputClass}
+            type="email"
+            name="email"
+            autoComplete="email"
+            required
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? FORM_ERROR_ID : undefined}
+          />
         </ExecutiveField>
-        {state.error ? <p className="ids-body text-danger">{state.error}</p> : null}
+        {state.error ? <AuthAlert id={FORM_ERROR_ID}>{state.error}</AuthAlert> : null}
         <ExecutiveFill>
           <Button type="submit" disabled={pending}>
             {pending ? "Sending…" : "Send reset link"}
@@ -252,6 +338,7 @@ export function ForgotPasswordScreen() {
 
 export function ResetPasswordScreen({ token }: { token: string }) {
   const [state, formAction, pending] = useActionState(resetPasswordAction, {});
+  const invalid = Boolean(state.error);
 
   return (
     <ExecutiveStack gap="section">
@@ -271,6 +358,8 @@ export function ResetPasswordScreen({ token }: { token: string }) {
             autoComplete="new-password"
             minLength={8}
             required
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? FORM_ERROR_ID : undefined}
           />
         </ExecutiveField>
         <ExecutiveField>
@@ -282,9 +371,11 @@ export function ResetPasswordScreen({ token }: { token: string }) {
             autoComplete="new-password"
             minLength={8}
             required
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? FORM_ERROR_ID : undefined}
           />
         </ExecutiveField>
-        {state.error ? <p className="ids-body text-danger">{state.error}</p> : null}
+        {state.error ? <AuthAlert id={FORM_ERROR_ID}>{state.error}</AuthAlert> : null}
         <ExecutiveFill>
           <Button type="submit" disabled={pending}>
             {pending ? "Saving…" : "Update password"}
