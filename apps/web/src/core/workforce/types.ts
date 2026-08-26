@@ -323,9 +323,78 @@ export type VerificationResult = {
   outcome: VerificationOutcome;
 };
 
+/**
+ * Capability/verifier-owned predicate identity. The model, AgentDefinition,
+ * ProposedAction, caller, and executor cannot supply or modify this.
+ */
 export type VerificationPredicate = {
   id: string;
+  version: string;
+  capabilityId: string;
 };
+
+export type BoundPredicate = VerificationPredicate & {
+  expected: ExecutionArguments;
+  fingerprint: string;
+};
+
+export const VERIFICATION_OBSERVATION_STATUSES = [
+  "observed",
+  "missing",
+  "unavailable",
+  "timeout",
+  "invalid",
+] as const;
+
+export type VerificationObservationStatus =
+  (typeof VERIFICATION_OBSERVATION_STATUSES)[number];
+
+export type VerificationObservation = {
+  status: VerificationObservationStatus;
+  observedAt: string;
+  values?: ExecutionArguments;
+};
+
+export const VERIFICATION_STATUSES = [
+  "pending",
+  "observing",
+  "verified",
+  "not_verified",
+  "failed",
+] as const;
+
+export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
+
+export const VERIFICATION_PROVENANCE = ["system_observation"] as const;
+
+export type VerificationProvenance = (typeof VERIFICATION_PROVENANCE)[number];
+
+export const VERIFICATION_FAILURES = [
+  "VERIFIER_UNAVAILABLE",
+  "INVALID_PREDICATE",
+  "OBSERVER_UNAVAILABLE",
+  "OBSERVER_TIMEOUT",
+  "INVALID_OBSERVATION",
+  "EVIDENCE_TOO_LARGE",
+  "SCOPE_MISMATCH",
+  "EXECUTION_MISMATCH",
+  "PERSISTENCE_UNAVAILABLE",
+  "INTERRUPTED",
+] as const;
+
+export type VerificationFailure = (typeof VERIFICATION_FAILURES)[number];
+
+export type VerificationProcessResult =
+  | {
+      ok: true;
+      result: VerificationResult;
+      verificationId: string;
+    }
+  | {
+      ok: false;
+      failure: VerificationFailure;
+      verificationId?: string;
+    };
 
 export type WorkforceRunPhase =
   | "queued"
@@ -374,6 +443,7 @@ export const WORKFORCE_RUN_FAILURES = [
   "INTERRUPTED",
   "CANCELLED",
   "PERSISTENCE_UNAVAILABLE",
+  "VERIFICATION_UNAVAILABLE",
 ] as const;
 
 export type WorkforceRunFailure = (typeof WORKFORCE_RUN_FAILURES)[number];

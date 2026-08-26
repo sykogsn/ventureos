@@ -38,6 +38,8 @@ export type {
   VerificationOutcome,
   VerificationPredicate,
   VerificationResult,
+  VerificationFailure,
+  BoundPredicate,
   WorkforceActor,
   WorkforceExecutionCommand,
   WorkforceExecutionResult,
@@ -58,6 +60,9 @@ export {
   EXECUTION_FAILURES,
   MODEL_FAILURES,
   VERIFICATION_RESULTS,
+  VERIFICATION_FAILURES,
+  VERIFICATION_OBSERVATION_STATUSES,
+  VERIFICATION_STATUSES,
   WORKFORCE_RUN_COMPLETION_KINDS,
   WORKFORCE_RUN_FAILURES,
 } from "./types";
@@ -110,10 +115,25 @@ export {
 } from "./execution";
 export {
   createExecutionProbeExecutor,
+  createProbeAuthoritativeStore,
   createWorkforceExecutorRegistry,
   EXECUTION_PROBE_CAPABILITY_ID,
   type WorkforceExecutorRegistry,
 } from "./executors";
+export {
+  createExecutionProbeVerifier,
+  createWorkforceVerifierRegistry,
+  EXECUTION_PROBE_PREDICATE_ID,
+  type CapabilityVerifier,
+  type WorkforceVerifierRegistry,
+} from "./verifiers";
+export {
+  fingerprintBoundPredicate,
+  VERIFICATION_MAX_ATTEMPTS,
+  VERIFICATION_MAX_RETRIES,
+  VERIFICATION_RETRY_DELAY_MS,
+  VERIFICATION_EVIDENCE_CEILING_BYTES,
+} from "./verification";
 export {
   authoriseApprover,
   WORKFORCE_APPROVAL_PERMISSION,

@@ -344,6 +344,7 @@ export const workforceRuns = sqliteTable(
     fingerprintHash: text("fingerprint_hash"),
     executionId: text("execution_id"),
     approvalId: text("approval_id"),
+    verificationOutcome: text("verification_outcome"),
     modelCallCount: integer("model_call_count", { mode: "number" }).notNull(),
     requestedByUserId: text("requested_by_user_id").notNull(),
     createdAt: text("created_at").notNull(),
@@ -384,6 +385,39 @@ export const workforceApprovals = sqliteTable(
   ],
 );
 
+export const workforceVerifications = sqliteTable(
+  "workforce_verifications",
+  {
+    id: text("id").primaryKey(),
+    runId: text("run_id").notNull(),
+    executionId: text("execution_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    agentInstanceId: text("agent_instance_id").notNull(),
+    capabilityId: text("capability_id").notNull(),
+    sourceRequestId: text("source_request_id").notNull(),
+    sourceActionIndex: integer("source_action_index", { mode: "number" }).notNull(),
+    predicateId: text("predicate_id").notNull(),
+    predicateVersion: text("predicate_version").notNull(),
+    predicateFingerprint: text("predicate_fingerprint").notNull(),
+    expectedJson: text("expected_json").notNull(),
+    status: text("status").notNull(),
+    failureCategory: text("failure_category"),
+    attemptCount: integer("attempt_count", { mode: "number" }).notNull(),
+    observationJson: text("observation_json"),
+    evidenceJson: text("evidence_json"),
+    provenance: text("provenance"),
+    claimNonce: text("claim_nonce"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    completedAt: text("completed_at"),
+  },
+  (table) => [
+    uniqueIndex("workforce_verifications_run_idx").on(table.runId),
+    index("workforce_verifications_status_idx").on(table.status),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -410,4 +444,5 @@ export const schema = {
   agentInstances,
   workforceRuns,
   workforceApprovals,
+  workforceVerifications,
 };

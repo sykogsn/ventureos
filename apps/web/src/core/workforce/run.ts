@@ -18,11 +18,29 @@ import type {
   HumanWorkforceActor,
   ModelPort,
   ProposedAction,
+  VerificationFailure,
+  VerificationObservation,
+  VerificationOutcome,
   WorkforceActor,
   WorkforceRunCompletionKind,
   WorkforceRunFailure,
   WorkforceRunPhase,
 } from "./types";
+import type { WorkforceVerifierRegistry } from "./verifiers";
+import {
+  canRetryVerification,
+  encodeVerificationEvidence,
+  evidenceFromObservation,
+  fingerprintBoundPredicate,
+  isRetryableObservation,
+  isTerminalVerificationStatus,
+  observationContainsForbiddenData,
+  verificationRetryAt,
+  VERIFICATION_OBSERVE_TIMEOUT_MS,
+  VERIFICATION_PROVENANCE,
+  type WorkforceVerificationRecord,
+  type WorkforceVerificationStore,
+} from "./verification";
 
 export type WorkforceRunRecord = {
   id: WorkforceRunId;
@@ -44,6 +62,7 @@ export type WorkforceRunRecord = {
   fingerprintHash: string | null;
   executionId: string | null;
   approvalId: string | null;
+  verificationOutcome: VerificationOutcome | null;
   modelCallCount: number;
   requestedByUserId: UserId;
   createdAt: string;
@@ -63,6 +82,7 @@ export type WorkforceRunInsert = Omit<
   | "fingerprintHash"
   | "executionId"
   | "approvalId"
+  | "verificationOutcome"
   | "completedAt"
   | "createdAt"
   | "updatedAt"
@@ -84,6 +104,7 @@ export type WorkforceRunPatch = Partial<
     | "fingerprintHash"
     | "executionId"
     | "approvalId"
+    | "verificationOutcome"
     | "modelCallCount"
     | "completedAt"
   >
@@ -99,6 +120,7 @@ export type WorkforceRunStore = {
     to: WorkforceRunPhase,
   ): Promise<WorkforceRunRecord | undefined>;
   claimModelCall(id: WorkforceRunId): Promise<boolean>;
+  listByPhase(phase: WorkforceRunPhase): Promise<WorkforceRunRecord[]>;
   patch(id: WorkforceRunId, patch: WorkforceRunPatch): Promise<void>;
 };
 
@@ -144,7 +166,7 @@ export const WORKFORCE_RUN_STEP_JOB = "workforce.run.step";
 export const WORKFORCE_RUN_MAX_MODEL_CALLS = 1;
 export const WORKFORCE_ACTIVE_DURATION_MS = 10 * 60 * 1000;
 
-export type WorkforceRunStep = "reason" | "resume";
+export type WorkforceRunStep = "reason" | "resume" | "verify";
 
 export type WorkforceRunJobPayload = {
   runId: WorkforceRunId;
@@ -155,6 +177,7 @@ export type WorkforceJobPort = {
   enqueue(
     name: string,
     payload: WorkforceRunJobPayload,
+    runAt?: Date,
   ): Promise<{ id: JobId }>;
 };
 
@@ -186,16 +209,30 @@ export type WorkforceDecisionResult =
 export type WorkforceRunOrchestratorDeps = AuthorityEvaluatorDeps & {
   model: ModelPort;
   executors: WorkforceExecutorRegistry;
+  verifiers: WorkforceVerifierRegistry;
   execution: ExecutionPort;
   runs: WorkforceRunStore;
   approvals: WorkforceApprovalStore;
+  verifications: WorkforceVerificationStore;
   jobs: WorkforceJobPort;
   canApprove?: (userId: UserId, workspaceId: WorkspaceId) => Promise<boolean>;
+  audit?: {
+    record(entry: {
+      action: string;
+      actor?: {
+        kind: "system";
+        component: string;
+        workspaceId?: WorkspaceId;
+      };
+      metadata?: Record<string, string>;
+    }): Promise<unknown>;
+  };
 };
 
 export type WorkforceRunOrchestrator = {
   createRun(input: WorkforceRunCreateInput): Promise<WorkforceRunCreateResult>;
   handleJob(job: { payload: unknown }): Promise<void>;
+  recover(): Promise<void>;
   approve(
     runId: WorkforceRunId,
     actor: WorkforceActor,
@@ -216,6 +253,8 @@ export function createWorkforceRunOrchestrator(
       if (!isHumanActor(input.actor) || !input.objective.trim()) {
         return { ok: false, failure: "MALFORMED_REQUEST" };
       }
+
+      await recoverWorkforce(deps);
 
       const instance = await deps.instances.get(input.agentInstanceId);
       if (
@@ -249,6 +288,10 @@ export function createWorkforceRunOrchestrator(
       return { ok: true, runId, jobId: job.id };
     },
 
+    async recover() {
+      await recoverWorkforce(deps);
+    },
+
     async handleJob(job) {
       const payload = readPayload(job.payload);
       if (!payload) {
@@ -257,6 +300,10 @@ export function createWorkforceRunOrchestrator(
       await deps.runs.recoverInterrupted();
       const run = await deps.runs.get(payload.runId);
       if (!run || TERMINAL.has(run.phase)) {
+        return;
+      }
+      if (payload.step === "verify" || run.phase === "verifying") {
+        await handleVerify(deps, run.id);
         return;
       }
       if (payload.step === "reason") {
@@ -282,7 +329,7 @@ async function handleReason(
   deps: WorkforceRunOrchestratorDeps,
   current: WorkforceRunRecord,
 ) {
-  if (current.phase === "awaiting_approval") {
+  if (current.phase === "awaiting_approval" || current.phase === "verifying") {
     return;
   }
   if (
@@ -433,13 +480,21 @@ async function handleReason(
     return;
   }
 
-  await executeSelected(deps, run.id, actor);
+  const executing = await deps.runs.claimPhase(run.id, "reasoning", "executing");
+  if (!executing) {
+    return;
+  }
+  await executeSelected(deps, executing.id, actor);
 }
 
 async function handleResume(
   deps: WorkforceRunOrchestratorDeps,
   current: WorkforceRunRecord,
 ) {
+  if (current.phase === "verifying") {
+    await handleVerify(deps, current.id);
+    return;
+  }
   if (current.phase === "executing") {
     await executeSelected(deps, current.id, agentFromRun(current));
     return;
@@ -484,9 +539,27 @@ async function executeSelected(
   runId: WorkforceRunId,
   actor: AgentWorkforceActor,
 ) {
-  const run = await deps.runs.get(runId);
-  if (!run || !run.selectedAction) {
+  const current = await deps.runs.get(runId);
+  if (!current || !current.selectedAction) {
     await failRun(deps, runId, "INVALID_MODEL_OUTPUT");
+    return;
+  }
+  const selectedAction = current.selectedAction;
+
+  if (current.executionId) {
+    await scheduleVerification(deps, current);
+    return;
+  }
+
+  let run = current;
+  if (run.phase === "reasoning") {
+    const claimed = await deps.runs.claimPhase(run.id, "reasoning", "executing");
+    if (!claimed) {
+      return;
+    }
+    run = claimed;
+  }
+  if (run.phase !== "executing") {
     return;
   }
 
@@ -495,19 +568,19 @@ async function executeSelected(
     agentInstanceId: run.agentInstanceId,
     workspaceId: run.workspaceId,
     ventureId: run.ventureId,
-    capabilityId: run.selectedAction.capabilityId,
-    arguments: run.selectedAction.arguments,
+    capabilityId: selectedAction.capabilityId,
+    arguments: selectedAction.arguments,
     sourceRequestId: run.sourceRequestId,
     sourceActionIndex: 0,
   });
 
   if (result.ok) {
-    await deps.runs.patch(runId, {
-      phase: "completed",
-      completionKind: "executed",
-      executionId: result.executionId,
-      completedAt: nowIso(),
-    });
+    await deps.runs.patch(runId, { executionId: result.executionId });
+    const executed = await deps.runs.get(runId);
+    if (!executed) {
+      return;
+    }
+    await scheduleVerification(deps, executed);
     return;
   }
 
@@ -531,6 +604,406 @@ async function executeSelected(
     return;
   }
   await failRun(deps, runId, "EXECUTION_FAILED");
+}
+
+async function scheduleVerification(
+  deps: WorkforceRunOrchestratorDeps,
+  run: WorkforceRunRecord,
+) {
+  if (!run.executionId || !run.selectedAction) {
+    await failRun(deps, run.id, "VERIFICATION_UNAVAILABLE");
+    return;
+  }
+
+  const existing = await deps.verifications.getByRunId(run.id);
+  if (existing && isTerminalVerificationStatus(existing.status)) {
+    await finalizeFromVerification(deps, run.id, existing);
+    return;
+  }
+
+  if (!existing) {
+    const verifier = deps.verifiers.get(run.selectedAction.capabilityId);
+    if (!verifier) {
+      await failRun(deps, run.id, "VERIFICATION_UNAVAILABLE");
+      return;
+    }
+    const bound = verifier.bindPredicate(run.selectedAction.arguments);
+    if (!bound.ok) {
+      await failRun(deps, run.id, "VERIFICATION_UNAVAILABLE");
+      return;
+    }
+    await deps.verifications.insertPending({
+      runId: run.id,
+      executionId: run.executionId,
+      workspaceId: run.workspaceId,
+      ventureId: run.ventureId,
+      agentInstanceId: run.agentInstanceId,
+      capabilityId: run.selectedAction.capabilityId,
+      sourceRequestId: run.sourceRequestId,
+      sourceActionIndex: run.selectedActionIndex ?? 0,
+      predicate: bound.predicate,
+    });
+  }
+
+  if (run.phase === "executing") {
+    const verifying = await deps.runs.claimPhase(run.id, "executing", "verifying");
+    if (!verifying && (await deps.runs.get(run.id))?.phase !== "verifying") {
+      return;
+    }
+  } else if (run.phase !== "verifying") {
+    await deps.runs.patch(run.id, { phase: "verifying" });
+  }
+
+  const job = await deps.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
+    runId: run.id,
+    step: "verify",
+  });
+  await deps.runs.patch(run.id, { jobId: job.id, phase: "verifying" });
+}
+
+async function handleVerify(
+  deps: WorkforceRunOrchestratorDeps,
+  runId: WorkforceRunId,
+) {
+  const run = await deps.runs.get(runId);
+  if (!run || TERMINAL.has(run.phase)) {
+    return;
+  }
+
+  if (run.phase === "executing" && run.executionId) {
+    await scheduleVerification(deps, run);
+    return;
+  }
+
+  let verification = await deps.verifications.getByRunId(runId);
+  if (!verification) {
+    if (run.executionId) {
+      await scheduleVerification(deps, run);
+    }
+    return;
+  }
+
+  if (isTerminalVerificationStatus(verification.status)) {
+    await finalizeFromVerification(deps, runId, verification);
+    return;
+  }
+
+  if (
+    verification.workspaceId !== run.workspaceId ||
+    verification.ventureId !== run.ventureId ||
+    verification.agentInstanceId !== run.agentInstanceId
+  ) {
+    await failVerification(deps, verification, "SCOPE_MISMATCH");
+    return;
+  }
+  if (
+    !run.executionId ||
+    verification.executionId !== run.executionId ||
+    verification.capabilityId !== run.selectedCapabilityId
+  ) {
+    await failVerification(deps, verification, "EXECUTION_MISMATCH");
+    return;
+  }
+
+  if (verification.status === "observing" && verification.observation) {
+    await concludeObservation(deps, run, verification, verification.observation);
+    return;
+  }
+
+  let claimed =
+    verification.status === "pending"
+      ? await deps.verifications.claimObserving(verification.id)
+      : undefined;
+  if (!claimed && verification.status === "observing" && !verification.observation) {
+    claimed = await deps.verifications.adoptObserving(verification.id);
+  }
+  if (!claimed) {
+    return;
+  }
+  verification = claimed;
+
+  if (verification.attemptCount === 1 && !verification.observation) {
+    await recordVerificationAudit(deps, "workforce.verification.started", run, verification);
+  }
+
+  let observation = verification.observation;
+  if (!observation) {
+    const verifier = deps.verifiers.get(verification.capabilityId);
+    if (!verifier) {
+      await failVerification(deps, verification, "VERIFIER_UNAVAILABLE");
+      return;
+    }
+    try {
+      observation = await withTimeout(
+        verifier.observe({
+          runId: run.id,
+          executionId: verification.executionId,
+          workspaceId: verification.workspaceId,
+          ventureId: verification.ventureId,
+          agentInstanceId: verification.agentInstanceId,
+          capabilityId: verification.capabilityId,
+          predicateFingerprint: verification.predicateFingerprint,
+          sourceRequestId: verification.sourceRequestId,
+          sourceActionIndex: verification.sourceActionIndex,
+        }),
+        VERIFICATION_OBSERVE_TIMEOUT_MS,
+      );
+    } catch (error) {
+      observation = {
+        status:
+          error instanceof Error && error.message === "VERIFICATION_TIMEOUT"
+            ? "timeout"
+            : "unavailable",
+        observedAt: nowIso(),
+      };
+    }
+    const persisted = await deps.verifications.persistObservation(
+      verification.id,
+      observation,
+    );
+    if (!persisted) {
+      return;
+    }
+    verification = persisted;
+  }
+
+  await concludeObservation(deps, run, verification, observation);
+}
+
+async function concludeObservation(
+  deps: WorkforceRunOrchestratorDeps,
+  run: WorkforceRunRecord,
+  verification: WorkforceVerificationRecord,
+  observation: VerificationObservation,
+) {
+  if (observationContainsForbiddenData(observation)) {
+    await failVerification(deps, verification, "INVALID_OBSERVATION");
+    return;
+  }
+
+  if (observation.status === "invalid") {
+    await failVerification(deps, verification, "INVALID_OBSERVATION");
+    return;
+  }
+
+  if (observation.status === "observed") {
+    await applyObserved(deps, run, verification, observation);
+    return;
+  }
+
+  if (!isRetryableObservation(observation.status)) {
+    await failVerification(deps, verification, "INVALID_OBSERVATION");
+    return;
+  }
+
+  if (canRetryVerification(verification.attemptCount)) {
+    const released = await deps.verifications.releasePending(verification.id);
+    if (!released) {
+      return;
+    }
+    const job = await deps.jobs.enqueue(
+      WORKFORCE_RUN_STEP_JOB,
+      { runId: run.id, step: "verify" },
+      verificationRetryAt(),
+    );
+    await deps.runs.patch(run.id, { jobId: job.id, phase: "verifying" });
+    return;
+  }
+
+  if (observation.status === "missing") {
+    await completeVerification(deps, run, verification, observation, "NOT_VERIFIED");
+    return;
+  }
+
+  await failVerification(
+    deps,
+    verification,
+    observation.status === "timeout" ? "OBSERVER_TIMEOUT" : "OBSERVER_UNAVAILABLE",
+  );
+}
+
+async function applyObserved(
+  deps: WorkforceRunOrchestratorDeps,
+  run: WorkforceRunRecord,
+  verification: WorkforceVerificationRecord,
+  observation: VerificationObservation,
+) {
+  const verifier = deps.verifiers.get(verification.capabilityId);
+  if (!verifier) {
+    await failVerification(deps, verification, "VERIFIER_UNAVAILABLE");
+    return;
+  }
+  if (!run.selectedAction) {
+    await failVerification(deps, verification, "INVALID_PREDICATE");
+    return;
+  }
+  const live = verifier.bindPredicate(run.selectedAction.arguments);
+  const storedFingerprint = fingerprintBoundPredicate({
+    capabilityId: verification.capabilityId,
+    predicateId: verification.predicateId,
+    version: verification.predicateVersion,
+    expected: verification.expected,
+  });
+  if (
+    !live.ok ||
+    live.predicate.fingerprint !== verification.predicateFingerprint ||
+    storedFingerprint !== verification.predicateFingerprint
+  ) {
+    await failVerification(deps, verification, "INVALID_PREDICATE");
+    return;
+  }
+
+  const result = verifier.apply(live.predicate, observation);
+  await completeVerification(deps, run, verification, observation, result.outcome);
+}
+
+async function completeVerification(
+  deps: WorkforceRunOrchestratorDeps,
+  run: WorkforceRunRecord,
+  verification: WorkforceVerificationRecord,
+  observation: VerificationObservation,
+  outcome: VerificationOutcome,
+) {
+  const evidence = encodeVerificationEvidence(
+    evidenceFromObservation({
+      observation,
+      predicate: {
+        id: verification.predicateId,
+        version: verification.predicateVersion,
+        capabilityId: verification.capabilityId,
+        expected: verification.expected,
+        fingerprint: verification.predicateFingerprint,
+      },
+      executionId: verification.executionId,
+      matched: outcome === "VERIFIED",
+    }),
+  );
+  if (!evidence.ok) {
+    await failVerification(deps, verification, "EVIDENCE_TOO_LARGE");
+    return;
+  }
+  const completed = await deps.verifications.complete(
+    verification.id,
+    outcome,
+    evidence.json,
+    VERIFICATION_PROVENANCE,
+  );
+  if (!completed) {
+    const latest = await deps.verifications.get(verification.id);
+    if (latest && isTerminalVerificationStatus(latest.status)) {
+      await finalizeFromVerification(deps, run.id, latest);
+    }
+    return;
+  }
+  await recordVerificationAudit(
+    deps,
+    outcome === "VERIFIED"
+      ? "workforce.verification.verified"
+      : "workforce.verification.not_verified",
+    run,
+    completed,
+  );
+  await finalizeFromVerification(deps, run.id, completed);
+}
+
+async function failVerification(
+  deps: WorkforceRunOrchestratorDeps,
+  verification: WorkforceVerificationRecord,
+  failure: VerificationFailure,
+) {
+  const failed =
+    (await deps.verifications.fail(verification.id, failure)) ??
+    (await deps.verifications.get(verification.id));
+  if (failed) {
+    const run = await deps.runs.get(failed.runId);
+    if (run) {
+      await recordVerificationAudit(
+        deps,
+        "workforce.verification.failed",
+        run,
+        failed,
+      );
+    }
+  }
+  await failRun(deps, verification.runId, "VERIFICATION_UNAVAILABLE");
+}
+
+async function finalizeFromVerification(
+  deps: WorkforceRunOrchestratorDeps,
+  runId: WorkforceRunId,
+  verification: WorkforceVerificationRecord,
+) {
+  if (verification.status === "verified") {
+    await completeRun(deps, runId, "executed", "VERIFIED");
+    return;
+  }
+  if (verification.status === "not_verified") {
+    await completeRun(deps, runId, "executed", "NOT_VERIFIED");
+    return;
+  }
+  if (verification.status === "failed") {
+    await failRun(deps, runId, "VERIFICATION_UNAVAILABLE");
+  }
+}
+
+async function recoverWorkforce(deps: WorkforceRunOrchestratorDeps) {
+  await deps.runs.recoverInterrupted();
+  const verifying = await deps.runs.listByPhase("verifying");
+  for (const run of verifying) {
+    const verification = await deps.verifications.getByRunId(run.id);
+    if (!verification) {
+      if (run.executionId) {
+        await scheduleVerification(deps, run);
+      }
+      continue;
+    }
+    if (isTerminalVerificationStatus(verification.status)) {
+      await finalizeFromVerification(deps, run.id, verification);
+      continue;
+    }
+    if (verification.status === "observing") {
+      if (!verification.observation) {
+        await deps.verifications.releaseStaleObserving(verification.id);
+      }
+      await deps.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
+        runId: run.id,
+        step: "verify",
+      });
+      continue;
+    }
+    if (verification.status === "pending" && verification.attemptCount === 0) {
+      await deps.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
+        runId: run.id,
+        step: "verify",
+      });
+    }
+  }
+}
+
+async function recordVerificationAudit(
+  deps: WorkforceRunOrchestratorDeps,
+  action: string,
+  run: WorkforceRunRecord,
+  verification: WorkforceVerificationRecord,
+) {
+  if (!deps.audit) {
+    return;
+  }
+  await deps.audit.record({
+    action,
+    actor: {
+      kind: "system",
+      component: "workforce.verification",
+      workspaceId: run.workspaceId,
+    },
+    metadata: {
+      runId: run.id,
+      executionId: verification.executionId,
+      verificationId: verification.id,
+      workspaceId: run.workspaceId,
+      ventureId: run.ventureId,
+    },
+  });
 }
 
 async function decideApproval(
@@ -618,10 +1091,12 @@ async function completeRun(
   deps: WorkforceRunOrchestratorDeps,
   runId: WorkforceRunId,
   kind: "no_action" | "multiple_proposed_actions" | "executed",
+  verificationOutcome?: VerificationOutcome,
 ) {
   await deps.runs.patch(runId, {
     phase: "completed",
     completionKind: kind,
+    ...(verificationOutcome ? { verificationOutcome } : {}),
     completedAt: nowIso(),
   });
 }
@@ -686,7 +1161,9 @@ function readPayload(value: unknown): WorkforceRunJobPayload | undefined {
   const record = value as Record<string, unknown>;
   if (
     typeof record.runId !== "string" ||
-    (record.step !== "reason" && record.step !== "resume")
+    (record.step !== "reason" &&
+      record.step !== "resume" &&
+      record.step !== "verify")
   ) {
     return undefined;
   }
@@ -694,4 +1171,20 @@ function readPayload(value: unknown): WorkforceRunJobPayload | undefined {
     runId: record.runId as WorkforceRunId,
     step: record.step,
   };
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error("VERIFICATION_TIMEOUT"));
+    }, ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }

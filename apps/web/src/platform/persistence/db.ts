@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 5; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 6; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -426,6 +426,7 @@ export async function ensureSchema() {
           fingerprint_hash TEXT,
           execution_id TEXT,
           approval_id TEXT,
+          verification_outcome TEXT,
           model_call_count INTEGER NOT NULL,
           requested_by_user_id TEXT NOT NULL,
           created_at TEXT NOT NULL,
@@ -464,6 +465,43 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS workforce_approvals_status_workspace_idx ON workforce_approvals (status, workspace_id)`,
+      );
+
+      await addColumn("workforce_runs", "verification_outcome", "TEXT");
+      await addColumn("workforce_verifications", "claim_nonce", "TEXT");
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS workforce_verifications (
+          id TEXT PRIMARY KEY,
+          run_id TEXT NOT NULL,
+          execution_id TEXT NOT NULL,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          agent_instance_id TEXT NOT NULL,
+          capability_id TEXT NOT NULL,
+          source_request_id TEXT NOT NULL,
+          source_action_index INTEGER NOT NULL,
+          predicate_id TEXT NOT NULL,
+          predicate_version TEXT NOT NULL,
+          predicate_fingerprint TEXT NOT NULL,
+          expected_json TEXT NOT NULL,
+          status TEXT NOT NULL,
+          failure_category TEXT,
+          attempt_count INTEGER NOT NULL,
+          observation_json TEXT,
+          evidence_json TEXT,
+          provenance TEXT,
+          claim_nonce TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          completed_at TEXT
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS workforce_verifications_run_idx ON workforce_verifications (run_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS workforce_verifications_status_idx ON workforce_verifications (status)`,
       );
     })();
   }

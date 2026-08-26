@@ -5,6 +5,7 @@ import {
   createWorkforceExecutionGate,
 } from "@/core/workforce/execution";
 import { createWorkforceExecutorRegistry } from "@/core/workforce/executors";
+import { createWorkforceVerifierRegistry } from "@/core/workforce/verifiers";
 import {
   createWorkforceRunOrchestrator,
   WORKFORCE_RUN_STEP_JOB,
@@ -23,6 +24,7 @@ import { createWorkforceDefinitionRepository } from "@/platform/workforce/defini
 import { createWorkforceExecutionStore } from "@/platform/workforce/execution-store";
 import { createWorkforceInstanceRepository } from "@/platform/workforce/instance-repository";
 import { createWorkforceRunStore } from "@/platform/workforce/run-store";
+import { createWorkforceVerificationStore } from "@/platform/workforce/verification-store";
 import { createVentureScopePort } from "@/platform/workforce/venture-scope";
 import { WORKFORCE_APPROVAL_PERMISSION } from "@/core/workforce/approval";
 
@@ -56,9 +58,9 @@ const globalStore = globalThis as typeof globalThis & {
 };
 
 /**
- * Production Workforce service. Empty executor registry — no production
- * business executor. Tests inject a ModelPort and probe executor via
- * createWorkforceService.
+ * Production Workforce service. Empty executor registry and empty verifier
+ * registry — no production business executor or verifier. Tests inject a
+ * ModelPort and probe executor/verifier via createWorkforceService.
  */
 export function createWorkforceService(
   options: WorkforceServiceOptions = {},
@@ -67,7 +69,9 @@ export function createWorkforceService(
   const instances = createWorkforceInstanceRepository();
   const runs = createWorkforceRunStore();
   const approvals = createWorkforceApprovalStore();
+  const verifications = createWorkforceVerificationStore();
   const executors = createWorkforceExecutorRegistry([]);
+  const verifiers = createWorkforceVerifierRegistry([]);
   const execution = createWorkforceExecutionGate({
     definitions,
     instances,
@@ -85,14 +89,17 @@ export function createWorkforceService(
     scope: createVentureScopePort(),
     model: options.model ?? createOpenAIModelPort(),
     executors,
+    verifiers,
     execution,
     runs,
     approvals,
+    verifications,
     jobs: {
-      async enqueue(name, payload) {
-        return getPlatform().jobs.enqueue(name, payload);
+      async enqueue(name, payload, runAt) {
+        return getPlatform().jobs.enqueue(name, payload, runAt);
       },
     },
+    audit: getPlatform().audit,
     canApprove: async (userId: UserId, workspaceId: WorkspaceId) =>
       getPlatform().permissions.can({
         userId,

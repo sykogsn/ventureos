@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { eq } from "drizzle-orm";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import type { AgentDefinitionId, AgentInstanceId } from "@/contracts/ids";
 import { CAPABILITY_CONTRACTS } from "@/core/capability/contracts";
@@ -16,9 +17,14 @@ import {
 } from "@/core/workforce/execution";
 import {
   createExecutionProbeExecutor,
+  createProbeAuthoritativeStore,
   createWorkforceExecutorRegistry,
   EXECUTION_PROBE_CAPABILITY_ID,
 } from "@/core/workforce/executors";
+import {
+  createExecutionProbeVerifier,
+  createWorkforceVerifierRegistry,
+} from "@/core/workforce/verifiers";
 import { createFakeModelPort } from "@/core/workforce/model";
 import {
   createWorkforceRunOrchestrator,
@@ -45,7 +51,13 @@ import { createWorkforceExecutionStore } from "@/platform/workforce/execution-st
 import { createWorkforceInstanceRepository } from "@/platform/workforce/instance-repository";
 import { createWorkforceRunStepHandler } from "@/platform/workforce/run-handler";
 import { createWorkforceRunStore } from "@/platform/workforce/run-store";
+import { createWorkforceVerificationStore } from "@/platform/workforce/verification-store";
 import { createVentureScopePort } from "@/platform/workforce/venture-scope";
+import { createAuditLog } from "@/platform/audit/log";
+import {
+  workforceExecutions as executionTable,
+  workforceVerifications as verificationTable,
+} from "@/platform/persistence/schema";
 
 const userId = "user-1" as UserId;
 const workspaceId = "ws-1" as WorkspaceId;
@@ -161,6 +173,22 @@ function probeCapability() {
   });
 }
 
+async function drainDue(jobs: ReturnType<typeof createJobOrchestrator>, rounds = 8) {
+  for (let i = 0; i < rounds; i += 1) {
+    const processed = await jobs.processDue();
+    if (processed === 0) {
+      return;
+    }
+  }
+}
+
+async function releaseQueuedJobs() {
+  await getDb()
+    .update(jobTable)
+    .set({ runAt: new Date().toISOString() })
+    .where(eq(jobTable.status, "queued"));
+}
+
 async function seedScope(lifecycle: VentureLifecycle = "operating") {
   await ensureSchema();
   const store = getPersistence();
@@ -226,6 +254,9 @@ async function setup(options: {
   canApprove?: boolean;
   databaseUrl?: string;
   hydrateOnly?: boolean;
+  includeVerifier?: boolean;
+  observeScript?: Array<"observed" | "missing" | "unavailable" | "timeout" | "invalid">;
+  authoritativeStore?: ReturnType<typeof createProbeAuthoritativeStore>;
 } = {}) {
   if (!options.hydrateOnly) {
     await resetPersistenceLifecycle(options.databaseUrl ?? ":memory:");
@@ -240,11 +271,21 @@ async function setup(options: {
     await instances.insert(options.instance ?? instance());
   }
 
-  const probe = createExecutionProbeExecutor();
+  const authoritativeStore =
+    options.authoritativeStore ?? createProbeAuthoritativeStore();
+  const probe = createExecutionProbeExecutor(authoritativeStore);
+  const probeVerifier = createExecutionProbeVerifier(authoritativeStore, {
+    observeScript: options.observeScript,
+  });
   const executors = createWorkforceExecutorRegistry([probe.executor]);
+  const verifiers = createWorkforceVerifierRegistry(
+    options.includeVerifier === false ? [] : [probeVerifier.verifier],
+  );
   const runs = createWorkforceRunStore();
   const approvals = createWorkforceApprovalStore();
+  const verifications = createWorkforceVerificationStore();
   const jobs = createJobOrchestrator();
+  const audit = createAuditLog();
   let modelCalls = 0;
   const payload = reasoning(options.actions ?? [action()]);
   const model =
@@ -278,13 +319,16 @@ async function setup(options: {
     scope: createVentureScopePort(),
     model,
     executors,
+    verifiers,
     execution,
     runs,
     approvals,
+    verifications,
     jobs: {
-      enqueue: (name, jobPayload) => jobs.enqueue(name, jobPayload),
+      enqueue: (name, jobPayload, runAt) => jobs.enqueue(name, jobPayload, runAt),
     },
     canApprove: async () => options.canApprove ?? true,
+    audit,
   });
 
   jobs.register(WORKFORCE_RUN_STEP_JOB, createWorkforceRunStepHandler(orchestrator));
@@ -294,9 +338,13 @@ async function setup(options: {
     jobs,
     runs,
     approvals,
+    verifications,
     instances,
     definitions,
     probe,
+    probeVerifier,
+    authoritativeStore,
+    audit,
     modelCalls: () => modelCalls,
   };
 }
@@ -316,14 +364,17 @@ describe("WorkforceRun orchestrator", () => {
       return;
     }
     assert.notEqual(created.runId, created.jobId);
-    await ctx.jobs.processDue();
+    await drainDue(ctx.jobs);
     const run = await ctx.runs.get(created.runId);
     assert.equal(run?.phase, "completed");
     assert.equal(run?.completionKind, "executed");
+    assert.equal(run?.verificationOutcome, "VERIFIED");
     assert.equal(run?.modelCallCount, 1);
     assert.equal(ctx.probe.invocationCount(), 1);
     assert.equal(ctx.modelCalls(), 1);
     assert.equal(WORKFORCE_RUN_MAX_MODEL_CALLS, 1);
+    const verification = await ctx.verifications.getByRunId(created.runId);
+    assert.equal(verification?.status, "verified");
   });
 
   it("completes with no_action when the model proposes none", async () => {
@@ -344,6 +395,7 @@ describe("WorkforceRun orchestrator", () => {
     assert.equal(run?.phase, "completed");
     assert.equal(run?.completionKind, "no_action");
     assert.equal(ctx.probe.invocationCount(), 0);
+    assert.equal(await ctx.verifications.getByRunId(created.runId), undefined);
   });
 
   it("does not execute when the model proposes more than one action", async () => {
@@ -367,6 +419,7 @@ describe("WorkforceRun orchestrator", () => {
     assert.equal(run?.completionKind, "multiple_proposed_actions");
     assert.equal(ctx.probe.invocationCount(), 0);
     assert.equal(ctx.modelCalls(), 1);
+    assert.equal(await ctx.verifications.getByRunId(created.runId), undefined);
   });
 
   it("pauses for approval without occupying a running job", async () => {
@@ -471,6 +524,7 @@ describe("WorkforceRun orchestrator", () => {
     assert.equal(run?.phase, "failed");
     assert.equal(run?.failureCategory, "APPROVAL_REJECTED");
     assert.equal(ctx.probe.invocationCount(), 0);
+    assert.equal(await ctx.verifications.getByRunId(created.runId), undefined);
   });
 
   it("resumes with fresh authority after approval and executes once", async () => {
@@ -491,10 +545,11 @@ describe("WorkforceRun orchestrator", () => {
     await ctx.jobs.processDue();
     const approved = await ctx.orchestrator.approve(created.runId, human());
     assert.equal(approved.ok, true);
-    await ctx.jobs.processDue();
+    await drainDue(ctx.jobs);
     const run = await ctx.runs.get(created.runId);
     assert.equal(run?.phase, "completed");
     assert.equal(run?.completionKind, "executed");
+    assert.equal(run?.verificationOutcome, "VERIFIED");
     assert.equal(ctx.probe.invocationCount(), 1);
     assert.equal(ctx.modelCalls(), 1);
   });
@@ -592,15 +647,16 @@ describe("WorkforceRun orchestrator", () => {
     }
     await ctx.jobs.processDue();
     await ctx.orchestrator.approve(created.runId, human());
-    await ctx.jobs.processDue();
+    await drainDue(ctx.jobs);
     await ctx.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
       runId: created.runId,
       step: "resume",
     });
-    await ctx.jobs.processDue();
+    await drainDue(ctx.jobs);
     assert.equal(ctx.probe.invocationCount(), 1);
     const run = await ctx.runs.get(created.runId);
     assert.equal(run?.phase, "completed");
+    assert.equal(run?.verificationOutcome, "VERIFIED");
   });
 
   it("survives restart while waiting for approval", async () => {
@@ -682,6 +738,7 @@ describe("WorkforceRun orchestrator", () => {
 
     const service = await readFile(servicePath, "utf8");
     assert.match(service, /createWorkforceExecutorRegistry\(\[\]\)/);
+    assert.match(service, /createWorkforceVerifierRegistry\(\[\]\)/);
     assert.doesNotMatch(service, /execution-probe/);
     assert.doesNotMatch(service, /Qualora|Calviora|Farmora/);
   });
@@ -692,7 +749,9 @@ describe("WorkforceRun orchestrator", () => {
     assert.doesNotMatch(runSource, /while\s*\(/);
     assert.doesNotMatch(runSource, /step:\s*"reason".*step:\s*"reason"/s);
     assert.doesNotMatch(runSource, /createOpenAIModelPort/);
-    assert.doesNotMatch(runSource, /VERIFIED/);
+    assert.equal([...runSource.matchAll(/model\.invoke/g)].length, 1);
+    assert.match(runSource, /step:\s*"verify"/);
+    assert.doesNotMatch(runSource, /createOpenAIModelPort/);
 
     const kernel = await readFile(kernelPath, "utf8");
     assert.match(kernel, /jobs\.register\(WORKFORCE_RUN_STEP_JOB/);
@@ -700,5 +759,360 @@ describe("WorkforceRun orchestrator", () => {
 
     const adapter = await readFile(adapterPath, "utf8");
     assert.doesNotMatch(adapter, /ExecutionPort/);
+  });
+
+  it("claims executing before the Sprint 5 gate and does not complete as executed before verification", async () => {
+    const ctx = await setup();
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await ctx.jobs.processDue();
+    const run = await ctx.runs.get(created.runId);
+    assert.equal(run?.phase, "verifying");
+    assert.equal(run?.completionKind, null);
+    assert.ok(run?.executionId);
+    assert.equal(ctx.probe.invocationCount(), 1);
+    const executions = await getDb().select().from(executionTable);
+    assert.equal(executions[0]?.status, "succeeded");
+  });
+
+  it("verifies matching state and rejects wrong state without retry", async () => {
+    const matched = await setup();
+    const created = await matched.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(matched.jobs);
+    assert.equal((await matched.runs.get(created.runId))?.verificationOutcome, "VERIFIED");
+    assert.equal(matched.modelCalls(), 1);
+
+    const mismatched = await setup();
+    const second = await mismatched.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(second.ok, true);
+    if (!second.ok) {
+      return;
+    }
+    await mismatched.jobs.processDue();
+    mismatched.authoritativeStore.write(
+      { workspaceId, ventureId, agentInstanceId },
+      "wrong",
+    );
+    await drainDue(mismatched.jobs);
+    const run = await mismatched.runs.get(second.runId);
+    assert.equal(run?.phase, "completed");
+    assert.equal(run?.verificationOutcome, "NOT_VERIFIED");
+    assert.equal(mismatched.probe.invocationCount(), 1);
+    const delayed = await getDb()
+      .select()
+      .from(jobTable)
+      .where(eq(jobTable.status, "queued"));
+    assert.equal(delayed.length, 0);
+  });
+
+  it("never marks VERIFIED from executor success alone", async () => {
+    const ctx = await setup({ includeVerifier: false });
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(ctx.jobs);
+    const run = await ctx.runs.get(created.runId);
+    assert.equal(run?.phase, "failed");
+    assert.equal(run?.failureCategory, "VERIFICATION_UNAVAILABLE");
+    assert.equal(run?.verificationOutcome, null);
+    assert.equal(ctx.probe.invocationCount(), 1);
+  });
+
+  it("fails the process after two observer unavailable or timeout results", async () => {
+    const unavailable = await setup({
+      observeScript: ["unavailable", "unavailable"],
+    });
+    const first = await unavailable.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(first.ok, true);
+    if (!first.ok) {
+      return;
+    }
+    await drainDue(unavailable.jobs);
+    await releaseQueuedJobs();
+    await drainDue(unavailable.jobs);
+    const failedUnavailable = await unavailable.runs.get(first.runId);
+    assert.equal(failedUnavailable?.phase, "failed");
+    assert.equal(failedUnavailable?.failureCategory, "VERIFICATION_UNAVAILABLE");
+    assert.notEqual(failedUnavailable?.verificationOutcome, "NOT_VERIFIED");
+    const unavailableRow = await unavailable.verifications.getByRunId(first.runId);
+    assert.equal(unavailableRow?.status, "failed");
+    assert.equal(unavailableRow?.failureCategory, "OBSERVER_UNAVAILABLE");
+
+    const timed = await setup({ observeScript: ["timeout", "timeout"] });
+    const second = await timed.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(second.ok, true);
+    if (!second.ok) {
+      return;
+    }
+    await drainDue(timed.jobs);
+    await releaseQueuedJobs();
+    await drainDue(timed.jobs);
+    const failedTimeout = await timed.runs.get(second.runId);
+    assert.equal(failedTimeout?.failureCategory, "VERIFICATION_UNAVAILABLE");
+    const timeoutRow = await timed.verifications.getByRunId(second.runId);
+    assert.equal(timeoutRow?.failureCategory, "OBSERVER_TIMEOUT");
+  });
+
+  it("retries missing state once then returns a deterministic NOT_VERIFIED", async () => {
+    const ctx = await setup({
+      actions: [action({ arguments: { marker: "alpha", commit: false } })],
+    });
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(ctx.jobs);
+    const queued = await getDb()
+      .select()
+      .from(jobTable)
+      .where(eq(jobTable.status, "queued"));
+    assert.equal(queued.length, 1);
+    await releaseQueuedJobs();
+    await drainDue(ctx.jobs);
+    const run = await ctx.runs.get(created.runId);
+    assert.equal(run?.phase, "completed");
+    assert.equal(run?.verificationOutcome, "NOT_VERIFIED");
+    assert.equal(ctx.probe.invocationCount(), 1);
+    assert.equal(ctx.modelCalls(), 1);
+  });
+
+  it("makes duplicate verification delivery idempotent", async () => {
+    const ctx = await setup();
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(ctx.jobs);
+    await ctx.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
+      runId: created.runId,
+      step: "verify",
+    });
+    await drainDue(ctx.jobs);
+    const verification = await ctx.verifications.getByRunId(created.runId);
+    assert.equal(verification?.status, "verified");
+    assert.equal(ctx.probe.invocationCount(), 1);
+    assert.equal((await ctx.runs.get(created.runId))?.verificationOutcome, "VERIFIED");
+  });
+
+  it("does not let concurrent verify workers create contradictory results", async () => {
+    const ctx = await setup();
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await ctx.jobs.processDue();
+    await Promise.all([
+      ctx.orchestrator.handleJob({ payload: { runId: created.runId, step: "verify" } }),
+      ctx.orchestrator.handleJob({ payload: { runId: created.runId, step: "verify" } }),
+    ]);
+    const verification = await ctx.verifications.getByRunId(created.runId);
+    assert.equal(verification?.status, "verified");
+    assert.equal((await ctx.runs.get(created.runId))?.verificationOutcome, "VERIFIED");
+    const rows = await getDb().select().from(verificationTable);
+    assert.equal(rows.length, 1);
+  });
+
+  it("rejects cross-workspace, cross-Venture, and stale execution binding", async () => {
+    const ctx = await setup();
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await ctx.jobs.processDue();
+    const verification = await ctx.verifications.getByRunId(created.runId);
+    assert.ok(verification);
+    await getDb()
+      .update(verificationTable)
+      .set({ workspaceId: "ws-other" })
+      .where(eq(verificationTable.id, verification.id));
+    await drainDue(ctx.jobs);
+    assert.equal((await ctx.runs.get(created.runId))?.failureCategory, "VERIFICATION_UNAVAILABLE");
+
+    const ventureCtx = await setup();
+    const ventureRun = await ventureCtx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(ventureRun.ok, true);
+    if (!ventureRun.ok) {
+      return;
+    }
+    await ventureCtx.jobs.processDue();
+    const ventureVerification = await ventureCtx.verifications.getByRunId(ventureRun.runId);
+    assert.ok(ventureVerification);
+    await getDb()
+      .update(verificationTable)
+      .set({ ventureId: "venture-other" })
+      .where(eq(verificationTable.id, ventureVerification.id));
+    await drainDue(ventureCtx.jobs);
+    assert.equal(
+      (await ventureCtx.runs.get(ventureRun.runId))?.failureCategory,
+      "VERIFICATION_UNAVAILABLE",
+    );
+
+    const execCtx = await setup();
+    const execRun = await execCtx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(execRun.ok, true);
+    if (!execRun.ok) {
+      return;
+    }
+    await execCtx.jobs.processDue();
+    const execVerification = await execCtx.verifications.getByRunId(execRun.runId);
+    assert.ok(execVerification);
+    await getDb()
+      .update(verificationTable)
+      .set({ executionId: "exec-stale" })
+      .where(eq(verificationTable.id, execVerification.id));
+    await drainDue(execCtx.jobs);
+    assert.equal(
+      (await execCtx.runs.get(execRun.runId))?.failureCategory,
+      "VERIFICATION_UNAVAILABLE",
+    );
+  });
+
+  it("does not duplicate a succeeded execution after crash, and completes from persisted verification", async () => {
+    const url = await fileDatabase();
+    const first = await setup({ databaseUrl: url });
+    const created = await first.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await first.jobs.processDue();
+    const mid = await first.runs.get(created.runId);
+    assert.equal(mid?.phase, "verifying");
+    assert.ok(mid?.executionId);
+    await first.jobs.processDue();
+    await first.runs.patch(created.runId, {
+      phase: "verifying",
+      completionKind: null,
+      completedAt: null,
+    });
+
+    const second = await setup({ databaseUrl: url, hydrateOnly: true });
+    await second.orchestrator.recover();
+    await drainDue(second.jobs);
+    const recovered = await second.runs.get(created.runId);
+    assert.equal(recovered?.phase, "completed");
+    assert.equal(recovered?.verificationOutcome, "VERIFIED");
+    assert.equal(second.probe.invocationCount(), 0);
+    const executions = await getDb().select().from(executionTable);
+    assert.equal(executions.filter((row) => row.status === "succeeded").length, 1);
+  });
+
+  it("records system verification audit without evidence JSON", async () => {
+    const ctx = await setup();
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(ctx.jobs);
+    const events = await ctx.audit.list();
+    const actions = events.map((event) => event.action);
+    assert.equal(actions.includes("workforce.verification.started"), true);
+    assert.equal(actions.includes("workforce.verification.verified"), true);
+    for (const event of events.filter((item) => item.action.startsWith("workforce.verification."))) {
+      assert.equal(event.actor?.kind, "system");
+      if (event.actor && "component" in event.actor) {
+        assert.equal(event.actor.component, "workforce.verification");
+      }
+      assert.equal(JSON.stringify(event.metadata ?? {}).includes("observedKeys"), false);
+      assert.equal("evidence" in (event.metadata ?? {}), false);
+    }
   });
 });

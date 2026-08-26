@@ -13,8 +13,41 @@ const probeArgumentSchema = z
   .object({
     marker: z.string().max(64).optional(),
     label: z.string().max(64).optional(),
+    commit: z.boolean().optional(),
   })
   .strict();
+
+export type ProbeAuthoritativeScope = {
+  workspaceId: string;
+  ventureId: string;
+  agentInstanceId: string;
+};
+
+export type ProbeAuthoritativeStore = {
+  write(scope: ProbeAuthoritativeScope, marker: string): void;
+  read(scope: ProbeAuthoritativeScope): string | undefined;
+  clear(scope: ProbeAuthoritativeScope): void;
+};
+
+export function createProbeAuthoritativeStore(): ProbeAuthoritativeStore {
+  const values = new Map<string, string>();
+
+  function key(scope: ProbeAuthoritativeScope) {
+    return `${scope.workspaceId}|${scope.ventureId}|${scope.agentInstanceId}`;
+  }
+
+  return {
+    write(scope, marker) {
+      values.set(key(scope), marker);
+    },
+    read(scope) {
+      return values.get(key(scope));
+    },
+    clear(scope) {
+      values.delete(key(scope));
+    },
+  };
+}
 
 export type WorkforceExecutorRegistry = {
   get(id: string): CapabilityExecutor | undefined;
@@ -49,9 +82,12 @@ export type ExecutionProbe = {
 
 /**
  * Test-only set-once probe. Not a production capability and not in the
- * production Capability Registry.
+ * production Capability Registry. Optional store is the injected
+ * in-process authoritative state shared with the test verifier.
  */
-export function createExecutionProbeExecutor(): ExecutionProbe {
+export function createExecutionProbeExecutor(
+  store?: ProbeAuthoritativeStore,
+): ExecutionProbe {
   let count = 0;
   const invoked = new Set<string>();
 
@@ -74,6 +110,18 @@ export function createExecutionProbeExecutor(): ExecutionProbe {
       }
       invoked.add(request.executionId);
       count += 1;
+      if (request.arguments.commit !== false && store) {
+        store.write(
+          {
+            workspaceId: request.workspaceId,
+            ventureId: request.ventureId,
+            agentInstanceId: request.agentInstanceId,
+          },
+          typeof request.arguments.marker === "string"
+            ? request.arguments.marker
+            : "",
+        );
+      }
       return {
         executorId: EXECUTION_PROBE_CAPABILITY_ID,
         ok: true,

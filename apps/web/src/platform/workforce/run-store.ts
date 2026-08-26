@@ -20,6 +20,7 @@ import { ensureSchema, getClient, getDb } from "@/platform/persistence/db";
 import {
   workforceExecutions as executionTable,
   workforceRuns as runTable,
+  workforceVerifications as verificationTable,
 } from "@/platform/persistence/schema";
 
 export type {
@@ -68,6 +69,7 @@ export function createWorkforceRunStore(): WorkforceRunStore {
         fingerprintHash: null,
         executionId: null,
         approvalId: null,
+        verificationOutcome: null,
         modelCallCount: row.modelCallCount,
         requestedByUserId: row.requestedByUserId,
         createdAt: now,
@@ -105,6 +107,14 @@ export function createWorkforceRunStore(): WorkforceRunStore {
       });
       return result.rowsAffected === 1;
     },
+    async listByPhase(phase) {
+      await ready();
+      const rows = await getDb()
+        .select()
+        .from(runTable)
+        .where(eq(runTable.phase, phase));
+      return rows.map(toRecord);
+    },
     async patch(id, patch) {
       await ready();
       await getDb()
@@ -137,6 +147,9 @@ export function createWorkforceRunStore(): WorkforceRunStore {
             ? { executionId: patch.executionId }
             : {}),
           ...(patch.approvalId !== undefined ? { approvalId: patch.approvalId } : {}),
+          ...(patch.verificationOutcome !== undefined
+            ? { verificationOutcome: patch.verificationOutcome }
+            : {}),
           ...(patch.modelCallCount !== undefined
             ? { modelCallCount: patch.modelCallCount }
             : {}),
@@ -174,13 +187,44 @@ async function recoverActiveRuns() {
       .where(eq(executionTable.sourceRequestId, row.sourceRequestId))
       .limit(1);
     if (execution?.status === "succeeded") {
+      const [verification] = await getDb()
+        .select()
+        .from(verificationTable)
+        .where(eq(verificationTable.runId, row.id))
+        .limit(1);
+      if (verification?.status === "verified" || verification?.status === "not_verified") {
+        await getDb()
+          .update(runTable)
+          .set({
+            phase: "completed",
+            completionKind: "executed",
+            executionId: execution.id,
+            verificationOutcome:
+              verification.status === "verified" ? "VERIFIED" : "NOT_VERIFIED",
+            completedAt: verification.completedAt ?? execution.completedAt ?? now,
+            updatedAt: now,
+          })
+          .where(and(eq(runTable.id, row.id), eq(runTable.phase, "executing")));
+        continue;
+      }
+      if (verification?.status === "failed") {
+        await getDb()
+          .update(runTable)
+          .set({
+            phase: "failed",
+            failureCategory: "VERIFICATION_UNAVAILABLE",
+            executionId: execution.id,
+            completedAt: verification.completedAt ?? now,
+            updatedAt: now,
+          })
+          .where(and(eq(runTable.id, row.id), eq(runTable.phase, "executing")));
+        continue;
+      }
       await getDb()
         .update(runTable)
         .set({
-          phase: "completed",
-          completionKind: "executed",
+          phase: "verifying",
           executionId: execution.id,
-          completedAt: execution.completedAt ?? now,
           updatedAt: now,
         })
         .where(and(eq(runTable.id, row.id), eq(runTable.phase, "executing")));
@@ -230,6 +274,7 @@ function toRecord(row: typeof runTable.$inferSelect): WorkforceRunRecord {
     fingerprintHash: row.fingerprintHash,
     executionId: row.executionId,
     approvalId: row.approvalId,
+    verificationOutcome: (row.verificationOutcome as WorkforceRunRecord["verificationOutcome"]) ?? null,
     modelCallCount: Number(row.modelCallCount),
     requestedByUserId: row.requestedByUserId as UserId,
     createdAt: row.createdAt,
