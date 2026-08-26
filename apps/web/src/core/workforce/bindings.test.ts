@@ -238,15 +238,17 @@ describe("workforce binding composer", () => {
     );
   });
 
-  it("keeps production bindings empty and separate from test probes", async () => {
+  it("keeps production bindings to the authorised Qualora binding and separate from test probes", async () => {
     const production = await readFile(productionPath, "utf8");
     const service = await readFile(servicePath, "utf8");
     const bindings = await readFile(bindingsPath, "utf8");
+    assert.match(production, /QUALORA_EVIDENCE_ASSESSMENT_BINDING/);
     assert.match(
       production,
-      /export const PRODUCTION_WORKFORCE_BINDINGS: WorkforceBinding\[\] = \[\];/,
+      /export const PRODUCTION_WORKFORCE_BINDINGS: WorkforceBinding\[\] = \[\s*QUALORA_EVIDENCE_ASSESSMENT_BINDING,\s*\];/,
     );
     assert.doesNotMatch(production, /execution-probe/);
+    assert.doesNotMatch(production, /Calviora|Farmora/);
     assert.match(service, /composeWorkforceBindings\(\s*PRODUCTION_WORKFORCE_BINDINGS/);
     assert.doesNotMatch(service, /execution-probe/);
     assert.doesNotMatch(service, /Qualora|Calviora|Farmora/);

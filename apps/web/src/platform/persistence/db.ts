@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 7; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 8; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -432,6 +432,8 @@ export async function ensureSchema() {
           verification_outcome TEXT,
           model_call_count INTEGER NOT NULL,
           requested_by_user_id TEXT NOT NULL,
+          evidence_json TEXT,
+          citations_json TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           completed_at TEXT
@@ -514,6 +516,38 @@ export async function ensureSchema() {
       await addColumn("workforce_executions", "external_reference", "TEXT");
       await addColumn("workforce_verifications", "implementation_id", "TEXT");
       await addColumn("workforce_verifications", "implementation_version", "TEXT");
+      await addColumn("workforce_runs", "evidence_json", "TEXT");
+      await addColumn("workforce_runs", "citations_json", "TEXT");
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS qualora_evidence_assessments (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          requirement_id TEXT NOT NULL,
+          source_run_id TEXT NOT NULL,
+          source_agent_instance_id TEXT NOT NULL,
+          execution_idempotency_key TEXT NOT NULL,
+          gap_kind TEXT NOT NULL,
+          summary TEXT NOT NULL,
+          cited_evidence_ids_json TEXT NOT NULL,
+          status TEXT NOT NULL,
+          provenance TEXT NOT NULL,
+          implementation_id TEXT,
+          implementation_version TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS qualora_evidence_assessments_idempotency_idx ON qualora_evidence_assessments (execution_idempotency_key)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS qualora_evidence_assessments_workspace_venture_idx ON qualora_evidence_assessments (workspace_id, venture_id)`,
+      );
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS qualora_evidence_assessments_run_idx ON qualora_evidence_assessments (source_run_id)`,
+      );
     })();
   }
 

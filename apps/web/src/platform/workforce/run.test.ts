@@ -380,6 +380,42 @@ async function setup(options: {
 }
 
 describe("WorkforceRun orchestrator", () => {
+  it("persists and forwards supplied evidence and citations to ModelPort", async () => {
+    const captured: ModelRequest[] = [];
+    const ctx = await setup({
+      model: createFakeModelPort((request: ModelRequest) => {
+        captured.push(request);
+        return reasoning([action()]);
+      }),
+    });
+    const evidence = [
+      { id: "ev-1", sourceType: "note", excerpt: "Coverage is incomplete." },
+    ];
+    const citations = [
+      { sourceType: "requirement", sourceId: "req-1", excerpt: "A requirement." },
+    ];
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+      evidence,
+      citations,
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(ctx.jobs);
+    assert.equal(captured.length, 1);
+    assert.deepEqual(captured[0]?.evidence, evidence);
+    assert.deepEqual(captured[0]?.context.citations, citations);
+    const stored = await ctx.runs.get(created.runId);
+    assert.deepEqual(stored?.evidence, evidence);
+    assert.deepEqual(stored?.citations, citations);
+  });
+
   it("keeps RunId independent from JobId and completes a single allowed action", async () => {
     const ctx = await setup();
     const created = await ctx.orchestrator.createRun({
@@ -771,10 +807,7 @@ describe("WorkforceRun orchestrator", () => {
     assert.doesNotMatch(service, /execution-probe/);
     assert.doesNotMatch(service, /Qualora|Calviora|Farmora/);
     const production = await readFile(productionPath, "utf8");
-    assert.match(
-      production,
-      /export const PRODUCTION_WORKFORCE_BINDINGS: WorkforceBinding\[\] = \[\];/,
-    );
+    assert.match(production, /QUALORA_EVIDENCE_ASSESSMENT_BINDING/);
     assert.doesNotMatch(production, /execution-probe/);
   });
 

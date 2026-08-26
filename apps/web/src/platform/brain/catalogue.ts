@@ -187,7 +187,7 @@ export const knowledgeObjects: KnowledgeObject[] = [
     summary: "Quality and evidence operations. Full intelligence pack including briefing.",
     purpose: "Hold product truth without a Qualora application.",
     why: "Operators must recognise the same OS.",
-    evidence: ["Definition Registry qualora@0.3.0"],
+    evidence: ["Definition Registry qualora@0.4.0"],
     relationships: rel("product-operating-system", "ids", "adr-003"),
     history: [{ at: "2026-08-20", note: "Indexed from the live definition catalogue." }],
     aiContext: "Qualora is incubating. Do not invent a private Runtime or a traffic-light overlay.",
@@ -195,7 +195,7 @@ export const knowledgeObjects: KnowledgeObject[] = [
     lastReview: "2026-08-20",
     owner: "Product",
     status: "Living",
-    version: "0.3.0",
+    version: "0.4.0",
     scopes: ["Qualora"],
   },
   {

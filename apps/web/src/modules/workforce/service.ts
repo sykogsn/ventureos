@@ -14,7 +14,12 @@ import {
   type WorkforceRunOrchestrator,
 } from "@/core/workforce/run";
 import { createOpenAIModelPort } from "@/platform/ai/openai-adapter";
-import type { HumanWorkforceActor, ModelPort } from "@/core/workforce/types";
+import type {
+  HumanWorkforceActor,
+  ModelContextCitation,
+  ModelEvidenceRef,
+  ModelPort,
+} from "@/core/workforce/types";
 import { getPlatform } from "@/platform/kernel";
 import {
   createWorkforceApprovalSatisfactionPort,
@@ -38,6 +43,8 @@ export type WorkforceService = {
     workspaceId: WorkspaceId;
     ventureId: VentureId;
     objective: string;
+    evidence?: ModelEvidenceRef[];
+    citations?: ModelContextCitation[];
   }): Promise<WorkforceRunCreateResult>;
   approve(
     runId: WorkforceRunId,
@@ -59,10 +66,10 @@ const globalStore = globalThis as typeof globalThis & {
 };
 
 /**
- * Production Workforce service. Production bindings are empty — no
- * production business executor or verifier. Tests construct an
- * orchestrator with probe bindings directly and do not use this factory
- * to ship probes.
+ * Production Workforce service. Production bindings are composed from
+ * PRODUCTION_WORKFORCE_BINDINGS. Tests that need the execution probe
+ * construct an orchestrator with probe bindings directly and do not use
+ * this factory to ship probes.
  */
 export function createWorkforceService(
   options: WorkforceServiceOptions = {},

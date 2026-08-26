@@ -11,13 +11,19 @@ import {
 import type { WorkforceExecutorRegistry } from "./executors";
 import type { WorkforceImplementationRegistry } from "./bindings";
 import { emptyWorkforceImplementations } from "./bindings";
-import { PLATFORM_MODEL_DEFENCE } from "./model";
+import {
+  MODEL_EVIDENCE_LIMIT,
+  MODEL_UNTRUSTED_TEXT_LIMIT,
+  PLATFORM_MODEL_DEFENCE,
+} from "./model";
 import type {
   AgentWorkforceActor,
   ApprovalStatus,
   ExecutionArguments,
   ExecutionPort,
   HumanWorkforceActor,
+  ModelContextCitation,
+  ModelEvidenceRef,
   ModelPort,
   ProposedAction,
   VerificationFailure,
@@ -67,6 +73,8 @@ export type WorkforceRunRecord = {
   verificationOutcome: VerificationOutcome | null;
   modelCallCount: number;
   requestedByUserId: UserId;
+  evidence: ModelEvidenceRef[];
+  citations: ModelContextCitation[];
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -190,6 +198,8 @@ export type WorkforceRunCreateInput = {
   workspaceId: WorkspaceId;
   ventureId: VentureId;
   objective: string;
+  evidence?: ModelEvidenceRef[];
+  citations?: ModelContextCitation[];
 };
 
 export type WorkforceRunCreateResult =
@@ -258,6 +268,11 @@ export function createWorkforceRunOrchestrator(
         return { ok: false, failure: "MALFORMED_REQUEST" };
       }
 
+      const pack = readEvidencePack(input.evidence, input.citations, input.objective);
+      if (!pack) {
+        return { ok: false, failure: "MALFORMED_REQUEST" };
+      }
+
       await recoverWorkforce(deps);
 
       const instance = await deps.instances.get(input.agentInstanceId);
@@ -282,6 +297,8 @@ export function createWorkforceRunOrchestrator(
         sourceRequestId: runId,
         modelCallCount: 0,
         requestedByUserId: input.actor.userId,
+        evidence: pack.evidence,
+        citations: pack.citations,
       });
 
       const job = await deps.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
@@ -396,8 +413,8 @@ async function handleReason(
     platformInstructions: PLATFORM_MODEL_DEFENCE,
     roleInstructions: `${definition.role}. ${definition.responsibilities.join(" ")}`,
     task: run.objective,
-    context: { objective: run.objective, citations: [] },
-    evidence: [],
+    context: { objective: run.objective, citations: run.citations },
+    evidence: run.evidence,
     candidateCapabilities,
   });
 
@@ -1202,6 +1219,57 @@ function isArgumentMap(value: unknown): value is ExecutionArguments {
       typeof entry === "string" ||
       typeof entry === "number" ||
       typeof entry === "boolean",
+  );
+}
+
+function readEvidencePack(
+  evidence: ModelEvidenceRef[] | undefined,
+  citations: ModelContextCitation[] | undefined,
+  objective: string,
+): { evidence: ModelEvidenceRef[]; citations: ModelContextCitation[] } | undefined {
+  const evidenceItems = evidence ?? [];
+  const citationItems = citations ?? [];
+  if (evidenceItems.length > MODEL_EVIDENCE_LIMIT) {
+    return undefined;
+  }
+  if (!evidenceItems.every(isEvidenceRef) || !citationItems.every(isCitation)) {
+    return undefined;
+  }
+  const size =
+    objective.length +
+    evidenceItems.reduce((total, item) => total + item.excerpt.length, 0) +
+    citationItems.reduce((total, item) => total + item.excerpt.length, 0);
+  if (size > MODEL_UNTRUSTED_TEXT_LIMIT) {
+    return undefined;
+  }
+  return { evidence: evidenceItems, citations: citationItems };
+}
+
+function isEvidenceRef(value: unknown): value is ModelEvidenceRef {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === "string" &&
+    record.id.trim().length > 0 &&
+    typeof record.sourceType === "string" &&
+    record.sourceType.trim().length > 0 &&
+    typeof record.excerpt === "string"
+  );
+}
+
+function isCitation(value: unknown): value is ModelContextCitation {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.sourceType === "string" &&
+    record.sourceType.trim().length > 0 &&
+    typeof record.sourceId === "string" &&
+    record.sourceId.trim().length > 0 &&
+    typeof record.excerpt === "string"
   );
 }
 

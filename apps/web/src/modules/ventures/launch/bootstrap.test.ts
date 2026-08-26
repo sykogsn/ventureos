@@ -89,7 +89,7 @@ describe("Product bootstrap", () => {
     const { company, snapshot } = bootstrap("qualora", "Qualora One");
     const venture = snapshot.core.ventures[0];
     assert.ok(venture);
-    assert.deepEqual(company.venture.definition, { id: "qualora", version: "0.3.0" });
+    assert.deepEqual(company.venture.definition, { id: "qualora", version: "0.4.0" });
     assert.equal(mayConsumeBriefing(venture), true);
     assert.ok(projectSituationRoom(snapshot.core).briefing.implications.length > 0);
     assert.ok(projectExecutiveFloor(snapshot.core).executives.length > 0);

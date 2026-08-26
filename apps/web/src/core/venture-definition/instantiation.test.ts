@@ -62,9 +62,9 @@ describe("Venture instantiation", () => {
       executiveIds: [],
       productId: "qualora",
       definitionId: "qualora",
-      definitionVersion: "0.3.0",
+      definitionVersion: "0.4.0",
     });
-    assert.deepEqual(company.venture.definition, { id: "qualora", version: "0.3.0" });
+    assert.deepEqual(company.venture.definition, { id: "qualora", version: "0.4.0" });
   });
 
   it("rejects an unknown definition", () => {
@@ -106,7 +106,7 @@ describe("Venture instantiation", () => {
     assert.throws(
       () =>
         instantiateVentureDefinition(
-          { id: "qualora", version: "0.3.0" },
+          { id: "qualora", version: "0.4.0" },
           platformVentureRegistry,
           empty,
         ),

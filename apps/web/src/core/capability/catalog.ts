@@ -304,6 +304,29 @@ export const platformCapabilityCatalog: CapabilityManifest[] = [
     guarantees: ["Founder decisions enter VIC only through the Runtime."],
     limitations: ["UI remains presentational."],
   }),
+  createCapabilityManifest({
+    id: "assurance.evidence-assessment",
+    name: "Assurance Evidence Assessment",
+    classification: "Intelligence",
+    purpose:
+      "Record a bounded, AI-generated, unconfirmed evidence-gap assessment against one supplied assurance requirement. Does not determine regulatory truth.",
+    owner: "intelligence",
+    version: "1.0.0",
+    maturity: "experimental",
+    lifecycle: "internal",
+    dependencies: [],
+    provides: [C.assuranceEvidenceAssessment],
+    requires: [],
+    guarantees: [
+      "Registration names the capability only; it does not grant authority or dispatch an implementation.",
+      "A durable assessment, if created, is proposed and unconfirmed. It is not a compliance determination.",
+    ],
+    limitations: [
+      "Does not confirm, dismiss, close, or delete assessments.",
+      "Does not retrieve regulations, browse the web, or declare CQC outcomes.",
+      "Verification of execution state is not verification of regulatory judgement.",
+    ],
+  }),
 ];
 
 export const platformCapabilityRegistry = createCapabilityRegistry(

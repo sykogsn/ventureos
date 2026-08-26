@@ -368,6 +368,7 @@ export function createWorkforceExecutionGate(
         capabilityId: command.capabilityId,
         arguments: parsed.value,
         externalIdempotencyKey,
+        sourceRequestId: command.sourceRequestId,
       };
 
       try {

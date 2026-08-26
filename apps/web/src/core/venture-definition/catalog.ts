@@ -41,12 +41,12 @@ export const platformVentureCatalog: VentureDefinitionManifest[] = [
     description:
       "Qualora runs on VentureOS to keep quality constraints, findings and founder calls in one intelligence document.",
     owner: "founder",
-    version: "0.3.0",
+    version: "0.4.0",
     lifecycle: "incubating",
     maturity: "alpha",
     runtimeProfile: sharedRuntime,
     capabilityProfile: {
-      uses: [...sharedUses, "intelligence.briefing"],
+      uses: [...sharedUses, "intelligence.briefing", "assurance.evidence-assessment"],
       excludes: [],
     },
     governanceProfile: sharedGovernance,

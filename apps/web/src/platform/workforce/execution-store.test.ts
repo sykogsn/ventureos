@@ -78,7 +78,7 @@ function claimInput(
 }
 
 describe("workforce execution store", () => {
-  it("initialises schema generation 7 without destroying existing records", async () => {
+    it("initialises schema generation 8 without destroying existing records", async () => {
     await resetPersistenceLifecycle(":memory:");
     await ensureSchema();
     const store = createWorkforceExecutionStore();

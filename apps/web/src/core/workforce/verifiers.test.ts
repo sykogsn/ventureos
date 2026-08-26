@@ -80,6 +80,7 @@ describe("workforce verifier registry", () => {
       capabilityId: EXECUTION_PROBE_CAPABILITY_ID,
       arguments: { marker: "alpha" },
       externalIdempotencyKey: "core-derived-key",
+      sourceRequestId: "run-1",
     });
     assert.equal(outcome.ok, true);
     assert.equal("outcome" in outcome, false);

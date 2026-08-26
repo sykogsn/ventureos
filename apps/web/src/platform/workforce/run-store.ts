@@ -6,6 +6,8 @@ import type {
   WorkforceRunId,
 } from "@/contracts/ids";
 import type {
+  ModelContextCitation,
+  ModelEvidenceRef,
   ProposedAction,
   WorkforceRunCompletionKind,
   WorkforceRunFailure,
@@ -72,6 +74,8 @@ export function createWorkforceRunStore(): WorkforceRunStore {
         verificationOutcome: null,
         modelCallCount: row.modelCallCount,
         requestedByUserId: row.requestedByUserId,
+        evidenceJson: JSON.stringify(row.evidence ?? []),
+        citationsJson: JSON.stringify(row.citations ?? []),
         createdAt: now,
         updatedAt: now,
         completedAt: null,
@@ -277,6 +281,8 @@ function toRecord(row: typeof runTable.$inferSelect): WorkforceRunRecord {
     verificationOutcome: (row.verificationOutcome as WorkforceRunRecord["verificationOutcome"]) ?? null,
     modelCallCount: Number(row.modelCallCount),
     requestedByUserId: row.requestedByUserId as UserId,
+    evidence: parseEvidence(row.evidenceJson),
+    citations: parseCitations(row.citationsJson),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     completedAt: row.completedAt,
@@ -316,4 +322,59 @@ function parseAction(raw: string | null): ProposedAction | null {
   } catch {
     return null;
   }
+}
+
+function parseEvidence(raw: string | null): ModelEvidenceRef[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.filter(isEvidenceRef);
+  } catch {
+    return [];
+  }
+}
+
+function parseCitations(raw: string | null): ModelContextCitation[] {
+  if (!raw) {
+    return [];
+  }
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.filter(isCitation);
+  } catch {
+    return [];
+  }
+}
+
+function isEvidenceRef(value: unknown): value is ModelEvidenceRef {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === "string" &&
+    record.id.trim().length > 0 &&
+    typeof record.sourceType === "string" &&
+    typeof record.excerpt === "string"
+  );
+}
+
+function isCitation(value: unknown): value is ModelContextCitation {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.sourceType === "string" &&
+    typeof record.sourceId === "string" &&
+    typeof record.excerpt === "string"
+  );
 }

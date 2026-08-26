@@ -50,7 +50,7 @@ Rows stored before definition columns existed may have empty `definition_id` / `
 | Id | Version | Name | Lifecycle | Notes |
 |---|---|---|---|---|
 | `ventureos.company` | 1.0.0 | VentureOS Company | operating | Default instance for founder-created companies |
-| `qualora` | 0.3.0 | Qualora | incubating | Full intelligence pack including briefing |
+| `qualora` | 0.4.0 | Qualora | incubating | Full intelligence pack including briefing and `assurance.evidence-assessment` |
 | `calviora` | 0.1.0 | Calviora | concept | Excludes `intelligence.briefing` / morning-briefing |
 | `farmora` | 0.1.0 | Farmora | concept | Excludes executive-office feature; still uses office capability for VIC |
 

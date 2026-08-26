@@ -52,7 +52,7 @@ export const operatingCompany: CompanyKnowledgeObject = {
   type: "Company",
   legalName: "North Star Limited",
   operatingName: "North Star",
-  definitionRef: "qualora@0.3.0",
+  definitionRef: "qualora@0.4.0",
   workspaceId: "ws-desk",
   stage: "incubating",
   genomePointers: ["quality-operations"],

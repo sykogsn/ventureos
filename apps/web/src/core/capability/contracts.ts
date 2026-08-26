@@ -19,6 +19,7 @@ export const CAPABILITY_CONTRACTS = {
   founderIdentity: "contract.founder-identity",
   ventureGenome: "contract.venture-genome",
   capabilityRegistry: "contract.capability-registry",
+  assuranceEvidenceAssessment: "contract.assurance-evidence-assessment",
 } as const;
 
 export type CapabilityContract =

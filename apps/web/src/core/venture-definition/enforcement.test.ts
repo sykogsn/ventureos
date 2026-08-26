@@ -120,7 +120,7 @@ describe("Capability and feature enforcement", () => {
   });
 
   it("Runtime still orchestrates a founder decision when the profile allows it", () => {
-    const snapshot = founded({ id: "qualora", version: "0.3.0" }, "Qualora One");
+    const snapshot = founded({ id: "qualora", version: "0.4.0" }, "Qualora One");
     const rec = snapshot.core.recommendations.items[0];
     assert.ok(rec);
     const decided = runExecutiveIntelligenceRuntime(snapshot.core, {
@@ -136,7 +136,7 @@ describe("Capability and feature enforcement", () => {
 
 describe("Qualora projections", () => {
   it("keeps briefing, decisions and executive office", () => {
-    const snapshot = founded({ id: "qualora", version: "0.3.0" }, "Qualora One");
+    const snapshot = founded({ id: "qualora", version: "0.4.0" }, "Qualora One");
     const room = projectSituationRoom(snapshot.core);
     const floor = projectExecutiveFloor(snapshot.core);
     const venture = snapshot.core.ventures[0];

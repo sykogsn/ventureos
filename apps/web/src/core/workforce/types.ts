@@ -184,6 +184,7 @@ export type ExecutorInvocation = {
   capabilityId: string;
   arguments: ExecutionArguments;
   externalIdempotencyKey: string;
+  sourceRequestId: string;
 };
 
 export type ExecutionReceipt = {

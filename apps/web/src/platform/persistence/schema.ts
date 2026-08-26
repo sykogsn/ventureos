@@ -350,6 +350,8 @@ export const workforceRuns = sqliteTable(
     verificationOutcome: text("verification_outcome"),
     modelCallCount: integer("model_call_count", { mode: "number" }).notNull(),
     requestedByUserId: text("requested_by_user_id").notNull(),
+    evidenceJson: text("evidence_json"),
+    citationsJson: text("citations_json"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     completedAt: text("completed_at"),
@@ -423,6 +425,38 @@ export const workforceVerifications = sqliteTable(
   ],
 );
 
+export const qualoraEvidenceAssessments = sqliteTable(
+  "qualora_evidence_assessments",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    requirementId: text("requirement_id").notNull(),
+    sourceRunId: text("source_run_id").notNull(),
+    sourceAgentInstanceId: text("source_agent_instance_id").notNull(),
+    executionIdempotencyKey: text("execution_idempotency_key").notNull(),
+    gapKind: text("gap_kind").notNull(),
+    summary: text("summary").notNull(),
+    citedEvidenceIdsJson: text("cited_evidence_ids_json").notNull(),
+    status: text("status").notNull(),
+    provenance: text("provenance").notNull(),
+    implementationId: text("implementation_id"),
+    implementationVersion: text("implementation_version"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("qualora_evidence_assessments_idempotency_idx").on(
+      table.executionIdempotencyKey,
+    ),
+    index("qualora_evidence_assessments_workspace_venture_idx").on(
+      table.workspaceId,
+      table.ventureId,
+    ),
+    uniqueIndex("qualora_evidence_assessments_run_idx").on(table.sourceRunId),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -450,4 +484,5 @@ export const schema = {
   workforceRuns,
   workforceApprovals,
   workforceVerifications,
+  qualoraEvidenceAssessments,
 };

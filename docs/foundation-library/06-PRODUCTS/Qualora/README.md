@@ -2,7 +2,7 @@
 
 **Purpose.** Describe Qualora as a product on VentureOS: quality and evidence operations for regulated work.
 
-**Authority.** Product page. Live definition: `qualora@0.3.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `qualora@0.4.0` in the Definition Registry.
 
 **Audience.** Product, design, and engineers working on Qualora instances.
 
@@ -12,7 +12,7 @@
 
 **Status.** Incubating (definition); atmosphere not painted
 
-**Version.** 0.3.0
+**Version.** 0.4.0
 
 **Owner.** Founder (definition owner)
 
@@ -27,7 +27,9 @@ Qualora runs on VentureOS to keep quality constraints, findings, and founder cal
 - Lifecycle: incubating. Maturity: alpha.
 - Orchestrator: Executive Intelligence Runtime.
 - Features: situation-room, company-hq, executive-office, founder-decisions, morning-briefing, portfolio.
-- Adds `intelligence.briefing` to the shared capability pack.
+- Adds `intelligence.briefing` and `assurance.evidence-assessment` to the shared capability pack.
+- Production binding availability does not activate an Evidence Analyst. Activation is explicit.
+- A proposed Qualora evidence-gap assessment is unconfirmed. Sprint 7 VERIFIED confirms the intended row exists; it does not confirm regulatory judgement.
 - Excludes nothing.
 
 ## Identity

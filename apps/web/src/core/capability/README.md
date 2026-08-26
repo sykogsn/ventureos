@@ -28,6 +28,7 @@ Initial shared capabilities:
 | `intelligence.risk` | Risk Intelligence | Intelligence | stable |
 | `intelligence.mission` | Mission Engine | Intelligence | stable |
 | `intelligence.briefing` | Executive Briefing | Intelligence | shared |
+| `assurance.evidence-assessment` | Assurance Evidence Assessment | Intelligence | internal |
 | `intelligence.runtime` | Executive Intelligence Runtime | Intelligence | stable |
 | `governance.executive-office` | Executive Office | Governance | stable |
 | `governance.founder-decision` | Founder Decision Recording | Governance | stable |
