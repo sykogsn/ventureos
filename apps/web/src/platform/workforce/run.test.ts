@@ -12,6 +12,7 @@ import { platformCapabilityCatalog } from "@/core/capability/catalog";
 import { createCapabilityManifest } from "@/core/capability/model";
 import { createCapabilityRegistry } from "@/core/capability/registry";
 import { WORKFORCE_APPROVAL_PERMISSION } from "@/core/workforce/approval";
+import { composeWorkforceBindings, emptyWorkforceImplementations } from "@/core/workforce/bindings";
 import {
   createWorkforceExecutionGate,
 } from "@/core/workforce/execution";
@@ -52,6 +53,7 @@ import { createWorkforceInstanceRepository } from "@/platform/workforce/instance
 import { createWorkforceRunStepHandler } from "@/platform/workforce/run-handler";
 import { createWorkforceRunStore } from "@/platform/workforce/run-store";
 import { createWorkforceVerificationStore } from "@/platform/workforce/verification-store";
+import { createWorkforceJobPort } from "@/platform/workforce/job-port";
 import { createVentureScopePort } from "@/platform/workforce/venture-scope";
 import { createAuditLog } from "@/platform/audit/log";
 import {
@@ -70,6 +72,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const kernelPath = join(here, "../kernel.ts");
 const runPath = join(here, "../../core/workforce/run.ts");
 const servicePath = join(here, "../../modules/workforce/service.ts");
+const productionPath = join(here, "../../modules/workforce/production-bindings.ts");
 const adapterPath = join(here, "../ai/openai-adapter.ts");
 
 let tempDir: string | undefined;
@@ -182,6 +185,18 @@ async function drainDue(jobs: ReturnType<typeof createJobOrchestrator>, rounds =
   }
 }
 
+async function listedVerifyJobs() {
+  const rows = await getDb().select().from(jobTable);
+  return rows.filter((row) => {
+    try {
+      const payload = JSON.parse(row.payloadJson) as { step?: string };
+      return payload.step === "verify";
+    } catch {
+      return false;
+    }
+  });
+}
+
 async function releaseQueuedJobs() {
   await getDb()
     .update(jobTable)
@@ -277,10 +292,31 @@ async function setup(options: {
   const probeVerifier = createExecutionProbeVerifier(authoritativeStore, {
     observeScript: options.observeScript,
   });
-  const executors = createWorkforceExecutorRegistry([probe.executor]);
-  const verifiers = createWorkforceVerifierRegistry(
-    options.includeVerifier === false ? [] : [probeVerifier.verifier],
-  );
+  const capabilities = createCapabilityRegistry([
+    ...platformCapabilityCatalog,
+    probeCapability(),
+  ]);
+  const composed =
+    options.includeVerifier === false
+      ? undefined
+      : composeWorkforceBindings(
+          [
+            {
+              bindingId: "test.workforce.execution-probe",
+              implementationVersion: "1.0.0",
+              capabilityId: EXECUTION_PROBE_CAPABILITY_ID,
+              executor: probe.executor,
+              verifier: probeVerifier.verifier,
+            },
+          ],
+          capabilities,
+        );
+  const executors =
+    composed?.executors ?? createWorkforceExecutorRegistry([probe.executor]);
+  const verifiers =
+    composed?.verifiers ?? createWorkforceVerifierRegistry([]);
+  const implementations =
+    composed?.implementations ?? emptyWorkforceImplementations();
   const runs = createWorkforceRunStore();
   const approvals = createWorkforceApprovalStore();
   const verifications = createWorkforceVerificationStore();
@@ -299,12 +335,10 @@ async function setup(options: {
   const execution = createWorkforceExecutionGate({
     definitions,
     instances,
-    capabilities: createCapabilityRegistry([
-      ...platformCapabilityCatalog,
-      probeCapability(),
-    ]),
+    capabilities,
     scope: createVentureScopePort(),
     executors,
+    implementations,
     store: createWorkforceExecutionStore(),
     approvals: createWorkforceApprovalSatisfactionPort(approvals),
   });
@@ -312,21 +346,17 @@ async function setup(options: {
   const orchestrator = createWorkforceRunOrchestrator({
     definitions,
     instances,
-    capabilities: createCapabilityRegistry([
-      ...platformCapabilityCatalog,
-      probeCapability(),
-    ]),
+    capabilities,
     scope: createVentureScopePort(),
     model,
     executors,
     verifiers,
+    implementations,
     execution,
     runs,
     approvals,
     verifications,
-    jobs: {
-      enqueue: (name, jobPayload, runAt) => jobs.enqueue(name, jobPayload, runAt),
-    },
+    jobs: createWorkforceJobPort(jobs),
     canApprove: async () => options.canApprove ?? true,
     audit,
   });
@@ -737,10 +767,15 @@ describe("WorkforceRun orchestrator", () => {
     assert.equal(ctx.probe.invocationCount(), 0);
 
     const service = await readFile(servicePath, "utf8");
-    assert.match(service, /createWorkforceExecutorRegistry\(\[\]\)/);
-    assert.match(service, /createWorkforceVerifierRegistry\(\[\]\)/);
+    assert.match(service, /composeWorkforceBindings\(\s*PRODUCTION_WORKFORCE_BINDINGS/);
     assert.doesNotMatch(service, /execution-probe/);
     assert.doesNotMatch(service, /Qualora|Calviora|Farmora/);
+    const production = await readFile(productionPath, "utf8");
+    assert.match(
+      production,
+      /export const PRODUCTION_WORKFORCE_BINDINGS: WorkforceBinding\[\] = \[\];/,
+    );
+    assert.doesNotMatch(production, /execution-probe/);
   });
 
   it("does not loop, self-schedule reasoning, or call the OpenAI adapter from the orchestrator", async () => {
@@ -756,6 +791,8 @@ describe("WorkforceRun orchestrator", () => {
     const kernel = await readFile(kernelPath, "utf8");
     assert.match(kernel, /jobs\.register\(WORKFORCE_RUN_STEP_JOB/);
     assert.doesNotMatch(kernel, /createOpenAIModelPort/);
+    assert.match(kernel, /jobs\.processDue\(\)[\s\S]*orchestrator\.recover\(\)/);
+    assert.equal([...kernel.matchAll(/scheduler\.every/g)].length, 1);
 
     const adapter = await readFile(adapterPath, "utf8");
     assert.doesNotMatch(adapter, /ExecutionPort/);
@@ -1114,5 +1151,115 @@ describe("WorkforceRun orchestrator", () => {
       assert.equal(JSON.stringify(event.metadata ?? {}).includes("observedKeys"), false);
       assert.equal("evidence" in (event.metadata ?? {}), false);
     }
+  });
+
+  it("records execution success audit without dumping outcome", async () => {
+    const ctx = await setup();
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(ctx.jobs);
+    const events = await ctx.audit.list();
+    const succeeded = events.find((event) => event.action === "workforce.execution.succeeded");
+    assert.ok(succeeded);
+    assert.equal(succeeded?.metadata?.implementationId, "test.workforce.execution-probe");
+    assert.equal(succeeded?.metadata?.implementationVersion, "1.0.0");
+    assert.equal("output" in (succeeded?.metadata ?? {}), false);
+    const executions = await getDb().select().from(executionTable);
+    assert.equal(executions[0]?.implementationId, "test.workforce.execution-probe");
+    const verification = await ctx.verifications.getByRunId(created.runId);
+    assert.equal(verification?.implementationId, "test.workforce.execution-probe");
+    assert.equal(verification?.implementationVersion, "1.0.0");
+  });
+
+  it("reconciles a stranded verifying run without a verify job", async () => {
+    const ctx = await setup({ observeScript: ["unavailable"] });
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(ctx.jobs);
+    const delayed = await listedVerifyJobs();
+    assert.equal(delayed.some((row) => row.status === "queued"), true);
+    await getDb().delete(jobTable);
+    const before = await listedVerifyJobs();
+    assert.equal(before.length, 0);
+    await ctx.orchestrator.recover();
+    const recovered = await listedVerifyJobs();
+    assert.equal(recovered.filter((row) => row.status === "queued").length, 1);
+    assert.equal(ctx.probe.invocationCount(), 1);
+  });
+
+  it("does not double-enqueue a delayed verify job", async () => {
+    const ctx = await setup({ observeScript: ["unavailable"] });
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await drainDue(ctx.jobs);
+    const before = await listedVerifyJobs();
+    assert.equal(before.filter((row) => row.status === "queued").length, 1);
+    await ctx.orchestrator.recover();
+    const after = await listedVerifyJobs();
+    assert.equal(after.filter((row) => row.status === "queued").length, 1);
+    assert.equal(after.length, before.length);
+  });
+
+  it("does not steal a live observe nonce while a verify job is active", async () => {
+    const ctx = await setup();
+    const created = await ctx.orchestrator.createRun({
+      actor: human(),
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      objective: "probe once",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) {
+      return;
+    }
+    await ctx.jobs.processDue();
+    const run = await ctx.runs.get(created.runId);
+    assert.equal(run?.phase, "verifying");
+    const verification = await ctx.verifications.getByRunId(created.runId);
+    assert.ok(verification);
+    await getDb()
+      .update(verificationTable)
+      .set({
+        status: "observing",
+        claimNonce: "live-nonce",
+        updatedAt: new Date(Date.now() - 60_000).toISOString(),
+      })
+      .where(eq(verificationTable.id, verification.id));
+    await ctx.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
+      runId: created.runId,
+      step: "verify",
+    });
+    await ctx.orchestrator.recover();
+    const after = await ctx.verifications.getByRunId(created.runId);
+    assert.equal(after?.claimNonce, "live-nonce");
+    assert.equal(after?.status, "observing");
   });
 });

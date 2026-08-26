@@ -3,6 +3,7 @@ import { createId } from "@/platform/ids";
 import { isAgentActor } from "./actor";
 import { evaluateAuthority, type AuthorityEvaluatorDeps } from "./authority";
 import type { WorkforceExecutorRegistry } from "./executors";
+import type { WorkforceImplementationRegistry } from "./bindings";
 import {
   EXECUTION_FAILURES,
   type AgentWorkforceActor,
@@ -22,6 +23,20 @@ export const SCOPE_ARGUMENT_KEYS = [
   "agentInstanceId",
 ] as const;
 
+export const SECRET_ARGUMENT_KEYS = [
+  "password",
+  "token",
+  "secret",
+  "authorization",
+  "cookie",
+  "apikey",
+  "api_key",
+  "credential",
+  "session",
+] as const;
+
+export const EXTERNAL_REFERENCE_LIMIT = 256;
+
 export type ExecutionRecordStatus = "running" | "succeeded" | "failed";
 
 export type ExecutionRecord = {
@@ -40,6 +55,9 @@ export type ExecutionRecord = {
   authorityEvaluatedAt: string;
   outcomeJson: string | null;
   errorCategory: string | null;
+  implementationId: string | null;
+  implementationVersion: string | null;
+  externalReference: string | null;
   startedAt: string;
   completedAt: string | null;
 };
@@ -58,6 +76,8 @@ export type ExecutionClaimInput = {
   authorityContextVersion: string;
   authorityEvaluatedAt: string;
   startedAt: string;
+  implementationId?: string | null;
+  implementationVersion?: string | null;
 };
 
 export type ExecutionClaimResult =
@@ -106,6 +126,7 @@ export type WorkforceExecutionGateDeps = AuthorityEvaluatorDeps & {
   store: WorkforceExecutionStore;
   timeoutMs?: number;
   approvals?: WorkforceApprovalSatisfactionPort;
+  implementations?: WorkforceImplementationRegistry;
 };
 
 /**
@@ -123,6 +144,10 @@ export function deriveExecutionIdempotencyKey(request: ExecutionRequest): string
       String(request.sourceActionIndex),
     ].join("|"),
   );
+}
+
+export function deriveExternalIdempotencyKey(request: ExecutionRequest): string {
+  return deriveExecutionIdempotencyKey(request);
 }
 
 export function hashExecutionArguments(args: ExecutionArguments): string {
@@ -204,7 +229,7 @@ export function createWorkforceExecutionGate(
         };
       }
 
-      if (hasScopeInjection(command.arguments)) {
+      if (hasScopeInjection(command.arguments) || hasSecretInjection(command.arguments)) {
         return {
           ok: false,
           failure: "INVALID_ARGUMENTS",
@@ -266,6 +291,9 @@ export function createWorkforceExecutionGate(
         }
       }
 
+      const identity = deps.implementations?.get(command.capabilityId);
+      const externalIdempotencyKey = deriveExternalIdempotencyKey(command);
+
       await deps.store.recoverInterrupted();
       const claimed = await deps.store.claim({
         id: executionId,
@@ -281,6 +309,8 @@ export function createWorkforceExecutionGate(
         authorityContextVersion: context.contextVersion,
         authorityEvaluatedAt: evaluatedAt,
         startedAt: evaluatedAt,
+        implementationId: identity?.bindingId ?? null,
+        implementationVersion: identity?.implementationVersion ?? null,
       });
 
       if (claimed.kind === "mismatch") {
@@ -337,6 +367,7 @@ export function createWorkforceExecutionGate(
         ventureId: command.ventureId,
         capabilityId: command.capabilityId,
         arguments: parsed.value,
+        externalIdempotencyKey,
       };
 
       try {
@@ -365,6 +396,7 @@ export function createWorkforceExecutionGate(
           executorId: executor.id,
           ok: true,
           output: outcome.output,
+          receipt: boundReceipt(identity, outcome.receipt),
         };
         await deps.store.complete(claimed.record.id, succeeded);
         return {
@@ -453,6 +485,46 @@ function hasScopeInjection(args: ExecutionArguments) {
   return SCOPE_ARGUMENT_KEYS.some((key) => key in args);
 }
 
+function hasSecretInjection(args: ExecutionArguments) {
+  return Object.keys(args).some((key) =>
+    (SECRET_ARGUMENT_KEYS as readonly string[]).includes(key.toLowerCase()),
+  );
+}
+
+function boundReceipt(
+  identity: { bindingId: string; implementationVersion: string } | undefined,
+  receipt: ExecutionOutcome["receipt"],
+): ExecutionOutcome["receipt"] | undefined {
+  const externalReference = sanitizeExternalReference(receipt?.externalReference);
+  if (!identity && !externalReference && !receipt?.occurredAt) {
+    return undefined;
+  }
+  return {
+    implementationId: identity?.bindingId ?? "",
+    implementationVersion: identity?.implementationVersion ?? "",
+    ...(externalReference ? { externalReference } : {}),
+    ...(receipt?.occurredAt ? { occurredAt: receipt.occurredAt } : {}),
+  };
+}
+
+function sanitizeExternalReference(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > EXTERNAL_REFERENCE_LIMIT) {
+    return undefined;
+  }
+  if (
+    (SECRET_ARGUMENT_KEYS as readonly string[]).some((key) =>
+      trimmed.toLowerCase().includes(key),
+    )
+  ) {
+    return undefined;
+  }
+  return trimmed;
+}
+
 function isArgumentMap(value: unknown): value is ExecutionArguments {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -513,6 +585,24 @@ function parseStoredOutcome(raw: string | null): ExecutionOutcome | undefined {
     }
     if (typeof record.error === "string") {
       outcome.error = record.error;
+    }
+    if (record.receipt && typeof record.receipt === "object" && !Array.isArray(record.receipt)) {
+      const receipt = record.receipt as Record<string, unknown>;
+      if (
+        typeof receipt.implementationId === "string" &&
+        typeof receipt.implementationVersion === "string"
+      ) {
+        outcome.receipt = {
+          implementationId: receipt.implementationId,
+          implementationVersion: receipt.implementationVersion,
+          ...(typeof receipt.externalReference === "string"
+            ? { externalReference: receipt.externalReference }
+            : {}),
+          ...(typeof receipt.occurredAt === "string"
+            ? { occurredAt: receipt.occurredAt }
+            : {}),
+        };
+      }
     }
     return outcome;
   } catch {

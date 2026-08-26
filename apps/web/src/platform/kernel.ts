@@ -56,7 +56,11 @@ export function createPlatform(): Platform {
     await getWorkforceService().orchestrator.handleJob(job);
   });
   scheduler.every("jobs.processDue", 15_000, () => {
-    void jobs.processDue();
+    void (async () => {
+      await jobs.processDue();
+      const { getWorkforceService } = await import("@/modules/workforce/service");
+      await getWorkforceService().orchestrator.recover();
+    })();
   });
 
   return {

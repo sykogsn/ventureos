@@ -79,6 +79,7 @@ describe("workforce verifier registry", () => {
       ventureId: "venture-1" as never,
       capabilityId: EXECUTION_PROBE_CAPABILITY_ID,
       arguments: { marker: "alpha" },
+      externalIdempotencyKey: "core-derived-key",
     });
     assert.equal(outcome.ok, true);
     assert.equal("outcome" in outcome, false);

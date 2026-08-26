@@ -19,6 +19,7 @@ export type {
   ExecutionFailure,
   ExecutionOutcome,
   ExecutionPort,
+  ExecutionReceipt,
   ExecutionRequest,
   ExecutorInvocation,
   HumanWorkforceActor,
@@ -104,15 +105,25 @@ export {
 export {
   createWorkforceExecutionGate,
   deriveExecutionIdempotencyKey,
+  deriveExternalIdempotencyKey,
   fingerprintExecution,
   hashExecutionArguments,
   EXECUTION_ARGUMENT_LIMIT,
   EXECUTION_TIMEOUT_MS,
+  EXTERNAL_REFERENCE_LIMIT,
   SCOPE_ARGUMENT_KEYS,
+  SECRET_ARGUMENT_KEYS,
   type WorkforceExecutionGateDeps,
   type WorkforceExecutionStore,
   type WorkforceApprovalSatisfactionPort,
 } from "./execution";
+export {
+  composeWorkforceBindings,
+  emptyWorkforceImplementations,
+  type WorkforceBinding,
+  type WorkforceImplementationIdentity,
+  type WorkforceImplementationRegistry,
+} from "./bindings";
 export {
   createExecutionProbeExecutor,
   createProbeAuthoritativeStore,

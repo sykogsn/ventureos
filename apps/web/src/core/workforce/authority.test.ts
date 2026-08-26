@@ -525,5 +525,6 @@ describe("evaluateAuthority", () => {
     assert.doesNotMatch(source, /createOpenAIModelPort/);
     assert.doesNotMatch(source, /createWorkforceExecutionGate/);
     assert.doesNotMatch(source, /execution-probe/);
+    assert.match(source, /jobs\.processDue\(\)[\s\S]*orchestrator\.recover\(\)/);
   });
 });

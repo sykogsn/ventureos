@@ -26,7 +26,9 @@ import { createWorkforceDefinitionRegistry } from "./definitions";
 import {
   createWorkforceExecutionGate,
   deriveExecutionIdempotencyKey,
+  deriveExternalIdempotencyKey,
   hashExecutionArguments,
+  SECRET_ARGUMENT_KEYS,
 } from "./execution";
 import {
   createExecutionProbeExecutor,
@@ -42,6 +44,7 @@ import type {
   ExecutionRequest,
   HumanWorkforceActor,
 } from "./types";
+import type { WorkforceImplementationRegistry } from "./bindings";
 
 const userId = "user-1" as UserId;
 const workspaceId = "ws-1" as WorkspaceId;
@@ -190,6 +193,7 @@ async function setup(options: {
   executors?: CapabilityExecutor[];
   timeoutMs?: number;
   approvals?: import("./execution").WorkforceApprovalSatisfactionPort;
+  implementations?: WorkforceImplementationRegistry;
 } = {}) {
   await resetPersistenceLifecycle(":memory:");
   const probe = createExecutionProbeExecutor();
@@ -206,6 +210,7 @@ async function setup(options: {
     store: createWorkforceExecutionStore(),
     timeoutMs: options.timeoutMs,
     approvals: options.approvals,
+    implementations: options.implementations,
   });
   return { gate, probe };
 }
@@ -732,6 +737,114 @@ describe("controlled execution gate", () => {
       source,
       /evaluateAuthority\(\s*\{[^}]*contextVersion/,
     );
+  });
+
+  it("rejects secret-like argument keys", async () => {
+    const { gate, probe } = await setup();
+    for (const key of ["token", "apiKey", "password"]) {
+      const result = await gate.execute(command({ arguments: { [key]: "x" } }));
+      assert.equal(result.ok, false);
+      if (!result.ok) {
+        assert.equal(result.failure, "INVALID_ARGUMENTS");
+      }
+      assert.equal(probe.invocationCount(), 0);
+    }
+    assert.equal(SECRET_ARGUMENT_KEYS.includes("token"), true);
+  });
+
+  it("supplies a Core-derived external idempotency key the caller cannot set", async () => {
+    let seen: string | undefined;
+    const probe = createExecutionProbeExecutor();
+    const wrapped: CapabilityExecutor = {
+      ...probe.executor,
+      async execute(request) {
+        seen = request.externalIdempotencyKey;
+        return probe.executor.execute(request);
+      },
+    };
+    const { gate } = await setup({ executors: [wrapped] });
+    const request = command();
+    const forged = {
+      ...request,
+      externalIdempotencyKey: "attacker-supplied",
+    } as ExecutionRequest;
+    const result = await gate.execute(forged);
+    assert.equal(result.ok, true);
+    assert.equal(seen, deriveExternalIdempotencyKey(request));
+    assert.equal(seen, deriveExecutionIdempotencyKey(request));
+    assert.notEqual(seen, "attacker-supplied");
+  });
+
+  it("stamps binding identity even when the executor omits a receipt", async () => {
+    const probe = createExecutionProbeExecutor();
+    const wrapped: CapabilityExecutor = {
+      ...probe.executor,
+      async execute(request) {
+        const outcome = await probe.executor.execute(request);
+        return { executorId: outcome.executorId, ok: true };
+      },
+    };
+    const { gate } = await setup({
+      executors: [wrapped],
+      implementations: {
+        get(id) {
+          return id === EXECUTION_PROBE_CAPABILITY_ID
+            ? {
+                bindingId: "test.workforce.execution-probe",
+                implementationVersion: "1.0.0",
+              }
+            : undefined;
+        },
+      },
+    });
+    const result = await gate.execute(command());
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal("VERIFIED" in result, false);
+      assert.equal(result.outcome.receipt?.implementationId, "test.workforce.execution-probe");
+      assert.equal(result.outcome.receipt?.implementationVersion, "1.0.0");
+    }
+    const rows = await getDb().select().from(executionTable);
+    assert.equal(rows[0]?.implementationId, "test.workforce.execution-probe");
+    assert.equal(rows[0]?.implementationVersion, "1.0.0");
+  });
+
+  it("overwrites executor-supplied implementation identity from the binding", async () => {
+    const probe = createExecutionProbeExecutor();
+    const wrapped: CapabilityExecutor = {
+      ...probe.executor,
+      async execute(request) {
+        const outcome = await probe.executor.execute(request);
+        return {
+          ...outcome,
+          receipt: {
+            implementationId: "executor-lie",
+            implementationVersion: "999",
+            externalReference: "ext-ok",
+          },
+        };
+      },
+    };
+    const { gate } = await setup({
+      executors: [wrapped],
+      implementations: {
+        get(id) {
+          return id === EXECUTION_PROBE_CAPABILITY_ID
+            ? {
+                bindingId: "test.workforce.execution-probe",
+                implementationVersion: "1.0.0",
+              }
+            : undefined;
+        },
+      },
+    });
+    const result = await gate.execute(command());
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.outcome.receipt?.implementationId, "test.workforce.execution-probe");
+      assert.equal(result.outcome.receipt?.implementationVersion, "1.0.0");
+      assert.equal(result.outcome.receipt?.externalReference, "ext-ok");
+    }
   });
 });
 

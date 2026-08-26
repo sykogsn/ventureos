@@ -37,15 +37,21 @@ function insertInput() {
 }
 
 describe("workforce verification store", () => {
-  it("initialises schema generation 6 without destroying existing records", async () => {
+  it("initialises schema generation 7 without destroying existing records", async () => {
     await resetPersistenceLifecycle(":memory:");
     await ensureSchema();
     const store = createWorkforceVerificationStore();
-    await store.insertPending(insertInput());
+    await store.insertPending({
+      ...insertInput(),
+      implementationId: "bind-1",
+      implementationVersion: "1.0.0",
+    });
     await ensureSchema();
     const rows = await getDb().select().from(verificationTable);
     assert.equal(rows.length, 1);
     assert.equal(rows[0]?.runId, "run-1");
+    assert.equal(rows[0]?.implementationId, "bind-1");
+    assert.equal(rows[0]?.implementationVersion, "1.0.0");
     const jobs = await getDb().select().from(jobTable);
     assert.equal(Array.isArray(jobs), true);
   });

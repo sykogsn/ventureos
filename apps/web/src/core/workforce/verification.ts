@@ -215,6 +215,8 @@ export type WorkforceVerificationRecord = {
   evidenceJson: string | null;
   provenance: VerificationProvenance | null;
   claimNonce: string | null;
+  implementationId: string | null;
+  implementationVersion: string | null;
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -230,6 +232,8 @@ export type WorkforceVerificationInsert = {
   sourceRequestId: string;
   sourceActionIndex: number;
   predicate: BoundPredicate;
+  implementationId?: string | null;
+  implementationVersion?: string | null;
 };
 
 export type WorkforceVerificationStore = {

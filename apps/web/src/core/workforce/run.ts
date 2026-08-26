@@ -9,6 +9,8 @@ import {
   hashExecutionArguments,
 } from "./execution";
 import type { WorkforceExecutorRegistry } from "./executors";
+import type { WorkforceImplementationRegistry } from "./bindings";
+import { emptyWorkforceImplementations } from "./bindings";
 import { PLATFORM_MODEL_DEFENCE } from "./model";
 import type {
   AgentWorkforceActor,
@@ -179,6 +181,7 @@ export type WorkforceJobPort = {
     payload: WorkforceRunJobPayload,
     runAt?: Date,
   ): Promise<{ id: JobId }>;
+  hasActive(runId: WorkforceRunId, step: WorkforceRunStep): Promise<boolean>;
 };
 
 export type WorkforceRunCreateInput = {
@@ -210,6 +213,7 @@ export type WorkforceRunOrchestratorDeps = AuthorityEvaluatorDeps & {
   model: ModelPort;
   executors: WorkforceExecutorRegistry;
   verifiers: WorkforceVerifierRegistry;
+  implementations?: WorkforceImplementationRegistry;
   execution: ExecutionPort;
   runs: WorkforceRunStore;
   approvals: WorkforceApprovalStore;
@@ -575,6 +579,14 @@ async function executeSelected(
   });
 
   if (result.ok) {
+    if (result.reused !== true) {
+      await recordExecutionAudit(
+        deps,
+        run,
+        result.executionId,
+        "workforce.execution.succeeded",
+      );
+    }
     await deps.runs.patch(runId, { executionId: result.executionId });
     const executed = await deps.runs.get(runId);
     if (!executed) {
@@ -603,6 +615,7 @@ async function executeSelected(
   if (result.failure === "DUPLICATE_IN_PROGRESS") {
     return;
   }
+  await recordExecutionAudit(deps, run, result.executionId, "workforce.execution.failed");
   await failRun(deps, runId, "EXECUTION_FAILED");
 }
 
@@ -632,6 +645,9 @@ async function scheduleVerification(
       await failRun(deps, run.id, "VERIFICATION_UNAVAILABLE");
       return;
     }
+    const identity = (deps.implementations ?? emptyWorkforceImplementations()).get(
+      run.selectedAction.capabilityId,
+    );
     await deps.verifications.insertPending({
       runId: run.id,
       executionId: run.executionId,
@@ -642,6 +658,8 @@ async function scheduleVerification(
       sourceRequestId: run.sourceRequestId,
       sourceActionIndex: run.selectedActionIndex ?? 0,
       predicate: bound.predicate,
+      implementationId: identity?.bindingId ?? null,
+      implementationVersion: identity?.implementationVersion ?? null,
     });
   }
 
@@ -654,11 +672,21 @@ async function scheduleVerification(
     await deps.runs.patch(run.id, { phase: "verifying" });
   }
 
+  await enqueueVerifyIfIdle(deps, run.id);
+}
+
+async function enqueueVerifyIfIdle(
+  deps: WorkforceRunOrchestratorDeps,
+  runId: WorkforceRunId,
+) {
+  if (await deps.jobs.hasActive(runId, "verify")) {
+    return;
+  }
   const job = await deps.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
-    runId: run.id,
+    runId,
     step: "verify",
   });
-  await deps.runs.patch(run.id, { jobId: job.id, phase: "verifying" });
+  await deps.runs.patch(runId, { jobId: job.id, phase: "verifying" });
 }
 
 async function handleVerify(
@@ -949,6 +977,7 @@ async function finalizeFromVerification(
 async function recoverWorkforce(deps: WorkforceRunOrchestratorDeps) {
   await deps.runs.recoverInterrupted();
   const verifying = await deps.runs.listByPhase("verifying");
+  const staleAfterMs = VERIFICATION_OBSERVE_TIMEOUT_MS + 5_000;
   for (const run of verifying) {
     const verification = await deps.verifications.getByRunId(run.id);
     if (!verification) {
@@ -961,23 +990,58 @@ async function recoverWorkforce(deps: WorkforceRunOrchestratorDeps) {
       await finalizeFromVerification(deps, run.id, verification);
       continue;
     }
+    const active = await deps.jobs.hasActive(run.id, "verify");
     if (verification.status === "observing") {
-      if (!verification.observation) {
-        await deps.verifications.releaseStaleObserving(verification.id);
+      if (!verification.observation && !active) {
+        const age = Date.now() - Date.parse(verification.updatedAt);
+        if (Number.isFinite(age) && age > staleAfterMs) {
+          await deps.verifications.releaseStaleObserving(verification.id);
+        }
       }
-      await deps.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
-        runId: run.id,
-        step: "verify",
-      });
+      if (!active) {
+        await enqueueVerifyIfIdle(deps, run.id);
+      }
       continue;
     }
-    if (verification.status === "pending" && verification.attemptCount === 0) {
-      await deps.jobs.enqueue(WORKFORCE_RUN_STEP_JOB, {
-        runId: run.id,
-        step: "verify",
-      });
+    if (verification.status === "pending" && !active) {
+      await enqueueVerifyIfIdle(deps, run.id);
     }
   }
+}
+
+async function recordExecutionAudit(
+  deps: WorkforceRunOrchestratorDeps,
+  run: WorkforceRunRecord,
+  executionId: string | undefined,
+  action: string,
+) {
+  if (!deps.audit || !executionId) {
+    return;
+  }
+  const identity = (deps.implementations ?? emptyWorkforceImplementations()).get(
+    run.selectedCapabilityId ?? run.selectedAction?.capabilityId ?? "",
+  );
+  await deps.audit.record({
+    action,
+    actor: {
+      kind: "system",
+      component: "workforce.execution",
+      workspaceId: run.workspaceId,
+    },
+    metadata: {
+      runId: run.id,
+      executionId,
+      workspaceId: run.workspaceId,
+      ventureId: run.ventureId,
+      capabilityId: run.selectedCapabilityId ?? "",
+      ...(identity
+        ? {
+            implementationId: identity.bindingId,
+            implementationVersion: identity.implementationVersion,
+          }
+        : {}),
+    },
+  });
 }
 
 async function recordVerificationAudit(

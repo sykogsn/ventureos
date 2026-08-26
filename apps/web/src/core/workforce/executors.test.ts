@@ -55,6 +55,7 @@ describe("workforce executor registry", () => {
       ventureId: "venture-1" as ExecutorInvocation["ventureId"],
       capabilityId: EXECUTION_PROBE_CAPABILITY_ID,
       arguments: {},
+      externalIdempotencyKey: "core-derived-key",
     };
 
     await probe.executor.execute(request);

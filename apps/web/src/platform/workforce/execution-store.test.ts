@@ -78,17 +78,30 @@ function claimInput(
 }
 
 describe("workforce execution store", () => {
-  it("initialises schema generation 4 without destroying existing records", async () => {
+  it("initialises schema generation 7 without destroying existing records", async () => {
     await resetPersistenceLifecycle(":memory:");
     await ensureSchema();
     const store = createWorkforceExecutionStore();
-    const first = await store.claim(claimInput());
+    const first = await store.claim(
+      claimInput({
+        implementationId: "bind-1",
+        implementationVersion: "1.0.0",
+      }),
+    );
     assert.equal(first.kind, "claimed");
+    await store.complete("exec-1", {
+      executorId: "workforce.execution-probe",
+      ok: true,
+      output: { invoked: 1 },
+    });
 
     await ensureSchema();
     const rows = await getDb().select().from(executionTable);
     assert.equal(rows.length, 1);
     assert.equal(rows[0]?.idempotencyKey, "key-1");
+    assert.equal(rows[0]?.implementationId, "bind-1");
+    assert.equal(rows[0]?.implementationVersion, "1.0.0");
+    assert.equal(rows[0]?.status, "succeeded");
   });
 
   it("claims once under a unique idempotency key", async () => {

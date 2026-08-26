@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 6; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 7; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -355,6 +355,9 @@ export async function ensureSchema() {
           authority_evaluated_at TEXT NOT NULL,
           outcome_json TEXT,
           error_category TEXT,
+          implementation_id TEXT,
+          implementation_version TEXT,
+          external_reference TEXT,
           started_at TEXT NOT NULL,
           completed_at TEXT
         )
@@ -492,6 +495,8 @@ export async function ensureSchema() {
           evidence_json TEXT,
           provenance TEXT,
           claim_nonce TEXT,
+          implementation_id TEXT,
+          implementation_version TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           completed_at TEXT
@@ -503,6 +508,12 @@ export async function ensureSchema() {
       await exec(
         `CREATE INDEX IF NOT EXISTS workforce_verifications_status_idx ON workforce_verifications (status)`,
       );
+
+      await addColumn("workforce_executions", "implementation_id", "TEXT");
+      await addColumn("workforce_executions", "implementation_version", "TEXT");
+      await addColumn("workforce_executions", "external_reference", "TEXT");
+      await addColumn("workforce_verifications", "implementation_id", "TEXT");
+      await addColumn("workforce_verifications", "implementation_version", "TEXT");
     })();
   }
 

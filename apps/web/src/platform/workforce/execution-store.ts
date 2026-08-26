@@ -47,6 +47,9 @@ export function createWorkforceExecutionStore(): WorkforceExecutionStore {
           authorityEvaluatedAt: input.authorityEvaluatedAt,
           outcomeJson: null,
           errorCategory: null,
+          implementationId: input.implementationId ?? null,
+          implementationVersion: input.implementationVersion ?? null,
+          externalReference: null,
           startedAt: input.startedAt,
           completedAt: null,
         });
@@ -75,6 +78,15 @@ export function createWorkforceExecutionStore(): WorkforceExecutionStore {
           outcomeJson: serializeOutcome(outcome),
           errorCategory: null,
           completedAt: nowIso(),
+          ...(outcome.receipt?.implementationId
+            ? { implementationId: outcome.receipt.implementationId }
+            : {}),
+          ...(outcome.receipt?.implementationVersion
+            ? { implementationVersion: outcome.receipt.implementationVersion }
+            : {}),
+          ...(outcome.receipt?.externalReference
+            ? { externalReference: outcome.receipt.externalReference }
+            : {}),
         })
         .where(eq(executionTable.id, id));
     },
@@ -156,6 +168,9 @@ function toRecord(row: typeof executionTable.$inferSelect): ExecutionRecord {
     authorityEvaluatedAt: row.authorityEvaluatedAt,
     outcomeJson: row.outcomeJson,
     errorCategory: row.errorCategory,
+    implementationId: row.implementationId,
+    implementationVersion: row.implementationVersion,
+    externalReference: row.externalReference,
     startedAt: row.startedAt,
     completedAt: row.completedAt,
   };
@@ -166,7 +181,23 @@ function serializeOutcome(outcome: ExecutionOutcome) {
     executorId: outcome.executorId,
     ok: outcome.ok,
     ...(outcome.output !== undefined ? { output: outcome.output } : {}),
-    ...(outcome.error !== undefined ? { error: outcome.error } : {}),
+    ...(outcome.error !== undefined
+      ? { error: String(outcome.error).slice(0, 256) }
+      : {}),
+    ...(outcome.receipt
+      ? {
+          receipt: {
+            implementationId: outcome.receipt.implementationId,
+            implementationVersion: outcome.receipt.implementationVersion,
+            ...(outcome.receipt.externalReference
+              ? { externalReference: outcome.receipt.externalReference }
+              : {}),
+            ...(outcome.receipt.occurredAt
+              ? { occurredAt: outcome.receipt.occurredAt }
+              : {}),
+          },
+        }
+      : {}),
   });
 }
 

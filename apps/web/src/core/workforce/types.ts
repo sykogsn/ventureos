@@ -183,6 +183,14 @@ export type ExecutorInvocation = {
   ventureId: VentureId;
   capabilityId: string;
   arguments: ExecutionArguments;
+  externalIdempotencyKey: string;
+};
+
+export type ExecutionReceipt = {
+  implementationId: string;
+  implementationVersion: string;
+  externalReference?: string;
+  occurredAt?: string;
 };
 
 export type ExecutionOutcome = {
@@ -190,6 +198,7 @@ export type ExecutionOutcome = {
   ok: boolean;
   output?: unknown;
   error?: string;
+  receipt?: ExecutionReceipt;
 };
 
 export type CapabilityExecutor = {

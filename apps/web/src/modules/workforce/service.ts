@@ -4,8 +4,8 @@ import { platformCapabilityRegistry } from "@/core/capability/catalog";
 import {
   createWorkforceExecutionGate,
 } from "@/core/workforce/execution";
-import { createWorkforceExecutorRegistry } from "@/core/workforce/executors";
-import { createWorkforceVerifierRegistry } from "@/core/workforce/verifiers";
+import { composeWorkforceBindings } from "@/core/workforce/bindings";
+import { PRODUCTION_WORKFORCE_BINDINGS } from "@/modules/workforce/production-bindings";
 import {
   createWorkforceRunOrchestrator,
   WORKFORCE_RUN_STEP_JOB,
@@ -25,6 +25,7 @@ import { createWorkforceExecutionStore } from "@/platform/workforce/execution-st
 import { createWorkforceInstanceRepository } from "@/platform/workforce/instance-repository";
 import { createWorkforceRunStore } from "@/platform/workforce/run-store";
 import { createWorkforceVerificationStore } from "@/platform/workforce/verification-store";
+import { createWorkforceJobPort } from "@/platform/workforce/job-port";
 import { createVentureScopePort } from "@/platform/workforce/venture-scope";
 import { WORKFORCE_APPROVAL_PERMISSION } from "@/core/workforce/approval";
 
@@ -58,9 +59,10 @@ const globalStore = globalThis as typeof globalThis & {
 };
 
 /**
- * Production Workforce service. Empty executor registry and empty verifier
- * registry — no production business executor or verifier. Tests inject a
- * ModelPort and probe executor/verifier via createWorkforceService.
+ * Production Workforce service. Production bindings are empty — no
+ * production business executor or verifier. Tests construct an
+ * orchestrator with probe bindings directly and do not use this factory
+ * to ship probes.
  */
 export function createWorkforceService(
   options: WorkforceServiceOptions = {},
@@ -70,14 +72,19 @@ export function createWorkforceService(
   const runs = createWorkforceRunStore();
   const approvals = createWorkforceApprovalStore();
   const verifications = createWorkforceVerificationStore();
-  const executors = createWorkforceExecutorRegistry([]);
-  const verifiers = createWorkforceVerifierRegistry([]);
+  const composed = composeWorkforceBindings(
+    PRODUCTION_WORKFORCE_BINDINGS,
+    platformCapabilityRegistry,
+  );
+  const executors = composed.executors;
+  const verifiers = composed.verifiers;
   const execution = createWorkforceExecutionGate({
     definitions,
     instances,
     capabilities: platformCapabilityRegistry,
     scope: createVentureScopePort(),
     executors,
+    implementations: composed.implementations,
     store: createWorkforceExecutionStore(),
     approvals: createWorkforceApprovalSatisfactionPort(approvals),
   });
@@ -90,15 +97,12 @@ export function createWorkforceService(
     model: options.model ?? createOpenAIModelPort(),
     executors,
     verifiers,
+    implementations: composed.implementations,
     execution,
     runs,
     approvals,
     verifications,
-    jobs: {
-      async enqueue(name, payload, runAt) {
-        return getPlatform().jobs.enqueue(name, payload, runAt);
-      },
-    },
+    jobs: createWorkforceJobPort(getPlatform().jobs),
     audit: getPlatform().audit,
     canApprove: async (userId: UserId, workspaceId: WorkspaceId) =>
       getPlatform().permissions.can({

@@ -222,5 +222,6 @@ describe("durable JobOrchestrator", () => {
     assert.match(source, /jobs\.register\("noop"/);
     assert.match(source, /jobs\.register\(WORKFORCE_RUN_STEP_JOB/);
     assert.doesNotMatch(source, /createOpenAIModelPort/);
+    assert.match(source, /jobs\.processDue\(\)[\s\S]*orchestrator\.recover\(\)/);
   });
 });
