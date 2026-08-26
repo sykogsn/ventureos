@@ -20,9 +20,10 @@ import type {
  * 1. call evaluateAuthority against current authoritative state
  * 2. reject DENY
  * 3. reject UNAVAILABLE
- * 4. accept ALLOW only as a current decision, never as a cached ticket
- * 5. require a valid human FounderDecisionRecorded for ALLOW_WITH_APPROVAL
- * 6. compare request.contextVersion to the freshly composed contextVersion
+ * 4. reject ALLOW_WITH_APPROVAL without executing (approval is Sprint 6)
+ * 5. accept ALLOW only as a current decision, never as a cached ticket
+ * 6. ignore caller-provided AuthorityDecision, EnforcementContext,
+ *    contextVersion, and idempotencyKey — they never grant execution
  * 7. enforce durable idempotency before consequential side effects
  *
  * Sprint 6 approval resume MUST re-evaluate again.

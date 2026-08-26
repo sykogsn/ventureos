@@ -239,6 +239,37 @@ export const auditEvents = sqliteTable(
   ],
 );
 
+export const workforceExecutions = sqliteTable(
+  "workforce_executions",
+  {
+    id: text("id").primaryKey(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    agentInstanceId: text("agent_instance_id").notNull(),
+    capabilityId: text("capability_id").notNull(),
+    sourceRequestId: text("source_request_id").notNull(),
+    sourceActionIndex: integer("source_action_index", { mode: "number" }).notNull(),
+    argumentHash: text("argument_hash").notNull(),
+    fingerprintHash: text("fingerprint_hash").notNull(),
+    status: text("status").notNull(),
+    authorityContextVersion: text("authority_context_version").notNull(),
+    authorityEvaluatedAt: text("authority_evaluated_at").notNull(),
+    outcomeJson: text("outcome_json"),
+    errorCategory: text("error_category"),
+    startedAt: text("started_at").notNull(),
+    completedAt: text("completed_at"),
+  },
+  (table) => [
+    uniqueIndex("workforce_executions_idempotency_idx").on(table.idempotencyKey),
+    index("workforce_executions_workspace_venture_idx").on(
+      table.workspaceId,
+      table.ventureId,
+    ),
+    index("workforce_executions_status_idx").on(table.status),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -260,4 +291,5 @@ export const schema = {
   knowledgeEdges,
   jobs,
   auditEvents,
+  workforceExecutions,
 };

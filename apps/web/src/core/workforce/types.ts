@@ -149,15 +149,36 @@ export type AuthorityEvaluation =
       failure: "UNAVAILABLE";
     };
 
+export type ExecutionArgumentValue = string | number | boolean | null;
+
+export type ExecutionArguments = Record<string, ExecutionArgumentValue>;
+
+/**
+ * Trusted orchestration command. Constructed by VentureOS, never taken
+ * as model JSON. Does not accept AuthorityDecision, EnforcementContext,
+ * contextVersion, or an idempotency key as proof of authority.
+ */
 export type ExecutionRequest = {
   actor: WorkforceActor;
   agentInstanceId: AgentInstanceId;
   workspaceId: WorkspaceId;
   ventureId: VentureId;
-  executorId: string;
-  contextVersion: string;
-  idempotencyKey?: string;
-  input?: unknown;
+  capabilityId: string;
+  arguments: ExecutionArguments;
+  sourceRequestId: string;
+  sourceActionIndex: number;
+};
+
+export type WorkforceExecutionCommand = ExecutionRequest;
+
+export type ExecutorInvocation = {
+  executionId: string;
+  actor: AgentWorkforceActor;
+  agentInstanceId: AgentInstanceId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  capabilityId: string;
+  arguments: ExecutionArguments;
 };
 
 export type ExecutionOutcome = {
@@ -169,11 +190,50 @@ export type ExecutionOutcome = {
 
 export type CapabilityExecutor = {
   id: string;
-  execute(request: ExecutionRequest): Promise<ExecutionOutcome>;
+  parseArguments(
+    value: unknown,
+  ): { ok: true; value: ExecutionArguments } | { ok: false };
+  execute(request: ExecutorInvocation): Promise<ExecutionOutcome>;
 };
 
+export const EXECUTION_FAILURES = [
+  "MALFORMED_REQUEST",
+  "INVALID_ARGUMENTS",
+  "AUTHORITY_DENIED",
+  "AUTHORITY_UNAVAILABLE",
+  "APPROVAL_REQUIRED",
+  "NOT_EXECUTABLE",
+  "IDEMPOTENCY_MISMATCH",
+  "DUPLICATE_IN_PROGRESS",
+  "EXECUTION_FAILED",
+  "INTERRUPTED",
+] as const;
+
+export type ExecutionFailure = (typeof EXECUTION_FAILURES)[number];
+
+export type WorkforceExecutionResult =
+  | {
+      ok: true;
+      executionId: string;
+      idempotencyKey: string;
+      outcome: ExecutionOutcome;
+      contextVersion: string;
+      evaluatedAt: string;
+      reused?: true;
+    }
+  | {
+      ok: false;
+      failure: ExecutionFailure;
+      reason?: AuthorityDenyReason;
+      executionId?: string;
+      idempotencyKey?: string;
+      contextVersion?: string;
+      evaluatedAt?: string;
+      outcome?: ExecutionOutcome;
+    };
+
 export type ExecutionPort = {
-  execute(request: ExecutionRequest): Promise<ExecutionOutcome>;
+  execute(request: ExecutionRequest): Promise<WorkforceExecutionResult>;
 };
 
 export type ModelEvidenceRef = {

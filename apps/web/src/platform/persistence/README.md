@@ -10,7 +10,7 @@ Repository-driven SQLite storage for VentureOS. The intelligence service remains
 
 ## Jobs and audit
 
-`JobOrchestrator` and `AuditLog` persist through the same SQLite connection. They call `getDb()` / `getClient()` per operation so `resetPersistenceLifecycle()` does not leave them bound to a closed client. Handlers stay in-process and are not stored. Interrupted `running` jobs are failed with `interrupted-by-restart` on the first `processDue` of a new orchestrator instance; they are not replayed. Job payload JSON is parsed fail-closed. Audit is append-only and must not store VIC snapshots, model prompts, or evidence packs.
+`JobOrchestrator`, `AuditLog`, and workforce execution records persist through the same SQLite connection. They call `getDb()` / `getClient()` per operation so `resetPersistenceLifecycle()` does not leave them bound to a closed client. Handlers stay in-process and are not stored. Interrupted `running` jobs are failed with `interrupted-by-restart` on the first `processDue` of a new orchestrator instance; they are not replayed. Interrupted `running` workforce executions are failed with `INTERRUPTED` when a new execution store is constructed; they are not replayed. Job payload JSON and execution `outcome_json` are parsed fail-closed. Audit is append-only and must not store VIC snapshots, model prompts, or evidence packs. Workforce execution rows store argument hashes, not model prose.
 
 ## Policy rows
 

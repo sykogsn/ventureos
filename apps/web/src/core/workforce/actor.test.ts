@@ -20,6 +20,7 @@ import {
   type AuthorityDecision,
   type EnforcementContext,
   type ExecutionOutcome,
+  type ExecutionRequest,
   type HumanWorkforceActor,
   type ModelContext,
   type SystemWorkforceActor,
@@ -205,9 +206,27 @@ describe("context and outcome contracts", () => {
       executorId: "intelligence.knowledge-graph",
       ok: true,
     };
-    const verification: VerificationResult = { outcome: "VERIFIED" };
+    const request: ExecutionRequest = {
+      actor: {
+        kind: "agent",
+        agentInstanceId,
+        workspaceId,
+        ventureId,
+      },
+      agentInstanceId,
+      workspaceId,
+      ventureId,
+      capabilityId: "workforce.execution-probe",
+      arguments: {},
+      sourceRequestId: "req-1",
+      sourceActionIndex: 0,
+    };
 
     assert.equal("executorId" in execution, true);
+    assert.equal("contextVersion" in request, false);
+    assert.equal("idempotencyKey" in request, false);
+    assert.equal("executorId" in request, false);
+    const verification: VerificationResult = { outcome: "VERIFIED" };
     assert.equal("executorId" in verification, false);
     assert.equal("outcome" in verification, true);
     assert.deepEqual([...VERIFICATION_RESULTS], ["VERIFIED", "NOT_VERIFIED"]);

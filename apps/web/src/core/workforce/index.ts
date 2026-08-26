@@ -15,9 +15,12 @@ export type {
   AutonomyCeiling,
   CapabilityExecutor,
   EnforcementContext,
+  ExecutionArguments,
+  ExecutionFailure,
   ExecutionOutcome,
   ExecutionPort,
   ExecutionRequest,
+  ExecutorInvocation,
   HumanWorkforceActor,
   ModelCapabilityHint,
   ModelContext,
@@ -36,6 +39,8 @@ export type {
   VerificationPredicate,
   VerificationResult,
   WorkforceActor,
+  WorkforceExecutionCommand,
+  WorkforceExecutionResult,
   WorkforceRun,
   WorkforceRunLimits,
   WorkforceRunPhase,
@@ -46,6 +51,7 @@ export {
   AUTHORITY_DECISIONS,
   AUTHORITY_REASON_CODES,
   AUTONOMY_CEILINGS,
+  EXECUTION_FAILURES,
   MODEL_FAILURES,
   VERIFICATION_RESULTS,
 } from "./types";
@@ -84,3 +90,20 @@ export {
   MODEL_UNTRUSTED_TEXT_LIMIT,
   PLATFORM_MODEL_DEFENCE,
 } from "./model";
+export {
+  createWorkforceExecutionGate,
+  deriveExecutionIdempotencyKey,
+  fingerprintExecution,
+  hashExecutionArguments,
+  EXECUTION_ARGUMENT_LIMIT,
+  EXECUTION_TIMEOUT_MS,
+  SCOPE_ARGUMENT_KEYS,
+  type WorkforceExecutionGateDeps,
+  type WorkforceExecutionStore,
+} from "./execution";
+export {
+  createExecutionProbeExecutor,
+  createWorkforceExecutorRegistry,
+  EXECUTION_PROBE_CAPABILITY_ID,
+  type WorkforceExecutorRegistry,
+} from "./executors";

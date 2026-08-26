@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 3; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 4; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -332,6 +332,37 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS audit_events_workspace_idx ON audit_events (workspace_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS workforce_executions (
+          id TEXT PRIMARY KEY,
+          idempotency_key TEXT NOT NULL,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          agent_instance_id TEXT NOT NULL,
+          capability_id TEXT NOT NULL,
+          source_request_id TEXT NOT NULL,
+          source_action_index INTEGER NOT NULL,
+          argument_hash TEXT NOT NULL,
+          fingerprint_hash TEXT NOT NULL,
+          status TEXT NOT NULL,
+          authority_context_version TEXT NOT NULL,
+          authority_evaluated_at TEXT NOT NULL,
+          outcome_json TEXT,
+          error_category TEXT,
+          started_at TEXT NOT NULL,
+          completed_at TEXT
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS workforce_executions_idempotency_idx ON workforce_executions (idempotency_key)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS workforce_executions_workspace_venture_idx ON workforce_executions (workspace_id, venture_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS workforce_executions_status_idx ON workforce_executions (status)`,
       );
     })();
   }
