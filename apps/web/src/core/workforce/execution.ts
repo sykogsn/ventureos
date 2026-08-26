@@ -78,10 +78,34 @@ export type WorkforceExecutionStore = {
   ): Promise<void>;
 };
 
+/**
+ * Bound human approval is not an authority ticket. The gate still calls
+ * evaluateAuthority against current state. This port may only satisfy a
+ * current ALLOW_WITH_APPROVAL for the exact fingerprint. DENY and
+ * UNAVAILABLE never consult it.
+ */
+export type WorkforceApprovalSatisfaction = {
+  approved: boolean;
+  fingerprintHash: string;
+};
+
+export type WorkforceApprovalSatisfactionPort = {
+  satisfy(input: {
+    workspaceId: string;
+    ventureId: string;
+    agentInstanceId: string;
+    capabilityId: string;
+    sourceRequestId: string;
+    sourceActionIndex: number;
+    fingerprintHash: string;
+  }): Promise<WorkforceApprovalSatisfaction>;
+};
+
 export type WorkforceExecutionGateDeps = AuthorityEvaluatorDeps & {
   executors: WorkforceExecutorRegistry;
   store: WorkforceExecutionStore;
   timeoutMs?: number;
+  approvals?: WorkforceApprovalSatisfactionPort;
 };
 
 /**
@@ -161,7 +185,7 @@ export function createWorkforceExecutionGate(
           evaluatedAt,
         };
       }
-      if (decision.outcome === "ALLOW_WITH_APPROVAL") {
+      if (decision.outcome === "ALLOW_WITH_APPROVAL" && !deps.approvals) {
         return {
           ok: false,
           failure: "APPROVAL_REQUIRED",
@@ -209,6 +233,38 @@ export function createWorkforceExecutionGate(
         argumentHash,
       });
       const executionId = createId<string>();
+
+      if (decision.outcome === "ALLOW_WITH_APPROVAL") {
+        const approvals = deps.approvals;
+        if (!approvals) {
+          return {
+            ok: false,
+            failure: "APPROVAL_REQUIRED",
+            contextVersion: context.contextVersion,
+            evaluatedAt,
+          };
+        }
+        const satisfaction = await approvals.satisfy({
+          workspaceId: command.workspaceId,
+          ventureId: command.ventureId,
+          agentInstanceId: command.agentInstanceId,
+          capabilityId: command.capabilityId,
+          sourceRequestId: command.sourceRequestId,
+          sourceActionIndex: command.sourceActionIndex,
+          fingerprintHash,
+        });
+        if (
+          !satisfaction.approved ||
+          satisfaction.fingerprintHash !== fingerprintHash
+        ) {
+          return {
+            ok: false,
+            failure: "APPROVAL_REQUIRED",
+            contextVersion: context.contextVersion,
+            evaluatedAt,
+          };
+        }
+      }
 
       await deps.store.recoverInterrupted();
       const claimed = await deps.store.claim({

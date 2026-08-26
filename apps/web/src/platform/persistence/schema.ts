@@ -1,4 +1,11 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable(
   "users",
@@ -101,6 +108,7 @@ export const ventures = sqliteTable(
     riskJson: text("risk_json").notNull(),
     definitionId: text("definition_id").notNull().default(""),
     definitionVersion: text("definition_version").notNull().default(""),
+    lifecycle: text("lifecycle").notNull().default("operating"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
@@ -229,6 +237,9 @@ export const auditEvents = sqliteTable(
     action: text("action").notNull(),
     occurredAt: text("occurred_at").notNull(),
     actorUserId: text("actor_user_id"),
+    actorKind: text("actor_kind"),
+    actorAgentInstanceId: text("actor_agent_instance_id"),
+    actorComponent: text("actor_component"),
     workspaceId: text("workspace_id").notNull().default(""),
     ventureId: text("venture_id").notNull().default(""),
     metadataJson: text("metadata_json").notNull(),
@@ -270,6 +281,109 @@ export const workforceExecutions = sqliteTable(
   ],
 );
 
+export const agentDefinitions = sqliteTable(
+  "agent_definitions",
+  {
+    id: text("id").notNull(),
+    version: text("version").notNull(),
+    role: text("role").notNull(),
+    responsibilitiesJson: text("responsibilities_json").notNull(),
+    capabilityAllowJson: text("capability_allow_json").notNull(),
+    capabilityDenyJson: text("capability_deny_json").notNull(),
+    autonomyCeiling: text("autonomy_ceiling").notNull(),
+    approvalBoundary: text("approval_boundary").notNull(),
+    memoryPolicy: text("memory_policy").notNull(),
+    escalationPolicy: text("escalation_policy").notNull(),
+    evaluationProfile: text("evaluation_profile").notNull(),
+    lifecycle: text("lifecycle").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.id, table.version] })],
+);
+
+export const agentInstances = sqliteTable(
+  "agent_instances",
+  {
+    id: text("id").primaryKey(),
+    definitionId: text("definition_id").notNull(),
+    definitionVersion: text("definition_version").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("agent_instances_workspace_venture_idx").on(
+      table.workspaceId,
+      table.ventureId,
+    ),
+  ],
+);
+
+export const workforceRuns = sqliteTable(
+  "workforce_runs",
+  {
+    id: text("id").primaryKey(),
+    jobId: text("job_id"),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    agentInstanceId: text("agent_instance_id").notNull(),
+    definitionId: text("definition_id").notNull(),
+    definitionVersion: text("definition_version").notNull(),
+    objective: text("objective").notNull(),
+    phase: text("phase").notNull(),
+    completionKind: text("completion_kind"),
+    failureCategory: text("failure_category"),
+    sourceRequestId: text("source_request_id").notNull(),
+    selectedCapabilityId: text("selected_capability_id"),
+    selectedActionIndex: integer("selected_action_index", { mode: "number" }),
+    selectedActionJson: text("selected_action_json"),
+    argumentHash: text("argument_hash"),
+    fingerprintHash: text("fingerprint_hash"),
+    executionId: text("execution_id"),
+    approvalId: text("approval_id"),
+    modelCallCount: integer("model_call_count", { mode: "number" }).notNull(),
+    requestedByUserId: text("requested_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    completedAt: text("completed_at"),
+  },
+  (table) => [
+    index("workforce_runs_phase_idx").on(table.phase),
+    index("workforce_runs_workspace_idx").on(table.workspaceId),
+  ],
+);
+
+export const workforceApprovals = sqliteTable(
+  "workforce_approvals",
+  {
+    id: text("id").primaryKey(),
+    runId: text("run_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    agentInstanceId: text("agent_instance_id").notNull(),
+    capabilityId: text("capability_id").notNull(),
+    sourceRequestId: text("source_request_id").notNull(),
+    sourceActionIndex: integer("source_action_index", { mode: "number" }).notNull(),
+    argumentHash: text("argument_hash").notNull(),
+    fingerprintHash: text("fingerprint_hash").notNull(),
+    status: text("status").notNull(),
+    requestedAt: text("requested_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    decidedAt: text("decided_at"),
+    decidedByUserId: text("decided_by_user_id"),
+  },
+  (table) => [
+    uniqueIndex("workforce_approvals_run_idx").on(table.runId),
+    index("workforce_approvals_status_workspace_idx").on(
+      table.status,
+      table.workspaceId,
+    ),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -292,4 +406,8 @@ export const schema = {
   jobs,
   auditEvents,
   workforceExecutions,
+  agentDefinitions,
+  agentInstances,
+  workforceRuns,
+  workforceApprovals,
 };

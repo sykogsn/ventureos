@@ -1,8 +1,8 @@
 import type { AgentDefinition, AgentDefinitionId } from "./types";
 
 export type WorkforceDefinitionRegistry = {
-  get(id: AgentDefinitionId, version: string): AgentDefinition | undefined;
-  has(id: AgentDefinitionId): boolean;
+  get(id: AgentDefinitionId, version: string): Promise<AgentDefinition | undefined>;
+  has(id: AgentDefinitionId): Promise<boolean>;
 };
 
 export function createWorkforceDefinitionRegistry(
@@ -21,11 +21,11 @@ export function createWorkforceDefinitionRegistry(
   }
 
   return {
-    get(id, version) {
+    async get(id, version) {
       const found = byKey.get(definitionKey(id, version));
       return found ? cloneDefinition(found) : undefined;
     },
-    has(id) {
+    async has(id) {
       return ids.has(id);
     },
   };

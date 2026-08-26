@@ -20,14 +20,17 @@ import type {
  * 1. call evaluateAuthority against current authoritative state
  * 2. reject DENY
  * 3. reject UNAVAILABLE
- * 4. reject ALLOW_WITH_APPROVAL without executing (approval is Sprint 6)
+ * 4. reject ALLOW_WITH_APPROVAL without executing unless a bound human
+ *    approval satisfies the current ALLOW_WITH_APPROVAL (Sprint 6)
  * 5. accept ALLOW only as a current decision, never as a cached ticket
  * 6. ignore caller-provided AuthorityDecision, EnforcementContext,
  *    contextVersion, and idempotencyKey — they never grant execution
  * 7. enforce durable idempotency before consequential side effects
  *
  * Sprint 6 approval resume MUST re-evaluate again.
- * A previous ALLOW is never an execution ticket.
+ * A previous ALLOW, ALLOW_WITH_APPROVAL, or human APPROVED state is
+ * never an execution ticket. DENY and UNAVAILABLE are never overridden
+ * by a prior approval.
  */
 export const FOUNDER_ONLY_CAPABILITIES = ["governance.founder-decision"] as const;
 
@@ -126,7 +129,7 @@ async function evaluateAuthorityOrThrow(
     return deny("VENTURE_MISMATCH", snapshot(request), evaluatedAt);
   }
 
-  const instance = deps.instances.get(request.agentInstanceId);
+  const instance = await deps.instances.get(request.agentInstanceId);
   if (!instance) {
     return deny("INSTANCE_MISSING", snapshot(request), evaluatedAt);
   }
@@ -155,12 +158,12 @@ async function evaluateAuthorityOrThrow(
     );
   }
 
-  const definition = deps.definitions.get(
+  const definition = await deps.definitions.get(
     instance.definitionId,
     instance.definitionVersion,
   );
   if (!definition) {
-    const reason = deps.definitions.has(instance.definitionId)
+    const reason = (await deps.definitions.has(instance.definitionId))
       ? "DEFINITION_VERSION_MISMATCH"
       : "DEFINITION_MISSING";
     return deny(reason, snapshot(request, { instance }), evaluatedAt);

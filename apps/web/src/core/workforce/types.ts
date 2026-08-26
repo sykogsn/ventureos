@@ -1,5 +1,9 @@
 import type { JobId, UserId, VentureId, WorkspaceId } from "@/contracts";
-import type { AgentDefinitionId, AgentInstanceId } from "@/contracts/ids";
+import type {
+  AgentDefinitionId,
+  AgentInstanceId,
+  WorkforceRunId,
+} from "@/contracts/ids";
 
 export type { AgentDefinitionId, AgentInstanceId };
 
@@ -324,12 +328,14 @@ export type VerificationPredicate = {
 };
 
 export type WorkforceRunPhase =
-  | "executing"
+  | "queued"
+  | "reasoning"
   | "awaiting_approval"
-  | "verifying"
+  | "executing"
   | "completed"
   | "failed"
-  | "cancelled";
+  | "cancelled"
+  | "verifying";
 
 export type WorkforceRunLimits = {
   maxSteps: number;
@@ -345,12 +351,51 @@ export type WorkforceRunUsage = {
   outputTokens: number;
 };
 
+export const WORKFORCE_RUN_COMPLETION_KINDS = [
+  "executed",
+  "no_action",
+  "multiple_proposed_actions",
+] as const;
+
+export type WorkforceRunCompletionKind =
+  (typeof WORKFORCE_RUN_COMPLETION_KINDS)[number];
+
+export const WORKFORCE_RUN_FAILURES = [
+  "MALFORMED_REQUEST",
+  "INSTANCE_INVALID",
+  "MODEL_FAILED",
+  "INVALID_MODEL_OUTPUT",
+  "AUTHORITY_DENIED",
+  "AUTHORITY_UNAVAILABLE",
+  "APPROVAL_REJECTED",
+  "APPROVAL_EXPIRED",
+  "NOT_EXECUTABLE",
+  "EXECUTION_FAILED",
+  "INTERRUPTED",
+  "CANCELLED",
+  "PERSISTENCE_UNAVAILABLE",
+] as const;
+
+export type WorkforceRunFailure = (typeof WORKFORCE_RUN_FAILURES)[number];
+
+export const APPROVAL_STATUSES = [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "EXPIRED",
+  "CANCELLED",
+] as const;
+
+export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
+
 export type WorkforceRun = {
-  jobId: JobId;
+  id: WorkforceRunId;
+  jobId?: JobId;
   objective: string;
   agentInstanceId: AgentInstanceId;
   workspaceId: WorkspaceId;
   ventureId: VentureId;
+  definitionId: AgentDefinitionId;
   definitionVersion: string;
   contextVersion: string;
   phase: WorkforceRunPhase;
@@ -359,5 +404,7 @@ export type WorkforceRun = {
   executorOutcomes: ExecutionOutcome[];
   approvalReference?: string;
   verification?: VerificationResult;
+  completionKind?: WorkforceRunCompletionKind;
+  failureCategory?: WorkforceRunFailure;
   finalResult?: string;
 };

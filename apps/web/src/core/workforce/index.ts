@@ -42,18 +42,24 @@ export type {
   WorkforceExecutionCommand,
   WorkforceExecutionResult,
   WorkforceRun,
+  WorkforceRunCompletionKind,
+  WorkforceRunFailure,
   WorkforceRunLimits,
   WorkforceRunPhase,
   WorkforceRunUsage,
+  ApprovalStatus,
 } from "./types";
 export {
   AGENT_DEFINITION_LIFECYCLE,
+  APPROVAL_STATUSES,
   AUTHORITY_DECISIONS,
   AUTHORITY_REASON_CODES,
   AUTONOMY_CEILINGS,
   EXECUTION_FAILURES,
   MODEL_FAILURES,
   VERIFICATION_RESULTS,
+  WORKFORCE_RUN_COMPLETION_KINDS,
+  WORKFORCE_RUN_FAILURES,
 } from "./types";
 export {
   isAgentActor,
@@ -100,6 +106,7 @@ export {
   SCOPE_ARGUMENT_KEYS,
   type WorkforceExecutionGateDeps,
   type WorkforceExecutionStore,
+  type WorkforceApprovalSatisfactionPort,
 } from "./execution";
 export {
   createExecutionProbeExecutor,
@@ -107,3 +114,13 @@ export {
   EXECUTION_PROBE_CAPABILITY_ID,
   type WorkforceExecutorRegistry,
 } from "./executors";
+export {
+  authoriseApprover,
+  WORKFORCE_APPROVAL_PERMISSION,
+} from "./approval";
+export {
+  createWorkforceRunOrchestrator,
+  WORKFORCE_RUN_STEP_JOB,
+  WORKFORCE_RUN_MAX_MODEL_CALLS,
+  type WorkforceRunOrchestrator,
+} from "./run";

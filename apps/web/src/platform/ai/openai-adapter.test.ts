@@ -292,8 +292,8 @@ describe("OpenAI Responses adapter", () => {
 
   it("leaves EIR, VIC, authority, jobs, audit, persistence, and kernel untouched", async () => {
     const kernel = await readFile(join(webSrc, "platform/kernel.ts"), "utf8");
-    assert.doesNotMatch(kernel, /workforce\.run/);
     assert.doesNotMatch(kernel, /createOpenAIModelPort/);
+    assert.match(kernel, /WORKFORCE_RUN_STEP_JOB/);
 
     const authority = await readFile(join(webSrc, "core/workforce/authority.ts"), "utf8");
     assert.doesNotMatch(authority, /openai/i);

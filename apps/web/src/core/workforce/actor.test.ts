@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Actor, UserId, VentureId, WorkspaceId } from "@/contracts";
-import type { AgentDefinitionId, AgentInstanceId, JobId } from "@/contracts/ids";
+import type { AgentDefinitionId, AgentInstanceId, JobId, WorkforceRunId } from "@/contracts/ids";
 import {
   isAgentActor,
   isHumanActor,
@@ -246,11 +246,13 @@ describe("context and outcome contracts", () => {
       status: "active",
     };
     const run: WorkforceRun = {
+      id: "run-1" as WorkforceRunId,
       jobId: "job-1" as JobId,
       objective: "cite-and-prepare-finding",
       agentInstanceId: instance.id,
       workspaceId: instance.workspaceId,
       ventureId: instance.ventureId,
+      definitionId: instance.definitionId,
       definitionVersion: instance.definitionVersion,
       contextVersion: "ctx-1",
       phase: "awaiting_approval",
@@ -268,5 +270,6 @@ describe("context and outcome contracts", () => {
     assert.equal(run.ventureId, instance.ventureId);
     assert.equal(run.workspaceId, instance.workspaceId);
     assert.equal(run.agentInstanceId, instance.id);
+    assert.notEqual(run.id, run.jobId);
   });
 });

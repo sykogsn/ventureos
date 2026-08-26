@@ -55,7 +55,10 @@ describe("durable AuditLog", () => {
     assert.equal(listed.length, 1);
     assert.equal(listed[0]?.id, recorded.id);
     assert.equal(listed[0]?.action, "event.FounderDecisionRecorded");
-    assert.equal(listed[0]?.actor?.userId, "user-1");
+    assert.equal(listed[0]?.actor?.kind, "human");
+    if (listed[0]?.actor?.kind === "human") {
+      assert.equal(listed[0].actor.userId, "user-1");
+    }
   });
 
   it("lists records in deterministic chronological order", async () => {
@@ -100,7 +103,40 @@ describe("durable AuditLog", () => {
     const listed = await createAuditLog().list();
     assert.equal(listed[0]?.metadata?.workspaceId, "ws-1");
     assert.equal(listed[0]?.metadata?.ventureId, "ven-1");
-    assert.equal(listed[0]?.actor?.workspaceId, "ws-1");
-    assert.equal(listed[0]?.actor?.ventureId, "ven-1");
+    assert.equal(listed[0]?.actor?.kind, "human");
+    if (listed[0]?.actor?.kind === "human") {
+      assert.equal(listed[0].actor.workspaceId, "ws-1");
+      assert.equal(listed[0].actor.ventureId, "ven-1");
+    }
+  });
+
+  it("records agent and system actors without fabricating a UserId", async () => {
+    await resetPersistenceLifecycle(":memory:");
+    await ensureSchema();
+    const audit = createAuditLog();
+    await audit.record({
+      action: "workforce.run.step",
+      actor: {
+        kind: "agent",
+        agentInstanceId: "instance-1" as import("@/contracts/ids").AgentInstanceId,
+        workspaceId: "ws-1" as WorkspaceId,
+        ventureId: "ven-1" as VentureId,
+      },
+    });
+    await audit.record({
+      action: "workforce.run.recover",
+      actor: { kind: "system", component: "workforce.run-store" },
+    });
+    const listed = await audit.list();
+    assert.equal(listed[0]?.actor?.kind, "agent");
+    if (listed[0]?.actor?.kind === "agent") {
+      assert.equal(listed[0].actor.agentInstanceId, "instance-1");
+      assert.equal("userId" in listed[0].actor, false);
+    }
+    assert.equal(listed[1]?.actor?.kind, "system");
+    if (listed[1]?.actor?.kind === "system") {
+      assert.equal(listed[1].actor.component, "workforce.run-store");
+      assert.equal("userId" in listed[1].actor, false);
+    }
   });
 });

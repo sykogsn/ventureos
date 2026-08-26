@@ -189,6 +189,7 @@ async function setup(options: {
   capabilities?: AuthorityEvaluatorDeps["capabilities"];
   executors?: CapabilityExecutor[];
   timeoutMs?: number;
+  approvals?: import("./execution").WorkforceApprovalSatisfactionPort;
 } = {}) {
   await resetPersistenceLifecycle(":memory:");
   const probe = createExecutionProbeExecutor();
@@ -204,6 +205,7 @@ async function setup(options: {
     ),
     store: createWorkforceExecutionStore(),
     timeoutMs: options.timeoutMs,
+    approvals: options.approvals,
   });
   return { gate, probe };
 }
@@ -715,8 +717,9 @@ describe("controlled execution gate", () => {
     const kernel = await readFile(kernelPath, "utf8");
     assert.doesNotMatch(model, /createWorkforceExecutionGate|ExecutionPort/);
     assert.doesNotMatch(adapter, /createWorkforceExecutionGate|ExecutionPort/);
-    assert.doesNotMatch(kernel, /createWorkforceExecutionGate|workforce\.run|execution-probe/);
+    assert.doesNotMatch(kernel, /createWorkforceExecutionGate|execution-probe/);
     assert.match(kernel, /jobs\.register\("noop"/);
+    assert.match(kernel, /jobs\.register\(WORKFORCE_RUN_STEP_JOB/);
   });
 
   it("does not call evaluateAuthority with a caller EnforcementContext", async () => {
@@ -729,6 +732,58 @@ describe("controlled execution gate", () => {
       source,
       /evaluateAuthority\(\s*\{[^}]*contextVersion/,
     );
+  });
+});
+
+describe("approval satisfaction is not an execution ticket", () => {
+  it("executes current ALLOW_WITH_APPROVAL only for the bound approved fingerprint", async () => {
+    const { gate, probe } = await setup({
+      definitions: [definition({ autonomyCeiling: "prepare" })],
+      approvals: {
+        async satisfy(input) {
+          return { approved: true, fingerprintHash: input.fingerprintHash };
+        },
+      },
+    });
+    const result = await gate.execute(command());
+    assert.equal(result.ok, true);
+    assert.equal(probe.invocationCount(), 1);
+  });
+
+  it("does not let a prior approval override current DENY", async () => {
+    const { gate, probe } = await setup({
+      definitions: [definition({ autonomyCeiling: "prepare" })],
+      instances: [instance({ status: "disabled" })],
+      approvals: {
+        async satisfy() {
+          return { approved: true, fingerprintHash: "stale" };
+        },
+      },
+    });
+    const result = await gate.execute(command());
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failure, "AUTHORITY_DENIED");
+      assert.equal(result.reason, "INSTANCE_INACTIVE");
+    }
+    assert.equal(probe.invocationCount(), 0);
+  });
+
+  it("does not execute when the approval fingerprint does not match", async () => {
+    const { gate, probe } = await setup({
+      definitions: [definition({ autonomyCeiling: "prepare" })],
+      approvals: {
+        async satisfy() {
+          return { approved: true, fingerprintHash: "other" };
+        },
+      },
+    });
+    const result = await gate.execute(command());
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failure, "APPROVAL_REQUIRED");
+    }
+    assert.equal(probe.invocationCount(), 0);
   });
 });
 

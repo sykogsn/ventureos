@@ -10,6 +10,7 @@ import { createPermissionService } from "@/platform/permissions/service";
 import { createScheduler, type Scheduler } from "@/platform/scheduler/scheduler";
 import { createTelemetry, type Telemetry } from "@/platform/telemetry/telemetry";
 import { createWorkflowEngine } from "@/platform/workflows/engine";
+import { WORKFORCE_RUN_STEP_JOB } from "@/core/workforce/run";
 
 export type Platform = {
   events: EventBus;
@@ -50,6 +51,10 @@ export function createPlatform(): Platform {
   });
 
   jobs.register("noop", async () => undefined);
+  jobs.register(WORKFORCE_RUN_STEP_JOB, async (job) => {
+    const { getWorkforceService } = await import("@/modules/workforce/service");
+    await getWorkforceService().orchestrator.handleJob(job);
+  });
   scheduler.every("jobs.processDue", 15_000, () => {
     void jobs.processDue();
   });

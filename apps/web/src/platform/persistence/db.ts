@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 4; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 5; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -190,6 +190,7 @@ export async function ensureSchema() {
       await addColumn("ventures", "updated_at", "TEXT NOT NULL DEFAULT ''");
       await addColumn("ventures", "definition_id", "TEXT NOT NULL DEFAULT ''");
       await addColumn("ventures", "definition_version", "TEXT NOT NULL DEFAULT ''");
+      await addColumn("ventures", "lifecycle", "TEXT NOT NULL DEFAULT 'operating'");
       await exec(
         `CREATE UNIQUE INDEX IF NOT EXISTS ventures_workspace_slug_idx ON ventures (workspace_id, slug)`,
       );
@@ -327,6 +328,9 @@ export async function ensureSchema() {
           metadata_json TEXT NOT NULL
         )
       `);
+      await addColumn("audit_events", "actor_kind", "TEXT");
+      await addColumn("audit_events", "actor_agent_instance_id", "TEXT");
+      await addColumn("audit_events", "actor_component", "TEXT");
       await exec(
         `CREATE INDEX IF NOT EXISTS audit_events_occurred_at_idx ON audit_events (occurred_at)`,
       );
@@ -363,6 +367,103 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS workforce_executions_status_idx ON workforce_executions (status)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS agent_definitions (
+          id TEXT NOT NULL,
+          version TEXT NOT NULL,
+          role TEXT NOT NULL,
+          responsibilities_json TEXT NOT NULL,
+          capability_allow_json TEXT NOT NULL,
+          capability_deny_json TEXT NOT NULL,
+          autonomy_ceiling TEXT NOT NULL,
+          approval_boundary TEXT NOT NULL,
+          memory_policy TEXT NOT NULL,
+          escalation_policy TEXT NOT NULL,
+          evaluation_profile TEXT NOT NULL,
+          lifecycle TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (id, version)
+        )
+      `);
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS agent_instances (
+          id TEXT PRIMARY KEY,
+          definition_id TEXT NOT NULL,
+          definition_version TEXT NOT NULL,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          status TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS agent_instances_workspace_venture_idx ON agent_instances (workspace_id, venture_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS workforce_runs (
+          id TEXT PRIMARY KEY,
+          job_id TEXT,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          agent_instance_id TEXT NOT NULL,
+          definition_id TEXT NOT NULL,
+          definition_version TEXT NOT NULL,
+          objective TEXT NOT NULL,
+          phase TEXT NOT NULL,
+          completion_kind TEXT,
+          failure_category TEXT,
+          source_request_id TEXT NOT NULL,
+          selected_capability_id TEXT,
+          selected_action_index INTEGER,
+          selected_action_json TEXT,
+          argument_hash TEXT,
+          fingerprint_hash TEXT,
+          execution_id TEXT,
+          approval_id TEXT,
+          model_call_count INTEGER NOT NULL,
+          requested_by_user_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          completed_at TEXT
+        )
+      `);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS workforce_runs_phase_idx ON workforce_runs (phase)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS workforce_runs_workspace_idx ON workforce_runs (workspace_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS workforce_approvals (
+          id TEXT PRIMARY KEY,
+          run_id TEXT NOT NULL,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          agent_instance_id TEXT NOT NULL,
+          capability_id TEXT NOT NULL,
+          source_request_id TEXT NOT NULL,
+          source_action_index INTEGER NOT NULL,
+          argument_hash TEXT NOT NULL,
+          fingerprint_hash TEXT NOT NULL,
+          status TEXT NOT NULL,
+          requested_at TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          decided_at TEXT,
+          decided_by_user_id TEXT
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS workforce_approvals_run_idx ON workforce_approvals (run_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS workforce_approvals_status_workspace_idx ON workforce_approvals (status, workspace_id)`,
       );
     })();
   }

@@ -58,6 +58,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     risk: { headline: "", signals: [] },
     definitionId: "ventureos.company",
     definitionVersion: "1.0.0",
+    lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,
@@ -242,6 +243,28 @@ describe("persistence repositories", () => {
     const found = await store.ventures.findById(ventureId);
     assert.equal(found?.definitionId, "ventureos.company");
     assert.equal(found?.definitionVersion, "1.0.0");
+  });
+
+  it("persists instance operating lifecycle separately from marketing stage", async () => {
+    const store = getPersistence();
+    await store.organisations.insert({
+      id: workspaceId,
+      name: "Alpha",
+      slug: "alpha",
+      createdAt: NOW,
+    });
+    await store.ventures.insert(ventureRow({ stage: "Seed", lifecycle: "operating" }));
+    const found = await store.ventures.findById(ventureId);
+    assert.equal(found?.stage, "Seed");
+    assert.equal(found?.lifecycle, "operating");
+    await store.ventures.update({
+      ...found!,
+      lifecycle: "sunset",
+      updatedAt: NOW,
+    });
+    const sunset = await store.ventures.findById(ventureId);
+    assert.equal(sunset?.lifecycle, "sunset");
+    assert.equal(sunset?.stage, "Seed");
   });
 
   it("loads policy findings from the workspace snapshot", async () => {

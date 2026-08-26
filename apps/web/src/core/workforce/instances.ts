@@ -1,7 +1,7 @@
 import type { AgentInstance, AgentInstanceId } from "./types";
 
 export type WorkforceInstanceRegistry = {
-  get(id: AgentInstanceId): AgentInstance | undefined;
+  get(id: AgentInstanceId): Promise<AgentInstance | undefined>;
 };
 
 export function createWorkforceInstanceRegistry(
@@ -17,7 +17,7 @@ export function createWorkforceInstanceRegistry(
   }
 
   return {
-    get(id) {
+    async get(id) {
       const found = byId.get(id);
       return found ? { ...found } : undefined;
     },

@@ -12,6 +12,7 @@ import type { Recommendation } from "@/core/recommendation";
 import type { RiskIntelligence } from "@/core/risk-intelligence";
 import type { VentureGenome } from "@/core/venture-genome";
 import { DEFAULT_VENTURE_DEFINITION_REF } from "@/core/venture-definition/types";
+import { isVentureLifecycle } from "@/core/venture-definition/lifecycle";
 import { getDb, resetDatabaseLifecycle } from "@/platform/persistence/db";
 import { fromJson, toJson } from "@/platform/persistence/json";
 import {
@@ -115,6 +116,7 @@ function mapVenture(row: typeof ventures.$inferSelect): PersistedVenture {
     risk: fromJson<RiskIntelligence>(row.riskJson, { headline: "", signals: [] }),
     definitionId: row.definitionId || DEFAULT_VENTURE_DEFINITION_REF.id,
     definitionVersion: row.definitionVersion || DEFAULT_VENTURE_DEFINITION_REF.version,
+    lifecycle: isVentureLifecycle(row.lifecycle) ? row.lifecycle : "operating",
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -385,6 +387,7 @@ function createVentureRepository(): VentureRepository {
         riskJson: toJson(row.risk),
         definitionId: row.definitionId,
         definitionVersion: row.definitionVersion,
+        lifecycle: row.lifecycle,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       });
@@ -408,6 +411,7 @@ function createVentureRepository(): VentureRepository {
           riskJson: toJson(row.risk),
           definitionId: row.definitionId,
           definitionVersion: row.definitionVersion,
+          lifecycle: row.lifecycle,
           updatedAt: row.updatedAt,
         })
         .where(eq(ventures.id, row.id));

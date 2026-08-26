@@ -518,9 +518,12 @@ describe("evaluateAuthority", () => {
     assert.doesNotMatch(source, /invoke\(/);
   });
 
-  it("does not register a workforce.run kernel handler", async () => {
+  it("registers a bounded workforce.run.step kernel handler and not an autonomous loop", async () => {
     const source = await readFile(kernelPath, "utf8");
     assert.match(source, /jobs\.register\("noop"/);
-    assert.doesNotMatch(source, /workforce\.run/);
+    assert.match(source, /jobs\.register\(WORKFORCE_RUN_STEP_JOB/);
+    assert.doesNotMatch(source, /createOpenAIModelPort/);
+    assert.doesNotMatch(source, /createWorkforceExecutionGate/);
+    assert.doesNotMatch(source, /execution-probe/);
   });
 });

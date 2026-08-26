@@ -1,4 +1,4 @@
-export type { Actor, AgentId, DocumentId, EventId, JobId, NotificationId, UserId, VentureId, WorkflowRunId, WorkspaceId } from "./ids";
+export type { Actor, AgentId, DocumentId, EventId, JobId, NotificationId, UserId, VentureId, WorkflowRunId, WorkforceRunId, WorkspaceId } from "./ids";
 export type { ApiResult } from "./result";
 export { err, ok } from "./result";
 export type { Command, CommandContext } from "./commands";
