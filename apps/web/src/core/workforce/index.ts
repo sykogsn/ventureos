@@ -19,11 +19,18 @@ export type {
   ExecutionPort,
   ExecutionRequest,
   HumanWorkforceActor,
+  ModelCapabilityHint,
   ModelContext,
   ModelContextCitation,
+  ModelEvidenceRef,
+  ModelFailure,
+  ModelFinding,
   ModelPort,
+  ModelReasoningResult,
   ModelRequest,
   ModelResult,
+  ModelTrace,
+  ProposedAction,
   SystemWorkforceActor,
   VerificationOutcome,
   VerificationPredicate,
@@ -39,6 +46,7 @@ export {
   AUTHORITY_DECISIONS,
   AUTHORITY_REASON_CODES,
   AUTONOMY_CEILINGS,
+  MODEL_FAILURES,
   VERIFICATION_RESULTS,
 } from "./types";
 export {
@@ -64,3 +72,15 @@ export {
   createWorkforceInstanceRegistry,
   type WorkforceInstanceRegistry,
 } from "./instances";
+export {
+  checkModelRequestBounds,
+  createFakeModelPort,
+  interpretModelPayload,
+  MODEL_ARGUMENT_LIMIT,
+  MODEL_EVIDENCE_LIMIT,
+  MODEL_MAX_HTTP_ATTEMPTS,
+  MODEL_MAX_OUTPUT_TOKENS,
+  MODEL_REQUEST_TIMEOUT_MS,
+  MODEL_UNTRUSTED_TEXT_LIMIT,
+  PLATFORM_MODEL_DEFENCE,
+} from "./model";

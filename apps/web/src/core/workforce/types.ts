@@ -176,16 +176,76 @@ export type ExecutionPort = {
   execute(request: ExecutionRequest): Promise<ExecutionOutcome>;
 };
 
-export type ModelRequest = {
-  purpose: string;
-  input: unknown;
+export type ModelEvidenceRef = {
+  id: string;
+  sourceType: string;
+  excerpt: string;
 };
 
-export type ModelResult = {
-  ok: boolean;
-  data?: unknown;
-  error?: string;
+export type ModelCapabilityHint = {
+  id: string;
+  description: string;
 };
+
+export type ModelRequest = {
+  requestId: string;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  agentInstanceId: AgentInstanceId;
+  purpose: string;
+  platformInstructions: string;
+  roleInstructions: string;
+  task: string;
+  context: ModelContext;
+  evidence: ModelEvidenceRef[];
+  candidateCapabilities: ModelCapabilityHint[];
+};
+
+export type ProposedAction = {
+  capabilityId: string;
+  intent: string;
+  arguments: Record<string, string | number | boolean | null>;
+  rationale: string;
+  evidenceIds: string[];
+};
+
+export type ModelFinding = {
+  statement: string;
+  evidenceIds: string[];
+};
+
+export type ModelReasoningResult = {
+  summary: string;
+  explanation: string;
+  findings: ModelFinding[];
+  uncertainties: string[];
+  proposedActions: ProposedAction[];
+};
+
+export const MODEL_FAILURES = [
+  "MISSING_CREDENTIALS",
+  "TIMEOUT",
+  "RATE_LIMITED",
+  "INVALID_OUTPUT",
+  "CONTENT_REFUSED",
+  "UNAVAILABLE",
+] as const;
+
+export type ModelFailure = (typeof MODEL_FAILURES)[number];
+
+export type ModelTrace = {
+  requestId: string;
+  provider: string;
+  model: string;
+  durationMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  providerRequestId?: string;
+};
+
+export type ModelResult =
+  | { ok: true; data: ModelReasoningResult; trace: ModelTrace }
+  | { ok: false; failure: ModelFailure; trace?: ModelTrace };
 
 export type ModelPort = {
   invoke(request: ModelRequest): Promise<ModelResult>;
