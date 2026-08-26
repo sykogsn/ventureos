@@ -1,4 +1,4 @@
-import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable(
   "users",
@@ -206,6 +206,39 @@ export const knowledgeEdges = sqliteTable("knowledge_edges", {
   updatedAt: text("updated_at").notNull(),
 });
 
+export const jobs = sqliteTable(
+  "jobs",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    payloadJson: text("payload_json").notNull(),
+    status: text("status").notNull(),
+    runAt: text("run_at").notNull(),
+    attempts: integer("attempts", { mode: "number" }).notNull(),
+    lastError: text("last_error"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [index("jobs_status_run_at_idx").on(table.status, table.runAt)],
+);
+
+export const auditEvents = sqliteTable(
+  "audit_events",
+  {
+    id: text("id").primaryKey(),
+    action: text("action").notNull(),
+    occurredAt: text("occurred_at").notNull(),
+    actorUserId: text("actor_user_id"),
+    workspaceId: text("workspace_id").notNull().default(""),
+    ventureId: text("venture_id").notNull().default(""),
+    metadataJson: text("metadata_json").notNull(),
+  },
+  (table) => [
+    index("audit_events_occurred_at_idx").on(table.occurredAt),
+    index("audit_events_workspace_idx").on(table.workspaceId),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -225,4 +258,6 @@ export const schema = {
   companyStories,
   knowledgeNodes,
   knowledgeEdges,
+  jobs,
+  auditEvents,
 };
