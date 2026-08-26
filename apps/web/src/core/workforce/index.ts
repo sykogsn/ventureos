@@ -8,6 +8,11 @@ export type {
   AgentWorkforceActor,
   AuthorityDecision,
   AuthorityDecisionOutcome,
+  AuthorityDenyReason,
+  AuthorityEvaluation,
+  AuthorityReasonCode,
+  AuthorityRequest,
+  AutonomyCeiling,
   CapabilityExecutor,
   EnforcementContext,
   ExecutionOutcome,
@@ -32,6 +37,8 @@ export type {
 export {
   AGENT_DEFINITION_LIFECYCLE,
   AUTHORITY_DECISIONS,
+  AUTHORITY_REASON_CODES,
+  AUTONOMY_CEILINGS,
   VERIFICATION_RESULTS,
 } from "./types";
 export {
@@ -40,3 +47,20 @@ export {
   isSystemActor,
   toHumanWorkforceActor,
 } from "./actor";
+export {
+  evaluateAuthority,
+  FOUNDER_ONLY_CAPABILITIES,
+  isEnforcementContext,
+  isModelContext,
+  type AuthorityEvaluatorDeps,
+  type VentureScopePort,
+  type VentureScopeRecord,
+} from "./authority";
+export {
+  createWorkforceDefinitionRegistry,
+  type WorkforceDefinitionRegistry,
+} from "./definitions";
+export {
+  createWorkforceInstanceRegistry,
+  type WorkforceInstanceRegistry,
+} from "./instances";

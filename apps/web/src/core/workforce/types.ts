@@ -37,6 +37,10 @@ export const AGENT_DEFINITION_LIFECYCLE = [
 
 export type AgentDefinitionLifecycle = (typeof AGENT_DEFINITION_LIFECYCLE)[number];
 
+export const AUTONOMY_CEILINGS = ["observe", "prepare", "execute"] as const;
+
+export type AutonomyCeiling = (typeof AUTONOMY_CEILINGS)[number];
+
 export type AgentDefinition = {
   id: AgentDefinitionId;
   version: string;
@@ -44,7 +48,7 @@ export type AgentDefinition = {
   responsibilities: string[];
   capabilityAllowList: string[];
   capabilityDenyList: string[];
-  autonomyCeiling: string;
+  autonomyCeiling: AutonomyCeiling;
   approvalBoundary: string;
   memoryPolicy: string;
   escalationPolicy: string;
@@ -95,10 +99,55 @@ export const AUTHORITY_DECISIONS = [
 
 export type AuthorityDecisionOutcome = (typeof AUTHORITY_DECISIONS)[number];
 
-export type AuthorityDecision = {
-  outcome: AuthorityDecisionOutcome;
-  reason: string;
+export const AUTHORITY_REASON_CODES = [
+  "ACTOR_INVALID",
+  "INSTANCE_MISSING",
+  "INSTANCE_MISMATCH",
+  "INSTANCE_INACTIVE",
+  "DEFINITION_MISSING",
+  "DEFINITION_INACTIVE",
+  "DEFINITION_VERSION_MISMATCH",
+  "WORKSPACE_MISSING",
+  "WORKSPACE_MISMATCH",
+  "VENTURE_MISSING",
+  "VENTURE_MISMATCH",
+  "VENTURE_INACTIVE",
+  "CAPABILITY_UNKNOWN",
+  "CAPABILITY_DISABLED",
+  "CAPABILITY_NOT_ALLOWED",
+  "CAPABILITY_DENIED",
+  "AUTONOMY_EXCEEDED",
+  "APPROVAL_REQUIRED",
+] as const;
+
+export type AuthorityReasonCode = (typeof AUTHORITY_REASON_CODES)[number];
+
+export type AuthorityDenyReason = Exclude<AuthorityReasonCode, "APPROVAL_REQUIRED">;
+
+export type AuthorityDecision =
+  | { outcome: "ALLOW" }
+  | { outcome: "ALLOW_WITH_APPROVAL"; reason: "APPROVAL_REQUIRED" }
+  | { outcome: "DENY"; reason: AuthorityDenyReason };
+
+export type AuthorityRequest = {
+  actor: WorkforceActor;
+  agentInstanceId: AgentInstanceId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  capabilityId: string;
 };
+
+export type AuthorityEvaluation =
+  | {
+      ok: true;
+      decision: AuthorityDecision;
+      context: EnforcementContext;
+      evaluatedAt: string;
+    }
+  | {
+      ok: false;
+      failure: "UNAVAILABLE";
+    };
 
 export type ExecutionRequest = {
   actor: WorkforceActor;

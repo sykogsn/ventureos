@@ -11,6 +11,8 @@ import {
 import {
   AGENT_DEFINITION_LIFECYCLE,
   AUTHORITY_DECISIONS,
+  AUTHORITY_REASON_CODES,
+  AUTONOMY_CEILINGS,
   VERIFICATION_RESULTS,
   type AgentDefinition,
   type AgentInstance,
@@ -118,12 +120,12 @@ describe("AgentDefinition lifecycle", () => {
     const definition: AgentDefinition = {
       id: definitionId,
       version: "1",
-      role: "Qualora Evidence Analyst",
+      role: "Research Analyst",
       responsibilities: ["Prepare a cited evidence pack."],
-      capabilityAllowList: ["knowledge.retrieve"],
+      capabilityAllowList: ["intelligence.knowledge-graph"],
       capabilityDenyList: ["governance.founder-decision"],
       autonomyCeiling: "prepare",
-      approvalBoundary: "governance.prepareDecision",
+      approvalBoundary: "",
       memoryPolicy: "run-scoped",
       escalationPolicy: "fail-run",
       evaluationProfile: "verifiedCompletion",
@@ -151,9 +153,23 @@ describe("AuthorityDecision", () => {
     );
     const decision: AuthorityDecision = {
       outcome: "DENY",
-      reason: "unknown executor",
+      reason: "CAPABILITY_UNKNOWN",
     };
-    assert.equal(decision.outcome === "ALLOW", false);
+    assert.equal(decision.outcome, "DENY");
+    assert.equal(decision.reason, "CAPABILITY_UNKNOWN");
+  });
+
+  it("uses a closed autonomy ceiling and reason-code set", () => {
+    assert.deepEqual([...AUTONOMY_CEILINGS], ["observe", "prepare", "execute"]);
+    assert.equal((AUTONOMY_CEILINGS as readonly string[]).includes("delegate"), false);
+    assert.equal(
+      (AUTHORITY_REASON_CODES as readonly string[]).includes("ESCALATE"),
+      false,
+    );
+    assert.equal(
+      (AUTHORITY_REASON_CODES as readonly string[]).includes("UNKNOWN"),
+      false,
+    );
   });
 });
 
@@ -165,14 +181,14 @@ describe("context and outcome contracts", () => {
       agentInstanceId,
       definitionId,
       definitionVersion: "1",
-      capabilityScope: ["knowledge.retrieve"],
+      capabilityScope: ["intelligence.knowledge-graph"],
       contextVersion: "ctx-1",
-      ventureStatus: "active",
+      ventureStatus: "operating",
       instanceStatus: "active",
       definitionLifecycle: "ACTIVE",
     };
     const model: ModelContext = {
-      objective: "Cite one Qualora finding.",
+      objective: "Cite one finding.",
       citations: [{ sourceType: "finding", sourceId: "finding-1", excerpt: "Gap." }],
     };
 
@@ -186,7 +202,7 @@ describe("context and outcome contracts", () => {
 
   it("keeps ExecutionOutcome distinct from VerificationResult", () => {
     const execution: ExecutionOutcome = {
-      executorId: "knowledge.retrieve",
+      executorId: "intelligence.knowledge-graph",
       ok: true,
     };
     const verification: VerificationResult = { outcome: "VERIFIED" };
@@ -212,7 +228,7 @@ describe("context and outcome contracts", () => {
     };
     const run: WorkforceRun = {
       jobId: "job-1" as JobId,
-      objective: "qualora.evidence-analyst.cite-and-prepare-finding",
+      objective: "cite-and-prepare-finding",
       agentInstanceId: instance.id,
       workspaceId: instance.workspaceId,
       ventureId: instance.ventureId,
