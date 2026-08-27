@@ -457,6 +457,31 @@ export const qualoraEvidenceAssessments = sqliteTable(
   ],
 );
 
+export const qualoraEvidenceAssessmentReviews = sqliteTable(
+  "qualora_evidence_assessment_reviews",
+  {
+    id: text("id").primaryKey(),
+    assessmentId: text("assessment_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    assessmentFingerprint: text("assessment_fingerprint").notNull(),
+    reviewerUserId: text("reviewer_user_id").notNull(),
+    decision: text("decision").notNull(),
+    rationale: text("rationale"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("qualora_evidence_assessment_reviews_assessment_idx").on(
+      table.assessmentId,
+    ),
+    index("qualora_evidence_assessment_reviews_workspace_venture_idx").on(
+      table.workspaceId,
+      table.ventureId,
+    ),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -485,4 +510,5 @@ export const schema = {
   workforceApprovals,
   workforceVerifications,
   qualoraEvidenceAssessments,
+  qualoraEvidenceAssessmentReviews,
 };

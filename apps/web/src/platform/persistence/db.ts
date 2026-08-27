@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 8; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 9; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -547,6 +547,27 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE UNIQUE INDEX IF NOT EXISTS qualora_evidence_assessments_run_idx ON qualora_evidence_assessments (source_run_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS qualora_evidence_assessment_reviews (
+          id TEXT PRIMARY KEY,
+          assessment_id TEXT NOT NULL,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          assessment_fingerprint TEXT NOT NULL,
+          reviewer_user_id TEXT NOT NULL,
+          decision TEXT NOT NULL,
+          rationale TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS qualora_evidence_assessment_reviews_assessment_idx ON qualora_evidence_assessment_reviews (assessment_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS qualora_evidence_assessment_reviews_workspace_venture_idx ON qualora_evidence_assessment_reviews (workspace_id, venture_id)`,
       );
     })();
   }

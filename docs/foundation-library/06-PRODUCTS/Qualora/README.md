@@ -30,6 +30,7 @@ Qualora runs on VentureOS to keep quality constraints, findings, and founder cal
 - Adds `intelligence.briefing` and `assurance.evidence-assessment` to the shared capability pack.
 - Production binding availability does not activate an Evidence Analyst. Activation is explicit.
 - A proposed Qualora evidence-gap assessment is unconfirmed. Sprint 7 VERIFIED confirms the intended row exists; it does not confirm regulatory judgement.
+- An authorised human may CONFIRMED or DISMISSED that proposed assessment. CONFIRMED is not a CQC or compliance verdict. DISMISSED preserves the original AI proposal.
 - Excludes nothing.
 
 ## Identity

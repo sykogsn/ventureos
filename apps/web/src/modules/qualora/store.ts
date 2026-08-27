@@ -41,6 +41,7 @@ export type QualoraEvidenceAssessmentStore = {
     ventureId: VentureId;
     sourceRunId: string;
   }): Promise<QualoraEvidenceAssessment | undefined>;
+  getById(id: string): Promise<QualoraEvidenceAssessment | undefined>;
   listByVenture(input: {
     workspaceId: WorkspaceId;
     ventureId: VentureId;
@@ -129,6 +130,15 @@ export function createQualoraEvidenceAssessmentStore(): QualoraEvidenceAssessmen
             eq(assessmentTable.sourceRunId, input.sourceRunId),
           ),
         )
+        .limit(1);
+      return row ? toRecord(row) : undefined;
+    },
+    async getById(id) {
+      await ensureSchema();
+      const [row] = await getDb()
+        .select()
+        .from(assessmentTable)
+        .where(eq(assessmentTable.id, id))
         .limit(1);
       return row ? toRecord(row) : undefined;
     },

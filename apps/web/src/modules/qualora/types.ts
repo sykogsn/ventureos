@@ -38,6 +38,13 @@ export const QUALORA_AUDIT_RECORDED = "qualora.evidence-assessment.recorded";
 export const QUALORA_PREDICATE_ID = "assurance.evidence-assessment.proposed-gap";
 export const QUALORA_PREDICATE_VERSION = "1";
 
+export const QUALORA_REVIEW_DECISIONS = ["CONFIRMED", "DISMISSED"] as const;
+export type QualoraReviewDecision = (typeof QUALORA_REVIEW_DECISIONS)[number];
+
+export const QUALORA_REVIEW_PERMISSION = "venture.update" as const;
+export const QUALORA_AUDIT_REVIEWED = "qualora.evidence-assessment.reviewed";
+export const QUALORA_RATIONALE_LIMIT = 500;
+
 /**
  * Durable Qualora record. Always AI-generated, proposed, and unconfirmed.
  * Presence of this row is not a compliance determination.
@@ -57,6 +64,29 @@ export type QualoraEvidenceAssessment = {
   provenance: typeof QUALORA_ASSESSMENT_PROVENANCE_AI_GENERATED;
   implementationId: string | null;
   implementationVersion: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/**
+ * Human review of a proposed Qualora evidence-gap assessment.
+ *
+ * CONFIRMED means only that an authorised human confirms the proposed
+ * assessment is an appropriate assessment of the supplied evidence.
+ * It does not mean regulatory compliance or non-compliance, a CQC
+ * conclusion, or Sprint 7 VERIFIED execution state.
+ *
+ * DISMISSED preserves the original AI-generated proposed assessment.
+ */
+export type QualoraEvidenceAssessmentReview = {
+  id: string;
+  assessmentId: string;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  assessmentFingerprint: string;
+  reviewerUserId: string;
+  decision: QualoraReviewDecision;
+  rationale: string | null;
   createdAt: string;
   updatedAt: string;
 };
