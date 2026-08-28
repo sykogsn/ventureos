@@ -33,6 +33,9 @@ import type {
   FrigoraCorrectiveAction,
   FrigoraCorrectiveActionId,
   RecordCorrectiveActionInput,
+  FrigoraVisitOutcome,
+  FrigoraVisitOutcomeId,
+  RecordVisitOutcomeInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -50,6 +53,7 @@ import {
   recordFieldCaptureSchema,
   recordTechnicalFindingSchema,
   recordCorrectiveActionSchema,
+  recordVisitOutcomeSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -206,6 +210,27 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraCorrectiveAction[]>;
+  recordVisitOutcome(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: RecordVisitOutcomeInput,
+  ): Promise<FrigoraVisitOutcome>;
+  getVisitOutcome(
+    scope: FrigoraScope,
+    id: FrigoraVisitOutcomeId,
+  ): Promise<FrigoraVisitOutcome | null>;
+  getVisitOutcomeByVisit(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraVisitOutcome | null>;
+  listVisitOutcomesByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraVisitOutcome[]>;
+  listVisitOutcomesByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraVisitOutcome[]>;
 };
 
 export function createFrigoraService(options: {
@@ -1062,6 +1087,93 @@ export function createFrigoraService(options: {
       }
       return store.listCorrectiveActionsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
+    async recordVisitOutcome(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsVisitOutcome(visit);
+      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const existing = await store.findVisitOutcomeByVisit(
+        scope.workspaceId,
+        scope.ventureId,
+        visit.id,
+      );
+      if (existing) {
+        throw new FrigoraError(
+          "duplicate",
+          "A visit outcome already exists for this visit.",
+        );
+      }
+      const parsed = parseWithFrigora(recordVisitOutcomeSchema, input);
+      assertOutcomeAtWithinVisit(visit, parsed.outcomeAt);
+      const recordedByUserId = parsed.recordedByUserId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const assetId = await resolveFieldCaptureAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+      const now = nowIso();
+      const row: FrigoraVisitOutcome = {
+        id: createId<FrigoraVisitOutcomeId>(),
+        workspaceId: visit.workspaceId,
+        ventureId: visit.ventureId,
+        visitId: visit.id,
+        workOrderId: visit.workOrderId,
+        assetId,
+        description: parsed.description,
+        outcomeAt: parsed.outcomeAt,
+        recordedByUserId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertVisitOutcome(row);
+      return row;
+    },
+    async getVisitOutcome(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findVisitOutcome(scope.workspaceId, scope.ventureId, id);
+    },
+    async getVisitOutcomeByVisit(scope, visitId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
+      if (!visit) {
+        return null;
+      }
+      return store.findVisitOutcomeByVisit(scope.workspaceId, scope.ventureId, visitId);
+    },
+    async listVisitOutcomesByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listVisitOutcomesByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
+    async listVisitOutcomesByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listVisitOutcomesByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
   };
 }
 
@@ -1233,6 +1345,15 @@ function assertVisitAcceptsCorrectiveAction(visit: FrigoraVisit) {
   }
 }
 
+function assertVisitAcceptsVisitOutcome(visit: FrigoraVisit) {
+  if (visit.status === "cancelled") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Visit outcomes cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
 function assertObservedAtWithinVisit(visit: FrigoraVisit, observedAt: string) {
   const observedMs = Date.parse(observedAt);
   const arrivedMs = Date.parse(visit.arrivedAt);
@@ -1288,6 +1409,26 @@ function assertPerformedAtWithinVisit(visit: FrigoraVisit, performedAt: string) 
       throw new FrigoraError(
         "invalid_input",
         "Performed time must not follow visit departure.",
+      );
+    }
+  }
+}
+
+function assertOutcomeAtWithinVisit(visit: FrigoraVisit, outcomeAt: string) {
+  const outcomeMs = Date.parse(outcomeAt);
+  const arrivedMs = Date.parse(visit.arrivedAt);
+  if (outcomeMs < arrivedMs) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Outcome time must not precede visit arrival.",
+    );
+  }
+  if (visit.status === "departed" && visit.departedAt) {
+    const departedMs = Date.parse(visit.departedAt);
+    if (outcomeMs > departedMs) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Outcome time must not follow visit departure.",
       );
     }
   }

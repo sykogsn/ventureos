@@ -25,6 +25,8 @@ import type {
   RecordTechnicalFindingInput,
   FrigoraCorrectiveAction,
   RecordCorrectiveActionInput,
+  FrigoraVisitOutcome,
+  RecordVisitOutcomeInput,
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
   UpdateAssetInput,
@@ -243,5 +245,13 @@ export async function recordCorrectiveActionAction(
 ): Promise<FrigoraMutationResult<FrigoraCorrectiveAction>> {
   return mutate(input, (scope) =>
     getFrigoraService().recordCorrectiveAction(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function recordVisitOutcomeAction(
+  input: ScopedInput & { visitId: string } & RecordVisitOutcomeInput,
+): Promise<FrigoraMutationResult<FrigoraVisitOutcome>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitOutcome(scope, input.visitId as FrigoraVisitId, input),
   );
 }

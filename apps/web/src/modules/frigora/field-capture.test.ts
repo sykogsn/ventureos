@@ -58,7 +58,7 @@ async function seed(options: {
       id: ventureId,
       workspaceId,
       slug: `venture-${ventureId}`,
-      definitionVersion: options.definitionVersion ?? "0.8.0",
+      definitionVersion: options.definitionVersion ?? "0.9.0",
     }),
   );
   return {
@@ -113,7 +113,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.8.0",
+    definitionVersion: "0.9.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -762,8 +762,8 @@ describe("Frigora Visit field capture", () => {
     assert.equal(capture.captureKind, "measurement");
   });
 
-  it("resolves frigora@0.8.0 from catalog with field capture admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.8.0");
+  it("resolves frigora@0.9.0 from catalog with field capture admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.9.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /Visit field capture/,

@@ -331,6 +331,13 @@ export const recordCorrectiveActionSchema = z.object({
   sourceTechnicalFindingIds: z.array(requiredText).optional(),
 });
 
+export const recordVisitOutcomeSchema = z.object({
+  description: requiredText,
+  outcomeAt: isoTimestamp,
+  recordedByUserId: requiredText,
+  assetId: patchAssetIdNullable,
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });
