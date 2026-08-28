@@ -5,12 +5,14 @@ export type FrigoraSiteId = string & { readonly __brand: "FrigoraSiteId" };
 export type FrigoraAssetId = string & { readonly __brand: "FrigoraAssetId" };
 export type FrigoraWorkOrderId = string & { readonly __brand: "FrigoraWorkOrderId" };
 export type FrigoraVisitId = string & { readonly __brand: "FrigoraVisitId" };
+export type FrigoraFieldCaptureId = string & { readonly __brand: "FrigoraFieldCaptureId" };
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
 export type FrigoraAssetStatus = "active" | "decommissioned";
 export type FrigoraWorkOrderStatus = "open" | "closed" | "cancelled";
 export type FrigoraVisitStatus = "open" | "departed" | "cancelled";
+export type FrigoraFieldCaptureKind = "measurement" | "condition";
 
 export const FRIGORA_WORK_KINDS = ["reactive", "planned", "inspection"] as const;
 export type FrigoraWorkKind = (typeof FRIGORA_WORK_KINDS)[number];
@@ -26,6 +28,28 @@ export const FRIGORA_ASSET_KINDS = [
 ] as const;
 
 export type FrigoraAssetKind = (typeof FRIGORA_ASSET_KINDS)[number];
+
+export const FRIGORA_FIELD_CAPTURE_CODES = [
+  "temperature",
+  "suction_pressure",
+  "discharge_pressure",
+  "voltage",
+  "current",
+  "visual_condition",
+  "other",
+] as const;
+
+export type FrigoraFieldCaptureCode = (typeof FRIGORA_FIELD_CAPTURE_CODES)[number];
+
+export const FRIGORA_FIELD_CAPTURE_UNITS = [
+  "celsius",
+  "bar",
+  "volt",
+  "ampere",
+  "other",
+] as const;
+
+export type FrigoraFieldCaptureUnit = (typeof FRIGORA_FIELD_CAPTURE_UNITS)[number];
 
 export type FrigoraScope = {
   userId: UserId;
@@ -212,4 +236,33 @@ export type RecordVisitArrivalInput = {
 
 export type RecordVisitDepartureInput = {
   departedAt: string;
+};
+
+export type FrigoraFieldCapture = {
+  id: FrigoraFieldCaptureId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  visitId: FrigoraVisitId;
+  workOrderId: FrigoraWorkOrderId;
+  assetId: FrigoraAssetId | null;
+  captureKind: FrigoraFieldCaptureKind;
+  captureCode: FrigoraFieldCaptureCode;
+  valueNumeric: number | null;
+  valueUnit: FrigoraFieldCaptureUnit | null;
+  description: string | null;
+  observedAt: string;
+  capturedByUserId: UserId;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordFieldCaptureInput = {
+  captureKind: FrigoraFieldCaptureKind;
+  captureCode: string;
+  valueNumeric?: number | null;
+  valueUnit?: string | null;
+  description?: string | null;
+  observedAt: string;
+  userId: string;
+  assetId?: string | null;
 };

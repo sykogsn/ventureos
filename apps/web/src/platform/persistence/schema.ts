@@ -565,6 +565,35 @@ export const frigoraVisits = sqliteTable(
   ],
 );
 
+export const frigoraFieldCaptures = sqliteTable(
+  "frigora_field_captures",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    visitId: text("visit_id").notNull(),
+    workOrderId: text("work_order_id").notNull(),
+    assetId: text("asset_id"),
+    captureKind: text("capture_kind").notNull(),
+    captureCode: text("capture_code").notNull(),
+    valueNumeric: real("value_numeric"),
+    valueUnit: text("value_unit"),
+    description: text("description"),
+    observedAt: text("observed_at").notNull(),
+    capturedByUserId: text("captured_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("frigora_field_captures_venture_visit_idx").on(table.ventureId, table.visitId),
+    index("frigora_field_captures_venture_work_order_idx").on(
+      table.ventureId,
+      table.workOrderId,
+    ),
+    index("frigora_field_captures_venture_asset_idx").on(table.ventureId, table.assetId),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -597,4 +626,5 @@ export const schema = {
   frigoraAssets,
   frigoraWorkOrders,
   frigoraVisits,
+  frigoraFieldCaptures,
 };

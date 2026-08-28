@@ -15,6 +15,8 @@ import type {
   FrigoraWorkOrderStatus,
   FrigoraVisit,
   FrigoraVisitId,
+  FrigoraFieldCapture,
+  FrigoraFieldCaptureId,
 } from "./types";
 import type { UserId } from "@/contracts";
 import { parseWithFrigora, scopeSchema } from "./validation";
@@ -183,5 +185,40 @@ export async function listVisitsByAttendingUserQuery(
 ): Promise<FrigoraQueryResult<FrigoraVisit[]>> {
   return query(input, (scope) =>
     getFrigoraService().listVisitsByAttendingUser(scope, input.userId as UserId),
+  );
+}
+
+export async function getFieldCaptureQuery(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraQueryResult<FrigoraFieldCapture | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getFieldCapture(scope, input.id as FrigoraFieldCaptureId),
+  );
+}
+
+export async function listFieldCapturesByVisitQuery(
+  input: ScopedInput & { visitId: string },
+): Promise<FrigoraQueryResult<FrigoraFieldCapture[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listFieldCapturesByVisit(scope, input.visitId as FrigoraVisitId),
+  );
+}
+
+export async function listFieldCapturesByWorkOrderQuery(
+  input: ScopedInput & { workOrderId: string },
+): Promise<FrigoraQueryResult<FrigoraFieldCapture[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listFieldCapturesByWorkOrder(
+      scope,
+      input.workOrderId as FrigoraWorkOrderId,
+    ),
+  );
+}
+
+export async function listFieldCapturesByAssetQuery(
+  input: ScopedInput & { assetId: string },
+): Promise<FrigoraQueryResult<FrigoraFieldCapture[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listFieldCapturesByAsset(scope, input.assetId as FrigoraAssetId),
   );
 }

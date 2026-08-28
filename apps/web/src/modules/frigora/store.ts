@@ -6,6 +6,7 @@ import {
   frigoraCustomers,
   frigoraSites,
   frigoraVisits,
+  frigoraFieldCaptures,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -27,6 +28,11 @@ import type {
   FrigoraVisit,
   FrigoraVisitId,
   FrigoraVisitStatus,
+  FrigoraFieldCapture,
+  FrigoraFieldCaptureCode,
+  FrigoraFieldCaptureId,
+  FrigoraFieldCaptureKind,
+  FrigoraFieldCaptureUnit,
 } from "./types";
 
 export type FrigoraStore = {
@@ -141,6 +147,27 @@ export type FrigoraStore = {
     ventureId: VentureId,
     userId: UserId,
   ): Promise<FrigoraVisit[]>;
+  insertFieldCapture(row: FrigoraFieldCapture): Promise<void>;
+  findFieldCapture(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraFieldCaptureId,
+  ): Promise<FrigoraFieldCapture | null>;
+  listFieldCapturesByVisit(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraFieldCapture[]>;
+  listFieldCapturesByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraFieldCapture[]>;
+  listFieldCapturesByAsset(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraFieldCapture[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -570,6 +597,70 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraVisits.arrivedAt), asc(frigoraVisits.id));
       return rows.map(mapVisit);
     },
+    async insertFieldCapture(row) {
+      await ensureSchema();
+      await getDb().insert(frigoraFieldCaptures).values(toFieldCaptureValues(row));
+    },
+    async findFieldCapture(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraFieldCaptures)
+        .where(
+          and(
+            eq(frigoraFieldCaptures.id, id),
+            eq(frigoraFieldCaptures.workspaceId, workspaceId),
+            eq(frigoraFieldCaptures.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapFieldCapture(rows[0]) : null;
+    },
+    async listFieldCapturesByVisit(workspaceId, ventureId, visitId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraFieldCaptures)
+        .where(
+          and(
+            eq(frigoraFieldCaptures.workspaceId, workspaceId),
+            eq(frigoraFieldCaptures.ventureId, ventureId),
+            eq(frigoraFieldCaptures.visitId, visitId),
+          ),
+        )
+        .orderBy(asc(frigoraFieldCaptures.observedAt), asc(frigoraFieldCaptures.id));
+      return rows.map(mapFieldCapture);
+    },
+    async listFieldCapturesByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraFieldCaptures)
+        .where(
+          and(
+            eq(frigoraFieldCaptures.workspaceId, workspaceId),
+            eq(frigoraFieldCaptures.ventureId, ventureId),
+            eq(frigoraFieldCaptures.workOrderId, workOrderId),
+          ),
+        )
+        .orderBy(asc(frigoraFieldCaptures.observedAt), asc(frigoraFieldCaptures.id));
+      return rows.map(mapFieldCapture);
+    },
+    async listFieldCapturesByAsset(workspaceId, ventureId, assetId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraFieldCaptures)
+        .where(
+          and(
+            eq(frigoraFieldCaptures.workspaceId, workspaceId),
+            eq(frigoraFieldCaptures.ventureId, ventureId),
+            eq(frigoraFieldCaptures.assetId, assetId),
+          ),
+        )
+        .orderBy(asc(frigoraFieldCaptures.observedAt), asc(frigoraFieldCaptures.id));
+      return rows.map(mapFieldCapture);
+    },
   };
 }
 
@@ -666,6 +757,26 @@ function toVisitValues(row: FrigoraVisit) {
   };
 }
 
+function toFieldCaptureValues(row: FrigoraFieldCapture) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    visitId: row.visitId,
+    workOrderId: row.workOrderId,
+    assetId: row.assetId,
+    captureKind: row.captureKind,
+    captureCode: row.captureCode,
+    valueNumeric: row.valueNumeric,
+    valueUnit: row.valueUnit,
+    description: row.description,
+    observedAt: row.observedAt,
+    capturedByUserId: row.capturedByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -754,6 +865,26 @@ function mapVisit(row: typeof frigoraVisits.$inferSelect): FrigoraVisit {
     arrivedAt: row.arrivedAt,
     departedAt: row.departedAt ?? null,
     status: row.status as FrigoraVisitStatus,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapFieldCapture(row: typeof frigoraFieldCaptures.$inferSelect): FrigoraFieldCapture {
+  return {
+    id: row.id as FrigoraFieldCaptureId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    visitId: row.visitId as FrigoraVisitId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    assetId: (row.assetId as FrigoraAssetId | null) ?? null,
+    captureKind: row.captureKind as FrigoraFieldCaptureKind,
+    captureCode: row.captureCode as FrigoraFieldCaptureCode,
+    valueNumeric: row.valueNumeric ?? null,
+    valueUnit: (row.valueUnit as FrigoraFieldCaptureUnit | null) ?? null,
+    description: row.description ?? null,
+    observedAt: row.observedAt,
+    capturedByUserId: row.capturedByUserId as UserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

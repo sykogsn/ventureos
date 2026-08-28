@@ -62,7 +62,7 @@ async function seed(options: {
       workspaceId,
       slug: `venture-${ventureId}`,
       definitionId: options.definitionId ?? "frigora",
-      definitionVersion: options.definitionVersion ?? "0.5.0",
+      definitionVersion: options.definitionVersion ?? "0.6.0",
     }),
   );
   return {
@@ -121,7 +121,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.5.0",
+    definitionVersion: "0.6.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -807,8 +807,8 @@ describe("Frigora WorkOrder foundation", () => {
     assert.equal(workOrder.workKind, "inspection");
   });
 
-  it("resolves frigora@0.5.0 from catalog", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.5.0");
+  it("resolves frigora@0.6.0 from catalog", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.6.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /WorkOrder/,

@@ -24,6 +24,9 @@ import type {
   FrigoraVisitId,
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
+  FrigoraFieldCapture,
+  FrigoraFieldCaptureId,
+  RecordFieldCaptureInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -38,6 +41,7 @@ import {
   parseWithFrigora,
   recordVisitArrivalSchema,
   recordVisitDepartureSchema,
+  recordFieldCaptureSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -131,6 +135,27 @@ export type FrigoraService = {
     workOrderId: FrigoraWorkOrderId,
   ): Promise<FrigoraVisit[]>;
   listVisitsByAttendingUser(scope: FrigoraScope, userId: UserId): Promise<FrigoraVisit[]>;
+  recordFieldCapture(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: RecordFieldCaptureInput,
+  ): Promise<FrigoraFieldCapture>;
+  getFieldCapture(
+    scope: FrigoraScope,
+    id: FrigoraFieldCaptureId,
+  ): Promise<FrigoraFieldCapture | null>;
+  listFieldCapturesByVisit(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraFieldCapture[]>;
+  listFieldCapturesByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraFieldCapture[]>;
+  listFieldCapturesByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraFieldCapture[]>;
 };
 
 export function createFrigoraService(options: {
@@ -730,6 +755,93 @@ export function createFrigoraService(options: {
       }
       return store.listVisitsByAttendingUser(scope.workspaceId, scope.ventureId, userId);
     },
+    async recordFieldCapture(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsFieldCapture(visit);
+      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const parsed = parseWithFrigora(recordFieldCaptureSchema, input);
+      assertObservedAtWithinVisit(visit, parsed.observedAt);
+      const capturedByUserId = parsed.userId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, capturedByUserId);
+      const assetId = await resolveFieldCaptureAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+      const now = nowIso();
+      const row: FrigoraFieldCapture = {
+        id: createId<FrigoraFieldCaptureId>(),
+        workspaceId: visit.workspaceId,
+        ventureId: visit.ventureId,
+        visitId: visit.id,
+        workOrderId: visit.workOrderId,
+        assetId,
+        captureKind: parsed.captureKind,
+        captureCode: parsed.captureCode,
+        valueNumeric:
+          parsed.captureKind === "measurement" ? (parsed.valueNumeric as number) : null,
+        valueUnit:
+          parsed.captureKind === "measurement"
+            ? (parsed.valueUnit as FrigoraFieldCapture["valueUnit"])
+            : null,
+        description:
+          parsed.captureKind === "condition"
+            ? (parsed.description as string)
+            : (parsed.description ?? null),
+        observedAt: parsed.observedAt,
+        capturedByUserId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertFieldCapture(row);
+      return row;
+    },
+    async getFieldCapture(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findFieldCapture(scope.workspaceId, scope.ventureId, id);
+    },
+    async listFieldCapturesByVisit(scope, visitId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
+      if (!visit) {
+        return [];
+      }
+      return store.listFieldCapturesByVisit(scope.workspaceId, scope.ventureId, visitId);
+    },
+    async listFieldCapturesByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listFieldCapturesByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
+    async listFieldCapturesByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listFieldCapturesByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
   };
 }
 
@@ -872,6 +984,54 @@ function assertDepartedAfterArrived(arrivedAt: string, departedAt: string) {
       "Departure must not precede arrival.",
     );
   }
+}
+
+function assertVisitAcceptsFieldCapture(visit: FrigoraVisit) {
+  if (visit.status === "cancelled") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Field captures cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
+function assertObservedAtWithinVisit(visit: FrigoraVisit, observedAt: string) {
+  const observedMs = Date.parse(observedAt);
+  const arrivedMs = Date.parse(visit.arrivedAt);
+  if (observedMs < arrivedMs) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Observed time must not precede visit arrival.",
+    );
+  }
+  if (visit.status === "departed" && visit.departedAt) {
+    const departedMs = Date.parse(visit.departedAt);
+    if (observedMs > departedMs) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Observed time must not follow visit departure.",
+      );
+    }
+  }
+}
+
+async function resolveFieldCaptureAsset(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  workOrder: FrigoraWorkOrder,
+  assetId: string | null,
+): Promise<FrigoraAssetId | null> {
+  if (assetId === null) {
+    return null;
+  }
+  const asset = await requireAsset(store, scope, assetId as FrigoraAssetId);
+  if (asset.siteId !== workOrder.siteId) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Asset must belong to the work order site.",
+    );
+  }
+  return asset.id;
 }
 
 async function assertSiteAcceptsWorkOrder(

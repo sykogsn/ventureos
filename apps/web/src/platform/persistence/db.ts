@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 11; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 12; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -673,6 +673,35 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_visits_venture_attending_user_idx ON frigora_visits (venture_id, attending_user_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_field_captures (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          visit_id TEXT NOT NULL,
+          work_order_id TEXT NOT NULL,
+          asset_id TEXT,
+          capture_kind TEXT NOT NULL,
+          capture_code TEXT NOT NULL,
+          value_numeric REAL,
+          value_unit TEXT,
+          description TEXT,
+          observed_at TEXT NOT NULL,
+          captured_by_user_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_field_captures_venture_visit_idx ON frigora_field_captures (venture_id, visit_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_field_captures_venture_work_order_idx ON frigora_field_captures (venture_id, work_order_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_field_captures_venture_asset_idx ON frigora_field_captures (venture_id, asset_id)`,
       );
     })();
   }

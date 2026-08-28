@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { FRIGORA_ASSET_KINDS, FRIGORA_WORK_KINDS } from "./types";
+import {
+  FRIGORA_ASSET_KINDS,
+  FRIGORA_FIELD_CAPTURE_CODES,
+  FRIGORA_FIELD_CAPTURE_UNITS,
+  FRIGORA_WORK_KINDS,
+} from "./types";
 import { FrigoraError } from "./errors";
 
 const requiredText = z.string().trim().min(1, "Required text is empty.");
@@ -252,6 +257,62 @@ export const listVisitsByAttendingUserSchema = z.object({
   userId: requiredText,
 });
 
+const patchAssetIdNullable = z.union([requiredText, z.null()]).optional();
+
+export const recordFieldCaptureSchema = z
+  .object({
+    captureKind: z.enum(["measurement", "condition"]),
+    captureCode: z.enum(FRIGORA_FIELD_CAPTURE_CODES),
+    valueNumeric: z.number().finite().nullable().optional(),
+    valueUnit: z.enum(FRIGORA_FIELD_CAPTURE_UNITS).nullable().optional(),
+    description: nullableText.optional(),
+    observedAt: isoTimestamp,
+    userId: requiredText,
+    assetId: patchAssetIdNullable,
+  })
+  .superRefine((value, ctx) => {
+    if (value.captureKind === "measurement") {
+      if (value.valueNumeric == null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Measurement captures require a numeric value.",
+          path: ["valueNumeric"],
+        });
+      }
+      if (!value.valueUnit) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Measurement captures require a unit.",
+          path: ["valueUnit"],
+        });
+      }
+    }
+    if (value.captureKind === "condition") {
+      const description = value.description?.trim() ?? "";
+      if (description.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Condition captures require a description.",
+          path: ["description"],
+        });
+      }
+      if (value.valueNumeric != null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Condition captures cannot include a numeric value.",
+          path: ["valueNumeric"],
+        });
+      }
+      if (value.valueUnit) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Condition captures cannot include a unit.",
+          path: ["valueUnit"],
+        });
+      }
+    }
+  });
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });
@@ -277,10 +338,18 @@ export function parseWithFrigora<T>(
     invalidKind ||
     issue?.path.includes("assetKind") ||
     issue?.path.includes("workKind") ||
+    issue?.path.includes("captureKind") ||
+    issue?.path.includes("captureCode") ||
     /Invalid option|Invalid enum/i.test(message)
   ) {
     if (issue?.path.includes("workKind")) {
       throw new FrigoraError("invalid_kind", "Work kind is not allowed.");
+    }
+    if (issue?.path.includes("captureKind")) {
+      throw new FrigoraError("invalid_kind", "Field capture kind is not allowed.");
+    }
+    if (issue?.path.includes("captureCode")) {
+      throw new FrigoraError("invalid_kind", "Field capture code is not allowed.");
     }
     throw new FrigoraError("invalid_kind", "Asset kind is not allowed.");
   }
