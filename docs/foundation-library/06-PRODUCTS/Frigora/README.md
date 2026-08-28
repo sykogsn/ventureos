@@ -1,8 +1,8 @@
 # Frigora
 
-**Purpose.** Describe Frigora as a refrigeration venture on VentureOS. This page records OS admission, not an operational product.
+**Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.1.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `frigora@0.2.0` in the Definition Registry.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
@@ -10,9 +10,9 @@
 
 **Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, and Asset identity
 
-**Version.** 0.1.0
+**Version.** 0.2.0
 
 **Owner.** Founder (definition owner)
 
@@ -20,7 +20,7 @@
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Frigora to the OS. Refrigeration operational records, field workflows, FACT→PATTERN→SIGNAL, and employee agents are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, and Asset operational records as durable identity beside VIC. Work orders, PPM, refrigerant events, evidence, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
 
 ## Profile
 
@@ -30,6 +30,16 @@ Frigora is a VentureOS venture. This definition admits Frigora to the OS. Refrig
 - Features: situation-room, company-hq, executive-office, founder-decisions, morning-briefing, portfolio.
 - Adds `intelligence.briefing` to the shared capability pack.
 - Excludes nothing.
+
+## Operational foundation
+
+Admitted in this version, persisted beside VIC for Frigora instances:
+
+- Customer
+- Site
+- Asset
+
+RefrigerationSystem and Component remain deferred. Assets may exist at a site without a system grouping.
 
 ## Identity
 
@@ -43,7 +53,7 @@ Frigora receives the full executive desk. Theme must not invent a private Runtim
 
 The following are not part of this definition version and must not be read as built:
 
-- customers, sites, refrigeration systems, assets/components
+- refrigeration systems, asset components
 - work orders, dispatch, engineer field workflows
 - faults, readings, diagnoses, repairs, parts
 - refrigerant events, cylinders

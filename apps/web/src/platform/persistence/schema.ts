@@ -2,6 +2,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -423,6 +424,89 @@ export const workforceVerifications = sqliteTable(
   ],
 );
 
+export const frigoraCustomers = sqliteTable(
+  "frigora_customers",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    code: text("code").notNull(),
+    displayName: text("display_name").notNull(),
+    legalName: text("legal_name"),
+    status: text("status").notNull().default("active"),
+    notes: text("notes"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_customers_venture_code_idx").on(table.ventureId, table.code),
+    index("frigora_customers_workspace_venture_idx").on(
+      table.workspaceId,
+      table.ventureId,
+    ),
+    index("frigora_customers_venture_status_idx").on(table.ventureId, table.status),
+  ],
+);
+
+export const frigoraSites = sqliteTable(
+  "frigora_sites",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    addressLine1: text("address_line1"),
+    addressLine2: text("address_line2"),
+    city: text("city"),
+    region: text("region"),
+    postalCode: text("postal_code"),
+    country: text("country"),
+    status: text("status").notNull().default("active"),
+    notes: text("notes"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_sites_customer_code_idx").on(table.customerId, table.code),
+    index("frigora_sites_workspace_venture_idx").on(table.workspaceId, table.ventureId),
+    index("frigora_sites_customer_idx").on(table.customerId),
+    index("frigora_sites_venture_status_idx").on(table.ventureId, table.status),
+  ],
+);
+
+export const frigoraAssets = sqliteTable(
+  "frigora_assets",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    siteId: text("site_id").notNull(),
+    tag: text("tag").notNull(),
+    name: text("name"),
+    assetKind: text("asset_kind"),
+    manufacturer: text("manufacturer"),
+    model: text("model"),
+    serialNumber: text("serial_number"),
+    status: text("status").notNull().default("active"),
+    designTargetCelsius: real("design_target_celsius"),
+    refrigerantType: text("refrigerant_type"),
+    locationOnSite: text("location_on_site"),
+    installedOn: text("installed_on"),
+    commissionedOn: text("commissioned_on"),
+    notes: text("notes"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_assets_site_tag_idx").on(table.siteId, table.tag),
+    index("frigora_assets_workspace_venture_idx").on(table.workspaceId, table.ventureId),
+    index("frigora_assets_site_idx").on(table.siteId),
+    index("frigora_assets_venture_status_idx").on(table.ventureId, table.status),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -450,4 +534,7 @@ export const schema = {
   workforceRuns,
   workforceApprovals,
   workforceVerifications,
+  frigoraCustomers,
+  frigoraSites,
+  frigoraAssets,
 };

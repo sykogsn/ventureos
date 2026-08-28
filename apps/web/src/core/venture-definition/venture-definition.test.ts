@@ -63,7 +63,11 @@ describe("Venture definition registry", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").name, "Frigora");
     assert.equal(platformVentureRegistry.resolve("frigora").lifecycle, "concept");
     assert.equal(platformVentureRegistry.resolve("frigora").maturity, "experimental");
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.1.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.2.0");
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /Customer, Site, and Asset/,
+    );
     assert.ok(
       RUNTIME_REQUIRED_CAPABILITIES.every((id) =>
         platformVentureRegistry.resolve("frigora").capabilityProfile.uses.includes(id),

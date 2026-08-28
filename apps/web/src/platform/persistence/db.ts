@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 7; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 8; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -514,6 +514,102 @@ export async function ensureSchema() {
       await addColumn("workforce_executions", "external_reference", "TEXT");
       await addColumn("workforce_verifications", "implementation_id", "TEXT");
       await addColumn("workforce_verifications", "implementation_version", "TEXT");
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_customers (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          code TEXT NOT NULL,
+          display_name TEXT NOT NULL,
+          legal_name TEXT,
+          status TEXT NOT NULL DEFAULT 'active',
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS frigora_customers_venture_code_idx ON frigora_customers (venture_id, code)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_customers_workspace_venture_idx ON frigora_customers (workspace_id, venture_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_customers_venture_status_idx ON frigora_customers (venture_id, status)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_sites (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          customer_id TEXT NOT NULL,
+          code TEXT NOT NULL,
+          name TEXT NOT NULL,
+          address_line1 TEXT,
+          address_line2 TEXT,
+          city TEXT,
+          region TEXT,
+          postal_code TEXT,
+          country TEXT,
+          status TEXT NOT NULL DEFAULT 'active',
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS frigora_sites_customer_code_idx ON frigora_sites (customer_id, code)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_sites_workspace_venture_idx ON frigora_sites (workspace_id, venture_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_sites_customer_idx ON frigora_sites (customer_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_sites_venture_status_idx ON frigora_sites (venture_id, status)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_assets (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          site_id TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          name TEXT,
+          asset_kind TEXT,
+          manufacturer TEXT,
+          model TEXT,
+          serial_number TEXT,
+          status TEXT NOT NULL DEFAULT 'active',
+          design_target_celsius REAL,
+          refrigerant_type TEXT,
+          location_on_site TEXT,
+          installed_on TEXT,
+          commissioned_on TEXT,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS frigora_assets_site_tag_idx ON frigora_assets (site_id, tag)`,
+      );
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS frigora_assets_venture_serial_idx ON frigora_assets (venture_id, serial_number) WHERE serial_number IS NOT NULL`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_assets_workspace_venture_idx ON frigora_assets (workspace_id, venture_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_assets_site_idx ON frigora_assets (site_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_assets_venture_status_idx ON frigora_assets (venture_id, status)`,
+      );
     })();
   }
 
