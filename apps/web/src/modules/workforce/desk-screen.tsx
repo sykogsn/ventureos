@@ -8,6 +8,7 @@ import {
   WORKFORCE_VERIFICATION_LANGUAGE,
   type WorkforceDeskState,
 } from "@/modules/workforce/desk";
+import { WorkforceEmployeeDirectory } from "@/modules/workforce/employee-directory";
 
 function WorkforceEmpty({
   title,
@@ -72,10 +73,7 @@ export function WorkforceDeskScreen({ state }: { state: WorkforceDeskState }) {
                 <h2 id="workforce-employees-heading" className="ids-kicker">
                   Employees
                 </h2>
-                <EmptyCopy>
-                  Governed AI employees for this company appear in this region.
-                  This desk is read-first.
-                </EmptyCopy>
+                <WorkforceEmployeeDirectory />
               </Stack>
             </SectionCard>
           </section>

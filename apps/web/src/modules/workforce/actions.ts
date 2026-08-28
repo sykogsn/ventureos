@@ -14,6 +14,8 @@ import {
   listWorkforceRunsFromSession,
   type WorkforceAgentInstanceView,
 } from "@/modules/workforce/session-entry";
+import { loadWorkforceEmployeeDirectory } from "@/modules/workforce/employees-read-model";
+import type { WorkforceEmployeeDirectoryEntry } from "@/modules/workforce/employees-read-model";
 import type {
   WorkforceRunInspection,
   WorkforceRunListItem,
@@ -46,6 +48,11 @@ export type WorkforceListInstancesActionResult = {
 export type WorkforceGetInstanceActionResult = {
   error?: string;
   instance?: WorkforceAgentInstanceView;
+};
+
+export type WorkforceEmployeeDirectoryActionResult = {
+  error?: string;
+  employees?: WorkforceEmployeeDirectoryEntry[];
 };
 
 export async function approveWorkforceRunAction(input: {
@@ -183,6 +190,40 @@ export async function listWorkforceInstancesAction(input: {
     return { error: "Instances could not be listed." };
   }
   return { instances: result.instances };
+}
+
+export async function loadWorkforceEmployeeDirectoryAction(input: {
+  ventureId: string;
+  workspaceId?: string;
+}): Promise<WorkforceEmployeeDirectoryActionResult> {
+  const session = await getSession();
+  if (!session) {
+    return { error: "You must be signed in." };
+  }
+
+  const result = await loadWorkforceEmployeeDirectory({
+    session,
+    activeWorkspaceId: await getActiveWorkspaceId(),
+    claimedWorkspaceId: input.workspaceId,
+    ventureId: input.ventureId,
+  });
+
+  if (!result.ok) {
+    switch (result.failure) {
+      case "UNAUTHENTICATED":
+        return { error: "You must be signed in." };
+      case "WORKSPACE_REQUIRED":
+        return { error: "A workspace is required." };
+      case "UNAUTHORISED":
+        return { error: "Operating authority is required." };
+      case "SCOPE_MISMATCH":
+        return { error: "This company is outside your current desk scope." };
+      default:
+        return { error: "Employees could not be loaded." };
+    }
+  }
+
+  return { employees: result.employees };
 }
 
 export async function getWorkforceInstanceAction(input: {
