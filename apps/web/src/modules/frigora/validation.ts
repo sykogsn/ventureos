@@ -313,6 +313,15 @@ export const recordFieldCaptureSchema = z
     }
   });
 
+export const recordTechnicalFindingSchema = z.object({
+  findingKind: z.enum(["symptom", "suspected_fault", "confirmed_fault"]),
+  description: requiredText,
+  assertedAt: isoTimestamp,
+  userId: requiredText,
+  assetId: patchAssetIdNullable,
+  sourceFieldCaptureIds: z.array(requiredText).optional(),
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });

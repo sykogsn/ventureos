@@ -17,6 +17,8 @@ import type {
   FrigoraVisitId,
   FrigoraFieldCapture,
   FrigoraFieldCaptureId,
+  FrigoraTechnicalFinding,
+  FrigoraTechnicalFindingId,
 } from "./types";
 import type { UserId } from "@/contracts";
 import { parseWithFrigora, scopeSchema } from "./validation";
@@ -220,5 +222,40 @@ export async function listFieldCapturesByAssetQuery(
 ): Promise<FrigoraQueryResult<FrigoraFieldCapture[]>> {
   return query(input, (scope) =>
     getFrigoraService().listFieldCapturesByAsset(scope, input.assetId as FrigoraAssetId),
+  );
+}
+
+export async function getTechnicalFindingQuery(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraQueryResult<FrigoraTechnicalFinding | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getTechnicalFinding(scope, input.id as FrigoraTechnicalFindingId),
+  );
+}
+
+export async function listTechnicalFindingsByVisitQuery(
+  input: ScopedInput & { visitId: string },
+): Promise<FrigoraQueryResult<FrigoraTechnicalFinding[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listTechnicalFindingsByVisit(scope, input.visitId as FrigoraVisitId),
+  );
+}
+
+export async function listTechnicalFindingsByWorkOrderQuery(
+  input: ScopedInput & { workOrderId: string },
+): Promise<FrigoraQueryResult<FrigoraTechnicalFinding[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listTechnicalFindingsByWorkOrder(
+      scope,
+      input.workOrderId as FrigoraWorkOrderId,
+    ),
+  );
+}
+
+export async function listTechnicalFindingsByAssetQuery(
+  input: ScopedInput & { assetId: string },
+): Promise<FrigoraQueryResult<FrigoraTechnicalFinding[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listTechnicalFindingsByAsset(scope, input.assetId as FrigoraAssetId),
   );
 }

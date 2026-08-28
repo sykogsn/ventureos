@@ -6,6 +6,7 @@ export type FrigoraAssetId = string & { readonly __brand: "FrigoraAssetId" };
 export type FrigoraWorkOrderId = string & { readonly __brand: "FrigoraWorkOrderId" };
 export type FrigoraVisitId = string & { readonly __brand: "FrigoraVisitId" };
 export type FrigoraFieldCaptureId = string & { readonly __brand: "FrigoraFieldCaptureId" };
+export type FrigoraTechnicalFindingId = string & { readonly __brand: "FrigoraTechnicalFindingId" };
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
@@ -13,6 +14,7 @@ export type FrigoraAssetStatus = "active" | "decommissioned";
 export type FrigoraWorkOrderStatus = "open" | "closed" | "cancelled";
 export type FrigoraVisitStatus = "open" | "departed" | "cancelled";
 export type FrigoraFieldCaptureKind = "measurement" | "condition";
+export type FrigoraTechnicalFindingKind = "symptom" | "suspected_fault" | "confirmed_fault";
 
 export const FRIGORA_WORK_KINDS = ["reactive", "planned", "inspection"] as const;
 export type FrigoraWorkKind = (typeof FRIGORA_WORK_KINDS)[number];
@@ -265,4 +267,29 @@ export type RecordFieldCaptureInput = {
   observedAt: string;
   userId: string;
   assetId?: string | null;
+};
+
+export type FrigoraTechnicalFinding = {
+  id: FrigoraTechnicalFindingId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  visitId: FrigoraVisitId;
+  workOrderId: FrigoraWorkOrderId;
+  assetId: FrigoraAssetId | null;
+  findingKind: FrigoraTechnicalFindingKind;
+  description: string;
+  sourceFieldCaptureIds: FrigoraFieldCaptureId[] | null;
+  assertedAt: string;
+  recordedByUserId: UserId;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordTechnicalFindingInput = {
+  findingKind: FrigoraTechnicalFindingKind;
+  description: string;
+  assertedAt: string;
+  userId: string;
+  assetId?: string | null;
+  sourceFieldCaptureIds?: string[];
 };

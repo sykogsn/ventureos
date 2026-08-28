@@ -119,9 +119,9 @@ describe("Product bootstrap", () => {
     const { company, snapshot } = bootstrap("frigora", "Frigora One");
     const venture = snapshot.core.ventures[0];
     assert.ok(venture);
-    assert.deepEqual(company.venture.definition, { id: "frigora", version: "0.6.0" });
+    assert.deepEqual(company.venture.definition, { id: "frigora", version: "0.7.0" });
     assert.equal(company.draft.definitionId, "frigora");
-    assert.equal(company.draft.definitionVersion, "0.6.0");
+    assert.equal(company.draft.definitionVersion, "0.7.0");
     assert.equal(mayConsumeBriefing(venture), true);
     assert.equal(ventureHasFeature(venture, "executive-office"), true);
     assert.ok(projectSituationRoom(snapshot.core).briefing.implications.length > 0);

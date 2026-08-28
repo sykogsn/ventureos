@@ -7,6 +7,7 @@ import {
   frigoraSites,
   frigoraVisits,
   frigoraFieldCaptures,
+  frigoraTechnicalFindings,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -33,6 +34,9 @@ import type {
   FrigoraFieldCaptureId,
   FrigoraFieldCaptureKind,
   FrigoraFieldCaptureUnit,
+  FrigoraTechnicalFinding,
+  FrigoraTechnicalFindingId,
+  FrigoraTechnicalFindingKind,
 } from "./types";
 
 export type FrigoraStore = {
@@ -168,6 +172,27 @@ export type FrigoraStore = {
     ventureId: VentureId,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraFieldCapture[]>;
+  insertTechnicalFinding(row: FrigoraTechnicalFinding): Promise<void>;
+  findTechnicalFinding(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraTechnicalFindingId,
+  ): Promise<FrigoraTechnicalFinding | null>;
+  listTechnicalFindingsByVisit(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraTechnicalFinding[]>;
+  listTechnicalFindingsByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraTechnicalFinding[]>;
+  listTechnicalFindingsByAsset(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraTechnicalFinding[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -661,6 +686,70 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraFieldCaptures.observedAt), asc(frigoraFieldCaptures.id));
       return rows.map(mapFieldCapture);
     },
+    async insertTechnicalFinding(row) {
+      await ensureSchema();
+      await getDb().insert(frigoraTechnicalFindings).values(toTechnicalFindingValues(row));
+    },
+    async findTechnicalFinding(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraTechnicalFindings)
+        .where(
+          and(
+            eq(frigoraTechnicalFindings.id, id),
+            eq(frigoraTechnicalFindings.workspaceId, workspaceId),
+            eq(frigoraTechnicalFindings.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapTechnicalFinding(rows[0]) : null;
+    },
+    async listTechnicalFindingsByVisit(workspaceId, ventureId, visitId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraTechnicalFindings)
+        .where(
+          and(
+            eq(frigoraTechnicalFindings.workspaceId, workspaceId),
+            eq(frigoraTechnicalFindings.ventureId, ventureId),
+            eq(frigoraTechnicalFindings.visitId, visitId),
+          ),
+        )
+        .orderBy(asc(frigoraTechnicalFindings.assertedAt), asc(frigoraTechnicalFindings.id));
+      return rows.map(mapTechnicalFinding);
+    },
+    async listTechnicalFindingsByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraTechnicalFindings)
+        .where(
+          and(
+            eq(frigoraTechnicalFindings.workspaceId, workspaceId),
+            eq(frigoraTechnicalFindings.ventureId, ventureId),
+            eq(frigoraTechnicalFindings.workOrderId, workOrderId),
+          ),
+        )
+        .orderBy(asc(frigoraTechnicalFindings.assertedAt), asc(frigoraTechnicalFindings.id));
+      return rows.map(mapTechnicalFinding);
+    },
+    async listTechnicalFindingsByAsset(workspaceId, ventureId, assetId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraTechnicalFindings)
+        .where(
+          and(
+            eq(frigoraTechnicalFindings.workspaceId, workspaceId),
+            eq(frigoraTechnicalFindings.ventureId, ventureId),
+            eq(frigoraTechnicalFindings.assetId, assetId),
+          ),
+        )
+        .orderBy(asc(frigoraTechnicalFindings.assertedAt), asc(frigoraTechnicalFindings.id));
+      return rows.map(mapTechnicalFinding);
+    },
   };
 }
 
@@ -777,6 +866,47 @@ function toFieldCaptureValues(row: FrigoraFieldCapture) {
   };
 }
 
+function toTechnicalFindingValues(row: FrigoraTechnicalFinding) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    visitId: row.visitId,
+    workOrderId: row.workOrderId,
+    assetId: row.assetId,
+    findingKind: row.findingKind,
+    description: row.description,
+    sourceFieldCaptureIds: serializeSourceFieldCaptureIds(row.sourceFieldCaptureIds),
+    assertedAt: row.assertedAt,
+    recordedByUserId: row.recordedByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function serializeSourceFieldCaptureIds(ids: FrigoraFieldCaptureId[] | null): string | null {
+  if (!ids || ids.length === 0) {
+    return null;
+  }
+  return JSON.stringify([...ids].sort());
+}
+
+function parseSourceFieldCaptureIds(raw: string | null): FrigoraFieldCaptureId[] | null {
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+    const ids = parsed.filter((value): value is string => typeof value === "string");
+    return ids.length === 0 ? null : (ids as FrigoraFieldCaptureId[]);
+  } catch {
+    return null;
+  }
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -885,6 +1015,26 @@ function mapFieldCapture(row: typeof frigoraFieldCaptures.$inferSelect): Frigora
     description: row.description ?? null,
     observedAt: row.observedAt,
     capturedByUserId: row.capturedByUserId as UserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapTechnicalFinding(
+  row: typeof frigoraTechnicalFindings.$inferSelect,
+): FrigoraTechnicalFinding {
+  return {
+    id: row.id as FrigoraTechnicalFindingId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    visitId: row.visitId as FrigoraVisitId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    assetId: (row.assetId as FrigoraAssetId | null) ?? null,
+    findingKind: row.findingKind as FrigoraTechnicalFindingKind,
+    description: row.description,
+    sourceFieldCaptureIds: parseSourceFieldCaptureIds(row.sourceFieldCaptureIds ?? null),
+    assertedAt: row.assertedAt,
+    recordedByUserId: row.recordedByUserId as UserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -21,6 +21,8 @@ import type {
   FrigoraVisitId,
   FrigoraFieldCapture,
   RecordFieldCaptureInput,
+  FrigoraTechnicalFinding,
+  RecordTechnicalFindingInput,
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
   UpdateAssetInput,
@@ -223,5 +225,13 @@ export async function recordFieldCaptureAction(
 ): Promise<FrigoraMutationResult<FrigoraFieldCapture>> {
   return mutate(input, (scope) =>
     getFrigoraService().recordFieldCapture(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function recordTechnicalFindingAction(
+  input: ScopedInput & { visitId: string } & RecordTechnicalFindingInput,
+): Promise<FrigoraMutationResult<FrigoraTechnicalFinding>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordTechnicalFinding(scope, input.visitId as FrigoraVisitId, input),
   );
 }
