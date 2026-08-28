@@ -11,6 +11,7 @@ export type FrigoraCorrectiveActionId = string & { readonly __brand: "FrigoraCor
 export type FrigoraVisitOutcomeId = string & { readonly __brand: "FrigoraVisitOutcomeId" };
 export type FrigoraRecommendedActionId = string & { readonly __brand: "FrigoraRecommendedActionId" };
 export type FrigoraRefrigerantEventId = string & { readonly __brand: "FrigoraRefrigerantEventId" };
+export type FrigoraPartUsageId = string & { readonly __brand: "FrigoraPartUsageId" };
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
@@ -22,6 +23,9 @@ export type FrigoraTechnicalFindingKind = "symptom" | "suspected_fault" | "confi
 
 export const FRIGORA_REFRIGERANT_EVENT_KINDS = ["added", "recovered", "removed"] as const;
 export type FrigoraRefrigerantEventKind = (typeof FRIGORA_REFRIGERANT_EVENT_KINDS)[number];
+
+export const FRIGORA_PART_USAGE_UNITS = ["each", "metre", "litre", "kilogram", "other"] as const;
+export type FrigoraPartUsageUnit = (typeof FRIGORA_PART_USAGE_UNITS)[number];
 
 export const FRIGORA_WORK_KINDS = ["reactive", "planned", "inspection"] as const;
 export type FrigoraWorkKind = (typeof FRIGORA_WORK_KINDS)[number];
@@ -397,6 +401,35 @@ export type RecordRefrigerantEventInput = {
   cylinderReference?: string | null;
   occurredAt: string;
   handledByUserId: string;
+  recordedByUserId: string;
+  assetId?: string | null;
+};
+
+export type FrigoraPartUsage = {
+  id: FrigoraPartUsageId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  visitId: FrigoraVisitId;
+  workOrderId: FrigoraWorkOrderId;
+  assetId: FrigoraAssetId | null;
+  partDescription: string;
+  quantity: number;
+  quantityUnit: FrigoraPartUsageUnit;
+  notes: string | null;
+  usedAt: string;
+  usedByUserId: UserId;
+  recordedByUserId: UserId;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordPartUsageInput = {
+  partDescription: string;
+  quantity: number;
+  quantityUnit: FrigoraPartUsageUnit;
+  notes?: string | null;
+  usedAt: string;
+  usedByUserId: string;
   recordedByUserId: string;
   assetId?: string | null;
 };

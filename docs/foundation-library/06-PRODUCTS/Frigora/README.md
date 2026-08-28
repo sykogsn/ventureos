@@ -2,7 +2,7 @@
 
 **Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.11.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `frigora@0.12.0` in the Definition Registry.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
@@ -10,9 +10,9 @@
 
 **Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, and Visit refrigerant events
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, and Visit part usages
 
-**Version.** 0.11.0
+**Version.** 0.12.0
 
 **Owner.** Founder (definition owner)
 
@@ -20,7 +20,7 @@
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, and Visit refrigerant events as durable operational records beside VIC. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, and Visit part usages as durable operational records beside VIC. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
 
 ## Profile
 
@@ -47,6 +47,7 @@ Admitted in this version, persisted beside VIC for Frigora instances:
 - Visit outcomes (human-recorded resulting operational state at the end of a Visit attendance episode)
 - Visit recommended actions (human-recorded forward operational intent associated with a Visit attendance episode; advisory only, not execution)
 - Visit refrigerant events (human-recorded refrigerant handling that actually occurred during a Visit attendance episode; append-only facts, not leak inference)
+- Visit part usages (human-recorded part or material that was actually used during a Visit attendance episode; append-only facts, not inventory)
 
 RefrigerationSystem and Component remain deferred. Assets may exist at a site without a system grouping.
 
@@ -66,13 +67,14 @@ At visit-episode maturity, authoritative records separate:
 2. **Observed/measured fact** — Visit field capture
 3. **Human technical interpretation** — Visit technical finding
 4. **Work actually performed** — Visit corrective action
-5. **Refrigerant handling actually occurred** — Visit refrigerant event
-6. **Resulting operational state** — Visit outcome
-7. **Forward operational intent** — Visit recommended action
+5. **Part or material actually used** — Visit part usage
+6. **Refrigerant handling actually occurred** — Visit refrigerant event
+7. **Resulting operational state** — Visit outcome
+8. **Forward operational intent** — Visit recommended action
 
 **Refrigerant semantic law:** refrigerant added ≠ refrigerant leaked. A refrigerant event records handling (for example 2 kg R404A added). It does not infer leak quantity, leak rate, or refrigerant loss.
 
-Recommended action answers what a human recommends should happen next. It is not execution, scheduling, or executive Recommendation. Visit outcome, recommended action, and refrigerant events are independent records; none requires the others.
+Corrective action, part usage, and refrigerant event answer independent questions. Part usage is not inferred from corrective action or refrigerant handling. Visit outcome and recommended action remain independent; none of these records requires the others.
 
 ## Deferred
 
@@ -80,8 +82,10 @@ The following are not part of this definition version and must not be read as bu
 
 - refrigeration systems, asset components
 - work execution, dispatch, engineer field workflows
-- full diagnosis workflow, root cause, repairs, parts
+- full diagnosis workflow, root cause, repairs
+- parts catalogue, SKU registry, inventory, stock balances, warehouse, van stock
 - cylinder inventory, stock ledger, refrigerant catalogue
+- purchasing, suppliers, purchase orders, pricing, unit costing, invoice lines
 - PPM requirements, obligations, planned visits, work execution
 - commercial operations
 - evidence packages, operational memory

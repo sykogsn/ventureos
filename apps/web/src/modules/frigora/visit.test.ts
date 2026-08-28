@@ -602,7 +602,7 @@ describe("Frigora Visit attendance", () => {
   });
 
   it("resolves frigora@0.10.0 from catalog", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.11.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.12.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /Visit attendance identity/,

@@ -60,7 +60,7 @@ async function seed(options: {
       workspaceId,
       slug: `venture-${ventureId}`,
       definitionId: options.definitionId ?? "frigora",
-      definitionVersion: options.definitionVersion ?? "0.11.0",
+      definitionVersion: options.definitionVersion ?? "0.12.0",
     }),
   );
   return {
@@ -115,7 +115,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.11.0",
+    definitionVersion: "0.12.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -757,10 +757,11 @@ describe("Frigora Recommended action", () => {
     assert.equal(recommendation.description, "Return with lifting equipment");
   });
 
-  it("resolves frigora@0.11.0 from catalog with recommended action admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.11.0");
+  it("resolves frigora@0.12.0 from catalog with recommended action admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.12.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /recommended actions/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /refrigerant events/);
+    assert.match(platformVentureRegistry.resolve("frigora").description, /part usages/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /employee agents/);
   });
 });

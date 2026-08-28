@@ -12,6 +12,7 @@ import {
   frigoraVisitOutcomes,
   frigoraRecommendedActions,
   frigoraRefrigerantEvents,
+  frigoraPartUsages,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -50,6 +51,9 @@ import type {
   FrigoraRefrigerantEvent,
   FrigoraRefrigerantEventId,
   FrigoraRefrigerantEventKind,
+  FrigoraPartUsage,
+  FrigoraPartUsageId,
+  FrigoraPartUsageUnit,
 } from "./types";
 
 export type FrigoraStore = {
@@ -290,6 +294,27 @@ export type FrigoraStore = {
     ventureId: VentureId,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraRefrigerantEvent[]>;
+  insertPartUsage(row: FrigoraPartUsage): Promise<void>;
+  findPartUsage(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraPartUsageId,
+  ): Promise<FrigoraPartUsage | null>;
+  listPartUsagesByVisit(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraPartUsage[]>;
+  listPartUsagesByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraPartUsage[]>;
+  listPartUsagesByAsset(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraPartUsage[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -1107,6 +1132,70 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraRefrigerantEvents.occurredAt), asc(frigoraRefrigerantEvents.id));
       return rows.map(mapRefrigerantEvent);
     },
+    async insertPartUsage(row) {
+      await ensureSchema();
+      await getDb().insert(frigoraPartUsages).values(toPartUsageValues(row));
+    },
+    async findPartUsage(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraPartUsages)
+        .where(
+          and(
+            eq(frigoraPartUsages.id, id),
+            eq(frigoraPartUsages.workspaceId, workspaceId),
+            eq(frigoraPartUsages.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapPartUsage(rows[0]) : null;
+    },
+    async listPartUsagesByVisit(workspaceId, ventureId, visitId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraPartUsages)
+        .where(
+          and(
+            eq(frigoraPartUsages.workspaceId, workspaceId),
+            eq(frigoraPartUsages.ventureId, ventureId),
+            eq(frigoraPartUsages.visitId, visitId),
+          ),
+        )
+        .orderBy(asc(frigoraPartUsages.usedAt), asc(frigoraPartUsages.id));
+      return rows.map(mapPartUsage);
+    },
+    async listPartUsagesByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraPartUsages)
+        .where(
+          and(
+            eq(frigoraPartUsages.workspaceId, workspaceId),
+            eq(frigoraPartUsages.ventureId, ventureId),
+            eq(frigoraPartUsages.workOrderId, workOrderId),
+          ),
+        )
+        .orderBy(asc(frigoraPartUsages.usedAt), asc(frigoraPartUsages.id));
+      return rows.map(mapPartUsage);
+    },
+    async listPartUsagesByAsset(workspaceId, ventureId, assetId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraPartUsages)
+        .where(
+          and(
+            eq(frigoraPartUsages.workspaceId, workspaceId),
+            eq(frigoraPartUsages.ventureId, ventureId),
+            eq(frigoraPartUsages.assetId, assetId),
+          ),
+        )
+        .orderBy(asc(frigoraPartUsages.usedAt), asc(frigoraPartUsages.id));
+      return rows.map(mapPartUsage);
+    },
   };
 }
 
@@ -1363,6 +1452,26 @@ function toRefrigerantEventValues(row: FrigoraRefrigerantEvent) {
   };
 }
 
+function toPartUsageValues(row: FrigoraPartUsage) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    visitId: row.visitId,
+    workOrderId: row.workOrderId,
+    assetId: row.assetId,
+    partDescription: row.partDescription,
+    quantity: row.quantity,
+    quantityUnit: row.quantityUnit,
+    notes: row.notes,
+    usedAt: row.usedAt,
+    usedByUserId: row.usedByUserId,
+    recordedByUserId: row.recordedByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -1570,6 +1679,26 @@ function mapRefrigerantEvent(
     cylinderReference: row.cylinderReference ?? null,
     occurredAt: row.occurredAt,
     handledByUserId: row.handledByUserId as UserId,
+    recordedByUserId: row.recordedByUserId as UserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapPartUsage(row: typeof frigoraPartUsages.$inferSelect): FrigoraPartUsage {
+  return {
+    id: row.id as FrigoraPartUsageId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    visitId: row.visitId as FrigoraVisitId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    assetId: (row.assetId as FrigoraAssetId | null) ?? null,
+    partDescription: row.partDescription,
+    quantity: row.quantity,
+    quantityUnit: row.quantityUnit as FrigoraPartUsageUnit,
+    notes: row.notes ?? null,
+    usedAt: row.usedAt,
+    usedByUserId: row.usedByUserId as UserId,
     recordedByUserId: row.recordedByUserId as UserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

@@ -9,14 +9,15 @@ import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistenc
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
-import type { FrigoraRefrigerantEvent, FrigoraScope } from "./types";
+import type { FrigoraPartUsage, FrigoraPartUsageUnit, FrigoraScope } from "./types";
+import { FRIGORA_PART_USAGE_UNITS } from "./types";
 
 const NOW = "2026-08-28T00:00:00.000Z";
 const ARRIVED = "2026-08-28T10:00:00.000Z";
-const OCCURRED = "2026-08-28T10:30:00.000Z";
+const USED = "2026-08-28T10:30:00.000Z";
 const DEPARTED = "2026-08-28T11:00:00.000Z";
-const EARLY_OCCURRED = "2026-08-28T09:00:00.000Z";
-const LATE_OCCURRED = "2026-08-28T12:00:00.000Z";
+const EARLY_USED = "2026-08-28T09:00:00.000Z";
+const LATE_USED = "2026-08-28T12:00:00.000Z";
 
 beforeEach(async () => {
   await resetPersistenceLifecycle();
@@ -185,213 +186,215 @@ async function addMember(workspaceId: WorkspaceId, userId: UserId) {
 
 function recordInput(
   overrides: Partial<{
-    refrigerantType: string;
-    eventKind: "added" | "recovered" | "removed";
-    quantityKg: number;
-    reason: string | null;
-    cylinderReference: string | null;
-    occurredAt: string;
-    handledByUserId: UserId;
+    partDescription: string;
+    quantity: number;
+    quantityUnit: FrigoraPartUsageUnit;
+    notes: string | null;
+    usedAt: string;
+    usedByUserId: UserId;
     recordedByUserId: UserId;
     assetId: string | null;
   }> = {},
 ) {
   return {
-    refrigerantType: overrides.refrigerantType ?? "R404A",
-    eventKind: overrides.eventKind ?? "added",
-    quantityKg: overrides.quantityKg ?? 2,
-    reason: overrides.reason,
-    cylinderReference: overrides.cylinderReference,
-    occurredAt: overrides.occurredAt ?? OCCURRED,
-    handledByUserId: overrides.handledByUserId ?? ("user-attendee" as UserId),
+    partDescription: overrides.partDescription ?? "Valve core",
+    quantity: overrides.quantity ?? 1,
+    quantityUnit: overrides.quantityUnit ?? "each",
+    notes: overrides.notes,
+    usedAt: overrides.usedAt ?? USED,
+    usedByUserId: overrides.usedByUserId ?? ("user-attendee" as UserId),
     recordedByUserId: overrides.recordedByUserId ?? ("user-attendee" as UserId),
     assetId: overrides.assetId,
   };
 }
 
-function assertNoForbiddenSemantics(record: FrigoraRefrigerantEvent) {
-  assert.equal("quantityUnit" in record, false);
-  assert.equal("leakQuantity" in record, false);
-  assert.equal("leakRate" in record, false);
-  assert.equal("leakMass" in record, false);
-  assert.equal("inferredLeak" in record, false);
-  assert.equal("inventoryTransactionId" in record, false);
-  assert.equal("cylinderId" in record, false);
-  assert.equal("stockLocationId" in record, false);
+function assertNoForbiddenSemantics(record: FrigoraPartUsage) {
+  assert.equal("sku" in record, false);
+  assert.equal("catalogueId" in record, false);
+  assert.equal("inventoryItemId" in record, false);
+  assert.equal("stockTransactionId" in record, false);
+  assert.equal("unitCost" in record, false);
+  assert.equal("price" in record, false);
+  assert.equal("supplierId" in record, false);
+  assert.equal("serialNumber" in record, false);
   assert.equal("evidence" in record, false);
   assert.equal("evidenceId" in record, false);
-  assert.equal("priority" in record, false);
-  assert.equal("status" in record, false);
-  assert.equal("description" in record, false);
-  assert.equal("recommendedAction" in record, false);
+  assert.equal("correctiveActionId" in record, false);
+  assert.equal("leakQuantity" in record, false);
+  assert.equal("quantityKg" in record, false);
+  assert.equal("warehouseId" in record, false);
+  assert.equal("stockLocationId" in record, false);
+  assert.equal("invoiceLineId" in record, false);
 }
 
-describe("Frigora Refrigerant event", () => {
-  it("records valid added, recovered, and removed events with tenant fields and derived workOrderId", async () => {
+describe("Frigora Part usage", () => {
+  it("records valid part usage with tenant fields and derived workOrderId", async () => {
     const owner = await seed();
-    const handlerId = "user-handler" as UserId;
+    const usedById = "user-used-by" as UserId;
     const recorderId = "user-recorder" as UserId;
-    await addMember(owner.workspaceId, handlerId);
+    await addMember(owner.workspaceId, usedById);
     await addMember(owner.workspaceId, recorderId);
-    const { visit } = await seedOpenVisit(owner.service, owner.scope, handlerId);
+    const { visit } = await seedOpenVisit(owner.service, owner.scope, usedById);
 
-    const added = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
-      refrigerantType: "R404A",
-      eventKind: "added",
-      quantityKg: 2,
-      occurredAt: OCCURRED,
-      handledByUserId: handlerId,
+    const usage = await owner.service.recordPartUsage(owner.scope, visit.id, {
+      partDescription: "Schrader valve core",
+      quantity: 2,
+      quantityUnit: "each",
+      usedAt: USED,
+      usedByUserId: usedById,
       recordedByUserId: recorderId,
-      reason: "Charge adjusted after valve-core replacement.",
-      cylinderReference: "CYL-8842",
+      notes: "Replaced during valve service.",
     });
-    assert.equal(added.eventKind, "added");
-    assert.equal(added.quantityKg, 2);
-    assert.equal(added.refrigerantType, "R404A");
-    assert.equal(added.visitId, visit.id);
-    assert.equal(added.workOrderId, visit.workOrderId);
-    assert.equal(added.handledByUserId, handlerId);
-    assert.equal(added.recordedByUserId, recorderId);
-    assert.equal(added.reason, "Charge adjusted after valve-core replacement.");
-    assert.equal(added.cylinderReference, "CYL-8842");
-    assertNoForbiddenSemantics(added);
+    assert.equal(usage.partDescription, "Schrader valve core");
+    assert.equal(usage.quantity, 2);
+    assert.equal(usage.quantityUnit, "each");
+    assert.equal(usage.visitId, visit.id);
+    assert.equal(usage.workOrderId, visit.workOrderId);
+    assert.equal(usage.usedByUserId, usedById);
+    assert.equal(usage.recordedByUserId, recorderId);
+    assert.equal(usage.notes, "Replaced during valve service.");
+    assert.equal(usage.createdAt, usage.updatedAt);
+    assertNoForbiddenSemantics(usage);
 
-    const recovered = await owner.service.recordRefrigerantEvent(
-      owner.scope,
-      visit.id,
-      recordInput({
-        eventKind: "recovered",
-        quantityKg: 1.5,
-        occurredAt: "2026-08-28T10:35:00.000Z",
-        handledByUserId: handlerId,
-        recordedByUserId: recorderId,
-      }),
-    );
-    assert.equal(recovered.eventKind, "recovered");
-
-    const removed = await owner.service.recordRefrigerantEvent(
-      owner.scope,
-      visit.id,
-      recordInput({
-        eventKind: "removed",
-        quantityKg: 0.5,
-        occurredAt: "2026-08-28T10:40:00.000Z",
-        handledByUserId: handlerId,
-        recordedByUserId: recorderId,
-      }),
-    );
-    assert.equal(removed.eventKind, "removed");
-
-    const loaded = await owner.service.getRefrigerantEvent(owner.scope, added.id);
-    assert.equal(loaded?.id, added.id);
+    const loaded = await owner.service.getPartUsage(owner.scope, usage.id);
+    assert.equal(loaded?.id, usage.id);
   });
 
-  it("rejects unsupported event kinds including transferred", async () => {
-    const owner = await seed();
-    const attendeeId = "user-attendee" as UserId;
-    await addMember(owner.workspaceId, attendeeId);
-    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
-    await expectCode(
-      () =>
-        owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
-          ...recordInput(),
-          eventKind: "transferred" as "added",
-        }),
-      "invalid_kind",
-    );
-    await expectCode(
-      () =>
-        owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
-          ...recordInput(),
-          eventKind: "leaked" as "added",
-        }),
-      "invalid_kind",
-    );
-  });
-
-  it("validates quantityKg as positive finite kilograms without quantityUnit", async () => {
-    const owner = await seed();
-    const attendeeId = "user-attendee" as UserId;
-    await addMember(owner.workspaceId, attendeeId);
-    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
-
-    const halfKg = await owner.service.recordRefrigerantEvent(
-      owner.scope,
-      visit.id,
-      recordInput({ quantityKg: 0.5 }),
-    );
-    assert.equal(halfKg.quantityKg, 0.5);
-    assert.equal("quantityUnit" in halfKg, false);
-
-    for (const quantityKg of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-      await expectCode(
-        () => owner.service.recordRefrigerantEvent(owner.scope, visit.id, recordInput({ quantityKg })),
-        "invalid_input",
-      );
-    }
-  });
-
-  it("requires trimmed refrigerantType and accepts optional reason and cylinderReference", async () => {
-    const owner = await seed();
-    const attendeeId = "user-attendee" as UserId;
-    await addMember(owner.workspaceId, attendeeId);
-    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
-
-    await expectCode(
-      () =>
-        owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
-          ...recordInput(),
-          refrigerantType: "   ",
-        }),
-      "invalid_input",
-    );
-
-    const trimmed = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
-      ...recordInput(),
-      refrigerantType: "  R404A  ",
-    });
-    assert.equal(trimmed.refrigerantType, "R404A");
-
-    const minimal = await owner.service.recordRefrigerantEvent(
-      owner.scope,
-      visit.id,
-      recordInput({ reason: undefined, cylinderReference: undefined, occurredAt: "2026-08-28T10:32:00.000Z" }),
-    );
-    assert.equal(minimal.reason, null);
-    assert.equal(minimal.cylinderReference, null);
-  });
-
-  it("allows multiple events per visit and orders by occurredAt then id", async () => {
+  it("allows multiple part usages per visit and orders by usedAt then id", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
     const { workOrder, asset, visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
 
-    const first = await owner.service.recordRefrigerantEvent(
+    const first = await owner.service.recordPartUsage(
       owner.scope,
       visit.id,
-      recordInput({ occurredAt: "2026-08-28T10:15:00.000Z", quantityKg: 1 }),
+      recordInput({ usedAt: "2026-08-28T10:15:00.000Z", quantity: 1 }),
     );
-    const second = await owner.service.recordRefrigerantEvent(
+    const second = await owner.service.recordPartUsage(
       owner.scope,
       visit.id,
-      recordInput({ occurredAt: "2026-08-28T10:45:00.000Z", quantityKg: 2, assetId: asset.id }),
+      recordInput({
+        usedAt: "2026-08-28T10:45:00.000Z",
+        quantity: 2,
+        quantityUnit: "metre",
+        partDescription: "Copper tube",
+        assetId: asset.id,
+      }),
     );
-    const listed = await owner.service.listRefrigerantEventsByVisit(owner.scope, visit.id);
+    const listed = await owner.service.listPartUsagesByVisit(owner.scope, visit.id);
     assert.equal(listed.length, 2);
-    assert.deepEqual(listed.map((event) => event.id), [first.id, second.id]);
     assert.deepEqual(
-      (await owner.service.listRefrigerantEventsByWorkOrder(owner.scope, workOrder.id)).map(
-        (event) => event.id,
+      listed.map((row) => row.id),
+      [first.id, second.id],
+    );
+    assert.deepEqual(
+      (await owner.service.listPartUsagesByWorkOrder(owner.scope, workOrder.id)).map(
+        (row) => row.id,
       ),
       [first.id, second.id],
     );
     assert.deepEqual(
-      (await owner.service.listRefrigerantEventsByAsset(owner.scope, asset.id)).map(
-        (event) => event.id,
-      ),
+      (await owner.service.listPartUsagesByAsset(owner.scope, asset.id)).map((row) => row.id),
       [second.id],
     );
+  });
+
+  it("accepts all five quantity units and rejects unsupported units", async () => {
+    const owner = await seed();
+    const attendeeId = "user-attendee" as UserId;
+    await addMember(owner.workspaceId, attendeeId);
+    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+
+    let minute = 15;
+    for (const quantityUnit of FRIGORA_PART_USAGE_UNITS) {
+      const row = await owner.service.recordPartUsage(
+        owner.scope,
+        visit.id,
+        recordInput({
+          quantityUnit,
+          usedAt: `2026-08-28T10:${String(minute).padStart(2, "0")}:00.000Z`,
+          partDescription: `Unit ${quantityUnit}`,
+        }),
+      );
+      assert.equal(row.quantityUnit, quantityUnit);
+      minute += 1;
+    }
+
+    await expectCode(
+      () =>
+        owner.service.recordPartUsage(owner.scope, visit.id, {
+          ...recordInput(),
+          quantityUnit: "box" as "each",
+        }),
+      "invalid_kind",
+    );
+  });
+
+  it("requires trimmed partDescription and accepts optional notes", async () => {
+    const owner = await seed();
+    const attendeeId = "user-attendee" as UserId;
+    await addMember(owner.workspaceId, attendeeId);
+    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+
+    await expectCode(
+      () =>
+        owner.service.recordPartUsage(owner.scope, visit.id, {
+          ...recordInput(),
+          partDescription: "   ",
+        }),
+      "invalid_input",
+    );
+    await expectCode(
+      () =>
+        owner.service.recordPartUsage(owner.scope, visit.id, {
+          ...recordInput(),
+          partDescription: "",
+        }),
+      "invalid_input",
+    );
+
+    const trimmed = await owner.service.recordPartUsage(owner.scope, visit.id, {
+      ...recordInput(),
+      partDescription: "  Filter drier  ",
+    });
+    assert.equal(trimmed.partDescription, "Filter drier");
+
+    const withNotes = await owner.service.recordPartUsage(owner.scope, visit.id, {
+      ...recordInput({
+        notes: "  Used during leak repair  ",
+        usedAt: "2026-08-28T10:32:00.000Z",
+      }),
+    });
+    assert.equal(withNotes.notes, "Used during leak repair");
+
+    const minimal = await owner.service.recordPartUsage(
+      owner.scope,
+      visit.id,
+      recordInput({ notes: undefined, usedAt: "2026-08-28T10:33:00.000Z" }),
+    );
+    assert.equal(minimal.notes, null);
+  });
+
+  it("validates quantity as positive finite including fractional values", async () => {
+    const owner = await seed();
+    const attendeeId = "user-attendee" as UserId;
+    await addMember(owner.workspaceId, attendeeId);
+    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+
+    const half = await owner.service.recordPartUsage(
+      owner.scope,
+      visit.id,
+      recordInput({ quantity: 0.5, quantityUnit: "litre" }),
+    );
+    assert.equal(half.quantity, 0.5);
+
+    for (const quantity of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expectCode(
+        () => owner.service.recordPartUsage(owner.scope, visit.id, recordInput({ quantity })),
+        "invalid_input",
+      );
+    }
   });
 
   it("accepts optional asset and null asset; rejects wrong-site and cross-venture assets", async () => {
@@ -403,15 +406,15 @@ describe("Frigora Refrigerant event", () => {
       userId: attendeeId,
       arrivedAt: ARRIVED,
     });
-    const withAsset = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+    const withAsset = await owner.service.recordPartUsage(owner.scope, visit.id, {
       ...recordInput(),
       assetId: asset.id,
     });
     assert.equal(withAsset.assetId, asset.id);
-    const nullAsset = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+    const nullAsset = await owner.service.recordPartUsage(owner.scope, visit.id, {
       ...recordInput(),
       assetId: null,
-      occurredAt: "2026-08-28T10:31:00.000Z",
+      usedAt: "2026-08-28T10:31:00.000Z",
     });
     assert.equal(nullAsset.assetId, null);
 
@@ -426,7 +429,7 @@ describe("Frigora Refrigerant event", () => {
     });
     await expectCode(
       () =>
-        owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+        owner.service.recordPartUsage(owner.scope, visit.id, {
           ...recordInput(),
           assetId: foreignAsset.id,
         }),
@@ -454,7 +457,7 @@ describe("Frigora Refrigerant event", () => {
     });
     await expectCode(
       () =>
-        owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+        owner.service.recordPartUsage(owner.scope, visit.id, {
           ...recordInput(),
           assetId: otherAsset.id,
         }),
@@ -462,14 +465,14 @@ describe("Frigora Refrigerant event", () => {
     );
   });
 
-  it("requires workspace members for handler and recorder with flexible provenance", async () => {
+  it("requires workspace members for usedBy and recordedBy with flexible provenance", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
-    const handlerId = "user-handler" as UserId;
+    const usedById = "user-used-by" as UserId;
     const recorderId = "user-recorder" as UserId;
     const assigneeId = "user-assignee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
-    await addMember(owner.workspaceId, handlerId);
+    await addMember(owner.workspaceId, usedById);
     await addMember(owner.workspaceId, recorderId);
     await addMember(owner.workspaceId, assigneeId);
     const { workOrder, visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
@@ -477,40 +480,40 @@ describe("Frigora Refrigerant event", () => {
 
     await expectCode(
       () =>
-        owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+        owner.service.recordPartUsage(owner.scope, visit.id, {
           ...recordInput(),
-          handledByUserId: "user-outsider",
+          usedByUserId: "user-outsider",
         }),
       "not_found",
     );
     await expectCode(
       () =>
-        owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+        owner.service.recordPartUsage(owner.scope, visit.id, {
           ...recordInput(),
           recordedByUserId: "user-outsider",
         }),
       "not_found",
     );
 
-    const same = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+    const same = await owner.service.recordPartUsage(owner.scope, visit.id, {
       ...recordInput(),
-      handledByUserId: attendeeId,
+      usedByUserId: attendeeId,
       recordedByUserId: attendeeId,
     });
-    assert.equal(same.handledByUserId, same.recordedByUserId);
+    assert.equal(same.usedByUserId, same.recordedByUserId);
 
-    const different = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+    const different = await owner.service.recordPartUsage(owner.scope, visit.id, {
       ...recordInput(),
-      handledByUserId: handlerId,
+      usedByUserId: usedById,
       recordedByUserId: recorderId,
-      occurredAt: "2026-08-28T10:33:00.000Z",
+      usedAt: "2026-08-28T10:33:00.000Z",
     });
-    assert.notEqual(different.handledByUserId, different.recordedByUserId);
-    assert.notEqual(different.handledByUserId, attendeeId);
-    assert.notEqual(different.handledByUserId, assigneeId);
+    assert.notEqual(different.usedByUserId, different.recordedByUserId);
+    assert.notEqual(different.usedByUserId, attendeeId);
+    assert.notEqual(different.usedByUserId, assigneeId);
   });
 
-  it("enforces occurredAt within visit attendance and rejects cancelled visits", async () => {
+  it("enforces usedAt within visit attendance and rejects cancelled visits", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -518,32 +521,39 @@ describe("Frigora Refrigerant event", () => {
 
     await expectCode(
       () =>
-        owner.service.recordRefrigerantEvent(
+        owner.service.recordPartUsage(
           owner.scope,
           visit.id,
-          recordInput({ occurredAt: EARLY_OCCURRED }),
+          recordInput({ usedAt: EARLY_USED }),
         ),
       "invalid_input",
     );
+
+    const openOk = await owner.service.recordPartUsage(
+      owner.scope,
+      visit.id,
+      recordInput({ usedAt: USED }),
+    );
+    assert.equal(openOk.usedAt, USED);
 
     const departed = await owner.service.recordVisitDeparture(owner.scope, visit.id, {
       departedAt: DEPARTED,
     });
     await expectCode(
       () =>
-        owner.service.recordRefrigerantEvent(
+        owner.service.recordPartUsage(
           owner.scope,
           departed.id,
-          recordInput({ occurredAt: LATE_OCCURRED }),
+          recordInput({ usedAt: LATE_USED }),
         ),
       "invalid_input",
     );
-    const delayed = await owner.service.recordRefrigerantEvent(
+    const delayed = await owner.service.recordPartUsage(
       owner.scope,
       departed.id,
-      recordInput({ occurredAt: OCCURRED }),
+      recordInput({ usedAt: "2026-08-28T10:40:00.000Z", partDescription: "Delayed core" }),
     );
-    assert.equal(delayed.occurredAt, OCCURRED);
+    assert.equal(delayed.usedAt, "2026-08-28T10:40:00.000Z");
 
     const owner2 = await seed({
       reset: false,
@@ -551,40 +561,36 @@ describe("Frigora Refrigerant event", () => {
       userId: owner.userId,
     });
     const { visit: visit2 } = await seedOpenVisit(owner2.service, owner2.scope, attendeeId);
-    const recorded = await owner2.service.recordRefrigerantEvent(
-      owner2.scope,
-      visit2.id,
-      recordInput(),
-    );
+    const recorded = await owner2.service.recordPartUsage(owner2.scope, visit2.id, recordInput());
     await owner2.service.cancelVisit(owner2.scope, visit2.id);
     await expectCode(
-      () => owner2.service.recordRefrigerantEvent(owner2.scope, visit2.id, recordInput()),
+      () => owner2.service.recordPartUsage(owner2.scope, visit2.id, recordInput()),
       "invalid_status",
     );
-    const persisted = await owner2.service.getRefrigerantEvent(owner2.scope, recorded.id);
+    const persisted = await owner2.service.getPartUsage(owner2.scope, recorded.id);
     assert.equal(persisted?.id, recorded.id);
   });
 
-  it("preserves events after work order close or cancel and allows delayed entry", async () => {
+  it("preserves usages after work order close or cancel and allows delayed entry", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
     const { workOrder, visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
 
-    const beforeClose = await owner.service.recordRefrigerantEvent(
+    const beforeClose = await owner.service.recordPartUsage(
       owner.scope,
       visit.id,
-      recordInput({ quantityKg: 1 }),
+      recordInput({ quantity: 1 }),
     );
     await owner.service.closeWorkOrder(owner.scope, workOrder.id);
-    const afterClose = await owner.service.recordRefrigerantEvent(
+    const afterClose = await owner.service.recordPartUsage(
       owner.scope,
       visit.id,
-      recordInput({ quantityKg: 2, occurredAt: "2026-08-28T10:34:00.000Z" }),
+      recordInput({ quantity: 2, usedAt: "2026-08-28T10:34:00.000Z" }),
     );
     assert.equal(afterClose.workOrderId, workOrder.id);
     assert.equal(
-      (await owner.service.getRefrigerantEvent(owner.scope, beforeClose.id))?.id,
+      (await owner.service.getPartUsage(owner.scope, beforeClose.id))?.id,
       beforeClose.id,
     );
 
@@ -598,25 +604,25 @@ describe("Frigora Refrigerant event", () => {
       owner2.scope,
       attendeeId,
     );
-    const beforeCancel = await owner2.service.recordRefrigerantEvent(
+    const beforeCancel = await owner2.service.recordPartUsage(
       owner2.scope,
       visit2.id,
       recordInput(),
     );
     await owner2.service.cancelWorkOrder(owner2.scope, wo2.id);
-    const afterCancel = await owner2.service.recordRefrigerantEvent(
+    const afterCancel = await owner2.service.recordPartUsage(
       owner2.scope,
       visit2.id,
-      recordInput({ occurredAt: "2026-08-28T10:36:00.000Z", quantityKg: 3 }),
+      recordInput({ usedAt: "2026-08-28T10:36:00.000Z", quantity: 3 }),
     );
     assert.equal(afterCancel.workOrderId, wo2.id);
     assert.equal(
-      (await owner2.service.getRefrigerantEvent(owner2.scope, beforeCancel.id))?.id,
+      (await owner2.service.getPartUsage(owner2.scope, beforeCancel.id))?.id,
       beforeCancel.id,
     );
   });
 
-  it("does not mutate asset configuration, visit, work order, or other visit facts", async () => {
+  it("does not mutate asset, visit, work order, or sibling visit facts", async () => {
     const owner = await seed();
     const assigneeId = "user-assignee" as UserId;
     const attendeeId = "user-attendee" as UserId;
@@ -632,37 +638,45 @@ describe("Frigora Refrigerant event", () => {
       captureCode: "temperature",
       valueNumeric: -8,
       valueUnit: "celsius",
-      observedAt: OCCURRED,
+      observedAt: USED,
       userId: attendeeId,
     });
     const finding = await owner.service.recordTechnicalFinding(owner.scope, visit.id, {
       findingKind: "confirmed_fault",
       description: "service-valve leak",
-      assertedAt: OCCURRED,
+      assertedAt: USED,
       userId: attendeeId,
     });
     const action = await owner.service.recordCorrectiveAction(owner.scope, visit.id, {
       description: "Replaced valve core",
-      performedAt: OCCURRED,
+      performedAt: USED,
       performedByUserId: attendeeId,
       recordedByUserId: recorderId,
     });
     const outcome = await owner.service.recordVisitOutcome(owner.scope, visit.id, {
       description: "Cooling restored",
-      outcomeAt: OCCURRED,
+      outcomeAt: USED,
       recordedByUserId: recorderId,
     });
     const recommendation = await owner.service.recordRecommendedAction(owner.scope, visit.id, {
       description: "Return for pressure test follow-up",
-      recommendedAt: OCCURRED,
+      recommendedAt: USED,
       recommendedByUserId: attendeeId,
       recordedByUserId: recorderId,
     });
+    const refrigerant = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+      refrigerantType: "R404A",
+      eventKind: "added",
+      quantityKg: 2,
+      occurredAt: USED,
+      handledByUserId: attendeeId,
+      recordedByUserId: recorderId,
+    });
 
-    await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+    await owner.service.recordPartUsage(owner.scope, visit.id, {
       ...recordInput(),
       assetId: asset.id,
-      reason: "Charge adjusted after valve-core replacement.",
+      notes: "Valve core used during corrective work.",
     });
 
     const loadedAsset = await owner.service.getAsset(owner.scope, asset.id);
@@ -690,78 +704,67 @@ describe("Frigora Refrigerant event", () => {
       (await owner.service.getRecommendedAction(owner.scope, recommendation.id))?.description,
       "Return for pressure test follow-up",
     );
-  });
-
-  it("preserves refrigerant added ≠ refrigerant leaked semantics", async () => {
-    const owner = await seed();
-    const attendeeId = "user-attendee" as UserId;
-    await addMember(owner.workspaceId, attendeeId);
-    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
-
-    const added = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
-      refrigerantType: "R404A",
-      eventKind: "added",
-      quantityKg: 2,
-      reason: "Possible leak noted on finding; 2 kg added to restore charge.",
-      occurredAt: OCCURRED,
-      handledByUserId: attendeeId,
-      recordedByUserId: attendeeId,
-    });
-    assert.equal(added.eventKind, "added");
-    assert.equal(added.quantityKg, 2);
-    assertNoForbiddenSemantics(added);
-    assert.match(added.reason ?? "", /Possible leak/);
-  });
-
-  it("does not require corrective action, visit outcome, or recommended action prerequisites", async () => {
-    const owner = await seed();
-    const attendeeId = "user-attendee" as UserId;
-    await addMember(owner.workspaceId, attendeeId);
-    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
-
-    const beforeOthers = await owner.service.recordRefrigerantEvent(
-      owner.scope,
-      visit.id,
-      recordInput(),
+    assert.equal(
+      (await owner.service.getRefrigerantEvent(owner.scope, refrigerant.id))?.quantityKg,
+      2,
     );
+  });
+
+  it("does not require corrective action, refrigerant event, outcome, or recommended action", async () => {
+    const owner = await seed();
+    const attendeeId = "user-attendee" as UserId;
+    await addMember(owner.workspaceId, attendeeId);
+    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+
+    const beforeOthers = await owner.service.recordPartUsage(owner.scope, visit.id, recordInput());
     await owner.service.recordCorrectiveAction(owner.scope, visit.id, {
       description: "Replaced valve core",
-      performedAt: OCCURRED,
+      performedAt: USED,
       performedByUserId: attendeeId,
+      recordedByUserId: attendeeId,
+    });
+    await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+      refrigerantType: "R404A",
+      eventKind: "added",
+      quantityKg: 1,
+      occurredAt: USED,
+      handledByUserId: attendeeId,
       recordedByUserId: attendeeId,
     });
     await owner.service.recordVisitOutcome(owner.scope, visit.id, {
       description: "Cooling restored",
-      outcomeAt: OCCURRED,
+      outcomeAt: USED,
       recordedByUserId: attendeeId,
     });
     await owner.service.recordRecommendedAction(owner.scope, visit.id, {
       description: "Schedule follow-up",
-      recommendedAt: OCCURRED,
+      recommendedAt: USED,
       recommendedByUserId: attendeeId,
       recordedByUserId: attendeeId,
     });
-    const afterOthers = await owner.service.recordRefrigerantEvent(
+    const afterOthers = await owner.service.recordPartUsage(
       owner.scope,
       visit.id,
-      recordInput({ occurredAt: "2026-08-28T10:37:00.000Z", eventKind: "recovered", quantityKg: 1 }),
+      recordInput({ usedAt: "2026-08-28T10:37:00.000Z", quantity: 2 }),
     );
     assert.notEqual(beforeOthers.id, afterOthers.id);
   });
 
-  it("does not create platform recommendations or workforce actions", async () => {
+  it("exposes append-only surface without update/delete and avoids platform side effects", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
     const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
     const before = (await getPersistence().recommendations.listForWorkspace(owner.workspaceId))
       .length;
-    await owner.service.recordRefrigerantEvent(owner.scope, visit.id, recordInput());
+    await owner.service.recordPartUsage(owner.scope, visit.id, recordInput());
     const after = (await getPersistence().recommendations.listForWorkspace(owner.workspaceId))
       .length;
     assert.equal(after, before);
-    assert.equal("listAssetHistory" in owner.service, false);
-    assert.equal("listServiceHistory" in owner.service, false);
+    assert.equal("updatePartUsage" in owner.service, false);
+    assert.equal("deletePartUsage" in owner.service, false);
+    assert.equal("editPartUsage" in owner.service, false);
+    assert.equal("reversePartUsage" in owner.service, false);
     assert.equal("recordProposedAction" in owner.service, false);
   });
 
@@ -770,7 +773,7 @@ describe("Frigora Refrigerant event", () => {
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
     const { workOrder, asset, visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
-    const event = await owner.service.recordRefrigerantEvent(
+    const usage = await owner.service.recordPartUsage(
       owner.scope,
       visit.id,
       recordInput({ assetId: asset.id }),
@@ -785,13 +788,13 @@ describe("Frigora Refrigerant event", () => {
       }),
     );
     const otherScope = { ...owner.scope, ventureId: otherVenture };
-    assert.equal(await owner.service.getRefrigerantEvent(otherScope, event.id), null);
-    assert.deepEqual(await owner.service.listRefrigerantEventsByVisit(otherScope, visit.id), []);
+    assert.equal(await owner.service.getPartUsage(otherScope, usage.id), null);
+    assert.deepEqual(await owner.service.listPartUsagesByVisit(otherScope, visit.id), []);
     assert.deepEqual(
-      await owner.service.listRefrigerantEventsByWorkOrder(otherScope, workOrder.id),
+      await owner.service.listPartUsagesByWorkOrder(otherScope, workOrder.id),
       [],
     );
-    assert.deepEqual(await owner.service.listRefrigerantEventsByAsset(otherScope, asset.id), []);
+    assert.deepEqual(await owner.service.listPartUsagesByAsset(otherScope, asset.id), []);
 
     const otherWorkspace = "ws-other" as WorkspaceId;
     await getPersistence().organisations.insert({
@@ -811,27 +814,13 @@ describe("Frigora Refrigerant event", () => {
       workspaceId: otherWorkspace,
       ventureId: owner.ventureId,
     };
-    assert.equal(await owner.service.getRefrigerantEvent(crossWorkspaceScope, event.id), null);
+    assert.equal(await owner.service.getPartUsage(crossWorkspaceScope, usage.id), null);
 
     const { scope, service } = await seed({ definitionId: "ventureos.company" });
     await expectCode(
-      () => service.recordRefrigerantEvent(scope, visit.id, recordInput()),
+      () => service.recordPartUsage(scope, visit.id, recordInput()),
       "not_frigora",
     );
-  });
-
-  it("supports persisted Frigora 0.10.0 instance for prior capabilities", async () => {
-    const owner = await seed({ definitionVersion: "0.10.0" });
-    const attendeeId = "user-attendee" as UserId;
-    await addMember(owner.workspaceId, attendeeId);
-    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
-    const recommendation = await owner.service.recordRecommendedAction(owner.scope, visit.id, {
-      description: "Replace liquid-line drier",
-      recommendedAt: OCCURRED,
-      recommendedByUserId: attendeeId,
-      recordedByUserId: attendeeId,
-    });
-    assert.equal(recommendation.description, "Replace liquid-line drier");
   });
 
   it("supports persisted Frigora 0.11.0 instance for prior capabilities", async () => {
@@ -839,16 +828,26 @@ describe("Frigora Refrigerant event", () => {
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
     const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
-    const event = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, recordInput());
+    const event = await owner.service.recordRefrigerantEvent(owner.scope, visit.id, {
+      refrigerantType: "R404A",
+      eventKind: "added",
+      quantityKg: 1,
+      occurredAt: USED,
+      handledByUserId: attendeeId,
+      recordedByUserId: attendeeId,
+    });
     assert.equal(event.eventKind, "added");
   });
 
-  it("resolves frigora@0.12.0 from catalog with refrigerant event admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.12.0");
-    assert.match(platformVentureRegistry.resolve("frigora").description, /refrigerant events/);
-    assert.match(platformVentureRegistry.resolve("frigora").description, /part usages/);
-    assert.match(platformVentureRegistry.resolve("frigora").description, /parts catalogue/);
-    assert.match(platformVentureRegistry.resolve("frigora").description, /cylinder inventory/);
-    assert.match(platformVentureRegistry.resolve("frigora").description, /employee agents/);
+  it("resolves frigora@0.12.0 from catalog with part usage admission and retained exclusions", () => {
+    const frigora = platformVentureRegistry.resolve("frigora");
+    assert.equal(frigora.version, "0.12.0");
+    assert.match(frigora.description, /part usages/);
+    assert.match(frigora.description, /refrigerant events/);
+    assert.match(frigora.description, /parts catalogue/);
+    assert.match(frigora.description, /inventory/);
+    assert.match(frigora.description, /cylinder inventory/);
+    assert.match(frigora.description, /evidence/);
+    assert.match(frigora.description, /employee agents/);
   });
 });

@@ -42,6 +42,9 @@ import type {
   FrigoraRefrigerantEvent,
   FrigoraRefrigerantEventId,
   RecordRefrigerantEventInput,
+  FrigoraPartUsage,
+  FrigoraPartUsageId,
+  RecordPartUsageInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -62,6 +65,7 @@ import {
   recordVisitOutcomeSchema,
   recordRecommendedActionSchema,
   recordRefrigerantEventSchema,
+  recordPartUsageSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -281,6 +285,27 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraRefrigerantEvent[]>;
+  recordPartUsage(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: RecordPartUsageInput,
+  ): Promise<FrigoraPartUsage>;
+  getPartUsage(
+    scope: FrigoraScope,
+    id: FrigoraPartUsageId,
+  ): Promise<FrigoraPartUsage | null>;
+  listPartUsagesByVisit(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraPartUsage[]>;
+  listPartUsagesByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraPartUsage[]>;
+  listPartUsagesByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraPartUsage[]>;
 };
 
 export function createFrigoraService(options: {
@@ -1386,6 +1411,88 @@ export function createFrigoraService(options: {
       }
       return store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
+    async recordPartUsage(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsPartUsage(visit);
+      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const parsed = parseWithFrigora(recordPartUsageSchema, input);
+      assertUsedAtWithinVisit(visit, parsed.usedAt);
+      const usedByUserId = parsed.usedByUserId as UserId;
+      const recordedByUserId = parsed.recordedByUserId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, usedByUserId);
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const assetId = await resolveFieldCaptureAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+      const now = nowIso();
+      const row: FrigoraPartUsage = {
+        id: createId<FrigoraPartUsageId>(),
+        workspaceId: visit.workspaceId,
+        ventureId: visit.ventureId,
+        visitId: visit.id,
+        workOrderId: visit.workOrderId,
+        assetId,
+        partDescription: parsed.partDescription,
+        quantity: parsed.quantity,
+        quantityUnit: parsed.quantityUnit,
+        notes: parsed.notes ?? null,
+        usedAt: parsed.usedAt,
+        usedByUserId,
+        recordedByUserId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertPartUsage(row);
+      return row;
+    },
+    async getPartUsage(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findPartUsage(scope.workspaceId, scope.ventureId, id);
+    },
+    async listPartUsagesByVisit(scope, visitId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
+      if (!visit) {
+        return [];
+      }
+      return store.listPartUsagesByVisit(scope.workspaceId, scope.ventureId, visitId);
+    },
+    async listPartUsagesByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listPartUsagesByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
+    async listPartUsagesByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
   };
 }
 
@@ -1584,6 +1691,15 @@ function assertVisitAcceptsRefrigerantEvent(visit: FrigoraVisit) {
   }
 }
 
+function assertVisitAcceptsPartUsage(visit: FrigoraVisit) {
+  if (visit.status === "cancelled") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Part usages cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
 function assertObservedAtWithinVisit(visit: FrigoraVisit, observedAt: string) {
   const observedMs = Date.parse(observedAt);
   const arrivedMs = Date.parse(visit.arrivedAt);
@@ -1699,6 +1815,26 @@ function assertOccurredAtWithinVisit(visit: FrigoraVisit, occurredAt: string) {
       throw new FrigoraError(
         "invalid_input",
         "Occurrence time must not follow visit departure.",
+      );
+    }
+  }
+}
+
+function assertUsedAtWithinVisit(visit: FrigoraVisit, usedAt: string) {
+  const usedMs = Date.parse(usedAt);
+  const arrivedMs = Date.parse(visit.arrivedAt);
+  if (usedMs < arrivedMs) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Usage time must not precede visit arrival.",
+    );
+  }
+  if (visit.status === "departed" && visit.departedAt) {
+    const departedMs = Date.parse(visit.departedAt);
+    if (usedMs > departedMs) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Usage time must not follow visit departure.",
       );
     }
   }

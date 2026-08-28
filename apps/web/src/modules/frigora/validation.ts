@@ -3,6 +3,7 @@ import {
   FRIGORA_ASSET_KINDS,
   FRIGORA_FIELD_CAPTURE_CODES,
   FRIGORA_FIELD_CAPTURE_UNITS,
+  FRIGORA_PART_USAGE_UNITS,
   FRIGORA_REFRIGERANT_EVENT_KINDS,
   FRIGORA_WORK_KINDS,
 } from "./types";
@@ -375,6 +376,32 @@ export const recordRefrigerantEventSchema = z.object({
   assetId: patchAssetIdNullable,
 });
 
+const positiveQuantity = z.number().superRefine((value, ctx) => {
+  if (!Number.isFinite(value)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Quantity must be a finite number.",
+    });
+  }
+  if (value <= 0) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Quantity must be greater than zero.",
+    });
+  }
+});
+
+export const recordPartUsageSchema = z.object({
+  partDescription: requiredText,
+  quantity: positiveQuantity,
+  quantityUnit: z.enum(FRIGORA_PART_USAGE_UNITS),
+  notes: patchText.optional(),
+  usedAt: isoTimestamp,
+  usedByUserId: requiredText,
+  recordedByUserId: requiredText,
+  assetId: patchAssetIdNullable,
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });
@@ -403,6 +430,7 @@ export function parseWithFrigora<T>(
     issue?.path.includes("captureKind") ||
     issue?.path.includes("captureCode") ||
     issue?.path.includes("eventKind") ||
+    issue?.path.includes("quantityUnit") ||
     /Invalid option|Invalid enum/i.test(message)
   ) {
     if (issue?.path.includes("workKind")) {
@@ -416,6 +444,9 @@ export function parseWithFrigora<T>(
     }
     if (issue?.path.includes("eventKind")) {
       throw new FrigoraError("invalid_kind", "Refrigerant event kind is not allowed.");
+    }
+    if (issue?.path.includes("quantityUnit")) {
+      throw new FrigoraError("invalid_kind", "Part usage unit is not allowed.");
     }
     throw new FrigoraError("invalid_kind", "Asset kind is not allowed.");
   }
