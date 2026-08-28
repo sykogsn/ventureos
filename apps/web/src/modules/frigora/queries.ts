@@ -25,6 +25,8 @@ import type {
   FrigoraVisitOutcomeId,
   FrigoraRecommendedAction,
   FrigoraRecommendedActionId,
+  FrigoraRefrigerantEvent,
+  FrigoraRefrigerantEventId,
 } from "./types";
 import type { UserId } from "@/contracts";
 import { parseWithFrigora, scopeSchema } from "./validation";
@@ -368,5 +370,40 @@ export async function listRecommendedActionsByAssetQuery(
 ): Promise<FrigoraQueryResult<FrigoraRecommendedAction[]>> {
   return query(input, (scope) =>
     getFrigoraService().listRecommendedActionsByAsset(scope, input.assetId as FrigoraAssetId),
+  );
+}
+
+export async function getRefrigerantEventQuery(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraQueryResult<FrigoraRefrigerantEvent | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getRefrigerantEvent(scope, input.id as FrigoraRefrigerantEventId),
+  );
+}
+
+export async function listRefrigerantEventsByVisitQuery(
+  input: ScopedInput & { visitId: string },
+): Promise<FrigoraQueryResult<FrigoraRefrigerantEvent[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listRefrigerantEventsByVisit(scope, input.visitId as FrigoraVisitId),
+  );
+}
+
+export async function listRefrigerantEventsByWorkOrderQuery(
+  input: ScopedInput & { workOrderId: string },
+): Promise<FrigoraQueryResult<FrigoraRefrigerantEvent[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listRefrigerantEventsByWorkOrder(
+      scope,
+      input.workOrderId as FrigoraWorkOrderId,
+    ),
+  );
+}
+
+export async function listRefrigerantEventsByAssetQuery(
+  input: ScopedInput & { assetId: string },
+): Promise<FrigoraQueryResult<FrigoraRefrigerantEvent[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listRefrigerantEventsByAsset(scope, input.assetId as FrigoraAssetId),
   );
 }

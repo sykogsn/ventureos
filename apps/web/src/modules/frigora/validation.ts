@@ -3,6 +3,7 @@ import {
   FRIGORA_ASSET_KINDS,
   FRIGORA_FIELD_CAPTURE_CODES,
   FRIGORA_FIELD_CAPTURE_UNITS,
+  FRIGORA_REFRIGERANT_EVENT_KINDS,
   FRIGORA_WORK_KINDS,
 } from "./types";
 import { FrigoraError } from "./errors";
@@ -346,6 +347,34 @@ export const recordRecommendedActionSchema = z.object({
   assetId: patchAssetIdNullable,
 });
 
+// Refrigerant added ≠ refrigerant leaked. quantityKg records handling only, not leak inference.
+const positiveQuantityKg = z.number().superRefine((value, ctx) => {
+  if (!Number.isFinite(value)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Quantity must be a finite number.",
+    });
+  }
+  if (value <= 0) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Quantity must be greater than zero.",
+    });
+  }
+});
+
+export const recordRefrigerantEventSchema = z.object({
+  refrigerantType: requiredText,
+  eventKind: z.enum(FRIGORA_REFRIGERANT_EVENT_KINDS),
+  quantityKg: positiveQuantityKg,
+  reason: patchText.optional(),
+  cylinderReference: patchText.optional(),
+  occurredAt: isoTimestamp,
+  handledByUserId: requiredText,
+  recordedByUserId: requiredText,
+  assetId: patchAssetIdNullable,
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });
@@ -373,6 +402,7 @@ export function parseWithFrigora<T>(
     issue?.path.includes("workKind") ||
     issue?.path.includes("captureKind") ||
     issue?.path.includes("captureCode") ||
+    issue?.path.includes("eventKind") ||
     /Invalid option|Invalid enum/i.test(message)
   ) {
     if (issue?.path.includes("workKind")) {
@@ -383,6 +413,9 @@ export function parseWithFrigora<T>(
     }
     if (issue?.path.includes("captureCode")) {
       throw new FrigoraError("invalid_kind", "Field capture code is not allowed.");
+    }
+    if (issue?.path.includes("eventKind")) {
+      throw new FrigoraError("invalid_kind", "Refrigerant event kind is not allowed.");
     }
     throw new FrigoraError("invalid_kind", "Asset kind is not allowed.");
   }

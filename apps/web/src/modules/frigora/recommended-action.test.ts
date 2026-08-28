@@ -60,7 +60,7 @@ async function seed(options: {
       workspaceId,
       slug: `venture-${ventureId}`,
       definitionId: options.definitionId ?? "frigora",
-      definitionVersion: options.definitionVersion ?? "0.10.0",
+      definitionVersion: options.definitionVersion ?? "0.11.0",
     }),
   );
   return {
@@ -115,7 +115,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.10.0",
+    definitionVersion: "0.11.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -743,8 +743,22 @@ describe("Frigora Recommended action", () => {
     assert.equal(outcome.description, "Temporary operation was restored");
   });
 
-  it("resolves frigora@0.10.0 from catalog with recommended action admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.10.0");
+  it("supports persisted Frigora 0.10.0 instance for prior capabilities", async () => {
+    const owner = await seed({ definitionVersion: "0.10.0" });
+    const attendeeId = "user-attendee" as UserId;
+    await addMember(owner.workspaceId, attendeeId);
+    const { visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+    const recommendation = await owner.service.recordRecommendedAction(owner.scope, visit.id, {
+      description: "Return with lifting equipment",
+      recommendedAt: RECOMMENDED_AT,
+      recommendedByUserId: attendeeId,
+      recordedByUserId: attendeeId,
+    });
+    assert.equal(recommendation.description, "Return with lifting equipment");
+  });
+
+  it("resolves frigora@0.11.0 from catalog with recommended action admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.11.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /recommended actions/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /refrigerant events/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /employee agents/);

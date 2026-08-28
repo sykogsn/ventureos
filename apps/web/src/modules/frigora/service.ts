@@ -39,6 +39,9 @@ import type {
   FrigoraRecommendedAction,
   FrigoraRecommendedActionId,
   RecordRecommendedActionInput,
+  FrigoraRefrigerantEvent,
+  FrigoraRefrigerantEventId,
+  RecordRefrigerantEventInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -58,6 +61,7 @@ import {
   recordCorrectiveActionSchema,
   recordVisitOutcomeSchema,
   recordRecommendedActionSchema,
+  recordRefrigerantEventSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -256,6 +260,27 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraRecommendedAction[]>;
+  recordRefrigerantEvent(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: RecordRefrigerantEventInput,
+  ): Promise<FrigoraRefrigerantEvent>;
+  getRefrigerantEvent(
+    scope: FrigoraScope,
+    id: FrigoraRefrigerantEventId,
+  ): Promise<FrigoraRefrigerantEvent | null>;
+  listRefrigerantEventsByVisit(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraRefrigerantEvent[]>;
+  listRefrigerantEventsByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraRefrigerantEvent[]>;
+  listRefrigerantEventsByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraRefrigerantEvent[]>;
 };
 
 export function createFrigoraService(options: {
@@ -1278,6 +1303,89 @@ export function createFrigoraService(options: {
       }
       return store.listRecommendedActionsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
+    async recordRefrigerantEvent(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsRefrigerantEvent(visit);
+      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const parsed = parseWithFrigora(recordRefrigerantEventSchema, input);
+      assertOccurredAtWithinVisit(visit, parsed.occurredAt);
+      const handledByUserId = parsed.handledByUserId as UserId;
+      const recordedByUserId = parsed.recordedByUserId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, handledByUserId);
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const assetId = await resolveFieldCaptureAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+      const now = nowIso();
+      const row: FrigoraRefrigerantEvent = {
+        id: createId<FrigoraRefrigerantEventId>(),
+        workspaceId: visit.workspaceId,
+        ventureId: visit.ventureId,
+        visitId: visit.id,
+        workOrderId: visit.workOrderId,
+        assetId,
+        refrigerantType: parsed.refrigerantType,
+        eventKind: parsed.eventKind,
+        quantityKg: parsed.quantityKg,
+        reason: parsed.reason ?? null,
+        cylinderReference: parsed.cylinderReference ?? null,
+        occurredAt: parsed.occurredAt,
+        handledByUserId,
+        recordedByUserId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertRefrigerantEvent(row);
+      return row;
+    },
+    async getRefrigerantEvent(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findRefrigerantEvent(scope.workspaceId, scope.ventureId, id);
+    },
+    async listRefrigerantEventsByVisit(scope, visitId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
+      if (!visit) {
+        return [];
+      }
+      return store.listRefrigerantEventsByVisit(scope.workspaceId, scope.ventureId, visitId);
+    },
+    async listRefrigerantEventsByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listRefrigerantEventsByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
+    async listRefrigerantEventsByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
   };
 }
 
@@ -1467,6 +1575,15 @@ function assertVisitAcceptsRecommendedAction(visit: FrigoraVisit) {
   }
 }
 
+function assertVisitAcceptsRefrigerantEvent(visit: FrigoraVisit) {
+  if (visit.status === "cancelled") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Refrigerant events cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
 function assertObservedAtWithinVisit(visit: FrigoraVisit, observedAt: string) {
   const observedMs = Date.parse(observedAt);
   const arrivedMs = Date.parse(visit.arrivedAt);
@@ -1562,6 +1679,26 @@ function assertRecommendedAtWithinVisit(visit: FrigoraVisit, recommendedAt: stri
       throw new FrigoraError(
         "invalid_input",
         "Recommended time must not follow visit departure.",
+      );
+    }
+  }
+}
+
+function assertOccurredAtWithinVisit(visit: FrigoraVisit, occurredAt: string) {
+  const occurredMs = Date.parse(occurredAt);
+  const arrivedMs = Date.parse(visit.arrivedAt);
+  if (occurredMs < arrivedMs) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Occurrence time must not precede visit arrival.",
+    );
+  }
+  if (visit.status === "departed" && visit.departedAt) {
+    const departedMs = Date.parse(visit.departedAt);
+    if (occurredMs > departedMs) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Occurrence time must not follow visit departure.",
       );
     }
   }

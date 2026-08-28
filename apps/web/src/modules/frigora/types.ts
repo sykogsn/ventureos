@@ -10,6 +10,7 @@ export type FrigoraTechnicalFindingId = string & { readonly __brand: "FrigoraTec
 export type FrigoraCorrectiveActionId = string & { readonly __brand: "FrigoraCorrectiveActionId" };
 export type FrigoraVisitOutcomeId = string & { readonly __brand: "FrigoraVisitOutcomeId" };
 export type FrigoraRecommendedActionId = string & { readonly __brand: "FrigoraRecommendedActionId" };
+export type FrigoraRefrigerantEventId = string & { readonly __brand: "FrigoraRefrigerantEventId" };
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
@@ -18,6 +19,9 @@ export type FrigoraWorkOrderStatus = "open" | "closed" | "cancelled";
 export type FrigoraVisitStatus = "open" | "departed" | "cancelled";
 export type FrigoraFieldCaptureKind = "measurement" | "condition";
 export type FrigoraTechnicalFindingKind = "symptom" | "suspected_fault" | "confirmed_fault";
+
+export const FRIGORA_REFRIGERANT_EVENT_KINDS = ["added", "recovered", "removed"] as const;
+export type FrigoraRefrigerantEventKind = (typeof FRIGORA_REFRIGERANT_EVENT_KINDS)[number];
 
 export const FRIGORA_WORK_KINDS = ["reactive", "planned", "inspection"] as const;
 export type FrigoraWorkKind = (typeof FRIGORA_WORK_KINDS)[number];
@@ -362,6 +366,37 @@ export type RecordRecommendedActionInput = {
   description: string;
   recommendedAt: string;
   recommendedByUserId: string;
+  recordedByUserId: string;
+  assetId?: string | null;
+};
+
+export type FrigoraRefrigerantEvent = {
+  id: FrigoraRefrigerantEventId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  visitId: FrigoraVisitId;
+  workOrderId: FrigoraWorkOrderId;
+  assetId: FrigoraAssetId | null;
+  refrigerantType: string;
+  eventKind: FrigoraRefrigerantEventKind;
+  quantityKg: number;
+  reason: string | null;
+  cylinderReference: string | null;
+  occurredAt: string;
+  handledByUserId: UserId;
+  recordedByUserId: UserId;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordRefrigerantEventInput = {
+  refrigerantType: string;
+  eventKind: FrigoraRefrigerantEventKind;
+  quantityKg: number;
+  reason?: string | null;
+  cylinderReference?: string | null;
+  occurredAt: string;
+  handledByUserId: string;
   recordedByUserId: string;
   assetId?: string | null;
 };

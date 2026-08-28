@@ -29,6 +29,8 @@ import type {
   RecordVisitOutcomeInput,
   FrigoraRecommendedAction,
   RecordRecommendedActionInput,
+  FrigoraRefrigerantEvent,
+  RecordRefrigerantEventInput,
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
   UpdateAssetInput,
@@ -263,5 +265,13 @@ export async function recordRecommendedActionAction(
 ): Promise<FrigoraMutationResult<FrigoraRecommendedAction>> {
   return mutate(input, (scope) =>
     getFrigoraService().recordRecommendedAction(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function recordRefrigerantEventAction(
+  input: ScopedInput & { visitId: string } & RecordRefrigerantEventInput,
+): Promise<FrigoraMutationResult<FrigoraRefrigerantEvent>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordRefrigerantEvent(scope, input.visitId as FrigoraVisitId, input),
   );
 }

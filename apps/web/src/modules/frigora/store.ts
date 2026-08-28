@@ -11,6 +11,7 @@ import {
   frigoraCorrectiveActions,
   frigoraVisitOutcomes,
   frigoraRecommendedActions,
+  frigoraRefrigerantEvents,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -46,6 +47,9 @@ import type {
   FrigoraVisitOutcomeId,
   FrigoraRecommendedAction,
   FrigoraRecommendedActionId,
+  FrigoraRefrigerantEvent,
+  FrigoraRefrigerantEventId,
+  FrigoraRefrigerantEventKind,
 } from "./types";
 
 export type FrigoraStore = {
@@ -265,6 +269,27 @@ export type FrigoraStore = {
     ventureId: VentureId,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraRecommendedAction[]>;
+  insertRefrigerantEvent(row: FrigoraRefrigerantEvent): Promise<void>;
+  findRefrigerantEvent(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraRefrigerantEventId,
+  ): Promise<FrigoraRefrigerantEvent | null>;
+  listRefrigerantEventsByVisit(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraRefrigerantEvent[]>;
+  listRefrigerantEventsByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraRefrigerantEvent[]>;
+  listRefrigerantEventsByAsset(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraRefrigerantEvent[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -1018,6 +1043,70 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraRecommendedActions.recommendedAt), asc(frigoraRecommendedActions.id));
       return rows.map(mapRecommendedAction);
     },
+    async insertRefrigerantEvent(row) {
+      await ensureSchema();
+      await getDb().insert(frigoraRefrigerantEvents).values(toRefrigerantEventValues(row));
+    },
+    async findRefrigerantEvent(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRefrigerantEvents)
+        .where(
+          and(
+            eq(frigoraRefrigerantEvents.id, id),
+            eq(frigoraRefrigerantEvents.workspaceId, workspaceId),
+            eq(frigoraRefrigerantEvents.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapRefrigerantEvent(rows[0]) : null;
+    },
+    async listRefrigerantEventsByVisit(workspaceId, ventureId, visitId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRefrigerantEvents)
+        .where(
+          and(
+            eq(frigoraRefrigerantEvents.workspaceId, workspaceId),
+            eq(frigoraRefrigerantEvents.ventureId, ventureId),
+            eq(frigoraRefrigerantEvents.visitId, visitId),
+          ),
+        )
+        .orderBy(asc(frigoraRefrigerantEvents.occurredAt), asc(frigoraRefrigerantEvents.id));
+      return rows.map(mapRefrigerantEvent);
+    },
+    async listRefrigerantEventsByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRefrigerantEvents)
+        .where(
+          and(
+            eq(frigoraRefrigerantEvents.workspaceId, workspaceId),
+            eq(frigoraRefrigerantEvents.ventureId, ventureId),
+            eq(frigoraRefrigerantEvents.workOrderId, workOrderId),
+          ),
+        )
+        .orderBy(asc(frigoraRefrigerantEvents.occurredAt), asc(frigoraRefrigerantEvents.id));
+      return rows.map(mapRefrigerantEvent);
+    },
+    async listRefrigerantEventsByAsset(workspaceId, ventureId, assetId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRefrigerantEvents)
+        .where(
+          and(
+            eq(frigoraRefrigerantEvents.workspaceId, workspaceId),
+            eq(frigoraRefrigerantEvents.ventureId, ventureId),
+            eq(frigoraRefrigerantEvents.assetId, assetId),
+          ),
+        )
+        .orderBy(asc(frigoraRefrigerantEvents.occurredAt), asc(frigoraRefrigerantEvents.id));
+      return rows.map(mapRefrigerantEvent);
+    },
   };
 }
 
@@ -1253,6 +1342,27 @@ function toRecommendedActionValues(row: FrigoraRecommendedAction) {
   };
 }
 
+function toRefrigerantEventValues(row: FrigoraRefrigerantEvent) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    visitId: row.visitId,
+    workOrderId: row.workOrderId,
+    assetId: row.assetId,
+    refrigerantType: row.refrigerantType,
+    eventKind: row.eventKind,
+    quantityKg: row.quantityKg,
+    reason: row.reason,
+    cylinderReference: row.cylinderReference,
+    occurredAt: row.occurredAt,
+    handledByUserId: row.handledByUserId,
+    recordedByUserId: row.recordedByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -1437,6 +1547,29 @@ function mapRecommendedAction(
     description: row.description,
     recommendedAt: row.recommendedAt,
     recommendedByUserId: row.recommendedByUserId as UserId,
+    recordedByUserId: row.recordedByUserId as UserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapRefrigerantEvent(
+  row: typeof frigoraRefrigerantEvents.$inferSelect,
+): FrigoraRefrigerantEvent {
+  return {
+    id: row.id as FrigoraRefrigerantEventId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    visitId: row.visitId as FrigoraVisitId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    assetId: (row.assetId as FrigoraAssetId | null) ?? null,
+    refrigerantType: row.refrigerantType,
+    eventKind: row.eventKind as FrigoraRefrigerantEventKind,
+    quantityKg: row.quantityKg,
+    reason: row.reason ?? null,
+    cylinderReference: row.cylinderReference ?? null,
+    occurredAt: row.occurredAt,
+    handledByUserId: row.handledByUserId as UserId,
     recordedByUserId: row.recordedByUserId as UserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
