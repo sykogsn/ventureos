@@ -2,7 +2,7 @@
 
 **Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.9.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `frigora@0.10.0` in the Definition Registry.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
@@ -10,9 +10,9 @@
 
 **Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, and Visit outcomes
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, and Visit recommended actions
 
-**Version.** 0.9.0
+**Version.** 0.10.0
 
 **Owner.** Founder (definition owner)
 
@@ -20,7 +20,7 @@
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, and Visit outcomes as durable operational records beside VIC. Work execution, dispatch, full diagnosis workflow, root cause, structured recommended actions, full repair workflow, evidence, PPM, refrigerant events, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, and Visit recommended actions as durable operational records beside VIC. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, evidence, PPM, refrigerant events, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
 
 ## Profile
 
@@ -45,6 +45,7 @@ Admitted in this version, persisted beside VIC for Frigora instances:
 - Visit technical findings (human-recorded symptom, suspected fault, and confirmed fault assertions against a Visit)
 - Visit corrective actions (human-recorded work actually performed during a Visit attendance episode)
 - Visit outcomes (human-recorded resulting operational state at the end of a Visit attendance episode)
+- Visit recommended actions (human-recorded forward operational intent associated with a Visit attendance episode; advisory only, not execution)
 
 RefrigerationSystem and Component remain deferred. Assets may exist at a site without a system grouping.
 
@@ -55,6 +56,19 @@ IDS key: `frigora`. Brand and atmosphere selectors exist so the instance is reco
 ## Honesty
 
 Frigora receives the full executive desk. Theme must not invent a private Runtime or a private navigation model. The VentureOS Situation Room remains the founder/executive brief. Frigora operational presentation must not replace `/dashboard`.
+
+## Truth chain (operational)
+
+At visit-episode maturity, authoritative records separate:
+
+1. **Reported intake** — `WorkOrder.reportedCondition`
+2. **Observed/measured fact** — Visit field capture
+3. **Human technical interpretation** — Visit technical finding
+4. **Work actually performed** — Visit corrective action
+5. **Resulting operational state** — Visit outcome
+6. **Forward operational intent** — Visit recommended action
+
+Recommended action answers what a human recommends should happen next. It is not execution, scheduling, or executive Recommendation. Visit outcome and recommended action are independent records; neither requires the other.
 
 ## Deferred
 

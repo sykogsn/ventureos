@@ -676,6 +676,32 @@ export const frigoraVisitOutcomes = sqliteTable(
   ],
 );
 
+export const frigoraRecommendedActions = sqliteTable(
+  "frigora_recommended_actions",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    visitId: text("visit_id").notNull(),
+    workOrderId: text("work_order_id").notNull(),
+    assetId: text("asset_id"),
+    description: text("description").notNull(),
+    recommendedAt: text("recommended_at").notNull(),
+    recommendedByUserId: text("recommended_by_user_id").notNull(),
+    recordedByUserId: text("recorded_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("frigora_recommended_actions_venture_visit_idx").on(table.ventureId, table.visitId),
+    index("frigora_recommended_actions_venture_work_order_idx").on(
+      table.ventureId,
+      table.workOrderId,
+    ),
+    index("frigora_recommended_actions_venture_asset_idx").on(table.ventureId, table.assetId),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -712,4 +738,5 @@ export const schema = {
   frigoraTechnicalFindings,
   frigoraCorrectiveActions,
   frigoraVisitOutcomes,
+  frigoraRecommendedActions,
 };

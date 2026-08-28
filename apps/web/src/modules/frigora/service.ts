@@ -36,6 +36,9 @@ import type {
   FrigoraVisitOutcome,
   FrigoraVisitOutcomeId,
   RecordVisitOutcomeInput,
+  FrigoraRecommendedAction,
+  FrigoraRecommendedActionId,
+  RecordRecommendedActionInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -54,6 +57,7 @@ import {
   recordTechnicalFindingSchema,
   recordCorrectiveActionSchema,
   recordVisitOutcomeSchema,
+  recordRecommendedActionSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -231,6 +235,27 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraVisitOutcome[]>;
+  recordRecommendedAction(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: RecordRecommendedActionInput,
+  ): Promise<FrigoraRecommendedAction>;
+  getRecommendedAction(
+    scope: FrigoraScope,
+    id: FrigoraRecommendedActionId,
+  ): Promise<FrigoraRecommendedAction | null>;
+  listRecommendedActionsByVisit(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraRecommendedAction[]>;
+  listRecommendedActionsByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraRecommendedAction[]>;
+  listRecommendedActionsByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraRecommendedAction[]>;
 };
 
 export function createFrigoraService(options: {
@@ -1174,6 +1199,85 @@ export function createFrigoraService(options: {
       }
       return store.listVisitOutcomesByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
+    async recordRecommendedAction(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsRecommendedAction(visit);
+      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const parsed = parseWithFrigora(recordRecommendedActionSchema, input);
+      assertRecommendedAtWithinVisit(visit, parsed.recommendedAt);
+      const recommendedByUserId = parsed.recommendedByUserId as UserId;
+      const recordedByUserId = parsed.recordedByUserId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, recommendedByUserId);
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const assetId = await resolveFieldCaptureAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+      const now = nowIso();
+      const row: FrigoraRecommendedAction = {
+        id: createId<FrigoraRecommendedActionId>(),
+        workspaceId: visit.workspaceId,
+        ventureId: visit.ventureId,
+        visitId: visit.id,
+        workOrderId: visit.workOrderId,
+        assetId,
+        description: parsed.description,
+        recommendedAt: parsed.recommendedAt,
+        recommendedByUserId,
+        recordedByUserId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertRecommendedAction(row);
+      return row;
+    },
+    async getRecommendedAction(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findRecommendedAction(scope.workspaceId, scope.ventureId, id);
+    },
+    async listRecommendedActionsByVisit(scope, visitId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
+      if (!visit) {
+        return [];
+      }
+      return store.listRecommendedActionsByVisit(scope.workspaceId, scope.ventureId, visitId);
+    },
+    async listRecommendedActionsByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listRecommendedActionsByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
+    async listRecommendedActionsByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listRecommendedActionsByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
   };
 }
 
@@ -1354,6 +1458,15 @@ function assertVisitAcceptsVisitOutcome(visit: FrigoraVisit) {
   }
 }
 
+function assertVisitAcceptsRecommendedAction(visit: FrigoraVisit) {
+  if (visit.status === "cancelled") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Recommended actions cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
 function assertObservedAtWithinVisit(visit: FrigoraVisit, observedAt: string) {
   const observedMs = Date.parse(observedAt);
   const arrivedMs = Date.parse(visit.arrivedAt);
@@ -1429,6 +1542,26 @@ function assertOutcomeAtWithinVisit(visit: FrigoraVisit, outcomeAt: string) {
       throw new FrigoraError(
         "invalid_input",
         "Outcome time must not follow visit departure.",
+      );
+    }
+  }
+}
+
+function assertRecommendedAtWithinVisit(visit: FrigoraVisit, recommendedAt: string) {
+  const recommendedMs = Date.parse(recommendedAt);
+  const arrivedMs = Date.parse(visit.arrivedAt);
+  if (recommendedMs < arrivedMs) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Recommended time must not precede visit arrival.",
+    );
+  }
+  if (visit.status === "departed" && visit.departedAt) {
+    const departedMs = Date.parse(visit.departedAt);
+    if (recommendedMs > departedMs) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Recommended time must not follow visit departure.",
       );
     }
   }

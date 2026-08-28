@@ -9,6 +9,7 @@ export type FrigoraFieldCaptureId = string & { readonly __brand: "FrigoraFieldCa
 export type FrigoraTechnicalFindingId = string & { readonly __brand: "FrigoraTechnicalFindingId" };
 export type FrigoraCorrectiveActionId = string & { readonly __brand: "FrigoraCorrectiveActionId" };
 export type FrigoraVisitOutcomeId = string & { readonly __brand: "FrigoraVisitOutcomeId" };
+export type FrigoraRecommendedActionId = string & { readonly __brand: "FrigoraRecommendedActionId" };
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
@@ -338,6 +339,29 @@ export type FrigoraVisitOutcome = {
 export type RecordVisitOutcomeInput = {
   description: string;
   outcomeAt: string;
+  recordedByUserId: string;
+  assetId?: string | null;
+};
+
+export type FrigoraRecommendedAction = {
+  id: FrigoraRecommendedActionId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  visitId: FrigoraVisitId;
+  workOrderId: FrigoraWorkOrderId;
+  assetId: FrigoraAssetId | null;
+  description: string;
+  recommendedAt: string;
+  recommendedByUserId: UserId;
+  recordedByUserId: UserId;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordRecommendedActionInput = {
+  description: string;
+  recommendedAt: string;
+  recommendedByUserId: string;
   recordedByUserId: string;
   assetId?: string | null;
 };

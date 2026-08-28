@@ -10,6 +10,7 @@ import {
   frigoraTechnicalFindings,
   frigoraCorrectiveActions,
   frigoraVisitOutcomes,
+  frigoraRecommendedActions,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -43,6 +44,8 @@ import type {
   FrigoraCorrectiveActionId,
   FrigoraVisitOutcome,
   FrigoraVisitOutcomeId,
+  FrigoraRecommendedAction,
+  FrigoraRecommendedActionId,
 } from "./types";
 
 export type FrigoraStore = {
@@ -241,6 +244,27 @@ export type FrigoraStore = {
     ventureId: VentureId,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraVisitOutcome[]>;
+  insertRecommendedAction(row: FrigoraRecommendedAction): Promise<void>;
+  findRecommendedAction(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraRecommendedActionId,
+  ): Promise<FrigoraRecommendedAction | null>;
+  listRecommendedActionsByVisit(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraRecommendedAction[]>;
+  listRecommendedActionsByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraRecommendedAction[]>;
+  listRecommendedActionsByAsset(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraRecommendedAction[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -930,6 +954,70 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraVisitOutcomes.outcomeAt), asc(frigoraVisitOutcomes.id));
       return rows.map(mapVisitOutcome);
     },
+    async insertRecommendedAction(row) {
+      await ensureSchema();
+      await getDb().insert(frigoraRecommendedActions).values(toRecommendedActionValues(row));
+    },
+    async findRecommendedAction(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRecommendedActions)
+        .where(
+          and(
+            eq(frigoraRecommendedActions.id, id),
+            eq(frigoraRecommendedActions.workspaceId, workspaceId),
+            eq(frigoraRecommendedActions.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapRecommendedAction(rows[0]) : null;
+    },
+    async listRecommendedActionsByVisit(workspaceId, ventureId, visitId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRecommendedActions)
+        .where(
+          and(
+            eq(frigoraRecommendedActions.workspaceId, workspaceId),
+            eq(frigoraRecommendedActions.ventureId, ventureId),
+            eq(frigoraRecommendedActions.visitId, visitId),
+          ),
+        )
+        .orderBy(asc(frigoraRecommendedActions.recommendedAt), asc(frigoraRecommendedActions.id));
+      return rows.map(mapRecommendedAction);
+    },
+    async listRecommendedActionsByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRecommendedActions)
+        .where(
+          and(
+            eq(frigoraRecommendedActions.workspaceId, workspaceId),
+            eq(frigoraRecommendedActions.ventureId, ventureId),
+            eq(frigoraRecommendedActions.workOrderId, workOrderId),
+          ),
+        )
+        .orderBy(asc(frigoraRecommendedActions.recommendedAt), asc(frigoraRecommendedActions.id));
+      return rows.map(mapRecommendedAction);
+    },
+    async listRecommendedActionsByAsset(workspaceId, ventureId, assetId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRecommendedActions)
+        .where(
+          and(
+            eq(frigoraRecommendedActions.workspaceId, workspaceId),
+            eq(frigoraRecommendedActions.ventureId, ventureId),
+            eq(frigoraRecommendedActions.assetId, assetId),
+          ),
+        )
+        .orderBy(asc(frigoraRecommendedActions.recommendedAt), asc(frigoraRecommendedActions.id));
+      return rows.map(mapRecommendedAction);
+    },
   };
 }
 
@@ -1148,6 +1236,23 @@ function toVisitOutcomeValues(row: FrigoraVisitOutcome) {
   };
 }
 
+function toRecommendedActionValues(row: FrigoraRecommendedAction) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    visitId: row.visitId,
+    workOrderId: row.workOrderId,
+    assetId: row.assetId,
+    description: row.description,
+    recommendedAt: row.recommendedAt,
+    recommendedByUserId: row.recommendedByUserId,
+    recordedByUserId: row.recordedByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -1313,6 +1418,25 @@ function mapVisitOutcome(row: typeof frigoraVisitOutcomes.$inferSelect): Frigora
     assetId: (row.assetId as FrigoraAssetId | null) ?? null,
     description: row.description,
     outcomeAt: row.outcomeAt,
+    recordedByUserId: row.recordedByUserId as UserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapRecommendedAction(
+  row: typeof frigoraRecommendedActions.$inferSelect,
+): FrigoraRecommendedAction {
+  return {
+    id: row.id as FrigoraRecommendedActionId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    visitId: row.visitId as FrigoraVisitId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    assetId: (row.assetId as FrigoraAssetId | null) ?? null,
+    description: row.description,
+    recommendedAt: row.recommendedAt,
+    recommendedByUserId: row.recommendedByUserId as UserId,
     recordedByUserId: row.recordedByUserId as UserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

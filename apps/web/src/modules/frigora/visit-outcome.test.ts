@@ -669,13 +669,10 @@ describe("Frigora Visit outcome", () => {
     assert.equal(outcome.description, "Temporary operation was restored");
   });
 
-  it("resolves frigora@0.9.0 from catalog with visit outcome admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.9.0");
+  it("resolves frigora@0.10.0 from catalog with visit outcome admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.10.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /Visit outcomes/);
-    assert.match(
-      platformVentureRegistry.resolve("frigora").description,
-      /structured recommended actions/,
-    );
+    assert.match(platformVentureRegistry.resolve("frigora").description, /recommended actions/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /full repair workflow/);
   });
 });

@@ -444,8 +444,8 @@ describe("Frigora WorkOrder assignment", () => {
     assert.equal(assigned.assignedUserId, assigneeId);
   });
 
-  it("resolves frigora@0.9.0 from catalog", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.9.0");
+  it("resolves frigora@0.10.0 from catalog", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.10.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /current WorkOrder assignment/,

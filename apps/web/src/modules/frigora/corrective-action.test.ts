@@ -811,8 +811,8 @@ describe("Frigora Visit corrective action", () => {
     assert.equal(action.description, "Reset controller");
   });
 
-  it("resolves frigora@0.9.0 from catalog with corrective action admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.9.0");
+  it("resolves frigora@0.10.0 from catalog with corrective action admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.10.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /Visit corrective actions/,

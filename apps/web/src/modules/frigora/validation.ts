@@ -338,6 +338,14 @@ export const recordVisitOutcomeSchema = z.object({
   assetId: patchAssetIdNullable,
 });
 
+export const recordRecommendedActionSchema = z.object({
+  description: requiredText,
+  recommendedAt: isoTimestamp,
+  recommendedByUserId: requiredText,
+  recordedByUserId: requiredText,
+  assetId: patchAssetIdNullable,
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });
