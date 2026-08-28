@@ -114,6 +114,33 @@ export const platformVentureCatalog: VentureDefinitionManifest[] = [
     excludedFeatures: ["executive-office"],
   }),
   createVentureManifest({
+    id: "frigora",
+    name: "Frigora",
+    purpose: "Refrigeration operations for companies that run on VentureOS.",
+    description:
+      "Frigora is a VentureOS venture. This definition admits Frigora to the OS. Refrigeration operational records, field workflows, FACT→PATTERN→SIGNAL, and employee agents are not part of this definition version.",
+    owner: "founder",
+    version: "0.1.0",
+    lifecycle: "concept",
+    maturity: "experimental",
+    runtimeProfile: sharedRuntime,
+    capabilityProfile: {
+      uses: [...sharedUses, "intelligence.briefing"],
+      excludes: [],
+    },
+    governanceProfile: sharedGovernance,
+    dependencies: [],
+    supportedFeatures: [
+      "situation-room",
+      "company-hq",
+      "executive-office",
+      "founder-decisions",
+      "morning-briefing",
+      "portfolio",
+    ],
+    excludedFeatures: [],
+  }),
+  createVentureManifest({
     id: "ventureos.company",
     name: "VentureOS Company",
     purpose: "Default company definition for founder-created companies on VentureOS.",

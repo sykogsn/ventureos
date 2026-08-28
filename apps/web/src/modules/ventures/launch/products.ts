@@ -12,6 +12,7 @@ export const LAUNCH_PRODUCT_IDS = [
   "qualora",
   "calviora",
   "farmora",
+  "frigora",
 ] as const;
 
 export type LaunchProductId = (typeof LAUNCH_PRODUCT_IDS)[number];

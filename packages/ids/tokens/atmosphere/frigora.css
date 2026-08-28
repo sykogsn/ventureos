@@ -1,0 +1,89 @@
+html[data-ids-atmosphere="frigora"],
+html[data-ids-brand="frigora"] {
+  --ids-atmosphere-frigora-background: color-mix(
+    in srgb,
+    var(--ids-foundation-color-background) 94%,
+    #2f333c 6%
+  );
+  --ids-atmosphere-frigora-workspace: var(--ids-atmosphere-frigora-background);
+  --ids-atmosphere-frigora-sidebar: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface) 90%,
+    var(--ids-foundation-color-brand-primary) 10%
+  );
+  --ids-atmosphere-frigora-toolbar: color-mix(
+    in srgb,
+    var(--ids-atmosphere-frigora-workspace) 86%,
+    var(--ids-foundation-color-surface) 14%
+  );
+  --ids-atmosphere-frigora-header: transparent;
+  --ids-atmosphere-frigora-surface: var(--ids-foundation-color-surface);
+  --ids-atmosphere-frigora-surface-elevated: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface-elevated) 92%,
+    var(--ids-foundation-color-brand-primary) 8%
+  );
+  --ids-atmosphere-frigora-border: color-mix(
+    in srgb,
+    var(--ids-foundation-color-border) 88%,
+    #2f333c 12%
+  );
+  --ids-atmosphere-frigora-divider: var(--ids-foundation-color-divider);
+  --ids-atmosphere-frigora-accent: var(--ids-foundation-color-brand-primary);
+  --ids-atmosphere-frigora-accent-hover: var(--ids-foundation-color-brand-primary-hover);
+  --ids-atmosphere-frigora-accent-active: var(--ids-foundation-color-brand-primary-active);
+  --ids-atmosphere-frigora-accent-foreground: var(--ids-foundation-color-text-inverse);
+  --ids-atmosphere-frigora-texture: none;
+
+  --background: var(--ids-atmosphere-frigora-background);
+  --workspace: var(--ids-atmosphere-frigora-workspace);
+  --sidebar: var(--ids-atmosphere-frigora-sidebar);
+  --toolbar: var(--ids-atmosphere-frigora-toolbar);
+  --header: var(--ids-atmosphere-frigora-header);
+  --surface: var(--ids-atmosphere-frigora-surface);
+  --surface-elevated: var(--ids-atmosphere-frigora-surface-elevated);
+  --card: var(--ids-atmosphere-frigora-surface-elevated);
+  --border: var(--ids-atmosphere-frigora-border);
+  --divider: var(--ids-atmosphere-frigora-divider);
+  --atmosphere-texture: var(--ids-atmosphere-frigora-texture);
+  --accent: var(--ids-atmosphere-frigora-accent);
+  --accent-hover: var(--ids-atmosphere-frigora-accent-hover);
+  --accent-active: var(--ids-atmosphere-frigora-accent-active);
+  --accent-foreground: var(--ids-atmosphere-frigora-accent-foreground);
+  --ring: var(--ids-atmosphere-frigora-accent);
+  --brand-primary: var(--ids-atmosphere-frigora-accent);
+  --brand-primary-hover: var(--ids-atmosphere-frigora-accent-hover);
+  --brand-primary-active: var(--ids-atmosphere-frigora-accent-active);
+  --text-inverse: var(--ids-atmosphere-frigora-accent-foreground);
+}
+
+html.dark[data-ids-atmosphere="frigora"],
+html.dark[data-ids-brand="frigora"] {
+  --ids-atmosphere-frigora-background: color-mix(
+    in srgb,
+    var(--ids-foundation-color-background) 88%,
+    #07080c 12%
+  );
+  --ids-atmosphere-frigora-workspace: var(--ids-atmosphere-frigora-background);
+  --ids-atmosphere-frigora-sidebar: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface) 94%,
+    var(--ids-foundation-color-brand-primary) 6%
+  );
+  --ids-atmosphere-frigora-toolbar: color-mix(
+    in srgb,
+    var(--ids-atmosphere-frigora-workspace) 82%,
+    var(--ids-foundation-color-surface) 18%
+  );
+  --ids-atmosphere-frigora-surface: var(--ids-foundation-color-surface);
+  --ids-atmosphere-frigora-surface-elevated: color-mix(
+    in srgb,
+    var(--ids-foundation-color-surface-elevated) 94%,
+    var(--ids-foundation-color-brand-primary) 6%
+  );
+  --ids-atmosphere-frigora-border: color-mix(
+    in srgb,
+    var(--ids-foundation-color-border) 90%,
+    var(--ids-foundation-color-brand-primary) 10%
+  );
+}

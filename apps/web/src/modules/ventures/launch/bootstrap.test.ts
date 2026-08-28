@@ -66,7 +66,7 @@ describe("Product bootstrap", () => {
     const products = listLaunchProducts();
     assert.deepEqual(
       products.map((item) => item.id),
-      ["ventureos.company", "qualora", "calviora", "farmora"],
+      ["ventureos.company", "qualora", "calviora", "farmora", "frigora"],
     );
     assert.equal(products[0]?.label, "VentureOS Company");
     assert.doesNotMatch(products.map((item) => item.description).join(" "), /capability profile|runtime profile/i);
@@ -113,6 +113,19 @@ describe("Product bootstrap", () => {
     assert.equal(ventureHasFeature(venture, "executive-office"), false);
     assert.ok(projectSituationRoom(snapshot.core).briefing.implications.length > 0);
     assert.equal(projectExecutiveFloor(snapshot.core).executives.length, 0);
+  });
+
+  it("bootstraps Frigora", () => {
+    const { company, snapshot } = bootstrap("frigora", "Frigora One");
+    const venture = snapshot.core.ventures[0];
+    assert.ok(venture);
+    assert.deepEqual(company.venture.definition, { id: "frigora", version: "0.1.0" });
+    assert.equal(company.draft.definitionId, "frigora");
+    assert.equal(company.draft.definitionVersion, "0.1.0");
+    assert.equal(mayConsumeBriefing(venture), true);
+    assert.equal(ventureHasFeature(venture, "executive-office"), true);
+    assert.ok(projectSituationRoom(snapshot.core).briefing.implications.length > 0);
+    assert.ok(projectExecutiveFloor(snapshot.core).executives.length > 0);
   });
 
   it("fails on an unknown product", () => {

@@ -245,6 +245,22 @@ describe("persistence repositories", () => {
     assert.equal(found?.definitionVersion, "1.0.0");
   });
 
+  it("preserves a Frigora definition ref instead of coercing to VentureOS Company", async () => {
+    const store = getPersistence();
+    await store.organisations.insert({
+      id: workspaceId,
+      name: "Alpha",
+      slug: "alpha",
+      createdAt: NOW,
+    });
+    await store.ventures.insert(
+      ventureRow({ definitionId: "frigora", definitionVersion: "0.1.0" }),
+    );
+    const found = await store.ventures.findById(ventureId);
+    assert.equal(found?.definitionId, "frigora");
+    assert.equal(found?.definitionVersion, "0.1.0");
+  });
+
   it("persists instance operating lifecycle separately from marketing stage", async () => {
     const store = getPersistence();
     await store.organisations.insert({

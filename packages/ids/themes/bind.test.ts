@@ -14,6 +14,7 @@ describe("IDS theme bind", () => {
     assert.equal(brandFromDefinitionId("qualora"), "qualora");
     assert.equal(brandFromDefinitionId("calviora"), "calviora");
     assert.equal(brandFromDefinitionId("farmora"), "farmora");
+    assert.equal(brandFromDefinitionId("frigora"), "frigora");
   });
 
   it("writes data-ids-brand and data-ids-atmosphere on the target element", () => {

@@ -197,7 +197,7 @@ A founded company is a Venture Instance: Venture Intelligence Core plus `definit
 11. Pre-definition rows map empty definition columns to `ventureos.company@1.0.0`.
 12. Projections hide excluded Situation Room, HQ, and Executive Office surfaces. They do not costume them.
 
-Live definitions: `ventureos.company`, `qualora`, `calviora`, `farmora`.
+Live definitions: `ventureos.company`, `qualora`, `calviora`, `farmora`, `frigora`.
 
 ## 11. Platform vs Product Decision Framework
 

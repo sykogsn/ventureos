@@ -25,7 +25,7 @@ Brand tokens nest the definition key:
 
 `--ids-brand-{product}-{role}`
 
-Product keys: `ventureos`, `qualora`, `calviora`, `farmora`.
+Product keys: `ventureos`, `qualora`, `calviora`, `farmora`, `frigora`.
 
 Maps to Venture Definition ids:
 
@@ -35,6 +35,7 @@ Maps to Venture Definition ids:
 | `qualora` | `qualora` |
 | `calviora` | `calviora` |
 | `farmora` | `farmora` |
+| `frigora` | `frigora` |
 
 CSS custom properties are the source for runtime theme. Tailwind `@theme` maps consume foundation aliases (`--color-background` → `var(--ids-foundation-color-background)`). Components never hard-code hex.
 
