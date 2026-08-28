@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 10; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 11; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -649,6 +649,30 @@ export async function ensureSchema() {
       await addColumn("frigora_work_orders", "assigned_user_id", "TEXT");
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_work_orders_venture_assignee_idx ON frigora_work_orders (venture_id, assigned_user_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_visits (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          work_order_id TEXT NOT NULL,
+          attending_user_id TEXT NOT NULL,
+          arrived_at TEXT NOT NULL,
+          departed_at TEXT,
+          status TEXT NOT NULL DEFAULT 'open',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_visits_workspace_venture_idx ON frigora_visits (workspace_id, venture_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_visits_venture_work_order_idx ON frigora_visits (venture_id, work_order_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_visits_venture_attending_user_idx ON frigora_visits (venture_id, attending_user_id)`,
       );
     })();
   }

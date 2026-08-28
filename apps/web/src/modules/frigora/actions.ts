@@ -17,6 +17,10 @@ import type {
   FrigoraSiteId,
   FrigoraWorkOrder,
   FrigoraWorkOrderId,
+  FrigoraVisit,
+  FrigoraVisitId,
+  RecordVisitArrivalInput,
+  RecordVisitDepartureInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -181,5 +185,33 @@ export async function clearWorkOrderAssignmentAction(
 ): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
   return mutate(input, (scope) =>
     getFrigoraService().clearWorkOrderAssignment(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function recordVisitArrivalAction(
+  input: ScopedInput & { workOrderId: string } & RecordVisitArrivalInput,
+): Promise<FrigoraMutationResult<FrigoraVisit>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitArrival(
+      scope,
+      input.workOrderId as FrigoraWorkOrderId,
+      input,
+    ),
+  );
+}
+
+export async function recordVisitDepartureAction(
+  input: ScopedInput & { id: string } & RecordVisitDepartureInput,
+): Promise<FrigoraMutationResult<FrigoraVisit>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitDeparture(scope, input.id as FrigoraVisitId, input),
+  );
+}
+
+export async function cancelVisitAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraVisit>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().cancelVisit(scope, input.id as FrigoraVisitId),
   );
 }

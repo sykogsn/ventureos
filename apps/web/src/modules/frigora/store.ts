@@ -5,6 +5,7 @@ import {
   frigoraAssets,
   frigoraCustomers,
   frigoraSites,
+  frigoraVisits,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -23,6 +24,9 @@ import type {
   FrigoraWorkOrderId,
   FrigoraWorkOrderStatus,
   FrigoraWorkKind,
+  FrigoraVisit,
+  FrigoraVisitId,
+  FrigoraVisitStatus,
 } from "./types";
 
 export type FrigoraStore = {
@@ -120,6 +124,23 @@ export type FrigoraStore = {
     ventureId: VentureId,
     userId: UserId,
   ): Promise<FrigoraWorkOrder[]>;
+  insertVisit(row: FrigoraVisit): Promise<void>;
+  updateVisit(row: FrigoraVisit): Promise<void>;
+  findVisit(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraVisitId,
+  ): Promise<FrigoraVisit | null>;
+  listVisitsByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraVisit[]>;
+  listVisitsByAttendingUser(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    userId: UserId,
+  ): Promise<FrigoraVisit[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -487,6 +508,68 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
       return rows.map(mapWorkOrder);
     },
+    async insertVisit(row) {
+      await ensureSchema();
+      await getDb().insert(frigoraVisits).values(toVisitValues(row));
+    },
+    async updateVisit(row) {
+      await ensureSchema();
+      await getDb()
+        .update(frigoraVisits)
+        .set(toVisitValues(row))
+        .where(
+          and(
+            eq(frigoraVisits.id, row.id),
+            eq(frigoraVisits.workspaceId, row.workspaceId),
+            eq(frigoraVisits.ventureId, row.ventureId),
+          ),
+        );
+    },
+    async findVisit(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisits)
+        .where(
+          and(
+            eq(frigoraVisits.id, id),
+            eq(frigoraVisits.workspaceId, workspaceId),
+            eq(frigoraVisits.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapVisit(rows[0]) : null;
+    },
+    async listVisitsByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisits)
+        .where(
+          and(
+            eq(frigoraVisits.workspaceId, workspaceId),
+            eq(frigoraVisits.ventureId, ventureId),
+            eq(frigoraVisits.workOrderId, workOrderId),
+          ),
+        )
+        .orderBy(asc(frigoraVisits.arrivedAt), asc(frigoraVisits.id));
+      return rows.map(mapVisit);
+    },
+    async listVisitsByAttendingUser(workspaceId, ventureId, userId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisits)
+        .where(
+          and(
+            eq(frigoraVisits.workspaceId, workspaceId),
+            eq(frigoraVisits.ventureId, ventureId),
+            eq(frigoraVisits.attendingUserId, userId),
+          ),
+        )
+        .orderBy(asc(frigoraVisits.arrivedAt), asc(frigoraVisits.id));
+      return rows.map(mapVisit);
+    },
   };
 }
 
@@ -568,6 +651,21 @@ function toWorkOrderValues(row: FrigoraWorkOrder) {
   };
 }
 
+function toVisitValues(row: FrigoraVisit) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    workOrderId: row.workOrderId,
+    attendingUserId: row.attendingUserId,
+    arrivedAt: row.arrivedAt,
+    departedAt: row.departedAt,
+    status: row.status,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -641,6 +739,21 @@ function mapWorkOrder(row: typeof frigoraWorkOrders.$inferSelect): FrigoraWorkOr
     reportedCondition: row.reportedCondition ?? null,
     status: row.status as FrigoraWorkOrderStatus,
     assignedUserId: (row.assignedUserId as UserId | null) ?? null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapVisit(row: typeof frigoraVisits.$inferSelect): FrigoraVisit {
+  return {
+    id: row.id as FrigoraVisitId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    attendingUserId: row.attendingUserId as UserId,
+    arrivedAt: row.arrivedAt,
+    departedAt: row.departedAt ?? null,
+    status: row.status as FrigoraVisitStatus,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

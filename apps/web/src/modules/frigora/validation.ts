@@ -115,6 +115,18 @@ function parseIsoDate(value: string, ctx: z.RefinementCtx) {
   return trimmed;
 }
 
+function parseIsoTimestamp(value: string, ctx: z.RefinementCtx) {
+  const trimmed = value.trim();
+  const parsed = Date.parse(trimmed);
+  if (Number.isNaN(parsed)) {
+    ctx.addIssue({ code: "custom", message: "Timestamp must be a valid ISO instant." });
+    return z.NEVER;
+  }
+  return trimmed;
+}
+
+const isoTimestamp = z.string().trim().transform((value, ctx) => parseIsoTimestamp(value, ctx));
+
 const optionalIsoDate = z
   .string()
   .trim()
@@ -220,6 +232,23 @@ export const assignWorkOrderSchema = z.object({
 });
 
 export const listWorkOrdersByAssigneeSchema = z.object({
+  userId: requiredText,
+});
+
+export const recordVisitArrivalSchema = z.object({
+  userId: requiredText,
+  arrivedAt: isoTimestamp,
+});
+
+export const recordVisitDepartureSchema = z.object({
+  departedAt: isoTimestamp,
+});
+
+export const listVisitsByWorkOrderSchema = z.object({
+  workOrderId: requiredText,
+});
+
+export const listVisitsByAttendingUserSchema = z.object({
   userId: requiredText,
 });
 

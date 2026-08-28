@@ -13,6 +13,8 @@ import type {
   FrigoraWorkOrder,
   FrigoraWorkOrderId,
   FrigoraWorkOrderStatus,
+  FrigoraVisit,
+  FrigoraVisitId,
 } from "./types";
 import type { UserId } from "@/contracts";
 import { parseWithFrigora, scopeSchema } from "./validation";
@@ -157,5 +159,29 @@ export async function listWorkOrdersByAssigneeQuery(
 ): Promise<FrigoraQueryResult<FrigoraWorkOrder[]>> {
   return query(input, (scope) =>
     getFrigoraService().listWorkOrdersByAssignee(scope, input.userId as UserId),
+  );
+}
+
+export async function getVisitQuery(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraQueryResult<FrigoraVisit | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getVisit(scope, input.id as FrigoraVisitId),
+  );
+}
+
+export async function listVisitsByWorkOrderQuery(
+  input: ScopedInput & { workOrderId: string },
+): Promise<FrigoraQueryResult<FrigoraVisit[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listVisitsByWorkOrder(scope, input.workOrderId as FrigoraWorkOrderId),
+  );
+}
+
+export async function listVisitsByAttendingUserQuery(
+  input: ScopedInput & { userId: string },
+): Promise<FrigoraQueryResult<FrigoraVisit[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listVisitsByAttendingUser(scope, input.userId as UserId),
   );
 }

@@ -20,6 +20,10 @@ import type {
   FrigoraWorkOrder,
   FrigoraWorkOrderId,
   FrigoraWorkOrderStatus,
+  FrigoraVisit,
+  FrigoraVisitId,
+  RecordVisitArrivalInput,
+  RecordVisitDepartureInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -32,6 +36,8 @@ import {
   createSiteSchema,
   createWorkOrderSchema,
   parseWithFrigora,
+  recordVisitArrivalSchema,
+  recordVisitDepartureSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -108,6 +114,23 @@ export type FrigoraService = {
     id: FrigoraWorkOrderId,
   ): Promise<FrigoraWorkOrder>;
   listWorkOrdersByAssignee(scope: FrigoraScope, userId: UserId): Promise<FrigoraWorkOrder[]>;
+  recordVisitArrival(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+    input: RecordVisitArrivalInput,
+  ): Promise<FrigoraVisit>;
+  recordVisitDeparture(
+    scope: FrigoraScope,
+    id: FrigoraVisitId,
+    input: RecordVisitDepartureInput,
+  ): Promise<FrigoraVisit>;
+  cancelVisit(scope: FrigoraScope, id: FrigoraVisitId): Promise<FrigoraVisit>;
+  getVisit(scope: FrigoraScope, id: FrigoraVisitId): Promise<FrigoraVisit | null>;
+  listVisitsByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraVisit[]>;
+  listVisitsByAttendingUser(scope: FrigoraScope, userId: UserId): Promise<FrigoraVisit[]>;
 };
 
 export function createFrigoraService(options: {
@@ -630,6 +653,83 @@ export function createFrigoraService(options: {
         userId,
       );
     },
+    async recordVisitArrival(scope, workOrderId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const workOrder = await requireOpenWorkOrder(store, scope, workOrderId);
+      const parsed = parseWithFrigora(recordVisitArrivalSchema, input);
+      const attendingUserId = parsed.userId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, attendingUserId);
+      const now = nowIso();
+      const row: FrigoraVisit = {
+        id: createId<FrigoraVisitId>(),
+        workspaceId: workOrder.workspaceId,
+        ventureId: workOrder.ventureId,
+        workOrderId: workOrder.id,
+        attendingUserId,
+        arrivedAt: parsed.arrivedAt,
+        departedAt: null,
+        status: "open",
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertVisit(row);
+      return row;
+    },
+    async recordVisitDeparture(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireOpenVisit(store, scope, id);
+      const parsed = parseWithFrigora(recordVisitDepartureSchema, input);
+      assertDepartedAfterArrived(existing.arrivedAt, parsed.departedAt);
+      const next: FrigoraVisit = {
+        ...existing,
+        departedAt: parsed.departedAt,
+        status: "departed",
+        updatedAt: nowIso(),
+      };
+      await store.updateVisit(next);
+      return next;
+    },
+    async cancelVisit(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireOpenVisit(store, scope, id);
+      const next: FrigoraVisit = {
+        ...existing,
+        status: "cancelled",
+        updatedAt: nowIso(),
+      };
+      await store.updateVisit(next);
+      return next;
+    },
+    async getVisit(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findVisit(scope.workspaceId, scope.ventureId, id);
+    },
+    async listVisitsByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listVisitsByWorkOrder(scope.workspaceId, scope.ventureId, workOrderId);
+    },
+    async listVisitsByAttendingUser(scope, userId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const member = await getPersistence().memberships.getRole(userId, scope.workspaceId);
+      if (!member) {
+        return [];
+      }
+      return store.listVisitsByAttendingUser(scope.workspaceId, scope.ventureId, userId);
+    },
   };
 }
 
@@ -736,6 +836,42 @@ async function requireOpenWorkOrder(
     );
   }
   return row;
+}
+
+async function requireVisit(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  id: FrigoraVisitId,
+) {
+  const row = await store.findVisit(scope.workspaceId, scope.ventureId, id);
+  if (!row) {
+    throw new FrigoraError("not_found", "Visit was not found.");
+  }
+  return row;
+}
+
+async function requireOpenVisit(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  id: FrigoraVisitId,
+) {
+  const row = await requireVisit(store, scope, id);
+  if (row.status !== "open") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Visits can only be updated while open.",
+    );
+  }
+  return row;
+}
+
+function assertDepartedAfterArrived(arrivedAt: string, departedAt: string) {
+  if (Date.parse(departedAt) < Date.parse(arrivedAt)) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Departure must not precede arrival.",
+    );
+  }
 }
 
 async function assertSiteAcceptsWorkOrder(

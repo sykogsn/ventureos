@@ -4,11 +4,13 @@ export type FrigoraCustomerId = string & { readonly __brand: "FrigoraCustomerId"
 export type FrigoraSiteId = string & { readonly __brand: "FrigoraSiteId" };
 export type FrigoraAssetId = string & { readonly __brand: "FrigoraAssetId" };
 export type FrigoraWorkOrderId = string & { readonly __brand: "FrigoraWorkOrderId" };
+export type FrigoraVisitId = string & { readonly __brand: "FrigoraVisitId" };
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
 export type FrigoraAssetStatus = "active" | "decommissioned";
 export type FrigoraWorkOrderStatus = "open" | "closed" | "cancelled";
+export type FrigoraVisitStatus = "open" | "departed" | "cancelled";
 
 export const FRIGORA_WORK_KINDS = ["reactive", "planned", "inspection"] as const;
 export type FrigoraWorkKind = (typeof FRIGORA_WORK_KINDS)[number];
@@ -188,4 +190,26 @@ export type UpdateWorkOrderInput = {
 
 export type AssignWorkOrderInput = {
   userId: string;
+};
+
+export type FrigoraVisit = {
+  id: FrigoraVisitId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  workOrderId: FrigoraWorkOrderId;
+  attendingUserId: UserId;
+  arrivedAt: string;
+  departedAt: string | null;
+  status: FrigoraVisitStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordVisitArrivalInput = {
+  userId: string;
+  arrivedAt: string;
+};
+
+export type RecordVisitDepartureInput = {
+  departedAt: string;
 };
