@@ -1,12 +1,31 @@
 "use server";
 
 import type { WorkforceRunId } from "@/contracts/ids";
-import { getSession } from "@/lib/auth/session";
+import { getActiveWorkspaceId, getSession } from "@/lib/auth/session";
 import { getWorkforceService } from "@/modules/workforce/service";
-import type { HumanWorkforceActor } from "@/core/workforce/types";
+import type {
+  HumanWorkforceActor,
+  ModelContextCitation,
+  ModelEvidenceRef,
+} from "@/core/workforce/types";
+import type { WorkforceRunInspection } from "@/platform/workforce/inspect";
+import {
+  createWorkforceRunFromSession,
+  inspectWorkforceRunFromSession,
+} from "@/modules/workforce/session-entry";
 
 export type WorkforceApprovalActionResult = {
   error?: string;
+};
+
+export type WorkforceCreateRunActionResult = {
+  error?: string;
+  runId?: string;
+};
+
+export type WorkforceInspectActionResult = {
+  error?: string;
+  inspection?: WorkforceRunInspection;
 };
 
 export async function approveWorkforceRunAction(input: {
@@ -51,4 +70,58 @@ async function decide(
     return { error: "Approval was not recorded." };
   }
   return {};
+}
+
+export async function createWorkforceRunAction(input: {
+  agentInstanceId: string;
+  ventureId: string;
+  workspaceId?: string;
+  objective: string;
+  evidence?: ModelEvidenceRef[];
+  citations?: ModelContextCitation[];
+}): Promise<WorkforceCreateRunActionResult> {
+  const session = await getSession();
+  if (!session) {
+    return { error: "You must be signed in." };
+  }
+
+  const result = await createWorkforceRunFromSession({
+    session,
+    activeWorkspaceId: await getActiveWorkspaceId(),
+    claimedWorkspaceId: input.workspaceId,
+    ventureId: input.ventureId,
+    agentInstanceId: input.agentInstanceId,
+    objective: input.objective,
+    evidence: input.evidence,
+    citations: input.citations,
+  });
+
+  if (!result.ok) {
+    return { error: "Run was not created." };
+  }
+  return { runId: result.runId };
+}
+
+export async function inspectWorkforceRunAction(input: {
+  runId: string;
+  ventureId: string;
+  workspaceId?: string;
+}): Promise<WorkforceInspectActionResult> {
+  const session = await getSession();
+  if (!session) {
+    return { error: "You must be signed in." };
+  }
+
+  const result = await inspectWorkforceRunFromSession({
+    session,
+    activeWorkspaceId: await getActiveWorkspaceId(),
+    claimedWorkspaceId: input.workspaceId,
+    ventureId: input.ventureId,
+    runId: input.runId,
+  });
+
+  if (!result.ok) {
+    return { error: "Run was not found." };
+  }
+  return { inspection: result.inspection };
 }
