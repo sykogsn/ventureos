@@ -1,18 +1,23 @@
 "use server";
 
-import type { WorkforceRunId } from "@/contracts/ids";
 import { getActiveWorkspaceId, getSession } from "@/lib/auth/session";
-import { getWorkforceService } from "@/modules/workforce/service";
 import type {
-  HumanWorkforceActor,
   ModelContextCitation,
   ModelEvidenceRef,
 } from "@/core/workforce/types";
-import type { WorkforceRunInspection } from "@/platform/workforce/inspect";
 import {
   createWorkforceRunFromSession,
+  decideWorkforceRunFromSession,
+  getWorkforceInstanceFromSession,
   inspectWorkforceRunFromSession,
+  listWorkforceInstancesFromSession,
+  listWorkforceRunsFromSession,
+  type WorkforceAgentInstanceView,
 } from "@/modules/workforce/session-entry";
+import type {
+  WorkforceRunInspection,
+  WorkforceRunListItem,
+} from "@/platform/workforce/inspect";
 
 export type WorkforceApprovalActionResult = {
   error?: string;
@@ -28,43 +33,53 @@ export type WorkforceInspectActionResult = {
   inspection?: WorkforceRunInspection;
 };
 
+export type WorkforceListRunsActionResult = {
+  error?: string;
+  runs?: WorkforceRunListItem[];
+};
+
+export type WorkforceListInstancesActionResult = {
+  error?: string;
+  instances?: WorkforceAgentInstanceView[];
+};
+
+export type WorkforceGetInstanceActionResult = {
+  error?: string;
+  instance?: WorkforceAgentInstanceView;
+};
+
 export async function approveWorkforceRunAction(input: {
   runId: string;
-  workspaceId: string;
   ventureId: string;
+  workspaceId?: string;
 }): Promise<WorkforceApprovalActionResult> {
   return decide("approve", input);
 }
 
 export async function rejectWorkforceRunAction(input: {
   runId: string;
-  workspaceId: string;
   ventureId: string;
+  workspaceId?: string;
 }): Promise<WorkforceApprovalActionResult> {
   return decide("reject", input);
 }
 
 async function decide(
   kind: "approve" | "reject",
-  input: { runId: string; workspaceId: string; ventureId: string },
+  input: { runId: string; ventureId: string; workspaceId?: string },
 ): Promise<WorkforceApprovalActionResult> {
   const session = await getSession();
   if (!session) {
     return { error: "You must be signed in." };
   }
 
-  const actor: HumanWorkforceActor = {
-    kind: "human",
-    userId: session.id,
-    workspaceId: input.workspaceId as HumanWorkforceActor["workspaceId"],
-    ventureId: input.ventureId as HumanWorkforceActor["ventureId"],
-  };
-
-  const service = getWorkforceService();
-  const result =
-    kind === "approve"
-      ? await service.approve(input.runId as WorkforceRunId, actor)
-      : await service.reject(input.runId as WorkforceRunId, actor);
+  const result = await decideWorkforceRunFromSession(kind, {
+    session,
+    activeWorkspaceId: await getActiveWorkspaceId(),
+    claimedWorkspaceId: input.workspaceId,
+    ventureId: input.ventureId,
+    runId: input.runId,
+  });
 
   if (!result.ok) {
     return { error: "Approval was not recorded." };
@@ -124,4 +139,72 @@ export async function inspectWorkforceRunAction(input: {
     return { error: "Run was not found." };
   }
   return { inspection: result.inspection };
+}
+
+export async function listWorkforceRunsAction(input: {
+  ventureId: string;
+  workspaceId?: string;
+}): Promise<WorkforceListRunsActionResult> {
+  const session = await getSession();
+  if (!session) {
+    return { error: "You must be signed in." };
+  }
+
+  const result = await listWorkforceRunsFromSession({
+    session,
+    activeWorkspaceId: await getActiveWorkspaceId(),
+    claimedWorkspaceId: input.workspaceId,
+    ventureId: input.ventureId,
+  });
+
+  if (!result.ok) {
+    return { error: "Runs could not be listed." };
+  }
+  return { runs: result.runs };
+}
+
+export async function listWorkforceInstancesAction(input: {
+  ventureId: string;
+  workspaceId?: string;
+}): Promise<WorkforceListInstancesActionResult> {
+  const session = await getSession();
+  if (!session) {
+    return { error: "You must be signed in." };
+  }
+
+  const result = await listWorkforceInstancesFromSession({
+    session,
+    activeWorkspaceId: await getActiveWorkspaceId(),
+    claimedWorkspaceId: input.workspaceId,
+    ventureId: input.ventureId,
+  });
+
+  if (!result.ok) {
+    return { error: "Instances could not be listed." };
+  }
+  return { instances: result.instances };
+}
+
+export async function getWorkforceInstanceAction(input: {
+  instanceId: string;
+  ventureId: string;
+  workspaceId?: string;
+}): Promise<WorkforceGetInstanceActionResult> {
+  const session = await getSession();
+  if (!session) {
+    return { error: "You must be signed in." };
+  }
+
+  const result = await getWorkforceInstanceFromSession({
+    session,
+    activeWorkspaceId: await getActiveWorkspaceId(),
+    claimedWorkspaceId: input.workspaceId,
+    ventureId: input.ventureId,
+    instanceId: input.instanceId,
+  });
+
+  if (!result.ok) {
+    return { error: "Instance was not found." };
+  }
+  return { instance: result.instance };
 }

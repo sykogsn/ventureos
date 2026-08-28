@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { AgentDefinitionId, AgentInstanceId } from "@/contracts/ids";
 import type { VentureId, WorkspaceId } from "@/contracts";
 import type {
@@ -13,6 +13,10 @@ import { agentInstances as instanceTable } from "@/platform/persistence/schema";
 export type WorkforceInstanceRepository = WorkforceInstanceRegistry & {
   insert(instance: AgentInstance): Promise<void>;
   setStatus(id: AgentInstanceId, status: AgentInstanceStatus): Promise<void>;
+  listByScope(input: {
+    workspaceId: WorkspaceId;
+    ventureId: VentureId;
+  }): Promise<AgentInstance[]>;
 };
 
 export function createWorkforceInstanceRepository(): WorkforceInstanceRepository {
@@ -46,6 +50,19 @@ export function createWorkforceInstanceRepository(): WorkforceInstanceRepository
         .update(instanceTable)
         .set({ status, updatedAt: nowIso() })
         .where(eq(instanceTable.id, id));
+    },
+    async listByScope(input) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(instanceTable)
+        .where(
+          and(
+            eq(instanceTable.workspaceId, input.workspaceId),
+            eq(instanceTable.ventureId, input.ventureId),
+          ),
+        );
+      return rows.map(toInstance);
     },
   };
 }

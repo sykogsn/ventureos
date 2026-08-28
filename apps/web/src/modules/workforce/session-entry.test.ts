@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
-import type { JobId, WorkforceRunId } from "@/contracts/ids";
+import type { AgentDefinitionId, AgentInstanceId, JobId, WorkforceRunId } from "@/contracts/ids";
 import { WORKFORCE_APPROVAL_PERMISSION } from "@/core/workforce/approval";
 import type { SessionUser } from "@/lib/auth/session-token";
 import { createId } from "@/platform/ids";
@@ -14,13 +14,18 @@ import {
   resetPersistenceLifecycle,
 } from "@/platform/persistence/repositories/sqlite";
 import { workforceRuns as runTable } from "@/platform/persistence/schema";
+import { createWorkforceInstanceRepository } from "@/platform/workforce/instance-repository";
 import type { WorkforceRunInspection } from "@/platform/workforce/inspect";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
 import { createPermissionService } from "@/platform/permissions/service";
 import { PRODUCTION_WORKFORCE_BINDINGS } from "@/modules/workforce/production-bindings";
 import {
   createWorkforceRunFromSession,
+  decideWorkforceRunFromSession,
+  getWorkforceInstanceFromSession,
   inspectWorkforceRunFromSession,
+  listWorkforceInstancesFromSession,
+  listWorkforceRunsFromSession,
   type WorkforceSessionEntryDeps,
 } from "./session-entry";
 
@@ -137,7 +142,10 @@ async function seedHome() {
 }
 
 function sessionDeps(
-  input: Pick<WorkforceSessionEntryDeps, "createRun" | "inspect"> = {},
+  input: Pick<
+    WorkforceSessionEntryDeps,
+    "createRun" | "inspect" | "decide" | "listRuns" | "listInstances" | "getInstance"
+  > = {},
 ): WorkforceSessionEntryDeps {
   return {
     canOperate: (id, workspace) =>
@@ -146,9 +154,46 @@ function sessionDeps(
         permission: WORKFORCE_APPROVAL_PERMISSION,
         resource: { type: "workspace", id: workspace },
       }),
-    createRun: input.createRun,
-    inspect: input.inspect,
+    ...input,
   };
+}
+
+async function insertRun(input: {
+  id: WorkforceRunId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  objective: string;
+}) {
+  const now = "2026-08-26T00:00:00.000Z";
+  await getDb().insert(runTable).values({
+    id: input.id,
+    jobId: null,
+    workspaceId: input.workspaceId,
+    ventureId: input.ventureId,
+    agentInstanceId: "instance-1",
+    definitionId: "definition-1",
+    definitionVersion: "1",
+    objective: input.objective,
+    phase: "completed",
+    completionKind: "executed",
+    failureCategory: null,
+    sourceRequestId: input.id,
+    selectedCapabilityId: null,
+    selectedActionIndex: null,
+    selectedActionJson: null,
+    argumentHash: null,
+    fingerprintHash: null,
+    executionId: null,
+    approvalId: null,
+    verificationOutcome: "VERIFIED",
+    modelCallCount: 1,
+    requestedByUserId: userId,
+    createdAt: now,
+    updatedAt: now,
+    completedAt: now,
+    evidenceJson: JSON.stringify([{ id: "ev.secret", excerpt: "care-data" }]),
+    citationsJson: null,
+  });
 }
 
 describe("Workforce session run entry", () => {
@@ -311,26 +356,31 @@ describe("Workforce session run entry", () => {
   });
 });
 
-describe("Workforce session inspect boundary", () => {
-  function inspection(overrides: Partial<WorkforceRunInspection["run"]> = {}): WorkforceRunInspection {
-    return {
-      run: {
-        id: "run-1",
-        phase: "completed",
-        completionKind: "executed",
-        failureCategory: null,
-        verificationOutcome: "VERIFIED",
-        definitionVersion: "1",
-        workspaceId,
-        ventureId,
-        agentInstanceId: "instance-1",
-        capabilityId: "platform.identity",
-        executionId: null,
-        ...overrides,
-      },
-    };
-  }
+function inspection(overrides: Partial<WorkforceRunInspection["run"]> = {}): WorkforceRunInspection {
+  return {
+    run: {
+      id: "run-1",
+      phase: "completed",
+      completionKind: "executed",
+      failureCategory: null,
+      verificationOutcome: "VERIFIED",
+      definitionVersion: "1",
+      workspaceId,
+      ventureId,
+      agentInstanceId: "instance-1",
+      capabilityId: "platform.identity",
+      executionId: null,
+      definitionId: "definition-1",
+      requestedByUserId: userId,
+      createdAt: "2026-08-26T00:00:00.000Z",
+      updatedAt: "2026-08-26T00:00:00.000Z",
+      completedAt: "2026-08-26T00:00:00.000Z",
+      ...overrides,
+    },
+  };
+}
 
+describe("Workforce session inspect boundary", () => {
   it("lets an authorised human inspect a run in session scope", async () => {
     await seedHome();
     const result = await inspectWorkforceRunFromSession(
@@ -489,6 +539,247 @@ describe("Workforce session inspect boundary", () => {
     assert.equal(serialized.includes("ev.secret"), false);
     assert.equal(serialized.includes("secret-objective"), false);
     assert.equal(serialized.includes("evidenceJson"), false);
+    assert.equal(result.inspection.run.definitionId, "definition-1");
+    assert.equal(result.inspection.run.requestedByUserId, userId);
+    assert.equal(result.inspection.run.createdAt, now);
+    assert.equal("objective" in result.inspection.run, false);
+  });
+});
+
+describe("Workforce session run list", () => {
+  it("lists only runs in the session workspace and Venture and redacts payloads", async () => {
+    await seedHome();
+    await seedVenture({
+      workspaceId: otherWorkspaceId,
+      ventureId: otherVentureId,
+      name: "Other Venture",
+      slug: "other-venture",
+    });
+    const homeRun = createId<WorkforceRunId>();
+    const foreignRun = createId<WorkforceRunId>();
+    await insertRun({
+      id: homeRun,
+      workspaceId,
+      ventureId,
+      objective: "secret-home-objective",
+    });
+    await insertRun({
+      id: foreignRun,
+      workspaceId: otherWorkspaceId,
+      ventureId: otherVentureId,
+      objective: "secret-foreign-objective",
+    });
+
+    const listed = await listWorkforceRunsFromSession(
+      {
+        session: session(),
+        activeWorkspaceId: workspaceId,
+        ventureId,
+      },
+      sessionDeps(),
+    );
+    assert.equal(listed.ok, true);
+    if (!listed.ok) {
+      return;
+    }
+    assert.deepEqual(
+      listed.runs.map((run) => run.id),
+      [homeRun],
+    );
+    const serialized = JSON.stringify(listed.runs);
+    assert.equal(serialized.includes("secret-home-objective"), false);
+    assert.equal(serialized.includes("secret-foreign-objective"), false);
+    assert.equal(serialized.includes("evidenceJson"), false);
+    assert.equal("objective" in listed.runs[0]!, false);
+  });
+
+  it("denies unauthenticated and cross-Venture list", async () => {
+    await seedHome();
+    await seedVenture({
+      workspaceId: otherWorkspaceId,
+      ventureId: otherVentureId,
+      name: "Other Venture",
+      slug: "other-venture",
+    });
+    const unauthenticated = await listWorkforceRunsFromSession(
+      {
+        session: null,
+        activeWorkspaceId: workspaceId,
+        ventureId,
+      },
+      sessionDeps(),
+    );
+    assert.equal(unauthenticated.ok, false);
+    if (!unauthenticated.ok) {
+      assert.equal(unauthenticated.failure, "UNAUTHENTICATED");
+    }
+    const crossVenture = await listWorkforceRunsFromSession(
+      {
+        session: session(),
+        activeWorkspaceId: workspaceId,
+        ventureId: otherVentureId,
+      },
+      sessionDeps(),
+    );
+    assert.equal(crossVenture.ok, false);
+    if (!crossVenture.ok) {
+      assert.equal(crossVenture.failure, "SCOPE_MISMATCH");
+    }
+  });
+});
+
+describe("Workforce session instance discovery", () => {
+  it("lists and gets instances only in session scope", async () => {
+    await seedHome();
+    await seedVenture({
+      workspaceId: otherWorkspaceId,
+      ventureId: otherVentureId,
+      name: "Other Venture",
+      slug: "other-venture",
+    });
+    const instances = createWorkforceInstanceRepository();
+    await instances.insert({
+      id: "instance-home" as AgentInstanceId,
+      definitionId: "definition-home" as AgentDefinitionId,
+      definitionVersion: "1",
+      workspaceId,
+      ventureId,
+      status: "active",
+    });
+    await instances.insert({
+      id: "instance-foreign" as AgentInstanceId,
+      definitionId: "definition-foreign" as AgentDefinitionId,
+      definitionVersion: "1",
+      workspaceId: otherWorkspaceId,
+      ventureId: otherVentureId,
+      status: "active",
+    });
+
+    const listed = await listWorkforceInstancesFromSession(
+      {
+        session: session(),
+        activeWorkspaceId: workspaceId,
+        ventureId,
+      },
+      sessionDeps(),
+    );
+    assert.equal(listed.ok, true);
+    if (!listed.ok) {
+      return;
+    }
+    assert.equal(listed.instances.length, 1);
+    assert.equal(listed.instances[0]?.id, "instance-home");
+    assert.equal("responsibilities" in listed.instances[0]!, false);
+
+    const got = await getWorkforceInstanceFromSession(
+      {
+        session: session(),
+        activeWorkspaceId: workspaceId,
+        ventureId,
+        instanceId: "instance-home",
+      },
+      sessionDeps(),
+    );
+    assert.equal(got.ok, true);
+
+    const foreign = await getWorkforceInstanceFromSession(
+      {
+        session: session(),
+        activeWorkspaceId: workspaceId,
+        ventureId,
+        instanceId: "instance-foreign",
+      },
+      sessionDeps(),
+    );
+    assert.equal(foreign.ok, false);
+    if (!foreign.ok) {
+      assert.equal(foreign.failure, "SCOPE_MISMATCH");
+    }
+  });
+});
+
+describe("Workforce session approve/reject hardening", () => {
+  it("does not call Core decide when the run is outside session scope", async () => {
+    await seedHome();
+    await seedVenture({
+      workspaceId: otherWorkspaceId,
+      ventureId: otherVentureId,
+      name: "Other Venture",
+      slug: "other-venture",
+    });
+    await grant("owner", userId, otherWorkspaceId);
+    let called = 0;
+    const result = await decideWorkforceRunFromSession(
+      "approve",
+      {
+        session: session(),
+        activeWorkspaceId: workspaceId,
+        claimedWorkspaceId: otherWorkspaceId,
+        ventureId,
+        runId: "run-1",
+      },
+      sessionDeps({
+        inspect: async () => inspection(),
+        decide: async () => {
+          called += 1;
+          return { ok: true, runId: "run-1" as WorkforceRunId };
+        },
+      }),
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failure, "SCOPE_MISMATCH");
+    }
+    assert.equal(called, 0);
+  });
+
+  it("approves only after session workspace and Venture match the run", async () => {
+    await seedHome();
+    let actorWorkspace: string | undefined;
+    const result = await decideWorkforceRunFromSession(
+      "approve",
+      {
+        session: session(),
+        activeWorkspaceId: workspaceId,
+        ventureId,
+        runId: "run-1",
+      },
+      sessionDeps({
+        inspect: async () => inspection(),
+        decide: async (_kind, runId, actor) => {
+          actorWorkspace = actor.workspaceId;
+          return { ok: true, runId };
+        },
+      }),
+    );
+    assert.equal(result.ok, true);
+    assert.equal(actorWorkspace, workspaceId);
+  });
+
+  it("denies approve of another Venture's run", async () => {
+    await seedHome();
+    let called = 0;
+    const result = await decideWorkforceRunFromSession(
+      "reject",
+      {
+        session: session(),
+        activeWorkspaceId: workspaceId,
+        ventureId,
+        runId: "run-foreign",
+      },
+      sessionDeps({
+        inspect: async () => inspection({ ventureId: otherVentureId }),
+        decide: async () => {
+          called += 1;
+          return { ok: true, runId: "run-foreign" as WorkforceRunId };
+        },
+      }),
+    );
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.failure, "SCOPE_MISMATCH");
+    }
+    assert.equal(called, 0);
   });
 });
 
@@ -510,7 +801,7 @@ describe("Workforce session entry isolation", () => {
     ];
     for (const relative of coreFiles) {
       const source = await readFile(join(webSrc, relative), "utf8");
-      assert.doesNotMatch(source, /createWorkforceRunFromSession|inspectWorkforceRunFromSession/);
+      assert.doesNotMatch(source, /createWorkforceRunFromSession|inspectWorkforceRunFromSession|decideWorkforceRunFromSession|listWorkforceRunsFromSession/);
       assert.doesNotMatch(source, /getSession|getActiveWorkspaceId/);
     }
     assert.equal(PRODUCTION_WORKFORCE_BINDINGS.length, 1);

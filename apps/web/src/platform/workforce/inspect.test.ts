@@ -116,6 +116,11 @@ describe("workforce run inspector", () => {
     assert.ok(inspection);
     assert.equal(inspection?.run.phase, "completed");
     assert.equal(inspection?.run.verificationOutcome, "VERIFIED");
+    assert.equal(inspection?.run.definitionId, "definition-1");
+    assert.equal(inspection?.run.requestedByUserId, "user-1");
+    assert.equal(inspection?.run.createdAt, now);
+    assert.equal(inspection?.run.updatedAt, now);
+    assert.equal(inspection?.run.completedAt, now);
     assert.equal(inspection?.execution?.implementationId, "test.workforce.execution-probe");
     assert.equal(inspection?.execution?.implementationVersion, "1.0.0");
     assert.equal(inspection?.execution?.externalReference, "ext-1");
@@ -127,11 +132,14 @@ describe("workforce run inspector", () => {
     assert.equal(serialized.includes("evidence"), false);
     assert.equal(serialized.includes("secretShouldNotLeak"), false);
     assert.equal(serialized.includes("observedKeys"), false);
+    assert.equal(serialized.includes("inspect"), false);
+    assert.equal("objective" in (inspection?.run ?? {}), false);
   });
 
   it("does not expose evidence JSON and remains venture-agnostic", async () => {
     const source = await readFile(inspectPath, "utf8");
     assert.doesNotMatch(source, /evidenceJson/);
+    assert.doesNotMatch(source, /objective/);
     assert.doesNotMatch(source, /Qualora|Calviora|Farmora/);
     assert.equal(await inspectWorkforceRun("missing" as WorkforceRunId), undefined);
   });

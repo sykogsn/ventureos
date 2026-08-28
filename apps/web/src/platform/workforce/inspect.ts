@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import type { VentureId, WorkspaceId } from "@/contracts";
 import type { WorkforceRunId } from "@/contracts/ids";
 import { ensureSchema, getDb } from "@/platform/persistence/db";
 import {
@@ -8,20 +9,29 @@ import {
   workforceVerifications as verificationTable,
 } from "@/platform/persistence/schema";
 
+export type WorkforceRunOperatorFields = {
+  id: string;
+  phase: string;
+  completionKind: string | null;
+  failureCategory: string | null;
+  verificationOutcome: string | null;
+  definitionId: string;
+  definitionVersion: string;
+  workspaceId: string;
+  ventureId: string;
+  agentInstanceId: string;
+  capabilityId: string | null;
+  executionId: string | null;
+  requestedByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+};
+
+export type WorkforceRunListItem = WorkforceRunOperatorFields;
+
 export type WorkforceRunInspection = {
-  run: {
-    id: string;
-    phase: string;
-    completionKind: string | null;
-    failureCategory: string | null;
-    verificationOutcome: string | null;
-    definitionVersion: string;
-    workspaceId: string;
-    ventureId: string;
-    agentInstanceId: string;
-    capabilityId: string | null;
-    executionId: string | null;
-  };
+  run: WorkforceRunOperatorFields;
   approval?: {
     status: string;
     decidedByUserId: string | null;
@@ -73,19 +83,7 @@ export async function inspectWorkforceRun(
     : [];
 
   return {
-    run: {
-      id: run.id,
-      phase: run.phase,
-      completionKind: run.completionKind,
-      failureCategory: run.failureCategory,
-      verificationOutcome: run.verificationOutcome,
-      definitionVersion: run.definitionVersion,
-      workspaceId: run.workspaceId,
-      ventureId: run.ventureId,
-      agentInstanceId: run.agentInstanceId,
-      capabilityId: run.selectedCapabilityId,
-      executionId: run.executionId,
-    },
+    run: toOperatorFields(run),
     ...(approval
       ? {
           approval: {
@@ -118,5 +116,67 @@ export async function inspectWorkforceRun(
           },
         }
       : {}),
+  };
+}
+
+/**
+ * Session application code must still authorise before calling this.
+ * Selects only operator-safe columns; never evidence, citations, or model JSON.
+ */
+export async function listWorkforceRunSummaries(input: {
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+}): Promise<WorkforceRunListItem[]> {
+  await ensureSchema();
+  const rows = await getDb()
+    .select({
+      id: runTable.id,
+      phase: runTable.phase,
+      completionKind: runTable.completionKind,
+      failureCategory: runTable.failureCategory,
+      verificationOutcome: runTable.verificationOutcome,
+      definitionId: runTable.definitionId,
+      definitionVersion: runTable.definitionVersion,
+      workspaceId: runTable.workspaceId,
+      ventureId: runTable.ventureId,
+      agentInstanceId: runTable.agentInstanceId,
+      capabilityId: runTable.selectedCapabilityId,
+      executionId: runTable.executionId,
+      requestedByUserId: runTable.requestedByUserId,
+      createdAt: runTable.createdAt,
+      updatedAt: runTable.updatedAt,
+      completedAt: runTable.completedAt,
+    })
+    .from(runTable)
+    .where(
+      and(
+        eq(runTable.workspaceId, input.workspaceId),
+        eq(runTable.ventureId, input.ventureId),
+      ),
+    )
+    .orderBy(desc(runTable.createdAt));
+  return rows;
+}
+
+function toOperatorFields(
+  run: typeof runTable.$inferSelect,
+): WorkforceRunOperatorFields {
+  return {
+    id: run.id,
+    phase: run.phase,
+    completionKind: run.completionKind,
+    failureCategory: run.failureCategory,
+    verificationOutcome: run.verificationOutcome,
+    definitionId: run.definitionId,
+    definitionVersion: run.definitionVersion,
+    workspaceId: run.workspaceId,
+    ventureId: run.ventureId,
+    agentInstanceId: run.agentInstanceId,
+    capabilityId: run.selectedCapabilityId,
+    executionId: run.executionId,
+    requestedByUserId: run.requestedByUserId,
+    createdAt: run.createdAt,
+    updatedAt: run.updatedAt,
+    completedAt: run.completedAt,
   };
 }

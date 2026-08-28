@@ -2,6 +2,7 @@ import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import type { AgentInstanceId, JobId, WorkforceRunId } from "@/contracts/ids";
 import { WORKFORCE_APPROVAL_PERMISSION } from "@/core/workforce/approval";
 import type {
+  AgentInstance,
   HumanWorkforceActor,
   ModelContextCitation,
   ModelEvidenceRef,
@@ -11,8 +12,11 @@ import { getPlatform } from "@/platform/kernel";
 import { getPersistence } from "@/platform/persistence/repositories";
 import {
   inspectWorkforceRun,
+  listWorkforceRunSummaries,
   type WorkforceRunInspection,
+  type WorkforceRunListItem,
 } from "@/platform/workforce/inspect";
+import { createWorkforceInstanceRepository } from "@/platform/workforce/instance-repository";
 import { getWorkforceService } from "@/modules/workforce/service";
 
 export type WorkforceSessionFailure =
@@ -31,6 +35,31 @@ export type WorkforceSessionInspectResult =
   | { ok: true; inspection: WorkforceRunInspection }
   | { ok: false; failure: WorkforceSessionFailure };
 
+export type WorkforceSessionListRunsResult =
+  | { ok: true; runs: WorkforceRunListItem[] }
+  | { ok: false; failure: WorkforceSessionFailure };
+
+export type WorkforceAgentInstanceView = {
+  id: AgentInstanceId;
+  definitionId: AgentInstance["definitionId"];
+  definitionVersion: string;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  status: AgentInstance["status"];
+};
+
+export type WorkforceSessionListInstancesResult =
+  | { ok: true; instances: WorkforceAgentInstanceView[] }
+  | { ok: false; failure: WorkforceSessionFailure };
+
+export type WorkforceSessionGetInstanceResult =
+  | { ok: true; instance: WorkforceAgentInstanceView }
+  | { ok: false; failure: WorkforceSessionFailure };
+
+export type WorkforceSessionDecisionResult =
+  | { ok: true; runId: WorkforceRunId }
+  | { ok: false; failure: WorkforceSessionFailure };
+
 export type WorkforceSessionEntryDeps = {
   canOperate?: (userId: UserId, workspaceId: WorkspaceId) => Promise<boolean>;
   loadVenture?: (
@@ -46,6 +75,20 @@ export type WorkforceSessionEntryDeps = {
     citations?: ModelContextCitation[];
   }) => Promise<{ ok: true; runId: WorkforceRunId; jobId: JobId } | { ok: false }>;
   inspect?: (runId: WorkforceRunId) => Promise<WorkforceRunInspection | undefined>;
+  listRuns?: (input: {
+    workspaceId: WorkspaceId;
+    ventureId: VentureId;
+  }) => Promise<WorkforceRunListItem[]>;
+  listInstances?: (input: {
+    workspaceId: WorkspaceId;
+    ventureId: VentureId;
+  }) => Promise<AgentInstance[]>;
+  getInstance?: (id: AgentInstanceId) => Promise<AgentInstance | undefined>;
+  decide?: (
+    kind: "approve" | "reject",
+    runId: WorkforceRunId,
+    actor: HumanWorkforceActor,
+  ) => Promise<{ ok: true; runId: WorkforceRunId } | { ok: false }>;
 };
 
 export type WorkforceSessionScopeInput = {
@@ -196,4 +239,128 @@ export async function inspectWorkforceRunFromSession(
     return { ok: false, failure: "SCOPE_MISMATCH" };
   }
   return { ok: true, inspection };
+}
+
+export async function listWorkforceRunsFromSession(
+  input: WorkforceSessionScopeInput,
+  deps: WorkforceSessionEntryDeps = {},
+): Promise<WorkforceSessionListRunsResult> {
+  const scoped = await authoriseWorkforceSession(input, deps);
+  if (!scoped.ok) {
+    return scoped;
+  }
+
+  const listRuns = deps.listRuns ?? listWorkforceRunSummaries;
+  const runs = await listRuns({
+    workspaceId: scoped.workspaceId,
+    ventureId: scoped.ventureId,
+  });
+  return { ok: true, runs };
+}
+
+export async function listWorkforceInstancesFromSession(
+  input: WorkforceSessionScopeInput,
+  deps: WorkforceSessionEntryDeps = {},
+): Promise<WorkforceSessionListInstancesResult> {
+  const scoped = await authoriseWorkforceSession(input, deps);
+  if (!scoped.ok) {
+    return scoped;
+  }
+
+  const listInstances =
+    deps.listInstances ??
+    ((scope: { workspaceId: WorkspaceId; ventureId: VentureId }) =>
+      createWorkforceInstanceRepository().listByScope(scope));
+  const instances = await listInstances({
+    workspaceId: scoped.workspaceId,
+    ventureId: scoped.ventureId,
+  });
+  return { ok: true, instances: instances.map(toInstanceView) };
+}
+
+export async function getWorkforceInstanceFromSession(
+  input: WorkforceSessionScopeInput & { instanceId: string },
+  deps: WorkforceSessionEntryDeps = {},
+): Promise<WorkforceSessionGetInstanceResult> {
+  const scoped = await authoriseWorkforceSession(input, deps);
+  if (!scoped.ok) {
+    return scoped;
+  }
+
+  const instanceId = input.instanceId.trim();
+  if (!instanceId) {
+    return { ok: false, failure: "MALFORMED_REQUEST" };
+  }
+
+  const getInstance =
+    deps.getInstance ??
+    ((id: AgentInstanceId) => createWorkforceInstanceRepository().get(id));
+  const instance = await getInstance(instanceId as AgentInstanceId);
+  if (!instance) {
+    return { ok: false, failure: "NOT_FOUND" };
+  }
+  if (
+    instance.workspaceId !== scoped.workspaceId ||
+    instance.ventureId !== scoped.ventureId
+  ) {
+    return { ok: false, failure: "SCOPE_MISMATCH" };
+  }
+  return { ok: true, instance: toInstanceView(instance) };
+}
+
+export async function decideWorkforceRunFromSession(
+  kind: "approve" | "reject",
+  input: WorkforceSessionScopeInput & { runId: string },
+  deps: WorkforceSessionEntryDeps = {},
+): Promise<WorkforceSessionDecisionResult> {
+  const scoped = await authoriseWorkforceSession(input, deps);
+  if (!scoped.ok) {
+    return scoped;
+  }
+
+  const runId = input.runId.trim();
+  if (!runId) {
+    return { ok: false, failure: "MALFORMED_REQUEST" };
+  }
+
+  const inspect = deps.inspect ?? inspectWorkforceRun;
+  const inspection = await inspect(runId as WorkforceRunId);
+  if (!inspection) {
+    return { ok: false, failure: "NOT_FOUND" };
+  }
+  if (
+    inspection.run.workspaceId !== scoped.workspaceId ||
+    inspection.run.ventureId !== scoped.ventureId
+  ) {
+    return { ok: false, failure: "SCOPE_MISMATCH" };
+  }
+
+  const decide =
+    deps.decide ??
+    (async (
+      decision: "approve" | "reject",
+      id: WorkforceRunId,
+      actor: HumanWorkforceActor,
+    ) => {
+      const service = getWorkforceService();
+      return decision === "approve"
+        ? service.approve(id, actor)
+        : service.reject(id, actor);
+    });
+  const decided = await decide(kind, runId as WorkforceRunId, scoped.actor);
+  if (!decided.ok) {
+    return { ok: false, failure: "MALFORMED_REQUEST" };
+  }
+  return { ok: true, runId: decided.runId };
+}
+
+function toInstanceView(instance: AgentInstance): WorkforceAgentInstanceView {
+  return {
+    id: instance.id,
+    definitionId: instance.definitionId,
+    definitionVersion: instance.definitionVersion,
+    workspaceId: instance.workspaceId,
+    ventureId: instance.ventureId,
+    status: instance.status,
+  };
 }
