@@ -522,6 +522,7 @@ export const frigoraWorkOrders = sqliteTable(
     status: text("status").notNull().default("open"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
+    assignedUserId: text("assigned_user_id"),
   },
   (table) => [
     uniqueIndex("frigora_work_orders_venture_reference_idx").on(
@@ -533,6 +534,10 @@ export const frigoraWorkOrders = sqliteTable(
     index("frigora_work_orders_customer_idx").on(table.customerId),
     index("frigora_work_orders_site_idx").on(table.siteId),
     index("frigora_work_orders_primary_asset_idx").on(table.primaryAssetId),
+    index("frigora_work_orders_venture_assignee_idx").on(
+      table.ventureId,
+      table.assignedUserId,
+    ),
   ],
 );
 

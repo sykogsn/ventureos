@@ -2,7 +2,7 @@
 
 **Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.3.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `frigora@0.4.0` in the Definition Registry.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
@@ -10,9 +10,9 @@
 
 **Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, and WorkOrder identity
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, and current WorkOrder assignment
 
-**Version.** 0.3.0
+**Version.** 0.4.0
 
 **Owner.** Founder (definition owner)
 
@@ -20,7 +20,7 @@
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, and WorkOrder identity as durable operational records beside VIC. Work execution, assignment, dispatch, PPM, refrigerant events, evidence, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, and current WorkOrder assignment as durable operational records beside VIC. Work execution, dispatch, PPM, refrigerant events, evidence, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
 
 ## Profile
 
@@ -39,6 +39,7 @@ Admitted in this version, persisted beside VIC for Frigora instances:
 - Site
 - Asset
 - WorkOrder (identity only: reference, kind, reported condition, lifecycle state)
+- Current WorkOrder assignment (workspace member responsibility only)
 
 RefrigerationSystem and Component remain deferred. Assets may exist at a site without a system grouping.
 

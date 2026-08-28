@@ -96,6 +96,7 @@ export type FrigoraWorkOrder = {
   workKind: FrigoraWorkKind;
   reportedCondition: string | null;
   status: FrigoraWorkOrderStatus;
+  assignedUserId: UserId | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -183,4 +184,8 @@ export type UpdateWorkOrderInput = {
   workKind?: FrigoraWorkKind;
   reportedCondition?: string | null;
   primaryAssetId?: string | null;
+};
+
+export type AssignWorkOrderInput = {
+  userId: string;
 };

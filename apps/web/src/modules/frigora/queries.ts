@@ -14,6 +14,7 @@ import type {
   FrigoraWorkOrderId,
   FrigoraWorkOrderStatus,
 } from "./types";
+import type { UserId } from "@/contracts";
 import { parseWithFrigora, scopeSchema } from "./validation";
 
 export type FrigoraQueryResult<T> = {
@@ -148,5 +149,13 @@ export async function listWorkOrdersByAssetQuery(
 ): Promise<FrigoraQueryResult<FrigoraWorkOrder[]>> {
   return query(input, (scope) =>
     getFrigoraService().listWorkOrdersByAsset(scope, input.assetId as FrigoraAssetId),
+  );
+}
+
+export async function listWorkOrdersByAssigneeQuery(
+  input: ScopedInput & { userId: string },
+): Promise<FrigoraQueryResult<FrigoraWorkOrder[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listWorkOrdersByAssignee(scope, input.userId as UserId),
   );
 }

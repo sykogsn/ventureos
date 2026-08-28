@@ -5,6 +5,7 @@ import { getPersistence } from "@/platform/persistence/repositories";
 import { FrigoraError } from "./errors";
 import { createFrigoraStore, type FrigoraStore } from "./store";
 import type {
+  AssignWorkOrderInput,
   CreateAssetInput,
   CreateCustomerInput,
   CreateSiteInput,
@@ -25,6 +26,7 @@ import type {
   UpdateWorkOrderInput,
 } from "./types";
 import {
+  assignWorkOrderSchema,
   createAssetSchema,
   createCustomerSchema,
   createSiteSchema,
@@ -96,6 +98,16 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraWorkOrder[]>;
+  assignWorkOrder(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+    input: AssignWorkOrderInput,
+  ): Promise<FrigoraWorkOrder>;
+  clearWorkOrderAssignment(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+  ): Promise<FrigoraWorkOrder>;
+  listWorkOrdersByAssignee(scope: FrigoraScope, userId: UserId): Promise<FrigoraWorkOrder[]>;
 };
 
 export function createFrigoraService(options: {
@@ -419,6 +431,7 @@ export function createFrigoraService(options: {
         workKind: parsed.workKind,
         reportedCondition: parsed.reportedCondition ?? null,
         status: "open",
+        assignedUserId: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -575,6 +588,48 @@ export function createFrigoraService(options: {
       }
       return store.listWorkOrdersByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
+    async assignWorkOrder(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireOpenWorkOrder(store, scope, id);
+      const parsed = parseWithFrigora(assignWorkOrderSchema, input);
+      const assigneeId = parsed.userId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, assigneeId);
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        assignedUserId: assigneeId,
+        updatedAt: nowIso(),
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async clearWorkOrderAssignment(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireOpenWorkOrder(store, scope, id);
+      if (existing.assignedUserId === null) {
+        return existing;
+      }
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        assignedUserId: null,
+        updatedAt: nowIso(),
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async listWorkOrdersByAssignee(scope, userId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const member = await getPersistence().memberships.getRole(userId, scope.workspaceId);
+      if (!member) {
+        return [];
+      }
+      return store.listWorkOrdersByAssignee(
+        scope.workspaceId,
+        scope.ventureId,
+        userId,
+      );
+    },
   };
 }
 
@@ -726,6 +781,13 @@ async function resolvePrimaryAssetAssociation(
     );
   }
   return asset.id;
+}
+
+async function requireWorkspaceMember(workspaceId: WorkspaceId, userId: UserId) {
+  const role = await getPersistence().memberships.getRole(userId, workspaceId);
+  if (!role) {
+    throw new FrigoraError("not_found", "Assignee is not a workspace member.");
+  }
 }
 
 async function assertUniqueCustomerCode(

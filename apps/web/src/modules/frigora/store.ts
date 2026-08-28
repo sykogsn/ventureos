@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import type { VentureId, WorkspaceId } from "@/contracts";
+import type { VentureId, WorkspaceId, UserId } from "@/contracts";
 import { ensureSchema, getDb } from "@/platform/persistence/db";
 import {
   frigoraAssets,
@@ -114,6 +114,11 @@ export type FrigoraStore = {
     workspaceId: WorkspaceId,
     ventureId: VentureId,
     assetId: FrigoraAssetId,
+  ): Promise<FrigoraWorkOrder[]>;
+  listWorkOrdersByAssignee(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    userId: UserId,
   ): Promise<FrigoraWorkOrder[]>;
 };
 
@@ -467,6 +472,21 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
       return rows.map(mapWorkOrder);
     },
+    async listWorkOrdersByAssignee(workspaceId, ventureId, userId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(
+          and(
+            eq(frigoraWorkOrders.workspaceId, workspaceId),
+            eq(frigoraWorkOrders.ventureId, ventureId),
+            eq(frigoraWorkOrders.assignedUserId, userId),
+          ),
+        )
+        .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
+      return rows.map(mapWorkOrder);
+    },
   };
 }
 
@@ -542,6 +562,7 @@ function toWorkOrderValues(row: FrigoraWorkOrder) {
     workKind: row.workKind,
     reportedCondition: row.reportedCondition,
     status: row.status,
+    assignedUserId: row.assignedUserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -619,6 +640,7 @@ function mapWorkOrder(row: typeof frigoraWorkOrders.$inferSelect): FrigoraWorkOr
     workKind: row.workKind as FrigoraWorkKind,
     reportedCondition: row.reportedCondition ?? null,
     status: row.status as FrigoraWorkOrderStatus,
+    assignedUserId: (row.assignedUserId as UserId | null) ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -53,7 +53,7 @@ Rows stored before definition columns existed may have empty `definition_id` / `
 | `qualora` | 0.3.0 | Qualora | incubating | Full intelligence pack including briefing |
 | `calviora` | 0.1.0 | Calviora | concept | Excludes `intelligence.briefing` / morning-briefing |
 | `farmora` | 0.1.0 | Farmora | concept | Excludes executive-office feature; still uses office capability for VIC |
-| `frigora` | 0.3.0 | Frigora | concept | Full intelligence pack including briefing. Customer, Site, Asset, and WorkOrder identity admitted beside VIC |
+| `frigora` | 0.4.0 | Frigora | concept | Full intelligence pack including briefing. Customer, Site, Asset, WorkOrder identity, and current assignment admitted beside VIC |
 
 The Runtime skips briefing assembly when the instance cannot consume `intelligence.briefing`. Projections hide excluded Situation Room, HQ, and Executive Office surfaces.
 

@@ -215,6 +215,14 @@ export const updateWorkOrderSchema = z.object({
   primaryAssetId: patchAssetId,
 });
 
+export const assignWorkOrderSchema = z.object({
+  userId: requiredText,
+});
+
+export const listWorkOrdersByAssigneeSchema = z.object({
+  userId: requiredText,
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });

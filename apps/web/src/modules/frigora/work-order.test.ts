@@ -62,7 +62,7 @@ async function seed(options: {
       workspaceId,
       slug: `venture-${ventureId}`,
       definitionId: options.definitionId ?? "frigora",
-      definitionVersion: options.definitionVersion ?? "0.3.0",
+      definitionVersion: options.definitionVersion ?? "0.4.0",
     }),
   );
   return {
@@ -121,7 +121,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.3.0",
+    definitionVersion: "0.4.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -168,6 +168,8 @@ function assertNoOutFields(workOrder: FrigoraWorkOrder) {
   assert.equal("evidenceId" in workOrder, false);
   assert.equal("assignedEngineerId" in workOrder, false);
   assert.equal("slaStatus" in workOrder, false);
+  assert.equal("dispatchedAt" in workOrder, false);
+  assert.equal("visitId" in workOrder, false);
   assert.equal("invoiceId" in workOrder, false);
   assert.equal("refrigerantEventId" in workOrder, false);
   assert.equal("reportedSummary" in workOrder, false);
@@ -194,6 +196,7 @@ describe("Frigora WorkOrder foundation", () => {
       workKind: "reactive",
     });
     assert.equal(workOrder.primaryAssetId, null);
+    assert.equal(workOrder.assignedUserId, null);
     assert.equal(workOrder.status, "open");
     assert.equal(workOrder.customerId, customer.id);
     assert.equal(workOrder.siteId, site.id);
@@ -804,8 +807,8 @@ describe("Frigora WorkOrder foundation", () => {
     assert.equal(workOrder.workKind, "inspection");
   });
 
-  it("resolves frigora@0.3.0 from catalog", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.3.0");
+  it("resolves frigora@0.4.0 from catalog", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.4.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /WorkOrder/,

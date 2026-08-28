@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { isFrigoraError } from "./errors";
 import { createScope, getFrigoraService } from "./service";
 import type {
+  AssignWorkOrderInput,
   CreateAssetInput,
   CreateCustomerInput,
   CreateSiteInput,
@@ -164,5 +165,21 @@ export async function reopenWorkOrderAction(
 ): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
   return mutate(input, (scope) =>
     getFrigoraService().reopenWorkOrder(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function assignWorkOrderAction(
+  input: ScopedInput & { id: string } & AssignWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().assignWorkOrder(scope, input.id as FrigoraWorkOrderId, input),
+  );
+}
+
+export async function clearWorkOrderAssignmentAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().clearWorkOrderAssignment(scope, input.id as FrigoraWorkOrderId),
   );
 }

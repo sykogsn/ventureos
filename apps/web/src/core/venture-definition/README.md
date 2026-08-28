@@ -42,4 +42,4 @@ The Runtime skips briefing assembly for instances that cannot consume `intellige
 | `qualora` | 0.3.0 | Qualora | incubating | Full intelligence pack including briefing |
 | `calviora` | 0.1.0 | Calviora | concept | Excludes briefing capability and morning-briefing feature |
 | `farmora` | 0.1.0 | Farmora | concept | Excludes executive-office feature; still uses office capability for VIC |
-| `frigora` | 0.3.0 | Frigora | concept | Full intelligence pack including briefing. Customer, Site, Asset, and WorkOrder identity admitted beside VIC |
+| `frigora` | 0.4.0 | Frigora | concept | Full intelligence pack including briefing. Customer, Site, Asset, WorkOrder identity, and current assignment admitted beside VIC |
