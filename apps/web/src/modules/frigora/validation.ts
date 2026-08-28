@@ -322,6 +322,15 @@ export const recordTechnicalFindingSchema = z.object({
   sourceFieldCaptureIds: z.array(requiredText).optional(),
 });
 
+export const recordCorrectiveActionSchema = z.object({
+  description: requiredText,
+  performedAt: isoTimestamp,
+  performedByUserId: requiredText,
+  recordedByUserId: requiredText,
+  assetId: patchAssetIdNullable,
+  sourceTechnicalFindingIds: z.array(requiredText).optional(),
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });

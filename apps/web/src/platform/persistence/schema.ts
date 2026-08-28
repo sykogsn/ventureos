@@ -621,6 +621,33 @@ export const frigoraTechnicalFindings = sqliteTable(
   ],
 );
 
+export const frigoraCorrectiveActions = sqliteTable(
+  "frigora_corrective_actions",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    visitId: text("visit_id").notNull(),
+    workOrderId: text("work_order_id").notNull(),
+    assetId: text("asset_id"),
+    description: text("description").notNull(),
+    sourceTechnicalFindingIds: text("source_technical_finding_ids"),
+    performedAt: text("performed_at").notNull(),
+    performedByUserId: text("performed_by_user_id").notNull(),
+    recordedByUserId: text("recorded_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("frigora_corrective_actions_venture_visit_idx").on(table.ventureId, table.visitId),
+    index("frigora_corrective_actions_venture_work_order_idx").on(
+      table.ventureId,
+      table.workOrderId,
+    ),
+    index("frigora_corrective_actions_venture_asset_idx").on(table.ventureId, table.assetId),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -655,4 +682,5 @@ export const schema = {
   frigoraVisits,
   frigoraFieldCaptures,
   frigoraTechnicalFindings,
+  frigoraCorrectiveActions,
 };

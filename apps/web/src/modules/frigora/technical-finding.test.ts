@@ -58,7 +58,7 @@ async function seed(options: {
       id: ventureId,
       workspaceId,
       slug: `venture-${ventureId}`,
-      definitionVersion: options.definitionVersion ?? "0.7.0",
+      definitionVersion: options.definitionVersion ?? "0.8.0",
     }),
   );
   return {
@@ -113,7 +113,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.7.0",
+    definitionVersion: "0.8.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -773,8 +773,8 @@ describe("Frigora Visit technical finding", () => {
     assert.equal(finding.findingKind, "symptom");
   });
 
-  it("resolves frigora@0.7.0 from catalog with technical finding admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.7.0");
+  it("resolves frigora@0.8.0 from catalog with technical finding admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.8.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /Visit technical findings/,

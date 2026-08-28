@@ -19,6 +19,8 @@ import type {
   FrigoraFieldCaptureId,
   FrigoraTechnicalFinding,
   FrigoraTechnicalFindingId,
+  FrigoraCorrectiveAction,
+  FrigoraCorrectiveActionId,
 } from "./types";
 import type { UserId } from "@/contracts";
 import { parseWithFrigora, scopeSchema } from "./validation";
@@ -257,5 +259,40 @@ export async function listTechnicalFindingsByAssetQuery(
 ): Promise<FrigoraQueryResult<FrigoraTechnicalFinding[]>> {
   return query(input, (scope) =>
     getFrigoraService().listTechnicalFindingsByAsset(scope, input.assetId as FrigoraAssetId),
+  );
+}
+
+export async function getCorrectiveActionQuery(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraQueryResult<FrigoraCorrectiveAction | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getCorrectiveAction(scope, input.id as FrigoraCorrectiveActionId),
+  );
+}
+
+export async function listCorrectiveActionsByVisitQuery(
+  input: ScopedInput & { visitId: string },
+): Promise<FrigoraQueryResult<FrigoraCorrectiveAction[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listCorrectiveActionsByVisit(scope, input.visitId as FrigoraVisitId),
+  );
+}
+
+export async function listCorrectiveActionsByWorkOrderQuery(
+  input: ScopedInput & { workOrderId: string },
+): Promise<FrigoraQueryResult<FrigoraCorrectiveAction[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listCorrectiveActionsByWorkOrder(
+      scope,
+      input.workOrderId as FrigoraWorkOrderId,
+    ),
+  );
+}
+
+export async function listCorrectiveActionsByAssetQuery(
+  input: ScopedInput & { assetId: string },
+): Promise<FrigoraQueryResult<FrigoraCorrectiveAction[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listCorrectiveActionsByAsset(scope, input.assetId as FrigoraAssetId),
   );
 }

@@ -30,6 +30,9 @@ import type {
   FrigoraTechnicalFinding,
   FrigoraTechnicalFindingId,
   RecordTechnicalFindingInput,
+  FrigoraCorrectiveAction,
+  FrigoraCorrectiveActionId,
+  RecordCorrectiveActionInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -46,6 +49,7 @@ import {
   recordVisitDepartureSchema,
   recordFieldCaptureSchema,
   recordTechnicalFindingSchema,
+  recordCorrectiveActionSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -181,6 +185,27 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraTechnicalFinding[]>;
+  recordCorrectiveAction(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: RecordCorrectiveActionInput,
+  ): Promise<FrigoraCorrectiveAction>;
+  getCorrectiveAction(
+    scope: FrigoraScope,
+    id: FrigoraCorrectiveActionId,
+  ): Promise<FrigoraCorrectiveAction | null>;
+  listCorrectiveActionsByVisit(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraCorrectiveAction[]>;
+  listCorrectiveActionsByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraCorrectiveAction[]>;
+  listCorrectiveActionsByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraCorrectiveAction[]>;
 };
 
 export function createFrigoraService(options: {
@@ -951,6 +976,92 @@ export function createFrigoraService(options: {
       }
       return store.listTechnicalFindingsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
+    async recordCorrectiveAction(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsCorrectiveAction(visit);
+      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const parsed = parseWithFrigora(recordCorrectiveActionSchema, input);
+      assertPerformedAtWithinVisit(visit, parsed.performedAt);
+      const performedByUserId = parsed.performedByUserId as UserId;
+      const recordedByUserId = parsed.recordedByUserId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, performedByUserId);
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const assetId = await resolveFieldCaptureAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+      const sourceTechnicalFindingIds = await resolveSourceTechnicalFindingIds(
+        store,
+        scope,
+        visit,
+        parsed.sourceTechnicalFindingIds,
+      );
+      const now = nowIso();
+      const row: FrigoraCorrectiveAction = {
+        id: createId<FrigoraCorrectiveActionId>(),
+        workspaceId: visit.workspaceId,
+        ventureId: visit.ventureId,
+        visitId: visit.id,
+        workOrderId: visit.workOrderId,
+        assetId,
+        description: parsed.description,
+        sourceTechnicalFindingIds,
+        performedAt: parsed.performedAt,
+        performedByUserId,
+        recordedByUserId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertCorrectiveAction(row);
+      return row;
+    },
+    async getCorrectiveAction(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findCorrectiveAction(scope.workspaceId, scope.ventureId, id);
+    },
+    async listCorrectiveActionsByVisit(scope, visitId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
+      if (!visit) {
+        return [];
+      }
+      return store.listCorrectiveActionsByVisit(scope.workspaceId, scope.ventureId, visitId);
+    },
+    async listCorrectiveActionsByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listCorrectiveActionsByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
+    async listCorrectiveActionsByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listCorrectiveActionsByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
   };
 }
 
@@ -1113,6 +1224,15 @@ function assertVisitAcceptsTechnicalFinding(visit: FrigoraVisit) {
   }
 }
 
+function assertVisitAcceptsCorrectiveAction(visit: FrigoraVisit) {
+  if (visit.status === "cancelled") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Corrective actions cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
 function assertObservedAtWithinVisit(visit: FrigoraVisit, observedAt: string) {
   const observedMs = Date.parse(observedAt);
   const arrivedMs = Date.parse(visit.arrivedAt);
@@ -1153,6 +1273,26 @@ function assertAssertedAtWithinVisit(visit: FrigoraVisit, assertedAt: string) {
   }
 }
 
+function assertPerformedAtWithinVisit(visit: FrigoraVisit, performedAt: string) {
+  const performedMs = Date.parse(performedAt);
+  const arrivedMs = Date.parse(visit.arrivedAt);
+  if (performedMs < arrivedMs) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Performed time must not precede visit arrival.",
+    );
+  }
+  if (visit.status === "departed" && visit.departedAt) {
+    const departedMs = Date.parse(visit.departedAt);
+    if (performedMs > departedMs) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Performed time must not follow visit departure.",
+      );
+    }
+  }
+}
+
 async function resolveSourceFieldCaptureIds(
   store: FrigoraStore,
   scope: FrigoraScope,
@@ -1183,6 +1323,40 @@ async function resolveSourceFieldCaptureIds(
       );
     }
     resolved.push(capture.id);
+  }
+  return resolved.sort();
+}
+
+async function resolveSourceTechnicalFindingIds(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  visit: FrigoraVisit,
+  ids: string[] | undefined,
+): Promise<FrigoraTechnicalFindingId[] | null> {
+  if (!ids || ids.length === 0) {
+    return null;
+  }
+  const unique = [...new Set(ids)];
+  const resolved: FrigoraTechnicalFindingId[] = [];
+  for (const id of unique) {
+    const finding = await store.findTechnicalFinding(
+      scope.workspaceId,
+      scope.ventureId,
+      id as FrigoraTechnicalFindingId,
+    );
+    if (!finding) {
+      throw new FrigoraError(
+        "not_found",
+        "Referenced technical finding was not found in this venture.",
+      );
+    }
+    if (finding.visitId !== visit.id) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Referenced technical findings must belong to the same visit.",
+      );
+    }
+    resolved.push(finding.id);
   }
   return resolved.sort();
 }
