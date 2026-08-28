@@ -8,6 +8,7 @@ import type {
   CreateAssetInput,
   CreateCustomerInput,
   CreateSiteInput,
+  CreateWorkOrderInput,
   FrigoraAsset,
   FrigoraAssetId,
   FrigoraCustomer,
@@ -15,18 +16,24 @@ import type {
   FrigoraScope,
   FrigoraSite,
   FrigoraSiteId,
+  FrigoraWorkOrder,
+  FrigoraWorkOrderId,
+  FrigoraWorkOrderStatus,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
+  UpdateWorkOrderInput,
 } from "./types";
 import {
   createAssetSchema,
   createCustomerSchema,
   createSiteSchema,
+  createWorkOrderSchema,
   parseWithFrigora,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
+  updateWorkOrderSchema,
 } from "./validation";
 
 export type FrigoraService = {
@@ -56,6 +63,39 @@ export type FrigoraService = {
   decommissionAsset(scope: FrigoraScope, id: FrigoraAssetId): Promise<FrigoraAsset>;
   getAsset(scope: FrigoraScope, id: FrigoraAssetId): Promise<FrigoraAsset | null>;
   listAssetsBySite(scope: FrigoraScope, siteId: FrigoraSiteId): Promise<FrigoraAsset[]>;
+  createWorkOrder(scope: FrigoraScope, input: CreateWorkOrderInput): Promise<FrigoraWorkOrder>;
+  updateWorkOrder(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+    input: UpdateWorkOrderInput,
+  ): Promise<FrigoraWorkOrder>;
+  closeWorkOrder(scope: FrigoraScope, id: FrigoraWorkOrderId): Promise<FrigoraWorkOrder>;
+  cancelWorkOrder(scope: FrigoraScope, id: FrigoraWorkOrderId): Promise<FrigoraWorkOrder>;
+  reopenWorkOrder(scope: FrigoraScope, id: FrigoraWorkOrderId): Promise<FrigoraWorkOrder>;
+  getWorkOrder(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+  ): Promise<FrigoraWorkOrder | null>;
+  getWorkOrderByReference(
+    scope: FrigoraScope,
+    workReference: string,
+  ): Promise<FrigoraWorkOrder | null>;
+  listWorkOrders(
+    scope: FrigoraScope,
+    status?: FrigoraWorkOrderStatus,
+  ): Promise<FrigoraWorkOrder[]>;
+  listWorkOrdersByCustomer(
+    scope: FrigoraScope,
+    customerId: FrigoraCustomerId,
+  ): Promise<FrigoraWorkOrder[]>;
+  listWorkOrdersBySite(
+    scope: FrigoraScope,
+    siteId: FrigoraSiteId,
+  ): Promise<FrigoraWorkOrder[]>;
+  listWorkOrdersByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraWorkOrder[]>;
 };
 
 export function createFrigoraService(options: {
@@ -356,6 +396,185 @@ export function createFrigoraService(options: {
       }
       return store.listAssetsBySite(scope.workspaceId, scope.ventureId, siteId);
     },
+    async createWorkOrder(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const parsed = parseWithFrigora(createWorkOrderSchema, input, true);
+      const site = await requireSite(store, scope, parsed.siteId as FrigoraSiteId);
+      await assertSiteAcceptsWorkOrder(store, scope, site);
+      const primaryAssetId = await resolvePrimaryAssetAssociation(
+        store,
+        scope,
+        site.id,
+        parsed.primaryAssetId === undefined ? null : parsed.primaryAssetId,
+      );
+      const now = nowIso();
+      const row: FrigoraWorkOrder = {
+        id: createId<FrigoraWorkOrderId>(),
+        workspaceId: site.workspaceId,
+        ventureId: site.ventureId,
+        customerId: site.customerId,
+        siteId: site.id,
+        primaryAssetId,
+        workReference: parsed.workReference,
+        workKind: parsed.workKind,
+        reportedCondition: parsed.reportedCondition ?? null,
+        status: "open",
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertWorkOrder(row);
+      return row;
+    },
+    async updateWorkOrder(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireOpenWorkOrder(store, scope, id);
+      const parsed = parseWithFrigora(updateWorkOrderSchema, input, true);
+      let primaryAssetId = existing.primaryAssetId;
+      if (parsed.primaryAssetId !== undefined) {
+        primaryAssetId = await resolvePrimaryAssetAssociation(
+          store,
+          scope,
+          existing.siteId,
+          parsed.primaryAssetId,
+        );
+      }
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        workKind: parsed.workKind ?? existing.workKind,
+        reportedCondition:
+          parsed.reportedCondition !== undefined
+            ? parsed.reportedCondition
+            : existing.reportedCondition,
+        primaryAssetId,
+        updatedAt: nowIso(),
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async closeWorkOrder(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireWorkOrder(store, scope, id);
+      if (existing.status === "closed") {
+        return existing;
+      }
+      if (existing.status !== "open") {
+        throw new FrigoraError(
+          "invalid_status",
+          "Only open work orders can be closed.",
+        );
+      }
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        status: "closed",
+        updatedAt: nowIso(),
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async cancelWorkOrder(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireWorkOrder(store, scope, id);
+      if (existing.status === "cancelled") {
+        return existing;
+      }
+      if (existing.status !== "open") {
+        throw new FrigoraError(
+          "invalid_status",
+          "Only open work orders can be cancelled.",
+        );
+      }
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        status: "cancelled",
+        updatedAt: nowIso(),
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async reopenWorkOrder(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireWorkOrder(store, scope, id);
+      if (existing.status === "open") {
+        return existing;
+      }
+      if (existing.status !== "closed") {
+        throw new FrigoraError(
+          "invalid_status",
+          "Only closed work orders can be reopened.",
+        );
+      }
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        status: "open",
+        updatedAt: nowIso(),
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async getWorkOrder(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findWorkOrder(scope.workspaceId, scope.ventureId, id);
+    },
+    async getWorkOrderByReference(scope, workReference) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      const trimmed = workReference.trim();
+      if (!trimmed) {
+        return null;
+      }
+      return store.findWorkOrderByReference(
+        scope.workspaceId,
+        scope.ventureId,
+        trimmed,
+      );
+    },
+    async listWorkOrders(scope, status) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return store.listWorkOrders(scope.workspaceId, scope.ventureId, status);
+    },
+    async listWorkOrdersByCustomer(scope, customerId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const customer = await store.findCustomer(
+        scope.workspaceId,
+        scope.ventureId,
+        customerId,
+      );
+      if (!customer) {
+        return [];
+      }
+      return store.listWorkOrdersByCustomer(
+        scope.workspaceId,
+        scope.ventureId,
+        customerId,
+      );
+    },
+    async listWorkOrdersBySite(scope, siteId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const site = await store.findSite(scope.workspaceId, scope.ventureId, siteId);
+      if (!site) {
+        return [];
+      }
+      return store.listWorkOrdersBySite(scope.workspaceId, scope.ventureId, siteId);
+    },
+    async listWorkOrdersByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listWorkOrdersByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
   };
 }
 
@@ -435,6 +654,78 @@ async function requireAsset(store: FrigoraStore, scope: FrigoraScope, id: Frigor
     throw new FrigoraError("not_found", "Asset was not found.");
   }
   return row;
+}
+
+async function requireWorkOrder(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  id: FrigoraWorkOrderId,
+) {
+  const row = await store.findWorkOrder(scope.workspaceId, scope.ventureId, id);
+  if (!row) {
+    throw new FrigoraError("not_found", "Work order was not found.");
+  }
+  return row;
+}
+
+async function requireOpenWorkOrder(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  id: FrigoraWorkOrderId,
+) {
+  const row = await requireWorkOrder(store, scope, id);
+  if (row.status !== "open") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Work orders can only be updated while open.",
+    );
+  }
+  return row;
+}
+
+async function assertSiteAcceptsWorkOrder(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  site: FrigoraSite,
+) {
+  if (site.status !== "active") {
+    throw new FrigoraError(
+      "archived_parent",
+      "Archived sites cannot receive new work orders.",
+    );
+  }
+  const customer = await requireCustomer(store, scope, site.customerId);
+  if (customer.status !== "active") {
+    throw new FrigoraError(
+      "archived_parent",
+      "Archived customers cannot receive new work orders.",
+    );
+  }
+}
+
+async function resolvePrimaryAssetAssociation(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  siteId: FrigoraSiteId,
+  primaryAssetId: string | null,
+): Promise<FrigoraAssetId | null> {
+  if (primaryAssetId === null) {
+    return null;
+  }
+  const asset = await requireAsset(store, scope, primaryAssetId as FrigoraAssetId);
+  if (asset.siteId !== siteId) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Primary asset must belong to the work order site.",
+    );
+  }
+  if (asset.status !== "active") {
+    throw new FrigoraError(
+      "archived_parent",
+      "Decommissioned assets cannot be newly associated.",
+    );
+  }
+  return asset.id;
 }
 
 async function assertUniqueCustomerCode(

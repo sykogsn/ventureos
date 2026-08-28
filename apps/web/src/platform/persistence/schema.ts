@@ -507,6 +507,35 @@ export const frigoraAssets = sqliteTable(
   ],
 );
 
+export const frigoraWorkOrders = sqliteTable(
+  "frigora_work_orders",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    siteId: text("site_id").notNull(),
+    primaryAssetId: text("primary_asset_id"),
+    workReference: text("work_reference").notNull(),
+    workKind: text("work_kind").notNull(),
+    reportedCondition: text("reported_condition"),
+    status: text("status").notNull().default("open"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_work_orders_venture_reference_idx").on(
+      table.ventureId,
+      table.workReference,
+    ),
+    index("frigora_work_orders_workspace_venture_idx").on(table.workspaceId, table.ventureId),
+    index("frigora_work_orders_venture_status_idx").on(table.ventureId, table.status),
+    index("frigora_work_orders_customer_idx").on(table.customerId),
+    index("frigora_work_orders_site_idx").on(table.siteId),
+    index("frigora_work_orders_primary_asset_idx").on(table.primaryAssetId),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -537,4 +566,5 @@ export const schema = {
   frigoraCustomers,
   frigoraSites,
   frigoraAssets,
+  frigoraWorkOrders,
 };

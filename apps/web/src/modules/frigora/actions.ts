@@ -7,15 +7,19 @@ import type {
   CreateAssetInput,
   CreateCustomerInput,
   CreateSiteInput,
+  CreateWorkOrderInput,
   FrigoraAsset,
   FrigoraAssetId,
   FrigoraCustomer,
   FrigoraCustomerId,
   FrigoraSite,
   FrigoraSiteId,
+  FrigoraWorkOrder,
+  FrigoraWorkOrderId,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
+  UpdateWorkOrderInput,
 } from "./types";
 import { parseWithFrigora, scopeSchema } from "./validation";
 
@@ -122,5 +126,43 @@ export async function decommissionAssetAction(
 ): Promise<FrigoraMutationResult<FrigoraAsset>> {
   return mutate(input, (scope) =>
     getFrigoraService().decommissionAsset(scope, input.id as FrigoraAssetId),
+  );
+}
+
+export async function createWorkOrderAction(
+  input: ScopedInput & CreateWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) => getFrigoraService().createWorkOrder(scope, input));
+}
+
+export async function updateWorkOrderAction(
+  input: ScopedInput & { id: string } & UpdateWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updateWorkOrder(scope, input.id as FrigoraWorkOrderId, input),
+  );
+}
+
+export async function closeWorkOrderAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().closeWorkOrder(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function cancelWorkOrderAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().cancelWorkOrder(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function reopenWorkOrderAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().reopenWorkOrder(scope, input.id as FrigoraWorkOrderId),
   );
 }

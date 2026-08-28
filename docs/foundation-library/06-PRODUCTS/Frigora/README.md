@@ -2,7 +2,7 @@
 
 **Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.2.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `frigora@0.3.0` in the Definition Registry.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
@@ -10,9 +10,9 @@
 
 **Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, and Asset identity
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, and WorkOrder identity
 
-**Version.** 0.2.0
+**Version.** 0.3.0
 
 **Owner.** Founder (definition owner)
 
@@ -20,7 +20,7 @@
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Customer, Site, and Asset operational records as durable identity beside VIC. Work orders, PPM, refrigerant events, evidence, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, and WorkOrder identity as durable operational records beside VIC. Work execution, assignment, dispatch, PPM, refrigerant events, evidence, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
 
 ## Profile
 
@@ -38,6 +38,7 @@ Admitted in this version, persisted beside VIC for Frigora instances:
 - Customer
 - Site
 - Asset
+- WorkOrder (identity only: reference, kind, reported condition, lifecycle state)
 
 RefrigerationSystem and Component remain deferred. Assets may exist at a site without a system grouping.
 
@@ -54,7 +55,7 @@ Frigora receives the full executive desk. Theme must not invent a private Runtim
 The following are not part of this definition version and must not be read as built:
 
 - refrigeration systems, asset components
-- work orders, dispatch, engineer field workflows
+- work execution, dispatch, engineer field workflows
 - faults, readings, diagnoses, repairs, parts
 - refrigerant events, cylinders
 - PPM requirements, obligations, planned visits, work execution

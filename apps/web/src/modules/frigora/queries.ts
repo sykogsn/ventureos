@@ -10,6 +10,9 @@ import type {
   FrigoraCustomerId,
   FrigoraSite,
   FrigoraSiteId,
+  FrigoraWorkOrder,
+  FrigoraWorkOrderId,
+  FrigoraWorkOrderStatus,
 } from "./types";
 import { parseWithFrigora, scopeSchema } from "./validation";
 
@@ -96,5 +99,54 @@ export async function listAssetsBySiteQuery(
 ): Promise<FrigoraQueryResult<FrigoraAsset[]>> {
   return query(input, (scope) =>
     getFrigoraService().listAssetsBySite(scope, input.siteId as FrigoraSiteId),
+  );
+}
+
+export async function getWorkOrderQuery(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraQueryResult<FrigoraWorkOrder | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getWorkOrder(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function getWorkOrderByReferenceQuery(
+  input: ScopedInput & { workReference: string },
+): Promise<FrigoraQueryResult<FrigoraWorkOrder | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getWorkOrderByReference(scope, input.workReference),
+  );
+}
+
+export async function listWorkOrdersQuery(
+  input: ScopedInput & { status?: FrigoraWorkOrderStatus },
+): Promise<FrigoraQueryResult<FrigoraWorkOrder[]>> {
+  return query(input, (scope) => getFrigoraService().listWorkOrders(scope, input.status));
+}
+
+export async function listWorkOrdersByCustomerQuery(
+  input: ScopedInput & { customerId: string },
+): Promise<FrigoraQueryResult<FrigoraWorkOrder[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listWorkOrdersByCustomer(
+      scope,
+      input.customerId as FrigoraCustomerId,
+    ),
+  );
+}
+
+export async function listWorkOrdersBySiteQuery(
+  input: ScopedInput & { siteId: string },
+): Promise<FrigoraQueryResult<FrigoraWorkOrder[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listWorkOrdersBySite(scope, input.siteId as FrigoraSiteId),
+  );
+}
+
+export async function listWorkOrdersByAssetQuery(
+  input: ScopedInput & { assetId: string },
+): Promise<FrigoraQueryResult<FrigoraWorkOrder[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listWorkOrdersByAsset(scope, input.assetId as FrigoraAssetId),
   );
 }

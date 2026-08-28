@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FRIGORA_ASSET_KINDS } from "./types";
+import { FRIGORA_ASSET_KINDS, FRIGORA_WORK_KINDS } from "./types";
 import { FrigoraError } from "./errors";
 
 const requiredText = z.string().trim().min(1, "Required text is empty.");
@@ -40,6 +40,43 @@ const patchFiniteNumber = z
   });
 
 const patchAssetKind = z.union([z.enum(FRIGORA_ASSET_KINDS), z.null()]).optional();
+
+const reportedConditionText = z
+  .string()
+  .trim()
+  .superRefine((value, ctx) => {
+    if (value.length > 2000) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Reported condition must be 2000 characters or fewer.",
+      });
+    }
+  })
+  .transform((value) => (value.length === 0 ? null : value))
+  .nullable();
+
+const patchReportedCondition = z
+  .union([z.string(), z.null()])
+  .optional()
+  .transform((value, ctx) => {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > 2000) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Reported condition must be 2000 characters or fewer.",
+      });
+      return z.NEVER;
+    }
+    return trimmed.length === 0 ? null : trimmed;
+  });
+
+const patchAssetId = z.union([requiredText, z.null()]).optional();
 
 const patchDate = z
   .union([z.string(), z.null()])
@@ -164,6 +201,24 @@ export const updateAssetSchema = z.object({
   notes: patchText,
 });
 
+export const createWorkOrderSchema = z.object({
+  siteId: requiredText,
+  workReference: requiredText,
+  workKind: z.enum(FRIGORA_WORK_KINDS),
+  reportedCondition: reportedConditionText.optional(),
+  primaryAssetId: patchAssetId,
+});
+
+export const updateWorkOrderSchema = z.object({
+  workKind: z.enum(FRIGORA_WORK_KINDS).optional(),
+  reportedCondition: patchReportedCondition,
+  primaryAssetId: patchAssetId,
+});
+
+export const listWorkOrdersSchema = z.object({
+  status: z.enum(["open", "closed", "cancelled"]).optional(),
+});
+
 export const scopeSchema = z.object({
   workspaceId: requiredText,
   ventureId: requiredText,
@@ -184,8 +239,12 @@ export function parseWithFrigora<T>(
   if (
     invalidKind ||
     issue?.path.includes("assetKind") ||
+    issue?.path.includes("workKind") ||
     /Invalid option|Invalid enum/i.test(message)
   ) {
+    if (issue?.path.includes("workKind")) {
+      throw new FrigoraError("invalid_kind", "Work kind is not allowed.");
+    }
     throw new FrigoraError("invalid_kind", "Asset kind is not allowed.");
   }
   if (issue?.path.includes("designTargetCelsius") || /finite number/i.test(message)) {

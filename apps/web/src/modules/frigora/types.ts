@@ -3,10 +3,15 @@ import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 export type FrigoraCustomerId = string & { readonly __brand: "FrigoraCustomerId" };
 export type FrigoraSiteId = string & { readonly __brand: "FrigoraSiteId" };
 export type FrigoraAssetId = string & { readonly __brand: "FrigoraAssetId" };
+export type FrigoraWorkOrderId = string & { readonly __brand: "FrigoraWorkOrderId" };
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
 export type FrigoraAssetStatus = "active" | "decommissioned";
+export type FrigoraWorkOrderStatus = "open" | "closed" | "cancelled";
+
+export const FRIGORA_WORK_KINDS = ["reactive", "planned", "inspection"] as const;
+export type FrigoraWorkKind = (typeof FRIGORA_WORK_KINDS)[number];
 
 export const FRIGORA_ASSET_KINDS = [
   "display_freezer",
@@ -80,6 +85,21 @@ export type FrigoraAsset = {
   updatedAt: string;
 };
 
+export type FrigoraWorkOrder = {
+  id: FrigoraWorkOrderId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  customerId: FrigoraCustomerId;
+  siteId: FrigoraSiteId;
+  primaryAssetId: FrigoraAssetId | null;
+  workReference: string;
+  workKind: FrigoraWorkKind;
+  reportedCondition: string | null;
+  status: FrigoraWorkOrderStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CreateCustomerInput = {
   code: string;
   displayName: string;
@@ -149,4 +169,18 @@ export type UpdateAssetInput = {
   installedOn?: string | null;
   commissionedOn?: string | null;
   notes?: string | null;
+};
+
+export type CreateWorkOrderInput = {
+  siteId: string;
+  workReference: string;
+  workKind: FrigoraWorkKind;
+  reportedCondition?: string | null;
+  primaryAssetId?: string | null;
+};
+
+export type UpdateWorkOrderInput = {
+  workKind?: FrigoraWorkKind;
+  reportedCondition?: string | null;
+  primaryAssetId?: string | null;
 };

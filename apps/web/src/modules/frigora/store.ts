@@ -5,6 +5,7 @@ import {
   frigoraAssets,
   frigoraCustomers,
   frigoraSites,
+  frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
 import type {
@@ -18,6 +19,10 @@ import type {
   FrigoraSite,
   FrigoraSiteId,
   FrigoraSiteStatus,
+  FrigoraWorkOrder,
+  FrigoraWorkOrderId,
+  FrigoraWorkOrderStatus,
+  FrigoraWorkKind,
 } from "./types";
 
 export type FrigoraStore = {
@@ -78,6 +83,38 @@ export type FrigoraStore = {
     ventureId: VentureId,
     siteId: FrigoraSiteId,
   ): Promise<FrigoraAsset[]>;
+  insertWorkOrder(row: FrigoraWorkOrder): Promise<void>;
+  updateWorkOrder(row: FrigoraWorkOrder): Promise<void>;
+  findWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraWorkOrderId,
+  ): Promise<FrigoraWorkOrder | null>;
+  findWorkOrderByReference(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workReference: string,
+  ): Promise<FrigoraWorkOrder | null>;
+  listWorkOrders(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    status?: FrigoraWorkOrderStatus,
+  ): Promise<FrigoraWorkOrder[]>;
+  listWorkOrdersByCustomer(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    customerId: FrigoraCustomerId,
+  ): Promise<FrigoraWorkOrder[]>;
+  listWorkOrdersBySite(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    siteId: FrigoraSiteId,
+  ): Promise<FrigoraWorkOrder[]>;
+  listWorkOrdersByAsset(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraWorkOrder[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -308,6 +345,128 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraAssets.createdAt), asc(frigoraAssets.id));
       return rows.map(mapAsset);
     },
+    async insertWorkOrder(row) {
+      await ensureSchema();
+      try {
+        await getDb().insert(frigoraWorkOrders).values(toWorkOrderValues(row));
+      } catch (error) {
+        throw uniqueOrOriginal(
+          error,
+          "Work reference already exists in this venture.",
+        );
+      }
+    },
+    async updateWorkOrder(row) {
+      await ensureSchema();
+      try {
+        await getDb()
+          .update(frigoraWorkOrders)
+          .set(toWorkOrderValues(row))
+          .where(
+            and(
+              eq(frigoraWorkOrders.id, row.id),
+              eq(frigoraWorkOrders.workspaceId, row.workspaceId),
+              eq(frigoraWorkOrders.ventureId, row.ventureId),
+            ),
+          );
+      } catch (error) {
+        throw uniqueOrOriginal(
+          error,
+          "Work reference already exists in this venture.",
+        );
+      }
+    },
+    async findWorkOrder(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const [row] = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(
+          and(
+            eq(frigoraWorkOrders.id, id),
+            eq(frigoraWorkOrders.workspaceId, workspaceId),
+            eq(frigoraWorkOrders.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return row ? mapWorkOrder(row) : null;
+    },
+    async findWorkOrderByReference(workspaceId, ventureId, workReference) {
+      await ensureSchema();
+      const [row] = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(
+          and(
+            eq(frigoraWorkOrders.workspaceId, workspaceId),
+            eq(frigoraWorkOrders.ventureId, ventureId),
+            eq(frigoraWorkOrders.workReference, workReference),
+          ),
+        )
+        .limit(1);
+      return row ? mapWorkOrder(row) : null;
+    },
+    async listWorkOrders(workspaceId, ventureId, status) {
+      await ensureSchema();
+      const filters = [
+        eq(frigoraWorkOrders.workspaceId, workspaceId),
+        eq(frigoraWorkOrders.ventureId, ventureId),
+      ];
+      if (status) {
+        filters.push(eq(frigoraWorkOrders.status, status));
+      }
+      const rows = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(and(...filters))
+        .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
+      return rows.map(mapWorkOrder);
+    },
+    async listWorkOrdersByCustomer(workspaceId, ventureId, customerId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(
+          and(
+            eq(frigoraWorkOrders.workspaceId, workspaceId),
+            eq(frigoraWorkOrders.ventureId, ventureId),
+            eq(frigoraWorkOrders.customerId, customerId),
+          ),
+        )
+        .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
+      return rows.map(mapWorkOrder);
+    },
+    async listWorkOrdersBySite(workspaceId, ventureId, siteId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(
+          and(
+            eq(frigoraWorkOrders.workspaceId, workspaceId),
+            eq(frigoraWorkOrders.ventureId, ventureId),
+            eq(frigoraWorkOrders.siteId, siteId),
+          ),
+        )
+        .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
+      return rows.map(mapWorkOrder);
+    },
+    async listWorkOrdersByAsset(workspaceId, ventureId, assetId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(
+          and(
+            eq(frigoraWorkOrders.workspaceId, workspaceId),
+            eq(frigoraWorkOrders.ventureId, ventureId),
+            eq(frigoraWorkOrders.primaryAssetId, assetId),
+          ),
+        )
+        .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
+      return rows.map(mapWorkOrder);
+    },
   };
 }
 
@@ -371,6 +530,23 @@ function toAssetValues(row: FrigoraAsset) {
   };
 }
 
+function toWorkOrderValues(row: FrigoraWorkOrder) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    customerId: row.customerId,
+    siteId: row.siteId,
+    primaryAssetId: row.primaryAssetId,
+    workReference: row.workReference,
+    workKind: row.workKind,
+    reportedCondition: row.reportedCondition,
+    status: row.status,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -426,6 +602,23 @@ function mapAsset(row: typeof frigoraAssets.$inferSelect): FrigoraAsset {
     installedOn: row.installedOn ?? null,
     commissionedOn: row.commissionedOn ?? null,
     notes: row.notes ?? null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapWorkOrder(row: typeof frigoraWorkOrders.$inferSelect): FrigoraWorkOrder {
+  return {
+    id: row.id as FrigoraWorkOrderId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    customerId: row.customerId as FrigoraCustomerId,
+    siteId: row.siteId as FrigoraSiteId,
+    primaryAssetId: (row.primaryAssetId as FrigoraAssetId | null) ?? null,
+    workReference: row.workReference,
+    workKind: row.workKind as FrigoraWorkKind,
+    reportedCondition: row.reportedCondition ?? null,
+    status: row.status as FrigoraWorkOrderStatus,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

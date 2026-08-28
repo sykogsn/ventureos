@@ -4,6 +4,7 @@ import { FrigoraError } from "./errors";
 import {
   createAssetSchema,
   createCustomerSchema,
+  createWorkOrderSchema,
   parseWithFrigora,
 } from "./validation";
 
@@ -59,5 +60,16 @@ describe("Frigora input validation", () => {
     });
     assert.equal(parsed.designTargetCelsius, -18);
     assert.equal(parsed.installedOn, "2024-01-15");
+  });
+
+  it("trims work_reference and normalizes reported_condition", () => {
+    const parsed = parseWithFrigora(createWorkOrderSchema, {
+      siteId: "site-1",
+      workReference: "  WO-1864  ",
+      workKind: "reactive",
+      reportedCondition: "",
+    });
+    assert.equal(parsed.workReference, "WO-1864");
+    assert.equal(parsed.reportedCondition, null);
   });
 });
