@@ -19,6 +19,13 @@ registerExtension({
       icon: "building-2",
     },
     {
+      id: "workforce",
+      label: "Workforce",
+      href: "/workforce",
+      section: "operate",
+      icon: "users",
+    },
+    {
       id: "agents",
       label: "Executive Office",
       href: "/agents",
@@ -61,6 +68,13 @@ registerExtension({
       group: "navigation",
       href: "/ventures",
       keywords: ["companies", "workspace", "hq"],
+    },
+    {
+      id: "nav.workforce",
+      title: "Go to Workforce",
+      group: "navigation",
+      href: "/workforce",
+      keywords: ["workforce", "employees", "runs"],
     },
     {
       id: "nav.agents",

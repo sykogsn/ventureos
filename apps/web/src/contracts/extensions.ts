@@ -3,6 +3,7 @@ export type NavSection = "operate" | "intelligence" | "system";
 export type ExtensionIcon =
   | "layout-dashboard"
   | "building-2"
+  | "users"
   | "bot"
   | "brain"
   | "settings"
