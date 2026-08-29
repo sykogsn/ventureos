@@ -414,6 +414,32 @@ export const recordAssetOperationalConditionSchema = z.object({
   recordedByUserId: requiredText,
 });
 
+const acknowledgementText = z
+  .string()
+  .trim()
+  .superRefine((value, ctx) => {
+    if (value.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Required text is empty.",
+      });
+      return;
+    }
+    if (value.length > 2000) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Acknowledgement text must be 2000 characters or fewer.",
+      });
+    }
+  });
+
+export const recordVisitCustomerAcknowledgementSchema = z.object({
+  acknowledgementText,
+  acknowledgerName: requiredText,
+  acknowledgedAt: isoTimestamp,
+  recordedByUserId: requiredText,
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });

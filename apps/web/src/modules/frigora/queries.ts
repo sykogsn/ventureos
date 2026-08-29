@@ -31,6 +31,8 @@ import type {
   FrigoraPartUsageId,
   FrigoraAssetOperationalCondition,
   FrigoraAssetOperationalConditionId,
+  FrigoraVisitCustomerAcknowledgement,
+  FrigoraVisitCustomerAcknowledgementId,
   FrigoraAssetHistoryEntry,
 } from "./types";
 import type { UserId } from "@/contracts";
@@ -477,6 +479,39 @@ export async function getCurrentAssetOperationalConditionQuery(
     getFrigoraService().getCurrentAssetOperationalCondition(
       scope,
       input.assetId as FrigoraAssetId,
+    ),
+  );
+}
+
+export async function getVisitCustomerAcknowledgementQuery(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraQueryResult<FrigoraVisitCustomerAcknowledgement | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getVisitCustomerAcknowledgement(
+      scope,
+      input.id as FrigoraVisitCustomerAcknowledgementId,
+    ),
+  );
+}
+
+export async function listVisitCustomerAcknowledgementsByVisitQuery(
+  input: ScopedInput & { visitId: string },
+): Promise<FrigoraQueryResult<FrigoraVisitCustomerAcknowledgement[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listVisitCustomerAcknowledgementsByVisit(
+      scope,
+      input.visitId as FrigoraVisitId,
+    ),
+  );
+}
+
+export async function listVisitCustomerAcknowledgementsByWorkOrderQuery(
+  input: ScopedInput & { workOrderId: string },
+): Promise<FrigoraQueryResult<FrigoraVisitCustomerAcknowledgement[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listVisitCustomerAcknowledgementsByWorkOrder(
+      scope,
+      input.workOrderId as FrigoraWorkOrderId,
     ),
   );
 }

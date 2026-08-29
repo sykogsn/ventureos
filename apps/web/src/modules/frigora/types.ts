@@ -15,6 +15,9 @@ export type FrigoraPartUsageId = string & { readonly __brand: "FrigoraPartUsageI
 export type FrigoraAssetOperationalConditionId = string & {
   readonly __brand: "FrigoraAssetOperationalConditionId";
 };
+export type FrigoraVisitCustomerAcknowledgementId = string & {
+  readonly __brand: "FrigoraVisitCustomerAcknowledgementId";
+};
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
@@ -470,6 +473,27 @@ export type RecordAssetOperationalConditionInput = {
   workOrderId?: string | null;
   assertedAt: string;
   assertedByUserId: string;
+  recordedByUserId: string;
+};
+
+export type FrigoraVisitCustomerAcknowledgement = {
+  id: FrigoraVisitCustomerAcknowledgementId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  visitId: FrigoraVisitId;
+  workOrderId: FrigoraWorkOrderId;
+  acknowledgementText: string;
+  acknowledgerName: string;
+  acknowledgedAt: string;
+  recordedByUserId: UserId;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordVisitCustomerAcknowledgementInput = {
+  acknowledgementText: string;
+  acknowledgerName: string;
+  acknowledgedAt: string;
   recordedByUserId: string;
 };
 

@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 19; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 20; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -893,6 +893,28 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_asset_operational_conditions_venture_work_order_idx ON frigora_asset_operational_conditions (venture_id, work_order_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_visit_customer_acknowledgements (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          visit_id TEXT NOT NULL,
+          work_order_id TEXT NOT NULL,
+          acknowledgement_text TEXT NOT NULL,
+          acknowledger_name TEXT NOT NULL,
+          acknowledged_at TEXT NOT NULL,
+          recorded_by_user_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_visit_customer_acknowledgements_venture_visit_idx ON frigora_visit_customer_acknowledgements (venture_id, visit_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_visit_customer_acknowledgements_venture_work_order_idx ON frigora_visit_customer_acknowledgements (venture_id, work_order_id)`,
       );
     })();
   }

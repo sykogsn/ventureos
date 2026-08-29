@@ -35,6 +35,8 @@ import type {
   RecordPartUsageInput,
   FrigoraAssetOperationalCondition,
   RecordAssetOperationalConditionInput,
+  FrigoraVisitCustomerAcknowledgement,
+  RecordVisitCustomerAcknowledgementInput,
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
   UpdateAssetInput,
@@ -292,4 +294,16 @@ export async function recordAssetOperationalConditionAction(
   input: ScopedInput & RecordAssetOperationalConditionInput,
 ): Promise<FrigoraMutationResult<FrigoraAssetOperationalCondition>> {
   return mutate(input, (scope) => getFrigoraService().recordAssetOperationalCondition(scope, input));
+}
+
+export async function recordVisitCustomerAcknowledgementAction(
+  input: ScopedInput & { visitId: string } & RecordVisitCustomerAcknowledgementInput,
+): Promise<FrigoraMutationResult<FrigoraVisitCustomerAcknowledgement>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitCustomerAcknowledgement(
+      scope,
+      input.visitId as FrigoraVisitId,
+      input,
+    ),
+  );
 }

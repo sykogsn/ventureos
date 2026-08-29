@@ -48,6 +48,9 @@ import type {
   FrigoraAssetOperationalCondition,
   FrigoraAssetOperationalConditionId,
   RecordAssetOperationalConditionInput,
+  FrigoraVisitCustomerAcknowledgement,
+  FrigoraVisitCustomerAcknowledgementId,
+  RecordVisitCustomerAcknowledgementInput,
   FrigoraAssetHistoryEntry,
   FrigoraAssetHistoryEventKind,
   UpdateAssetInput,
@@ -73,6 +76,7 @@ import {
   recordRefrigerantEventSchema,
   recordPartUsageSchema,
   recordAssetOperationalConditionSchema,
+  recordVisitCustomerAcknowledgementSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -329,6 +333,23 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraAssetOperationalCondition | null>;
+  recordVisitCustomerAcknowledgement(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: RecordVisitCustomerAcknowledgementInput,
+  ): Promise<FrigoraVisitCustomerAcknowledgement>;
+  getVisitCustomerAcknowledgement(
+    scope: FrigoraScope,
+    id: FrigoraVisitCustomerAcknowledgementId,
+  ): Promise<FrigoraVisitCustomerAcknowledgement | null>;
+  listVisitCustomerAcknowledgementsByVisit(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraVisitCustomerAcknowledgement[]>;
+  listVisitCustomerAcknowledgementsByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraVisitCustomerAcknowledgement[]>;
   listAssetHistory(
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
@@ -1589,6 +1610,70 @@ export function createFrigoraService(options: {
       );
       return selectCurrentAssetOperationalCondition(rows);
     },
+    async recordVisitCustomerAcknowledgement(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsVisitCustomerAcknowledgement(visit);
+      await requireWorkOrder(store, scope, visit.workOrderId);
+      const parsed = parseWithFrigora(recordVisitCustomerAcknowledgementSchema, input);
+      assertAcknowledgedAtNotBeforeArrival(visit, parsed.acknowledgedAt);
+      const recordedByUserId = parsed.recordedByUserId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const now = nowIso();
+      const row: FrigoraVisitCustomerAcknowledgement = {
+        id: createId<FrigoraVisitCustomerAcknowledgementId>(),
+        workspaceId: visit.workspaceId,
+        ventureId: visit.ventureId,
+        visitId: visit.id,
+        workOrderId: visit.workOrderId,
+        acknowledgementText: parsed.acknowledgementText,
+        acknowledgerName: parsed.acknowledgerName,
+        acknowledgedAt: parsed.acknowledgedAt,
+        recordedByUserId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertVisitCustomerAcknowledgement(row);
+      return row;
+    },
+    async getVisitCustomerAcknowledgement(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findVisitCustomerAcknowledgement(scope.workspaceId, scope.ventureId, id);
+    },
+    async listVisitCustomerAcknowledgementsByVisit(scope, visitId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
+      if (!visit) {
+        return [];
+      }
+      return store.listVisitCustomerAcknowledgementsByVisit(
+        scope.workspaceId,
+        scope.ventureId,
+        visitId,
+      );
+    },
+    async listVisitCustomerAcknowledgementsByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listVisitCustomerAcknowledgementsByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
     async listAssetHistory(scope, assetId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
@@ -2181,6 +2266,26 @@ function assertVisitAcceptsPartUsage(visit: FrigoraVisit) {
     throw new FrigoraError(
       "invalid_status",
       "Part usages cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
+function assertVisitAcceptsVisitCustomerAcknowledgement(visit: FrigoraVisit) {
+  if (visit.status === "cancelled") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Customer acknowledgements cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
+function assertAcknowledgedAtNotBeforeArrival(visit: FrigoraVisit, acknowledgedAt: string) {
+  const acknowledgedMs = Date.parse(acknowledgedAt);
+  const arrivedMs = Date.parse(visit.arrivedAt);
+  if (acknowledgedMs < arrivedMs) {
+    throw new FrigoraError(
+      "invalid_input",
+      "Acknowledgement time must not precede visit arrival.",
     );
   }
 }

@@ -14,6 +14,7 @@ import {
   frigoraRefrigerantEvents,
   frigoraPartUsages,
   frigoraAssetOperationalConditions,
+  frigoraVisitCustomerAcknowledgements,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -58,6 +59,8 @@ import type {
   FrigoraAssetOperationalCondition,
   FrigoraAssetOperationalConditionId,
   FrigoraAssetOperationalConditionKind,
+  FrigoraVisitCustomerAcknowledgement,
+  FrigoraVisitCustomerAcknowledgementId,
 } from "./types";
 
 export type FrigoraStore = {
@@ -330,6 +333,22 @@ export type FrigoraStore = {
     ventureId: VentureId,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraAssetOperationalCondition[]>;
+  insertVisitCustomerAcknowledgement(row: FrigoraVisitCustomerAcknowledgement): Promise<void>;
+  findVisitCustomerAcknowledgement(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraVisitCustomerAcknowledgementId,
+  ): Promise<FrigoraVisitCustomerAcknowledgement | null>;
+  listVisitCustomerAcknowledgementsByVisit(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraVisitCustomerAcknowledgement[]>;
+  listVisitCustomerAcknowledgementsByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraVisitCustomerAcknowledgement[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -1250,6 +1269,63 @@ export function createFrigoraStore(): FrigoraStore {
         );
       return rows.map(mapAssetOperationalCondition);
     },
+    async insertVisitCustomerAcknowledgement(row) {
+      await ensureSchema();
+      await getDb()
+        .insert(frigoraVisitCustomerAcknowledgements)
+        .values(toVisitCustomerAcknowledgementValues(row));
+    },
+    async findVisitCustomerAcknowledgement(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisitCustomerAcknowledgements)
+        .where(
+          and(
+            eq(frigoraVisitCustomerAcknowledgements.id, id),
+            eq(frigoraVisitCustomerAcknowledgements.workspaceId, workspaceId),
+            eq(frigoraVisitCustomerAcknowledgements.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapVisitCustomerAcknowledgement(rows[0]) : null;
+    },
+    async listVisitCustomerAcknowledgementsByVisit(workspaceId, ventureId, visitId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisitCustomerAcknowledgements)
+        .where(
+          and(
+            eq(frigoraVisitCustomerAcknowledgements.workspaceId, workspaceId),
+            eq(frigoraVisitCustomerAcknowledgements.ventureId, ventureId),
+            eq(frigoraVisitCustomerAcknowledgements.visitId, visitId),
+          ),
+        )
+        .orderBy(
+          asc(frigoraVisitCustomerAcknowledgements.acknowledgedAt),
+          asc(frigoraVisitCustomerAcknowledgements.id),
+        );
+      return rows.map(mapVisitCustomerAcknowledgement);
+    },
+    async listVisitCustomerAcknowledgementsByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisitCustomerAcknowledgements)
+        .where(
+          and(
+            eq(frigoraVisitCustomerAcknowledgements.workspaceId, workspaceId),
+            eq(frigoraVisitCustomerAcknowledgements.ventureId, ventureId),
+            eq(frigoraVisitCustomerAcknowledgements.workOrderId, workOrderId),
+          ),
+        )
+        .orderBy(
+          asc(frigoraVisitCustomerAcknowledgements.acknowledgedAt),
+          asc(frigoraVisitCustomerAcknowledgements.id),
+        );
+      return rows.map(mapVisitCustomerAcknowledgement);
+    },
   };
 }
 
@@ -1544,6 +1620,22 @@ function toAssetOperationalConditionValues(row: FrigoraAssetOperationalCondition
   };
 }
 
+function toVisitCustomerAcknowledgementValues(row: FrigoraVisitCustomerAcknowledgement) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    visitId: row.visitId,
+    workOrderId: row.workOrderId,
+    acknowledgementText: row.acknowledgementText,
+    acknowledgerName: row.acknowledgerName,
+    acknowledgedAt: row.acknowledgedAt,
+    recordedByUserId: row.recordedByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -1791,6 +1883,24 @@ function mapAssetOperationalCondition(
     workOrderId: (row.workOrderId as FrigoraWorkOrderId | null) ?? null,
     assertedAt: row.assertedAt,
     assertedByUserId: row.assertedByUserId as UserId,
+    recordedByUserId: row.recordedByUserId as UserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapVisitCustomerAcknowledgement(
+  row: typeof frigoraVisitCustomerAcknowledgements.$inferSelect,
+): FrigoraVisitCustomerAcknowledgement {
+  return {
+    id: row.id as FrigoraVisitCustomerAcknowledgementId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    visitId: row.visitId as FrigoraVisitId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    acknowledgementText: row.acknowledgementText,
+    acknowledgerName: row.acknowledgerName,
+    acknowledgedAt: row.acknowledgedAt,
     recordedByUserId: row.recordedByUserId as UserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

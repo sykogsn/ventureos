@@ -118,9 +118,9 @@ export const platformVentureCatalog: VentureDefinitionManifest[] = [
     name: "Frigora",
     purpose: "Refrigeration operations for companies that run on VentureOS.",
     description:
-      "Frigora is a VentureOS venture. Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, and Asset operational condition assertions are part of this definition version. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, and employee agents are not.",
+      "Frigora is a VentureOS venture. Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, and Visit customer acknowledgements are part of this definition version. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, and employee agents are not.",
     owner: "founder",
-    version: "0.14.0",
+    version: "0.15.0",
     lifecycle: "concept",
     maturity: "experimental",
     runtimeProfile: sharedRuntime,
