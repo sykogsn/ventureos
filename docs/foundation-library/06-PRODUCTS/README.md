@@ -28,7 +28,7 @@ The founder selects a Product. The Definition Registry resolves it. The Runtime 
 | Qualora | `qualora` | incubating | None |
 | Calviora | `calviora` | concept | Morning briefing |
 | Farmora | `farmora` | concept | Executive Office feature |
-| Frigora | `frigora` | concept | None (full desk; Customer/Site/Asset/WorkOrder identity, assignment, Visit attendance, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, and Visit part usages admitted) |
+| Frigora | `frigora` | concept | None (full desk; Customer/Site/Asset/WorkOrder identity, assignment, Visit attendance, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, and Asset history projection admitted) |
 
 VentureOS Company is the default instance for founder-created companies. It is the OS’s generic company, not a fourth marketed product in the launch sense.
 

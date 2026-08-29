@@ -2,7 +2,7 @@
 
 **Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.12.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `frigora@0.13.0` in the Definition Registry.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
@@ -10,17 +10,17 @@
 
 **Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, and Visit part usages
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, and Asset history projection
 
-**Version.** 0.12.0
+**Version.** 0.13.0
 
 **Owner.** Founder (definition owner)
 
-**Last Updated.** 2026-08-28
+**Last Updated.** 2026-08-29
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, and Visit part usages as durable operational records beside VIC. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, and Asset history projection as durable or derived operational views beside VIC. Asset history projection is a read-only, asset-rooted composition of certified operational truths — not a separate persisted store. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
 
 ## Profile
 
@@ -49,6 +49,10 @@ Admitted in this version, persisted beside VIC for Frigora instances:
 - Visit refrigerant events (human-recorded refrigerant handling that actually occurred during a Visit attendance episode; append-only facts, not leak inference)
 - Visit part usages (human-recorded part or material that was actually used during a Visit attendance episode; append-only facts, not inventory)
 
+Derived read model (not persisted):
+
+- Asset history projection (chronological, asset-rooted composition of the truths above; read-only; provenance-preserving)
+
 RefrigerationSystem and Component remain deferred. Assets may exist at a site without a system grouping.
 
 ## Identity
@@ -71,6 +75,8 @@ At visit-episode maturity, authoritative records separate:
 6. **Refrigerant handling actually occurred** — Visit refrigerant event
 7. **Resulting operational state** — Visit outcome
 8. **Forward operational intent** — Visit recommended action
+
+Asset history projection surfaces these as typed, chronological entries without collapsing truth layers or inventing inference.
 
 **Refrigerant semantic law:** refrigerant added ≠ refrigerant leaked. A refrigerant event records handling (for example 2 kg R404A added). It does not infer leak quantity, leak rate, or refrigerant loss.
 

@@ -433,3 +433,131 @@ export type RecordPartUsageInput = {
   recordedByUserId: string;
   assetId?: string | null;
 };
+
+export const FRIGORA_ASSET_HISTORY_EVENT_KINDS = [
+  "reported_intake",
+  "visit_arrival",
+  "visit_departure",
+  "observed",
+  "finding",
+  "corrective_action",
+  "part_usage",
+  "refrigerant",
+  "outcome",
+  "recommendation",
+] as const;
+
+export type FrigoraAssetHistoryEventKind = (typeof FRIGORA_ASSET_HISTORY_EVENT_KINDS)[number];
+
+type FrigoraAssetHistoryEntryBase = {
+  assetId: FrigoraAssetId;
+  visitId: FrigoraVisitId | null;
+  workOrderId: FrigoraWorkOrderId | null;
+  occurredAt: string;
+  recordedAt: string;
+  actorUserId: UserId | null;
+  recordedByUserId: UserId | null;
+};
+
+export type FrigoraAssetHistoryReportedIntakeDetail = {
+  workReference: string;
+  reportedCondition: string;
+  workKind: FrigoraWorkKind;
+};
+
+export type FrigoraAssetHistoryVisitAttendanceDetail = {
+  status: FrigoraVisitStatus;
+  attendingUserId: UserId;
+};
+
+export type FrigoraAssetHistoryObservedDetail = {
+  captureKind: FrigoraFieldCaptureKind;
+  captureCode: FrigoraFieldCaptureCode;
+  valueNumeric: number | null;
+  valueUnit: FrigoraFieldCaptureUnit | null;
+  description: string | null;
+};
+
+export type FrigoraAssetHistoryFindingDetail = {
+  findingKind: FrigoraTechnicalFindingKind;
+  description: string;
+};
+
+export type FrigoraAssetHistoryCorrectiveActionDetail = {
+  description: string;
+};
+
+export type FrigoraAssetHistoryPartUsageDetail = {
+  partDescription: string;
+  quantity: number;
+  quantityUnit: FrigoraPartUsageUnit;
+  notes: string | null;
+};
+
+export type FrigoraAssetHistoryRefrigerantDetail = {
+  refrigerantType: string;
+  eventKind: FrigoraRefrigerantEventKind;
+  quantityKg: number;
+  reason: string | null;
+  cylinderReference: string | null;
+};
+
+export type FrigoraAssetHistoryOutcomeDetail = {
+  description: string;
+};
+
+export type FrigoraAssetHistoryRecommendationDetail = {
+  description: string;
+};
+
+export type FrigoraAssetHistoryEntry =
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "reported_intake";
+      sourceId: FrigoraWorkOrderId;
+      detail: FrigoraAssetHistoryReportedIntakeDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "visit_arrival";
+      sourceId: FrigoraVisitId;
+      detail: FrigoraAssetHistoryVisitAttendanceDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "visit_departure";
+      sourceId: FrigoraVisitId;
+      detail: FrigoraAssetHistoryVisitAttendanceDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "observed";
+      sourceId: FrigoraFieldCaptureId;
+      detail: FrigoraAssetHistoryObservedDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "finding";
+      sourceId: FrigoraTechnicalFindingId;
+      detail: FrigoraAssetHistoryFindingDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "corrective_action";
+      sourceId: FrigoraCorrectiveActionId;
+      detail: FrigoraAssetHistoryCorrectiveActionDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "part_usage";
+      sourceId: FrigoraPartUsageId;
+      detail: FrigoraAssetHistoryPartUsageDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "refrigerant";
+      sourceId: FrigoraRefrigerantEventId;
+      detail: FrigoraAssetHistoryRefrigerantDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "outcome";
+      sourceId: FrigoraVisitOutcomeId;
+      detail: FrigoraAssetHistoryOutcomeDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "recommendation";
+      sourceId: FrigoraRecommendedActionId;
+      detail: FrigoraAssetHistoryRecommendationDetail;
+    });

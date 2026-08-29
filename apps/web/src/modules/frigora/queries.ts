@@ -29,6 +29,7 @@ import type {
   FrigoraRefrigerantEventId,
   FrigoraPartUsage,
   FrigoraPartUsageId,
+  FrigoraAssetHistoryEntry,
 } from "./types";
 import type { UserId } from "@/contracts";
 import { parseWithFrigora, scopeSchema } from "./validation";
@@ -442,5 +443,13 @@ export async function listPartUsagesByAssetQuery(
 ): Promise<FrigoraQueryResult<FrigoraPartUsage[]>> {
   return query(input, (scope) =>
     getFrigoraService().listPartUsagesByAsset(scope, input.assetId as FrigoraAssetId),
+  );
+}
+
+export async function listAssetHistoryQuery(
+  input: ScopedInput & { assetId: string },
+): Promise<FrigoraQueryResult<FrigoraAssetHistoryEntry[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listAssetHistory(scope, input.assetId as FrigoraAssetId),
   );
 }

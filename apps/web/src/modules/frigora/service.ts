@@ -45,11 +45,14 @@ import type {
   FrigoraPartUsage,
   FrigoraPartUsageId,
   RecordPartUsageInput,
+  FrigoraAssetHistoryEntry,
+  FrigoraAssetHistoryEventKind,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
   UpdateWorkOrderInput,
 } from "./types";
+import { FRIGORA_ASSET_HISTORY_EVENT_KINDS } from "./types";
 import {
   assignWorkOrderSchema,
   createAssetSchema,
@@ -306,6 +309,10 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraPartUsage[]>;
+  listAssetHistory(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraAssetHistoryEntry[]>;
 };
 
 export function createFrigoraService(options: {
@@ -1493,6 +1500,81 @@ export function createFrigoraService(options: {
       }
       return store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
+    async listAssetHistory(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+
+      const entries: FrigoraAssetHistoryEntry[] = [];
+      const workOrders = await store.listWorkOrdersByAsset(
+        scope.workspaceId,
+        scope.ventureId,
+        assetId,
+      );
+
+      for (const workOrder of workOrders) {
+        if (workOrder.reportedCondition !== null) {
+          entries.push(mapReportedIntakeEntry(assetId, workOrder));
+        }
+        const visits = await store.listVisitsByWorkOrder(
+          scope.workspaceId,
+          scope.ventureId,
+          workOrder.id,
+        );
+        for (const visit of visits) {
+          entries.push(mapVisitArrivalEntry(assetId, visit));
+          if (visit.departedAt !== null) {
+            entries.push(mapVisitDepartureEntry(assetId, visit));
+          }
+        }
+      }
+
+      const [
+        fieldCaptures,
+        findings,
+        correctiveActions,
+        outcomes,
+        recommendations,
+        refrigerantEvents,
+        partUsages,
+      ] = await Promise.all([
+        store.listFieldCapturesByAsset(scope.workspaceId, scope.ventureId, assetId),
+        store.listTechnicalFindingsByAsset(scope.workspaceId, scope.ventureId, assetId),
+        store.listCorrectiveActionsByAsset(scope.workspaceId, scope.ventureId, assetId),
+        store.listVisitOutcomesByAsset(scope.workspaceId, scope.ventureId, assetId),
+        store.listRecommendedActionsByAsset(scope.workspaceId, scope.ventureId, assetId),
+        store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId),
+        store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId),
+      ]);
+
+      for (const fieldCapture of fieldCaptures) {
+        entries.push(mapObservedEntry(fieldCapture));
+      }
+      for (const finding of findings) {
+        entries.push(mapFindingEntry(finding));
+      }
+      for (const correctiveAction of correctiveActions) {
+        entries.push(mapCorrectiveActionEntry(correctiveAction));
+      }
+      for (const outcome of outcomes) {
+        entries.push(mapOutcomeEntry(outcome));
+      }
+      for (const recommendation of recommendations) {
+        entries.push(mapRecommendationEntry(recommendation));
+      }
+      for (const refrigerantEvent of refrigerantEvents) {
+        entries.push(mapRefrigerantEntry(refrigerantEvent));
+      }
+      for (const partUsage of partUsages) {
+        entries.push(mapPartUsageEntry(partUsage));
+      }
+
+      return sortAssetHistoryEntries(entries);
+    },
   };
 }
 
@@ -1503,6 +1585,220 @@ export function getFrigoraService(): FrigoraService {
     service = createFrigoraService();
   }
   return service;
+}
+
+function assetHistoryKindOrder(kind: FrigoraAssetHistoryEventKind): number {
+  return FRIGORA_ASSET_HISTORY_EVENT_KINDS.indexOf(kind);
+}
+
+function sortAssetHistoryEntries(entries: FrigoraAssetHistoryEntry[]): FrigoraAssetHistoryEntry[] {
+  return [...entries].sort((left, right) => {
+    if (left.occurredAt !== right.occurredAt) {
+      return left.occurredAt < right.occurredAt ? -1 : 1;
+    }
+    const kindDiff = assetHistoryKindOrder(left.kind) - assetHistoryKindOrder(right.kind);
+    if (kindDiff !== 0) {
+      return kindDiff;
+    }
+    return left.sourceId < right.sourceId ? -1 : left.sourceId > right.sourceId ? 1 : 0;
+  });
+}
+
+function mapReportedIntakeEntry(
+  assetId: FrigoraAssetId,
+  workOrder: FrigoraWorkOrder,
+): FrigoraAssetHistoryEntry {
+  return {
+    kind: "reported_intake",
+    sourceId: workOrder.id,
+    assetId,
+    visitId: null,
+    workOrderId: workOrder.id,
+    occurredAt: workOrder.createdAt,
+    recordedAt: workOrder.createdAt,
+    actorUserId: null,
+    recordedByUserId: null,
+    detail: {
+      workReference: workOrder.workReference,
+      reportedCondition: workOrder.reportedCondition as string,
+      workKind: workOrder.workKind,
+    },
+  };
+}
+
+function mapVisitArrivalEntry(
+  assetId: FrigoraAssetId,
+  visit: FrigoraVisit,
+): FrigoraAssetHistoryEntry {
+  return {
+    kind: "visit_arrival",
+    sourceId: visit.id,
+    assetId,
+    visitId: visit.id,
+    workOrderId: visit.workOrderId,
+    occurredAt: visit.arrivedAt,
+    recordedAt: visit.createdAt,
+    actorUserId: visit.attendingUserId,
+    recordedByUserId: null,
+    detail: {
+      status: visit.status,
+      attendingUserId: visit.attendingUserId,
+    },
+  };
+}
+
+function mapVisitDepartureEntry(
+  assetId: FrigoraAssetId,
+  visit: FrigoraVisit,
+): FrigoraAssetHistoryEntry {
+  return {
+    kind: "visit_departure",
+    sourceId: visit.id,
+    assetId,
+    visitId: visit.id,
+    workOrderId: visit.workOrderId,
+    occurredAt: visit.departedAt as string,
+    recordedAt: visit.updatedAt,
+    actorUserId: visit.attendingUserId,
+    recordedByUserId: null,
+    detail: {
+      status: visit.status,
+      attendingUserId: visit.attendingUserId,
+    },
+  };
+}
+
+function mapObservedEntry(fieldCapture: FrigoraFieldCapture): FrigoraAssetHistoryEntry {
+  return {
+    kind: "observed",
+    sourceId: fieldCapture.id,
+    assetId: fieldCapture.assetId as FrigoraAssetId,
+    visitId: fieldCapture.visitId,
+    workOrderId: fieldCapture.workOrderId,
+    occurredAt: fieldCapture.observedAt,
+    recordedAt: fieldCapture.createdAt,
+    actorUserId: fieldCapture.capturedByUserId,
+    recordedByUserId: null,
+    detail: {
+      captureKind: fieldCapture.captureKind,
+      captureCode: fieldCapture.captureCode,
+      valueNumeric: fieldCapture.valueNumeric,
+      valueUnit: fieldCapture.valueUnit,
+      description: fieldCapture.description,
+    },
+  };
+}
+
+function mapFindingEntry(finding: FrigoraTechnicalFinding): FrigoraAssetHistoryEntry {
+  return {
+    kind: "finding",
+    sourceId: finding.id,
+    assetId: finding.assetId as FrigoraAssetId,
+    visitId: finding.visitId,
+    workOrderId: finding.workOrderId,
+    occurredAt: finding.assertedAt,
+    recordedAt: finding.createdAt,
+    actorUserId: finding.recordedByUserId,
+    recordedByUserId: finding.recordedByUserId,
+    detail: {
+      findingKind: finding.findingKind,
+      description: finding.description,
+    },
+  };
+}
+
+function mapCorrectiveActionEntry(action: FrigoraCorrectiveAction): FrigoraAssetHistoryEntry {
+  return {
+    kind: "corrective_action",
+    sourceId: action.id,
+    assetId: action.assetId as FrigoraAssetId,
+    visitId: action.visitId,
+    workOrderId: action.workOrderId,
+    occurredAt: action.performedAt,
+    recordedAt: action.createdAt,
+    actorUserId: action.performedByUserId,
+    recordedByUserId: action.recordedByUserId,
+    detail: {
+      description: action.description,
+    },
+  };
+}
+
+function mapPartUsageEntry(partUsage: FrigoraPartUsage): FrigoraAssetHistoryEntry {
+  return {
+    kind: "part_usage",
+    sourceId: partUsage.id,
+    assetId: partUsage.assetId as FrigoraAssetId,
+    visitId: partUsage.visitId,
+    workOrderId: partUsage.workOrderId,
+    occurredAt: partUsage.usedAt,
+    recordedAt: partUsage.createdAt,
+    actorUserId: partUsage.usedByUserId,
+    recordedByUserId: partUsage.recordedByUserId,
+    detail: {
+      partDescription: partUsage.partDescription,
+      quantity: partUsage.quantity,
+      quantityUnit: partUsage.quantityUnit,
+      notes: partUsage.notes,
+    },
+  };
+}
+
+function mapRefrigerantEntry(event: FrigoraRefrigerantEvent): FrigoraAssetHistoryEntry {
+  return {
+    kind: "refrigerant",
+    sourceId: event.id,
+    assetId: event.assetId as FrigoraAssetId,
+    visitId: event.visitId,
+    workOrderId: event.workOrderId,
+    occurredAt: event.occurredAt,
+    recordedAt: event.createdAt,
+    actorUserId: event.handledByUserId,
+    recordedByUserId: event.recordedByUserId,
+    detail: {
+      refrigerantType: event.refrigerantType,
+      eventKind: event.eventKind,
+      quantityKg: event.quantityKg,
+      reason: event.reason,
+      cylinderReference: event.cylinderReference,
+    },
+  };
+}
+
+function mapOutcomeEntry(outcome: FrigoraVisitOutcome): FrigoraAssetHistoryEntry {
+  return {
+    kind: "outcome",
+    sourceId: outcome.id,
+    assetId: outcome.assetId as FrigoraAssetId,
+    visitId: outcome.visitId,
+    workOrderId: outcome.workOrderId,
+    occurredAt: outcome.outcomeAt,
+    recordedAt: outcome.createdAt,
+    actorUserId: null,
+    recordedByUserId: outcome.recordedByUserId,
+    detail: {
+      description: outcome.description,
+    },
+  };
+}
+
+function mapRecommendationEntry(
+  recommendation: FrigoraRecommendedAction,
+): FrigoraAssetHistoryEntry {
+  return {
+    kind: "recommendation",
+    sourceId: recommendation.id,
+    assetId: recommendation.assetId as FrigoraAssetId,
+    visitId: recommendation.visitId,
+    workOrderId: recommendation.workOrderId,
+    occurredAt: recommendation.recommendedAt,
+    recordedAt: recommendation.createdAt,
+    actorUserId: recommendation.recommendedByUserId,
+    recordedByUserId: recommendation.recordedByUserId,
+    detail: {
+      description: recommendation.description,
+    },
+  };
 }
 
 async function allowFrigoraRead(permissions: PermissionService, scope: FrigoraScope) {
