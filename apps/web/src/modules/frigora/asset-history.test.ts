@@ -62,7 +62,7 @@ async function seed(options: {
       workspaceId,
       slug: `venture-${ventureId}`,
       definitionId: options.definitionId ?? "frigora",
-      definitionVersion: options.definitionVersion ?? "0.13.0",
+      definitionVersion: options.definitionVersion ?? "0.14.0",
     }),
   );
   return {
@@ -117,7 +117,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.13.0",
+    definitionVersion: "0.14.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -767,18 +767,18 @@ describe("Frigora asset history projection (F0.13)", () => {
     assert.equal(typeof listAssetHistoryQuery, "function");
   });
 
-  it("keeps SCHEMA_GENERATION at 18 with no asset history table", async () => {
+  it("keeps SCHEMA_GENERATION at 19 with no asset history table", async () => {
     const dbPath = fileURLToPath(new URL("../../platform/persistence/db.ts", import.meta.url));
     const schemaPath = fileURLToPath(new URL("../../platform/persistence/schema.ts", import.meta.url));
     const dbSource = readFileSync(dbPath, "utf8");
     const schemaSource = readFileSync(schemaPath, "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 18/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 19/);
     assert.equal(schemaSource.includes("frigora_asset_history"), false);
   });
 
-  it("admits frigora@0.13.0 with asset history projection in catalog", () => {
+  it("admits frigora@0.14.0 with asset history projection in catalog", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.13.0");
+    assert.equal(frigora.version, "0.14.0");
     assert.match(frigora.description, /Asset history projection/);
     assert.deepEqual([...FRIGORA_ASSET_HISTORY_EVENT_KINDS], [
       "reported_intake",
@@ -791,6 +791,7 @@ describe("Frigora asset history projection (F0.13)", () => {
       "refrigerant",
       "outcome",
       "recommendation",
+      "operational_condition",
     ]);
   });
 

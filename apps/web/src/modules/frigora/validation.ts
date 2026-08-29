@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   FRIGORA_ASSET_KINDS,
+  FRIGORA_ASSET_OPERATIONAL_CONDITION_KINDS,
   FRIGORA_FIELD_CAPTURE_CODES,
   FRIGORA_FIELD_CAPTURE_UNITS,
   FRIGORA_PART_USAGE_UNITS,
@@ -402,6 +403,17 @@ export const recordPartUsageSchema = z.object({
   assetId: patchAssetIdNullable,
 });
 
+export const recordAssetOperationalConditionSchema = z.object({
+  assetId: requiredText,
+  conditionKind: z.enum(FRIGORA_ASSET_OPERATIONAL_CONDITION_KINDS),
+  notes: patchText.optional(),
+  visitId: patchAssetIdNullable,
+  workOrderId: patchAssetIdNullable,
+  assertedAt: isoTimestamp,
+  assertedByUserId: requiredText,
+  recordedByUserId: requiredText,
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });
@@ -431,6 +443,7 @@ export function parseWithFrigora<T>(
     issue?.path.includes("captureCode") ||
     issue?.path.includes("eventKind") ||
     issue?.path.includes("quantityUnit") ||
+    issue?.path.includes("conditionKind") ||
     /Invalid option|Invalid enum/i.test(message)
   ) {
     if (issue?.path.includes("workKind")) {
@@ -447,6 +460,12 @@ export function parseWithFrigora<T>(
     }
     if (issue?.path.includes("quantityUnit")) {
       throw new FrigoraError("invalid_kind", "Part usage unit is not allowed.");
+    }
+    if (issue?.path.includes("conditionKind")) {
+      throw new FrigoraError(
+        "invalid_kind",
+        "Asset operational condition kind is not allowed.",
+      );
     }
     throw new FrigoraError("invalid_kind", "Asset kind is not allowed.");
   }

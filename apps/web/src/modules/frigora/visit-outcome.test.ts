@@ -670,7 +670,7 @@ describe("Frigora Visit outcome", () => {
   });
 
   it("resolves frigora@0.10.0 from catalog with visit outcome admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.13.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.14.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /Visit outcomes/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /recommended actions/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /full repair workflow/);

@@ -29,6 +29,8 @@ import type {
   FrigoraRefrigerantEventId,
   FrigoraPartUsage,
   FrigoraPartUsageId,
+  FrigoraAssetOperationalCondition,
+  FrigoraAssetOperationalConditionId,
   FrigoraAssetHistoryEntry,
 } from "./types";
 import type { UserId } from "@/contracts";
@@ -443,6 +445,39 @@ export async function listPartUsagesByAssetQuery(
 ): Promise<FrigoraQueryResult<FrigoraPartUsage[]>> {
   return query(input, (scope) =>
     getFrigoraService().listPartUsagesByAsset(scope, input.assetId as FrigoraAssetId),
+  );
+}
+
+export async function getAssetOperationalConditionQuery(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraQueryResult<FrigoraAssetOperationalCondition | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getAssetOperationalCondition(
+      scope,
+      input.id as FrigoraAssetOperationalConditionId,
+    ),
+  );
+}
+
+export async function listAssetOperationalConditionsByAssetQuery(
+  input: ScopedInput & { assetId: string },
+): Promise<FrigoraQueryResult<FrigoraAssetOperationalCondition[]>> {
+  return query(input, (scope) =>
+    getFrigoraService().listAssetOperationalConditionsByAsset(
+      scope,
+      input.assetId as FrigoraAssetId,
+    ),
+  );
+}
+
+export async function getCurrentAssetOperationalConditionQuery(
+  input: ScopedInput & { assetId: string },
+): Promise<FrigoraQueryResult<FrigoraAssetOperationalCondition | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getCurrentAssetOperationalCondition(
+      scope,
+      input.assetId as FrigoraAssetId,
+    ),
   );
 }
 

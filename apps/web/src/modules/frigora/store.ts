@@ -13,6 +13,7 @@ import {
   frigoraRecommendedActions,
   frigoraRefrigerantEvents,
   frigoraPartUsages,
+  frigoraAssetOperationalConditions,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -54,6 +55,9 @@ import type {
   FrigoraPartUsage,
   FrigoraPartUsageId,
   FrigoraPartUsageUnit,
+  FrigoraAssetOperationalCondition,
+  FrigoraAssetOperationalConditionId,
+  FrigoraAssetOperationalConditionKind,
 } from "./types";
 
 export type FrigoraStore = {
@@ -315,6 +319,17 @@ export type FrigoraStore = {
     ventureId: VentureId,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraPartUsage[]>;
+  insertAssetOperationalCondition(row: FrigoraAssetOperationalCondition): Promise<void>;
+  findAssetOperationalCondition(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraAssetOperationalConditionId,
+  ): Promise<FrigoraAssetOperationalCondition | null>;
+  listAssetOperationalConditionsByAsset(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraAssetOperationalCondition[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -1196,6 +1211,45 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraPartUsages.usedAt), asc(frigoraPartUsages.id));
       return rows.map(mapPartUsage);
     },
+    async insertAssetOperationalCondition(row) {
+      await ensureSchema();
+      await getDb()
+        .insert(frigoraAssetOperationalConditions)
+        .values(toAssetOperationalConditionValues(row));
+    },
+    async findAssetOperationalCondition(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraAssetOperationalConditions)
+        .where(
+          and(
+            eq(frigoraAssetOperationalConditions.id, id),
+            eq(frigoraAssetOperationalConditions.workspaceId, workspaceId),
+            eq(frigoraAssetOperationalConditions.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapAssetOperationalCondition(rows[0]) : null;
+    },
+    async listAssetOperationalConditionsByAsset(workspaceId, ventureId, assetId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraAssetOperationalConditions)
+        .where(
+          and(
+            eq(frigoraAssetOperationalConditions.workspaceId, workspaceId),
+            eq(frigoraAssetOperationalConditions.ventureId, ventureId),
+            eq(frigoraAssetOperationalConditions.assetId, assetId),
+          ),
+        )
+        .orderBy(
+          asc(frigoraAssetOperationalConditions.assertedAt),
+          asc(frigoraAssetOperationalConditions.id),
+        );
+      return rows.map(mapAssetOperationalCondition);
+    },
   };
 }
 
@@ -1472,6 +1526,24 @@ function toPartUsageValues(row: FrigoraPartUsage) {
   };
 }
 
+function toAssetOperationalConditionValues(row: FrigoraAssetOperationalCondition) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    assetId: row.assetId,
+    conditionKind: row.conditionKind,
+    notes: row.notes,
+    visitId: row.visitId,
+    workOrderId: row.workOrderId,
+    assertedAt: row.assertedAt,
+    assertedByUserId: row.assertedByUserId,
+    recordedByUserId: row.recordedByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 function mapCustomer(row: typeof frigoraCustomers.$inferSelect): FrigoraCustomer {
   return {
     id: row.id as FrigoraCustomerId,
@@ -1699,6 +1771,26 @@ function mapPartUsage(row: typeof frigoraPartUsages.$inferSelect): FrigoraPartUs
     notes: row.notes ?? null,
     usedAt: row.usedAt,
     usedByUserId: row.usedByUserId as UserId,
+    recordedByUserId: row.recordedByUserId as UserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapAssetOperationalCondition(
+  row: typeof frigoraAssetOperationalConditions.$inferSelect,
+): FrigoraAssetOperationalCondition {
+  return {
+    id: row.id as FrigoraAssetOperationalConditionId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    assetId: row.assetId as FrigoraAssetId,
+    conditionKind: row.conditionKind as FrigoraAssetOperationalConditionKind,
+    notes: row.notes ?? null,
+    visitId: (row.visitId as FrigoraVisitId | null) ?? null,
+    workOrderId: (row.workOrderId as FrigoraWorkOrderId | null) ?? null,
+    assertedAt: row.assertedAt,
+    assertedByUserId: row.assertedByUserId as UserId,
     recordedByUserId: row.recordedByUserId as UserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

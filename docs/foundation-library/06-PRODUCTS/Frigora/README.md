@@ -2,7 +2,7 @@
 
 **Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.13.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `frigora@0.14.0` in the Definition Registry.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
@@ -10,9 +10,9 @@
 
 **Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, and Asset history projection
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, and Asset operational condition assertions
 
-**Version.** 0.13.0
+**Version.** 0.14.0
 
 **Owner.** Founder (definition owner)
 
@@ -20,7 +20,7 @@
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, and Asset history projection as durable or derived operational views beside VIC. Asset history projection is a read-only, asset-rooted composition of certified operational truths — not a separate persisted store. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, and Asset operational condition assertions as durable or derived operational views beside VIC. Asset history projection is a read-only, asset-rooted composition of certified operational truths — not a separate persisted store. Asset operational condition is a human-asserted, append-only fact about present operational capability and is not inferred from other Frigora truths. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
 
 ## Profile
 
@@ -48,6 +48,7 @@ Admitted in this version, persisted beside VIC for Frigora instances:
 - Visit recommended actions (human-recorded forward operational intent associated with a Visit attendance episode; advisory only, not execution)
 - Visit refrigerant events (human-recorded refrigerant handling that actually occurred during a Visit attendance episode; append-only facts, not leak inference)
 - Visit part usages (human-recorded part or material that was actually used during a Visit attendance episode; append-only facts, not inventory)
+- Asset operational condition assertions (human-asserted present ability of an Asset to perform its intended function; append-only; current condition is derived)
 
 Derived read model (not persisted):
 
@@ -75,12 +76,15 @@ At visit-episode maturity, authoritative records separate:
 6. **Refrigerant handling actually occurred** — Visit refrigerant event
 7. **Resulting operational state** — Visit outcome
 8. **Forward operational intent** — Visit recommended action
+9. **Asserted asset operational condition** — Asset operational condition (asset-rooted; not inferred)
 
 Asset history projection surfaces these as typed, chronological entries without collapsing truth layers or inventing inference.
 
+**Asset.status** remains identity/lifecycle (`active` / `decommissioned`) and is not operational condition.
+
 **Refrigerant semantic law:** refrigerant added ≠ refrigerant leaked. A refrigerant event records handling (for example 2 kg R404A added). It does not infer leak quantity, leak rate, or refrigerant loss.
 
-Corrective action, part usage, and refrigerant event answer independent questions. Part usage is not inferred from corrective action or refrigerant handling. Visit outcome and recommended action remain independent; none of these records requires the others.
+Corrective action, part usage, refrigerant event, visit outcome, recommended action, and asset operational condition answer independent questions. None is inferred from the others.
 
 ## Deferred
 

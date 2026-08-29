@@ -12,6 +12,9 @@ export type FrigoraVisitOutcomeId = string & { readonly __brand: "FrigoraVisitOu
 export type FrigoraRecommendedActionId = string & { readonly __brand: "FrigoraRecommendedActionId" };
 export type FrigoraRefrigerantEventId = string & { readonly __brand: "FrigoraRefrigerantEventId" };
 export type FrigoraPartUsageId = string & { readonly __brand: "FrigoraPartUsageId" };
+export type FrigoraAssetOperationalConditionId = string & {
+  readonly __brand: "FrigoraAssetOperationalConditionId";
+};
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
@@ -26,6 +29,15 @@ export type FrigoraRefrigerantEventKind = (typeof FRIGORA_REFRIGERANT_EVENT_KIND
 
 export const FRIGORA_PART_USAGE_UNITS = ["each", "metre", "litre", "kilogram", "other"] as const;
 export type FrigoraPartUsageUnit = (typeof FRIGORA_PART_USAGE_UNITS)[number];
+
+export const FRIGORA_ASSET_OPERATIONAL_CONDITION_KINDS = [
+  "operational",
+  "partially_operational",
+  "non_operational",
+  "unknown",
+] as const;
+export type FrigoraAssetOperationalConditionKind =
+  (typeof FRIGORA_ASSET_OPERATIONAL_CONDITION_KINDS)[number];
 
 export const FRIGORA_WORK_KINDS = ["reactive", "planned", "inspection"] as const;
 export type FrigoraWorkKind = (typeof FRIGORA_WORK_KINDS)[number];
@@ -434,6 +446,33 @@ export type RecordPartUsageInput = {
   assetId?: string | null;
 };
 
+export type FrigoraAssetOperationalCondition = {
+  id: FrigoraAssetOperationalConditionId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  assetId: FrigoraAssetId;
+  conditionKind: FrigoraAssetOperationalConditionKind;
+  notes: string | null;
+  visitId: FrigoraVisitId | null;
+  workOrderId: FrigoraWorkOrderId | null;
+  assertedAt: string;
+  assertedByUserId: UserId;
+  recordedByUserId: UserId;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecordAssetOperationalConditionInput = {
+  assetId: string;
+  conditionKind: FrigoraAssetOperationalConditionKind;
+  notes?: string | null;
+  visitId?: string | null;
+  workOrderId?: string | null;
+  assertedAt: string;
+  assertedByUserId: string;
+  recordedByUserId: string;
+};
+
 export const FRIGORA_ASSET_HISTORY_EVENT_KINDS = [
   "reported_intake",
   "visit_arrival",
@@ -445,6 +484,7 @@ export const FRIGORA_ASSET_HISTORY_EVENT_KINDS = [
   "refrigerant",
   "outcome",
   "recommendation",
+  "operational_condition",
 ] as const;
 
 export type FrigoraAssetHistoryEventKind = (typeof FRIGORA_ASSET_HISTORY_EVENT_KINDS)[number];
@@ -510,6 +550,11 @@ export type FrigoraAssetHistoryRecommendationDetail = {
   description: string;
 };
 
+export type FrigoraAssetHistoryOperationalConditionDetail = {
+  conditionKind: FrigoraAssetOperationalConditionKind;
+  notes: string | null;
+};
+
 export type FrigoraAssetHistoryEntry =
   | (FrigoraAssetHistoryEntryBase & {
       kind: "reported_intake";
@@ -560,4 +605,9 @@ export type FrigoraAssetHistoryEntry =
       kind: "recommendation";
       sourceId: FrigoraRecommendedActionId;
       detail: FrigoraAssetHistoryRecommendationDetail;
+    })
+  | (FrigoraAssetHistoryEntryBase & {
+      kind: "operational_condition";
+      sourceId: FrigoraAssetOperationalConditionId;
+      detail: FrigoraAssetHistoryOperationalConditionDetail;
     });

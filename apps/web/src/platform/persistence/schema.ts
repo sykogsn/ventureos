@@ -758,6 +758,39 @@ export const frigoraPartUsages = sqliteTable(
   ],
 );
 
+export const frigoraAssetOperationalConditions = sqliteTable(
+  "frigora_asset_operational_conditions",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    assetId: text("asset_id").notNull(),
+    conditionKind: text("condition_kind").notNull(),
+    notes: text("notes"),
+    visitId: text("visit_id"),
+    workOrderId: text("work_order_id"),
+    assertedAt: text("asserted_at").notNull(),
+    assertedByUserId: text("asserted_by_user_id").notNull(),
+    recordedByUserId: text("recorded_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("frigora_asset_operational_conditions_venture_asset_idx").on(
+      table.ventureId,
+      table.assetId,
+    ),
+    index("frigora_asset_operational_conditions_venture_visit_idx").on(
+      table.ventureId,
+      table.visitId,
+    ),
+    index("frigora_asset_operational_conditions_venture_work_order_idx").on(
+      table.ventureId,
+      table.workOrderId,
+    ),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -797,4 +830,5 @@ export const schema = {
   frigoraRecommendedActions,
   frigoraRefrigerantEvents,
   frigoraPartUsages,
+  frigoraAssetOperationalConditions,
 };

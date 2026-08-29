@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 18; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 19; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -866,6 +866,33 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_part_usages_venture_asset_idx ON frigora_part_usages (venture_id, asset_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_asset_operational_conditions (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          condition_kind TEXT NOT NULL,
+          notes TEXT,
+          visit_id TEXT,
+          work_order_id TEXT,
+          asserted_at TEXT NOT NULL,
+          asserted_by_user_id TEXT NOT NULL,
+          recorded_by_user_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_asset_operational_conditions_venture_asset_idx ON frigora_asset_operational_conditions (venture_id, asset_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_asset_operational_conditions_venture_visit_idx ON frigora_asset_operational_conditions (venture_id, visit_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_asset_operational_conditions_venture_work_order_idx ON frigora_asset_operational_conditions (venture_id, work_order_id)`,
       );
     })();
   }

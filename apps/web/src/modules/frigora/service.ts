@@ -45,6 +45,9 @@ import type {
   FrigoraPartUsage,
   FrigoraPartUsageId,
   RecordPartUsageInput,
+  FrigoraAssetOperationalCondition,
+  FrigoraAssetOperationalConditionId,
+  RecordAssetOperationalConditionInput,
   FrigoraAssetHistoryEntry,
   FrigoraAssetHistoryEventKind,
   UpdateAssetInput,
@@ -69,6 +72,7 @@ import {
   recordRecommendedActionSchema,
   recordRefrigerantEventSchema,
   recordPartUsageSchema,
+  recordAssetOperationalConditionSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -309,6 +313,22 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraPartUsage[]>;
+  recordAssetOperationalCondition(
+    scope: FrigoraScope,
+    input: RecordAssetOperationalConditionInput,
+  ): Promise<FrigoraAssetOperationalCondition>;
+  getAssetOperationalCondition(
+    scope: FrigoraScope,
+    id: FrigoraAssetOperationalConditionId,
+  ): Promise<FrigoraAssetOperationalCondition | null>;
+  listAssetOperationalConditionsByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraAssetOperationalCondition[]>;
+  getCurrentAssetOperationalCondition(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraAssetOperationalCondition | null>;
   listAssetHistory(
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
@@ -1500,6 +1520,75 @@ export function createFrigoraService(options: {
       }
       return store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
+    async recordAssetOperationalCondition(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const parsed = parseWithFrigora(recordAssetOperationalConditionSchema, input);
+      const asset = await requireAsset(store, scope, parsed.assetId as FrigoraAssetId);
+      const assertedByUserId = parsed.assertedByUserId as UserId;
+      const recordedByUserId = parsed.recordedByUserId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, assertedByUserId);
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const { visitId, workOrderId } = await resolveOperationalConditionContext(
+        store,
+        scope,
+        asset.id,
+        parsed.visitId === undefined ? null : parsed.visitId,
+        parsed.workOrderId === undefined ? null : parsed.workOrderId,
+      );
+      const now = nowIso();
+      const row: FrigoraAssetOperationalCondition = {
+        id: createId<FrigoraAssetOperationalConditionId>(),
+        workspaceId: asset.workspaceId,
+        ventureId: asset.ventureId,
+        assetId: asset.id,
+        conditionKind: parsed.conditionKind,
+        notes: parsed.notes ?? null,
+        visitId,
+        workOrderId,
+        assertedAt: parsed.assertedAt,
+        assertedByUserId,
+        recordedByUserId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertAssetOperationalCondition(row);
+      return row;
+    },
+    async getAssetOperationalCondition(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findAssetOperationalCondition(scope.workspaceId, scope.ventureId, id);
+    },
+    async listAssetOperationalConditionsByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listAssetOperationalConditionsByAsset(
+        scope.workspaceId,
+        scope.ventureId,
+        assetId,
+      );
+    },
+    async getCurrentAssetOperationalCondition(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return null;
+      }
+      const rows = await store.listAssetOperationalConditionsByAsset(
+        scope.workspaceId,
+        scope.ventureId,
+        assetId,
+      );
+      return selectCurrentAssetOperationalCondition(rows);
+    },
     async listAssetHistory(scope, assetId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
@@ -1541,6 +1630,7 @@ export function createFrigoraService(options: {
         recommendations,
         refrigerantEvents,
         partUsages,
+        operationalConditions,
       ] = await Promise.all([
         store.listFieldCapturesByAsset(scope.workspaceId, scope.ventureId, assetId),
         store.listTechnicalFindingsByAsset(scope.workspaceId, scope.ventureId, assetId),
@@ -1549,6 +1639,7 @@ export function createFrigoraService(options: {
         store.listRecommendedActionsByAsset(scope.workspaceId, scope.ventureId, assetId),
         store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId),
         store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId),
+        store.listAssetOperationalConditionsByAsset(scope.workspaceId, scope.ventureId, assetId),
       ]);
 
       for (const fieldCapture of fieldCaptures) {
@@ -1571,6 +1662,9 @@ export function createFrigoraService(options: {
       }
       for (const partUsage of partUsages) {
         entries.push(mapPartUsageEntry(partUsage));
+      }
+      for (const operationalCondition of operationalConditions) {
+        entries.push(mapOperationalConditionEntry(operationalCondition));
       }
 
       return sortAssetHistoryEntries(entries);
@@ -1799,6 +1893,101 @@ function mapRecommendationEntry(
       description: recommendation.description,
     },
   };
+}
+
+function mapOperationalConditionEntry(
+  condition: FrigoraAssetOperationalCondition,
+): FrigoraAssetHistoryEntry {
+  return {
+    kind: "operational_condition",
+    sourceId: condition.id,
+    assetId: condition.assetId,
+    visitId: condition.visitId,
+    workOrderId: condition.workOrderId,
+    occurredAt: condition.assertedAt,
+    recordedAt: condition.createdAt,
+    actorUserId: condition.assertedByUserId,
+    recordedByUserId: condition.recordedByUserId,
+    detail: {
+      conditionKind: condition.conditionKind,
+      notes: condition.notes,
+    },
+  };
+}
+
+function selectCurrentAssetOperationalCondition(
+  rows: FrigoraAssetOperationalCondition[],
+): FrigoraAssetOperationalCondition | null {
+  if (rows.length === 0) {
+    return null;
+  }
+  let current = rows[0]!;
+  for (let index = 1; index < rows.length; index += 1) {
+    const candidate = rows[index]!;
+    if (candidate.assertedAt > current.assertedAt) {
+      current = candidate;
+      continue;
+    }
+    if (candidate.assertedAt === current.assertedAt && candidate.id > current.id) {
+      current = candidate;
+    }
+  }
+  return current;
+}
+
+async function resolveOperationalConditionContext(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  assetId: FrigoraAssetId,
+  visitIdInput: string | null,
+  workOrderIdInput: string | null,
+): Promise<{
+  visitId: FrigoraVisitId | null;
+  workOrderId: FrigoraWorkOrderId | null;
+}> {
+  let visitId: FrigoraVisitId | null = null;
+  let workOrderId: FrigoraWorkOrderId | null = null;
+
+  if (workOrderIdInput !== null) {
+    const workOrder = await requireWorkOrder(
+      store,
+      scope,
+      workOrderIdInput as FrigoraWorkOrderId,
+    );
+    if (workOrder.primaryAssetId !== assetId) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Work order primary asset must match the asserted asset.",
+      );
+    }
+    workOrderId = workOrder.id;
+  }
+
+  if (visitIdInput !== null) {
+    const visit = await requireVisit(store, scope, visitIdInput as FrigoraVisitId);
+    if (visit.status === "cancelled") {
+      throw new FrigoraError(
+        "invalid_status",
+        "Cancelled visits cannot receive operational condition context.",
+      );
+    }
+    const visitWorkOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+    if (visitWorkOrder.primaryAssetId !== assetId) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Visit work order primary asset must match the asserted asset.",
+      );
+    }
+    if (workOrderId !== null && visit.workOrderId !== workOrderId) {
+      throw new FrigoraError(
+        "invalid_input",
+        "Visit must belong to the supplied work order.",
+      );
+    }
+    visitId = visit.id;
+  }
+
+  return { visitId, workOrderId };
 }
 
 async function allowFrigoraRead(permissions: PermissionService, scope: FrigoraScope) {
