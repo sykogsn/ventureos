@@ -25,7 +25,11 @@ export default async function VentureLayout({
   }
 
   return (
-    <VentureWorkspace ventureId={ventureId} slug={venture.slug}>
+    <VentureWorkspace
+      ventureId={ventureId}
+      slug={venture.slug}
+      definitionId={venture.definitionId}
+    >
       {children}
     </VentureWorkspace>
   );
