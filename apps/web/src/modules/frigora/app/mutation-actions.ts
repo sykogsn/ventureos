@@ -6,10 +6,12 @@ import { getSession } from "@/lib/auth/session";
 import {
   assignWorkOrderAction,
   clearWorkOrderAssignmentAction,
+  closeWorkOrderAction,
   createAssetAction,
   createCustomerAction,
   createSiteAction,
   createWorkOrderAction,
+  reopenWorkOrderAction,
 } from "@/modules/frigora/actions";
 import { FRIGORA_ASSET_KINDS, FRIGORA_WORK_KINDS } from "@/modules/frigora/types";
 
@@ -51,6 +53,10 @@ function workPath(ventureId: string) {
   return `/ventures/${ventureId}/work`;
 }
 
+function operationsPath(ventureId: string) {
+  return `/ventures/${ventureId}/operations`;
+}
+
 function workDetailPath(ventureId: string, workOrderId: string) {
   return `/ventures/${ventureId}/work/${workOrderId}`;
 }
@@ -58,6 +64,7 @@ function workDetailPath(ventureId: string, workOrderId: string) {
 function revalidateOffice(ventureId: string) {
   revalidatePath(customersPath(ventureId));
   revalidatePath(workPath(ventureId));
+  revalidatePath(operationsPath(ventureId));
   revalidatePath(`/ventures/${ventureId}`, "layout");
 }
 
@@ -245,7 +252,52 @@ export async function assignToMeFormAction(
 
   revalidatePath(workDetailPath(scope.ventureId, workOrderId));
   revalidatePath(workPath(scope.ventureId));
+  revalidatePath(operationsPath(scope.ventureId));
   return {};
+}
+
+export async function closeWorkOrderFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+
+  const result = await closeWorkOrderAction({
+    ...scope,
+    id: workOrderId,
+  });
+
+  if (result.error) {
+    return { error: result.error };
+  }
+
+  revalidatePath(workDetailPath(scope.ventureId, workOrderId));
+  revalidatePath(workPath(scope.ventureId));
+  revalidatePath(operationsPath(scope.ventureId));
+  redirect(workDetailPath(scope.ventureId, workOrderId));
+}
+
+export async function reopenWorkOrderFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+
+  const result = await reopenWorkOrderAction({
+    ...scope,
+    id: workOrderId,
+  });
+
+  if (result.error) {
+    return { error: result.error };
+  }
+
+  revalidatePath(workDetailPath(scope.ventureId, workOrderId));
+  revalidatePath(workPath(scope.ventureId));
+  revalidatePath(operationsPath(scope.ventureId));
+  redirect(workDetailPath(scope.ventureId, workOrderId));
 }
 
 export async function clearAssignmentFormAction(
@@ -266,5 +318,6 @@ export async function clearAssignmentFormAction(
 
   revalidatePath(workDetailPath(scope.ventureId, workOrderId));
   revalidatePath(workPath(scope.ventureId));
+  revalidatePath(operationsPath(scope.ventureId));
   return {};
 }

@@ -10,18 +10,37 @@ import {
   listAssetOperationalConditionsByAssetQuery,
   listAssetsBySiteQuery,
   listCorrectiveActionsByVisitQuery,
+  listCorrectiveActionsByWorkOrderQuery,
   listCustomersQuery,
   listFieldCapturesByVisitQuery,
+  listFieldCapturesByWorkOrderQuery,
   listPartUsagesByVisitQuery,
+  listPartUsagesByWorkOrderQuery,
   listRecommendedActionsByVisitQuery,
+  listRecommendedActionsByWorkOrderQuery,
   listRefrigerantEventsByVisitQuery,
+  listRefrigerantEventsByWorkOrderQuery,
   listSitesByCustomerQuery,
   listTechnicalFindingsByVisitQuery,
+  listTechnicalFindingsByWorkOrderQuery,
   listVisitCustomerAcknowledgementsByVisitQuery,
+  listVisitCustomerAcknowledgementsByWorkOrderQuery,
+  listVisitOutcomesByWorkOrderQuery,
   listVisitsByWorkOrderQuery,
   listWorkOrdersByAssigneeQuery,
   listWorkOrdersQuery,
 } from "@/modules/frigora/queries";
+import {
+  ATTENTION_SIGNAL_LABELS,
+  computeOperationsCounts,
+  deriveAttentionSignals,
+  hasActiveVisit,
+  selectLatestVisit,
+  takeRecentActivity,
+  type OperationalActivityEvent,
+  type OperationalAttentionSignal,
+  type OperationsOverviewCounts,
+} from "@/modules/frigora/app/operational-derivations";
 import type {
   FrigoraAsset,
   FrigoraAssetOperationalCondition,
@@ -37,6 +56,7 @@ import type {
   FrigoraVisitCustomerAcknowledgement,
   FrigoraVisitOutcome,
   FrigoraWorkOrder,
+  FrigoraWorkOrderStatus,
 } from "@/modules/frigora/types";
 import type { UserId } from "@/contracts";
 
@@ -48,12 +68,34 @@ export type UserDisplay = {
   email: string;
 };
 
+export type WorkListFilters = {
+  status: "all" | FrigoraWorkOrderStatus;
+  assignment: "all" | "assigned" | "unassigned";
+};
+
 export type WorkOrderListRow = {
   workOrder: FrigoraWorkOrder;
   customer: FrigoraCustomer | null;
   site: FrigoraSite | null;
   asset: FrigoraAsset | null;
   assignee: UserDisplay | null;
+  visitCount: number;
+  hasActiveVisit: boolean;
+  latestVisit: FrigoraVisit | null;
+};
+
+export type OperationalAttentionItem = {
+  workOrder: FrigoraWorkOrder;
+  customer: FrigoraCustomer | null;
+  site: FrigoraSite | null;
+  assignee: UserDisplay | null;
+  signals: OperationalAttentionSignal[];
+};
+
+export type OperationsOverviewView = {
+  counts: OperationsOverviewCounts;
+  attention: OperationalAttentionItem[];
+  recentActivity: OperationalActivityEvent[];
 };
 
 export type VisitFactsView = {
@@ -79,6 +121,10 @@ export type WorkOrderDetailView = {
   visits: FrigoraVisit[];
   visitAttendees: Record<string, UserDisplay | null>;
   visitFacts: VisitFactsView[];
+  workOrderRecommendations: FrigoraRecommendedAction[];
+  currentOperationalCondition: FrigoraAssetOperationalCondition | null;
+  attentionSignals: OperationalAttentionSignal[];
+  latestVisitId: string | null;
 };
 
 export type MyWorkRow = {
@@ -402,17 +448,39 @@ export async function loadVisitRecorder(
   };
 }
 
-export async function loadWorkOrderList(scope: Scope): Promise<{
+export async function loadWorkOrderList(
+  scope: Scope,
+  filters: WorkListFilters = { status: "all", assignment: "all" },
+): Promise<{
   error?: string;
   rows: WorkOrderListRow[];
 }> {
-  const result = await listWorkOrdersQuery(scope);
+  const result =
+    filters.status === "all"
+      ? await listWorkOrdersQuery(scope)
+      : await listWorkOrdersQuery({ ...scope, status: filters.status });
   if (result.error) {
     return { error: result.error, rows: [] };
   }
-  const workOrders = result.record ?? [];
+
+  let workOrders = result.record ?? [];
+  if (filters.assignment === "assigned") {
+    workOrders = workOrders.filter((workOrder) => workOrder.assignedUserId !== null);
+  } else if (filters.assignment === "unassigned") {
+    workOrders = workOrders.filter((workOrder) => workOrder.assignedUserId === null);
+  }
+
   const rows: WorkOrderListRow[] = [];
   for (const workOrder of workOrders) {
+    const visitsResult = await listVisitsByWorkOrderQuery({
+      ...scope,
+      workOrderId: workOrder.id,
+    });
+    if (visitsResult.error) {
+      return { error: visitsResult.error, rows: [] };
+    }
+    const visits = visitsResult.record ?? [];
+
     const [customer, site, asset, assignee] = await Promise.all([
       getCustomerQuery({ ...scope, id: workOrder.customerId }),
       getSiteQuery({ ...scope, id: workOrder.siteId }),
@@ -427,10 +495,317 @@ export async function loadWorkOrderList(scope: Scope): Promise<{
       site: site.record ?? null,
       asset: asset.record ?? null,
       assignee,
+      visitCount: visits.length,
+      hasActiveVisit: hasActiveVisit(visits),
+      latestVisit: selectLatestVisit(visits),
     });
   }
   return { rows };
 }
+
+async function loadVisitsForWorkOrders(
+  scope: Scope,
+  workOrders: FrigoraWorkOrder[],
+): Promise<Map<string, FrigoraVisit[]>> {
+  const visitsByWorkOrderId = new Map<string, FrigoraVisit[]>();
+  await Promise.all(
+    workOrders.map(async (workOrder) => {
+      const visitsResult = await listVisitsByWorkOrderQuery({
+        ...scope,
+        workOrderId: workOrder.id,
+      });
+      visitsByWorkOrderId.set(workOrder.id, visitsResult.record ?? []);
+    }),
+  );
+  return visitsByWorkOrderId;
+}
+
+async function buildRecentActivity(scope: Scope): Promise<OperationalActivityEvent[]> {
+  const workOrdersResult = await listWorkOrdersQuery(scope);
+  if (workOrdersResult.error) {
+    return [];
+  }
+
+  const workOrders = workOrdersResult.record ?? [];
+  const events: OperationalActivityEvent[] = [];
+
+  await Promise.all(
+    workOrders.map(async (workOrder) => {
+      events.push({
+        kind: "work_order_created",
+        occurredAt: workOrder.createdAt,
+        sourceId: workOrder.id,
+        workOrderId: workOrder.id,
+        workOrderReference: workOrder.workReference,
+        visitId: null,
+        assetId: workOrder.primaryAssetId,
+        label: "Work order created",
+        detail: null,
+      });
+
+      const [
+        visitsResult,
+        capturesResult,
+        findingsResult,
+        correctiveResult,
+        partsResult,
+        refrigerantResult,
+        outcomesResult,
+        recommendedResult,
+        acknowledgementsResult,
+      ] = await Promise.all([
+        listVisitsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+        listFieldCapturesByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+        listTechnicalFindingsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+        listCorrectiveActionsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+        listPartUsagesByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+        listRefrigerantEventsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+        listVisitOutcomesByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+        listRecommendedActionsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+        listVisitCustomerAcknowledgementsByWorkOrderQuery({
+          ...scope,
+          workOrderId: workOrder.id,
+        }),
+      ]);
+
+      for (const visit of visitsResult.record ?? []) {
+        events.push({
+          kind: "visit_arrived",
+          occurredAt: visit.arrivedAt,
+          sourceId: visit.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: visit.id,
+          assetId: workOrder.primaryAssetId,
+          label: "Visit arrived",
+          detail: null,
+        });
+        if (visit.departedAt !== null) {
+          events.push({
+            kind: "visit_departed",
+            occurredAt: visit.departedAt,
+            sourceId: visit.id,
+            workOrderId: workOrder.id,
+            workOrderReference: workOrder.workReference,
+            visitId: visit.id,
+            assetId: workOrder.primaryAssetId,
+            label: "Visit departed",
+            detail: null,
+          });
+        }
+      }
+
+      for (const row of capturesResult.record ?? []) {
+        events.push({
+          kind: "field_capture_observed",
+          occurredAt: row.observedAt,
+          sourceId: row.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: row.visitId,
+          assetId: row.assetId,
+          label: "Observation recorded",
+          detail: row.description,
+        });
+      }
+
+      for (const row of findingsResult.record ?? []) {
+        events.push({
+          kind: "technical_finding_recorded",
+          occurredAt: row.assertedAt,
+          sourceId: row.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: row.visitId,
+          assetId: row.assetId,
+          label: "Finding recorded",
+          detail: row.description,
+        });
+      }
+
+      for (const row of correctiveResult.record ?? []) {
+        events.push({
+          kind: "corrective_action_recorded",
+          occurredAt: row.performedAt,
+          sourceId: row.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: row.visitId,
+          assetId: row.assetId,
+          label: "Corrective action recorded",
+          detail: row.description,
+        });
+      }
+
+      for (const row of partsResult.record ?? []) {
+        events.push({
+          kind: "part_usage_recorded",
+          occurredAt: row.usedAt,
+          sourceId: row.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: row.visitId,
+          assetId: row.assetId,
+          label: "Part usage recorded",
+          detail: row.partDescription,
+        });
+      }
+
+      for (const row of refrigerantResult.record ?? []) {
+        events.push({
+          kind: "refrigerant_event_recorded",
+          occurredAt: row.occurredAt,
+          sourceId: row.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: row.visitId,
+          assetId: row.assetId,
+          label: "Refrigerant event recorded",
+          detail: `${row.eventKind}: ${row.quantityKg} kg ${row.refrigerantType}`,
+        });
+      }
+
+      for (const row of outcomesResult.record ?? []) {
+        events.push({
+          kind: "visit_outcome_recorded",
+          occurredAt: row.outcomeAt,
+          sourceId: row.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: row.visitId,
+          assetId: row.assetId,
+          label: "Visit outcome recorded",
+          detail: row.description,
+        });
+      }
+
+      for (const row of recommendedResult.record ?? []) {
+        events.push({
+          kind: "recommended_action_recorded",
+          occurredAt: row.recommendedAt,
+          sourceId: row.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: row.visitId,
+          assetId: row.assetId,
+          label: "Recommendation recorded",
+          detail: row.description,
+        });
+      }
+
+      for (const row of acknowledgementsResult.record ?? []) {
+        events.push({
+          kind: "customer_acknowledgement_recorded",
+          occurredAt: row.acknowledgedAt,
+          sourceId: row.id,
+          workOrderId: workOrder.id,
+          workOrderReference: workOrder.workReference,
+          visitId: row.visitId,
+          assetId: null,
+          label: "Acknowledgement recorded",
+          detail: row.acknowledgementText,
+        });
+      }
+
+      if (workOrder.primaryAssetId) {
+        const conditionsResult = await listAssetOperationalConditionsByAssetQuery({
+          ...scope,
+          assetId: workOrder.primaryAssetId,
+        });
+        for (const row of conditionsResult.record ?? []) {
+          if (row.workOrderId !== workOrder.id) {
+            continue;
+          }
+          events.push({
+            kind: "asset_operational_condition_recorded",
+            occurredAt: row.assertedAt,
+            sourceId: row.id,
+            workOrderId: workOrder.id,
+            workOrderReference: workOrder.workReference,
+            visitId: row.visitId,
+            assetId: row.assetId,
+            label: "Operational condition recorded",
+            detail: row.conditionKind,
+          });
+        }
+      }
+    }),
+  );
+
+  return takeRecentActivity(events);
+}
+
+export async function loadOperationsOverview(scope: Scope): Promise<{
+  error?: string;
+  view: OperationsOverviewView;
+}> {
+  const openResult = await listWorkOrdersQuery({ ...scope, status: "open" });
+  if (openResult.error) {
+    return {
+      error: openResult.error,
+      view: {
+        counts: {
+          openWork: 0,
+          assignedOpen: 0,
+          unassignedOpen: 0,
+          activeVisits: 0,
+          visitedStillOpen: 0,
+        },
+        attention: [],
+        recentActivity: [],
+      },
+    };
+  }
+
+  const openWorkOrders = openResult.record ?? [];
+  const visitsByWorkOrderId = await loadVisitsForWorkOrders(scope, openWorkOrders);
+  const counts = computeOperationsCounts(openWorkOrders, visitsByWorkOrderId);
+
+  const attentionCandidates = openWorkOrders
+    .map((workOrder) => {
+      const visits = visitsByWorkOrderId.get(workOrder.id) ?? [];
+      const signals = deriveAttentionSignals(workOrder, visits);
+      if (signals.length === 0) {
+        return null;
+      }
+      return { workOrder, visits, signals };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .sort((left, right) => {
+      if (left.workOrder.workReference !== right.workOrder.workReference) {
+        return left.workOrder.workReference < right.workOrder.workReference ? -1 : 1;
+      }
+      return left.workOrder.id < right.workOrder.id ? -1 : 1;
+    });
+
+  const attention: OperationalAttentionItem[] = [];
+  for (const candidate of attentionCandidates) {
+    const [customer, site, assignee] = await Promise.all([
+      getCustomerQuery({ ...scope, id: candidate.workOrder.customerId }),
+      getSiteQuery({ ...scope, id: candidate.workOrder.siteId }),
+      resolveUserDisplay(candidate.workOrder.assignedUserId),
+    ]);
+    attention.push({
+      workOrder: candidate.workOrder,
+      customer: customer.record ?? null,
+      site: site.record ?? null,
+      assignee,
+      signals: candidate.signals,
+    });
+  }
+
+  const recentActivity = await buildRecentActivity(scope);
+
+  return {
+    view: {
+      counts,
+      attention,
+      recentActivity,
+    },
+  };
+}
+
+export { ATTENTION_SIGNAL_LABELS };
 
 export async function loadWorkOrderDetail(
   scope: Scope,
@@ -445,21 +820,35 @@ export async function loadWorkOrderDetail(
     return { view: null };
   }
 
-  const [customer, site, asset, assignee, visitsResult] = await Promise.all([
-    getCustomerQuery({ ...scope, id: workOrder.customerId }),
-    getSiteQuery({ ...scope, id: workOrder.siteId }),
-    workOrder.primaryAssetId
-      ? getAssetQuery({ ...scope, id: workOrder.primaryAssetId })
-      : Promise.resolve({ record: null as FrigoraAsset | null }),
-    resolveUserDisplay(workOrder.assignedUserId),
-    listVisitsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
-  ]);
+  const [customer, site, asset, assignee, visitsResult, recommendationsResult] =
+    await Promise.all([
+      getCustomerQuery({ ...scope, id: workOrder.customerId }),
+      getSiteQuery({ ...scope, id: workOrder.siteId }),
+      workOrder.primaryAssetId
+        ? getAssetQuery({ ...scope, id: workOrder.primaryAssetId })
+        : Promise.resolve({ record: null as FrigoraAsset | null }),
+      resolveUserDisplay(workOrder.assignedUserId),
+      listVisitsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+      listRecommendedActionsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+    ]);
 
   if (visitsResult.error) {
     return { error: visitsResult.error, view: null };
   }
 
   const visits = visitsResult.record ?? [];
+  const latestVisit = selectLatestVisit(visits);
+  const attentionSignals = deriveAttentionSignals(workOrder, visits);
+
+  let currentOperationalCondition: FrigoraAssetOperationalCondition | null = null;
+  if (workOrder.primaryAssetId) {
+    const conditionResult = await getCurrentAssetOperationalConditionQuery({
+      ...scope,
+      assetId: workOrder.primaryAssetId,
+    });
+    currentOperationalCondition = conditionResult.record ?? null;
+  }
+
   const visitAttendees: Record<string, UserDisplay | null> = {};
   const visitFacts: VisitFactsView[] = [];
   for (const visit of visits) {
@@ -477,6 +866,10 @@ export async function loadWorkOrderDetail(
       visits,
       visitAttendees,
       visitFacts,
+      workOrderRecommendations: recommendationsResult.record ?? [],
+      currentOperationalCondition,
+      attentionSignals,
+      latestVisitId: latestVisit?.id ?? null,
     },
   };
 }

@@ -4,12 +4,17 @@ import { EmptyCopy } from "@/core/shell/empty-copy";
 import { Fit, Stack } from "@/core/layout";
 import { AssignmentControls } from "@/modules/frigora/app/forms/assignment-controls";
 import { CreateWorkOrderForm } from "@/modules/frigora/app/forms/create-work-order-form";
+import { WorkOrderLifecycleControls } from "@/modules/frigora/app/forms/work-order-lifecycle-controls";
+import { formatVisitStatusLabel } from "@/modules/frigora/app/operational-derivations";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
-import type {
-  VisitFactsView,
-  WorkCreateOptions,
-  WorkOrderDetailView,
-  WorkOrderListRow,
+import {
+  ATTENTION_SIGNAL_LABELS,
+  type UserDisplay,
+  type VisitFactsView,
+  type WorkCreateOptions,
+  type WorkListFilters,
+  type WorkOrderDetailView,
+  type WorkOrderListRow,
 } from "@/modules/frigora/app/views";
 
 function VisitFactsReadBack({ facts }: { facts: VisitFactsView }) {
@@ -136,13 +141,32 @@ function VisitFactsReadBack({ facts }: { facts: VisitFactsView }) {
 export function WorkListScreen({
   ctx,
   rows,
+  filters,
   error,
 }: {
   ctx: FrigoraOpsContext;
   rows: WorkOrderListRow[];
+  filters: WorkListFilters;
   error?: string;
 }) {
   const base = `/ventures/${ctx.ventureId}/work`;
+
+  function filterHref(next: Partial<WorkListFilters>) {
+    const status = next.status ?? filters.status;
+    const assignment = next.assignment ?? filters.assignment;
+    const params = new URLSearchParams();
+    if (status !== "all") {
+      params.set("status", status);
+    }
+    if (assignment !== "all") {
+      params.set("assignment", assignment);
+    }
+    const query = params.toString();
+    return query.length > 0 ? `${base}?${query}` : base;
+  }
+
+  const hasFilters = filters.status !== "all" || filters.assignment !== "all";
+  const showEmptyFilters = rows.length === 0 && hasFilters;
 
   return (
     <PageFrame
@@ -168,13 +192,79 @@ export function WorkListScreen({
           </p>
         ) : null}
 
-        {rows.length === 0 ? (
+        <Stack gap="compact">
+          <h2 className="ids-label text-foreground">Filters</h2>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={filterHref({ status: "all" })}
+              className={
+                filters.status === "all" ? "vos-btn-primary" : "vos-btn-secondary"
+              }
+            >
+              All statuses
+            </Link>
+            <Link
+              href={filterHref({ status: "open" })}
+              className={
+                filters.status === "open" ? "vos-btn-primary" : "vos-btn-secondary"
+              }
+            >
+              Open
+            </Link>
+            <Link
+              href={filterHref({ status: "closed" })}
+              className={
+                filters.status === "closed" ? "vos-btn-primary" : "vos-btn-secondary"
+              }
+            >
+              Closed
+            </Link>
+            <Link
+              href={filterHref({ status: "cancelled" })}
+              className={
+                filters.status === "cancelled" ? "vos-btn-primary" : "vos-btn-secondary"
+              }
+            >
+              Cancelled
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={filterHref({ assignment: "all" })}
+              className={
+                filters.assignment === "all" ? "vos-btn-primary" : "vos-btn-secondary"
+              }
+            >
+              All assignment
+            </Link>
+            <Link
+              href={filterHref({ assignment: "assigned" })}
+              className={
+                filters.assignment === "assigned" ? "vos-btn-primary" : "vos-btn-secondary"
+              }
+            >
+              Assigned
+            </Link>
+            <Link
+              href={filterHref({ assignment: "unassigned" })}
+              className={
+                filters.assignment === "unassigned" ? "vos-btn-primary" : "vos-btn-secondary"
+              }
+            >
+              Unassigned
+            </Link>
+          </div>
+        </Stack>
+
+        {showEmptyFilters ? (
+          <p className="ids-caption text-muted">No work orders match these filters.</p>
+        ) : rows.length === 0 ? (
           <EmptyCopy title="No work orders yet">
             Create a work order after a customer, site, and optional asset exist.
           </EmptyCopy>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] text-left">
+            <table className="w-full min-w-[48rem] text-left">
               <thead>
                 <tr className="ids-caption text-muted">
                   <th className="py-2 pr-4 font-medium">Reference</th>
@@ -182,36 +272,59 @@ export function WorkListScreen({
                   <th className="py-2 pr-4 font-medium">Kind</th>
                   <th className="py-2 pr-4 font-medium">Customer / site</th>
                   <th className="py-2 pr-4 font-medium">Assignee</th>
+                  <th className="py-2 pr-4 font-medium">Visits</th>
+                  <th className="py-2 pr-4 font-medium">Latest visit</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ workOrder, customer, site, assignee }) => (
-                  <tr
-                    key={workOrder.id}
-                    className="border-t border-[var(--ids-foundation-stroke-subtle)]"
-                  >
-                    <td className="py-3 pr-4 ids-body">
-                      <Link
-                        href={`${base}/${workOrder.id}`}
-                        className="underline-offset-2 hover:underline"
-                      >
-                        {workOrder.workReference}
-                      </Link>
-                    </td>
-                    <td className="py-3 pr-4 ids-caption text-muted">{workOrder.status}</td>
-                    <td className="py-3 pr-4 ids-caption text-muted">{workOrder.workKind}</td>
-                    <td className="py-3 pr-4 ids-body">
-                      {customer?.displayName ?? "—"}
-                      <span className="ids-caption text-muted">
-                        {" "}
-                        / {site?.name ?? "—"}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4 ids-body">
-                      {assignee?.name ?? "Unassigned"}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map(
+                  ({
+                    workOrder,
+                    customer,
+                    site,
+                    assignee,
+                    visitCount,
+                    hasActiveVisit,
+                    latestVisit,
+                  }) => (
+                    <tr
+                      key={workOrder.id}
+                      className="border-t border-[var(--ids-foundation-stroke-subtle)]"
+                    >
+                      <td className="py-3 pr-4 ids-body">
+                        <Link
+                          href={`${base}/${workOrder.id}`}
+                          className="underline-offset-2 hover:underline"
+                        >
+                          {workOrder.workReference}
+                        </Link>
+                      </td>
+                      <td className="py-3 pr-4 ids-caption text-muted">{workOrder.status}</td>
+                      <td className="py-3 pr-4 ids-caption text-muted">{workOrder.workKind}</td>
+                      <td className="py-3 pr-4 ids-body">
+                        {customer?.displayName ?? "—"}
+                        <span className="ids-caption text-muted">
+                          {" "}
+                          / {site?.name ?? "—"}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 ids-body">
+                        {assignee?.name ?? "Unassigned"}
+                      </td>
+                      <td className="py-3 pr-4 ids-body">
+                        {visitCount}
+                        {hasActiveVisit ? (
+                          <span className="ids-caption text-muted"> · Visit in progress</span>
+                        ) : null}
+                      </td>
+                      <td className="py-3 pr-4 ids-caption text-muted">
+                        {latestVisit
+                          ? `${formatVisitStatusLabel(latestVisit.status)} · ${latestVisit.arrivedAt}`
+                          : "No visits"}
+                      </td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>
@@ -299,8 +412,20 @@ export function WorkDetailScreen({
   ctx: FrigoraOpsContext;
   view: WorkOrderDetailView;
 }) {
-  const { workOrder, customer, site, asset, assignee, visits, visitAttendees, visitFacts } =
-    view;
+  const {
+    workOrder,
+    customer,
+    site,
+    asset,
+    assignee,
+    visits,
+    visitAttendees,
+    visitFacts,
+    workOrderRecommendations,
+    currentOperationalCondition,
+    attentionSignals,
+    latestVisitId,
+  } = view;
 
   const workBase = `/ventures/${ctx.ventureId}/work/${workOrder.id}`;
   const assignedToMe = workOrder.assignedUserId === ctx.sessionUserId;
@@ -308,6 +433,11 @@ export function WorkDetailScreen({
   const openVisits = visits.filter((visit) => visit.status === "open");
   const latestOpen = openVisits.length > 0 ? openVisits[openVisits.length - 1] : null;
   const mayExecute = ctx.canWrite && isOpen && assignedToMe;
+
+  const latestFacts = latestVisitId
+    ? visitFacts.find((facts) => facts.visit.id === latestVisitId)
+    : null;
+  const previousFacts = visitFacts.filter((facts) => facts.visit.id !== latestVisitId);
 
   return (
     <PageFrame
@@ -382,6 +512,71 @@ export function WorkDetailScreen({
           )}
         </Stack>
 
+        {attentionSignals.length > 0 ? (
+          <Stack gap="compact">
+            <h2 className="ids-label text-foreground">Operational attention</h2>
+            <div className="flex flex-wrap gap-2">
+              {attentionSignals.map((signal) => (
+                <span
+                  key={signal}
+                  className="rounded-[var(--ids-foundation-radius-sm)] border border-[var(--ids-foundation-stroke-subtle)] px-2 py-0.5 ids-caption text-muted"
+                >
+                  {ATTENTION_SIGNAL_LABELS[signal]}
+                </span>
+              ))}
+            </div>
+          </Stack>
+        ) : null}
+
+        <Stack gap="compact">
+          <h2 className="ids-label text-foreground">Work order lifecycle</h2>
+          <WorkOrderLifecycleControls
+            workspaceId={ctx.workspaceId}
+            ventureId={ctx.ventureId}
+            workOrderId={workOrder.id}
+            status={workOrder.status}
+            canWrite={ctx.canWrite}
+          />
+        </Stack>
+
+        {workOrder.primaryAssetId && currentOperationalCondition ? (
+          <Stack gap="compact">
+            <h2 className="ids-label text-foreground">Asset operational condition</h2>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="ids-caption text-muted">Asserted condition</dt>
+                <dd className="ids-body">{currentOperationalCondition.conditionKind}</dd>
+              </div>
+              <div>
+                <dt className="ids-caption text-muted">Recorded</dt>
+                <dd className="ids-body">{currentOperationalCondition.assertedAt}</dd>
+              </div>
+              {currentOperationalCondition.notes ? (
+                <div className="sm:col-span-2">
+                  <dt className="ids-caption text-muted">Notes</dt>
+                  <dd className="ids-body whitespace-pre-wrap">
+                    {currentOperationalCondition.notes}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </Stack>
+        ) : null}
+
+        {workOrderRecommendations.length > 0 ? (
+          <Stack gap="compact">
+            <h2 className="ids-label text-foreground">Recommendations recorded</h2>
+            <ul className="ids-body list-none space-y-2">
+              {workOrderRecommendations.map((row) => (
+                <li key={row.id}>
+                  <span className="ids-caption text-muted">{row.recommendedAt}</span>
+                  <p>{row.description}</p>
+                </li>
+              ))}
+            </ul>
+          </Stack>
+        ) : null}
+
         <Stack gap="compact">
           <h2 className="ids-label text-foreground">Field execution</h2>
           {mayExecute && !latestOpen ? (
@@ -418,34 +613,66 @@ export function WorkDetailScreen({
               Start a visit from field execution when this work is assigned to you.
             </EmptyCopy>
           ) : (
-            <Stack gap="compact">
-              {visitFacts.map((facts) => (
-                <article
-                  key={facts.visit.id}
-                  className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4"
-                >
-                  <Stack gap="tight">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="ids-body">
-                        {facts.visit.status} ·{" "}
-                        {visitAttendees[facts.visit.id]?.name ??
-                          facts.visit.attendingUserId}
-                      </p>
-                      <Link
-                        href={`${workBase}/visit/${facts.visit.id}`}
-                        className="vos-btn-secondary"
-                      >
-                        View visit
-                      </Link>
-                    </div>
-                    <VisitFactsReadBack facts={facts} />
+            <Stack gap="section">
+              {latestFacts ? (
+                <Stack gap="compact">
+                  <h3 className="ids-label text-foreground">Latest visit</h3>
+                  <VisitFactsCard
+                    facts={latestFacts}
+                    attendee={visitAttendees[latestFacts.visit.id]}
+                    workBase={workBase}
+                  />
+                </Stack>
+              ) : null}
+              {previousFacts.length > 0 ? (
+                <Stack gap="compact">
+                  <h3 className="ids-label text-foreground">Previous visits</h3>
+                  <Stack gap="compact">
+                    {previousFacts.map((facts) => (
+                      <VisitFactsCard
+                        key={facts.visit.id}
+                        facts={facts}
+                        attendee={visitAttendees[facts.visit.id]}
+                        workBase={workBase}
+                      />
+                    ))}
                   </Stack>
-                </article>
-              ))}
+                </Stack>
+              ) : null}
             </Stack>
           )}
         </Stack>
       </Stack>
     </PageFrame>
+  );
+}
+
+function VisitFactsCard({
+  facts,
+  attendee,
+  workBase,
+}: {
+  facts: VisitFactsView;
+  attendee: UserDisplay | null | undefined;
+  workBase: string;
+}) {
+  const { visit } = facts;
+
+  return (
+    <article
+      className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4"
+    >
+      <Stack gap="tight">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="ids-body">
+            {formatVisitStatusLabel(visit.status)} · {attendee?.name ?? visit.attendingUserId}
+          </p>
+          <Link href={`${workBase}/visit/${visit.id}`} className="vos-btn-secondary">
+            View visit
+          </Link>
+        </div>
+        <VisitFactsReadBack facts={facts} />
+      </Stack>
+    </article>
   );
 }

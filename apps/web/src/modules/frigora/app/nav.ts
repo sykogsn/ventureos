@@ -18,6 +18,7 @@ export function buildVentureSurfaceLinks(input: {
 
   if (input.definitionId === "frigora") {
     links.push(
+      { href: `${base}/operations`, label: "Operations", match: "prefix" },
       { href: `${base}/work/assigned`, label: "My Work", match: "prefix" },
       { href: `${base}/work`, label: "Work", match: "prefix" },
       { href: `${base}/customers`, label: "Customers", match: "prefix" },

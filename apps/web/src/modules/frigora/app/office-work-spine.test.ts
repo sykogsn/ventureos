@@ -168,6 +168,7 @@ describe("F1.1 Office Work Spine", () => {
       [
         "Company HQ",
         "Executive Office",
+        "Operations",
         "My Work",
         "Work",
         "Customers",
@@ -374,6 +375,8 @@ describe("F1.1 Office Work Spine", () => {
     );
     assert.match(mutationActions, /userId: session\.id/);
     assert.equal(mutationActions.includes("technician"), false);
-    assert.equal(mutationActions.includes("closeWorkOrder"), false);
+    assert.match(mutationActions, /closeWorkOrderAction/);
+    assert.match(mutationActions, /reopenWorkOrderAction/);
+    assert.equal(mutationActions.includes("cancelWorkOrderAction"), false);
   });
 });
