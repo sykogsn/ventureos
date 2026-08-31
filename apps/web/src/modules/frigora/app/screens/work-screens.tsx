@@ -6,10 +6,132 @@ import { AssignmentControls } from "@/modules/frigora/app/forms/assignment-contr
 import { CreateWorkOrderForm } from "@/modules/frigora/app/forms/create-work-order-form";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
 import type {
+  VisitFactsView,
   WorkCreateOptions,
   WorkOrderDetailView,
   WorkOrderListRow,
 } from "@/modules/frigora/app/views";
+
+function VisitFactsReadBack({ facts }: { facts: VisitFactsView }) {
+  const { visit, attendee } = facts;
+
+  return (
+    <div className="mt-3 border-t border-[var(--ids-foundation-stroke-subtle)] pt-3">
+      <Stack gap="compact">
+      <p className="ids-caption text-muted">
+        {visit.status} · {attendee?.name ?? visit.attendingUserId} · arrived{" "}
+        {visit.arrivedAt}
+        {visit.departedAt ? ` · departed ${visit.departedAt}` : ""}
+      </p>
+
+      {facts.fieldCaptures.length > 0 ? (
+        <div>
+          <h4 className="ids-caption text-muted">Observations</h4>
+          <ul className="ids-body list-none space-y-1">
+            {facts.fieldCaptures.map((row) => (
+              <li key={row.id}>
+                {row.captureKind === "measurement"
+                  ? `${row.captureCode}: ${row.valueNumeric} ${row.valueUnit ?? ""}`
+                  : `${row.captureCode}: ${row.description ?? ""}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {facts.technicalFindings.length > 0 ? (
+        <div>
+          <h4 className="ids-caption text-muted">Findings</h4>
+          <ul className="ids-body list-none space-y-1">
+            {facts.technicalFindings.map((row) => (
+              <li key={row.id}>{row.findingKind}: {row.description}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {facts.correctiveActions.length > 0 ? (
+        <div>
+          <h4 className="ids-caption text-muted">Corrective actions</h4>
+          <ul className="ids-body list-none space-y-1">
+            {facts.correctiveActions.map((row) => (
+              <li key={row.id}>{row.description}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {facts.partUsages.length > 0 ? (
+        <div>
+          <h4 className="ids-caption text-muted">Parts</h4>
+          <ul className="ids-body list-none space-y-1">
+            {facts.partUsages.map((row) => (
+              <li key={row.id}>
+                {row.partDescription} — {row.quantity} {row.quantityUnit}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {facts.refrigerantEvents.length > 0 ? (
+        <div>
+          <h4 className="ids-caption text-muted">Refrigerant</h4>
+          <ul className="ids-body list-none space-y-1">
+            {facts.refrigerantEvents.map((row) => (
+              <li key={row.id}>
+                {row.eventKind}: {row.quantityKg} kg {row.refrigerantType}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {facts.visitOutcome ? (
+        <div>
+          <h4 className="ids-caption text-muted">Outcome</h4>
+          <p className="ids-body">{facts.visitOutcome.description}</p>
+        </div>
+      ) : null}
+
+      {facts.recommendedActions.length > 0 ? (
+        <div>
+          <h4 className="ids-caption text-muted">Recommendations</h4>
+          <ul className="ids-body list-none space-y-1">
+            {facts.recommendedActions.map((row) => (
+              <li key={row.id}>{row.description}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {facts.operationalConditions.length > 0 ? (
+        <div>
+          <h4 className="ids-caption text-muted">Operational condition</h4>
+          <ul className="ids-body list-none space-y-1">
+            {facts.operationalConditions.map((row) => (
+              <li key={row.id}>{row.conditionKind}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {facts.acknowledgements.length > 0 ? (
+        <div>
+          <h4 className="ids-caption text-muted">Acknowledgement</h4>
+          <ul className="ids-body list-none space-y-1">
+            {facts.acknowledgements.map((row) => (
+              <li key={row.id}>
+                {row.acknowledgerName}: {row.acknowledgementText}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      </Stack>
+    </div>
+  );
+}
 
 export function WorkListScreen({
   ctx,
@@ -177,7 +299,15 @@ export function WorkDetailScreen({
   ctx: FrigoraOpsContext;
   view: WorkOrderDetailView;
 }) {
-  const { workOrder, customer, site, asset, assignee, visits, visitAttendees } = view;
+  const { workOrder, customer, site, asset, assignee, visits, visitAttendees, visitFacts } =
+    view;
+
+  const workBase = `/ventures/${ctx.ventureId}/work/${workOrder.id}`;
+  const assignedToMe = workOrder.assignedUserId === ctx.sessionUserId;
+  const isOpen = workOrder.status === "open";
+  const openVisits = visits.filter((visit) => visit.status === "open");
+  const latestOpen = openVisits.length > 0 ? openVisits[openVisits.length - 1] : null;
+  const mayExecute = ctx.canWrite && isOpen && assignedToMe;
 
   return (
     <PageFrame
@@ -253,41 +383,66 @@ export function WorkDetailScreen({
         </Stack>
 
         <Stack gap="compact">
+          <h2 className="ids-label text-foreground">Field execution</h2>
+          {mayExecute && !latestOpen ? (
+            <Fit>
+              <Link href={`${workBase}/visit`} className="vos-btn-primary w-full sm:w-auto">
+                Start visit
+              </Link>
+            </Fit>
+          ) : mayExecute && latestOpen ? (
+            <Fit>
+              <Link
+                href={`${workBase}/visit/${latestOpen.id}`}
+                className="vos-btn-primary w-full sm:w-auto"
+              >
+                Continue visit
+              </Link>
+            </Fit>
+          ) : isOpen && !workOrder.assignedUserId ? (
+            <p className="ids-caption text-muted">
+              Assign this work order before field execution.
+            </p>
+          ) : isOpen && workOrder.assignedUserId && !assignedToMe ? (
+            <p className="ids-caption text-muted">
+              Assigned to {assignee?.name ?? workOrder.assignedUserId}. Field execution is
+              for the assignee.
+            </p>
+          ) : null}
+        </Stack>
+
+        <Stack gap="compact">
           <h2 className="ids-label text-foreground">Visits</h2>
           {visits.length === 0 ? (
             <EmptyCopy title="No visits recorded yet">
-              Field visit recording belongs to F1.2. Existing visits appear here read-only.
+              Start a visit from field execution when this work is assigned to you.
             </EmptyCopy>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[32rem] text-left">
-                <thead>
-                  <tr className="ids-caption text-muted">
-                    <th className="py-2 pr-4 font-medium">Status</th>
-                    <th className="py-2 pr-4 font-medium">Attending</th>
-                    <th className="py-2 pr-4 font-medium">Arrived</th>
-                    <th className="py-2 pr-4 font-medium">Departed</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visits.map((visit) => (
-                    <tr
-                      key={visit.id}
-                      className="border-t border-[var(--ids-foundation-stroke-subtle)]"
-                    >
-                      <td className="py-3 pr-4 ids-body">{visit.status}</td>
-                      <td className="py-3 pr-4 ids-body">
-                        {visitAttendees[visit.id]?.name ?? visit.attendingUserId}
-                      </td>
-                      <td className="py-3 pr-4 ids-caption text-muted">{visit.arrivedAt}</td>
-                      <td className="py-3 pr-4 ids-caption text-muted">
-                        {visit.departedAt ?? "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Stack gap="compact">
+              {visitFacts.map((facts) => (
+                <article
+                  key={facts.visit.id}
+                  className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4"
+                >
+                  <Stack gap="tight">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="ids-body">
+                        {facts.visit.status} ·{" "}
+                        {visitAttendees[facts.visit.id]?.name ??
+                          facts.visit.attendingUserId}
+                      </p>
+                      <Link
+                        href={`${workBase}/visit/${facts.visit.id}`}
+                        className="vos-btn-secondary"
+                      >
+                        View visit
+                      </Link>
+                    </div>
+                    <VisitFactsReadBack facts={facts} />
+                  </Stack>
+                </article>
+              ))}
+            </Stack>
           )}
         </Stack>
       </Stack>

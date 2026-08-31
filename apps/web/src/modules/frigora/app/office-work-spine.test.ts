@@ -168,6 +168,7 @@ describe("F1.1 Office Work Spine", () => {
       [
         "Company HQ",
         "Executive Office",
+        "My Work",
         "Work",
         "Customers",
         "Documents",
