@@ -251,6 +251,28 @@ export const auditEvents = sqliteTable(
   ],
 );
 
+export const storedObjects = sqliteTable(
+  "stored_objects",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id"),
+    storageKey: text("storage_key").notNull(),
+    originalFilename: text("original_filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes", { mode: "number" }).notNull(),
+    sha256: text("sha256").notNull(),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    deletedAt: text("deleted_at"),
+  },
+  (table) => [
+    uniqueIndex("stored_objects_storage_key_idx").on(table.storageKey),
+    index("stored_objects_workspace_idx").on(table.workspaceId),
+    index("stored_objects_workspace_venture_idx").on(table.workspaceId, table.ventureId),
+  ],
+);
+
 export const workforceExecutions = sqliteTable(
   "workforce_executions",
   {
@@ -839,6 +861,7 @@ export const schema = {
   knowledgeEdges,
   jobs,
   auditEvents,
+  storedObjects,
   workforceExecutions,
   agentDefinitions,
   agentInstances,

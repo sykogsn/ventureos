@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 20; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 21; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -336,6 +336,31 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS audit_events_workspace_idx ON audit_events (workspace_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS stored_objects (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT,
+          storage_key TEXT NOT NULL,
+          original_filename TEXT NOT NULL,
+          mime_type TEXT NOT NULL,
+          size_bytes INTEGER NOT NULL,
+          sha256 TEXT NOT NULL,
+          created_by_user_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          deleted_at TEXT
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS stored_objects_storage_key_idx ON stored_objects (storage_key)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS stored_objects_workspace_idx ON stored_objects (workspace_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS stored_objects_workspace_venture_idx ON stored_objects (workspace_id, venture_id)`,
       );
 
       await exec(`

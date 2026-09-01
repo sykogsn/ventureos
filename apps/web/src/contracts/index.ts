@@ -1,4 +1,17 @@
-export type { Actor, AgentId, DocumentId, EventId, JobId, NotificationId, UserId, VentureId, WorkflowRunId, WorkforceRunId, WorkspaceId } from "./ids";
+export type {
+  Actor,
+  AgentId,
+  DocumentId,
+  EventId,
+  JobId,
+  NotificationId,
+  StoredObjectId,
+  UserId,
+  VentureId,
+  WorkflowRunId,
+  WorkforceRunId,
+  WorkspaceId,
+} from "./ids";
 export type { ApiResult } from "./result";
 export { err, ok } from "./result";
 export type { Command, CommandContext } from "./commands";
@@ -34,6 +47,15 @@ export type {
   NotificationSource,
 } from "./notifications";
 export type { DocumentPort, DocumentRef } from "./documents";
+export type {
+  DeleteStoredObjectInput,
+  OpenStoredObjectInput,
+  StoredObjectMetadata,
+  StoredObjectPort,
+  StoredObjectRef,
+  StoredObjectScope,
+  StoreStoredObjectInput,
+} from "./stored-objects";
 export type {
   Permission,
   PermissionCheck,

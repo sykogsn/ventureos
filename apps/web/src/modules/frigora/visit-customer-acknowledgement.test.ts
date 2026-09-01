@@ -599,7 +599,7 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     );
   });
 
-  it("persists through restart and keeps SCHEMA_GENERATION at 20", async () => {
+  it("persists through restart and keeps SCHEMA_GENERATION at 21", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -618,7 +618,7 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     const schemaPath = fileURLToPath(
       new URL("../../platform/persistence/schema.ts", import.meta.url),
     );
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 20/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 21/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_visit_customer_acknowledgements/);
     assert.equal(readFileSync(schemaPath, "utf8").includes("frigora_asset_history"), false);
   });

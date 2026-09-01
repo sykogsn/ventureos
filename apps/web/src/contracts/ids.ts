@@ -5,6 +5,7 @@ export type AgentId = string & { readonly __brand: "AgentId" };
 export type AgentDefinitionId = string & { readonly __brand: "AgentDefinitionId" };
 export type AgentInstanceId = string & { readonly __brand: "AgentInstanceId" };
 export type DocumentId = string & { readonly __brand: "DocumentId" };
+export type StoredObjectId = string & { readonly __brand: "StoredObjectId" };
 export type EventId = string & { readonly __brand: "EventId" };
 export type JobId = string & { readonly __brand: "JobId" };
 export type WorkforceRunId = string & { readonly __brand: "WorkforceRunId" };

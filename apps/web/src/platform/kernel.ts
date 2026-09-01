@@ -1,4 +1,4 @@
-import type { DocumentPort, EventBus, NotificationPort, PermissionService, WorkflowEngine } from "@/contracts";
+import type { DocumentPort, EventBus, NotificationPort, PermissionService, StoredObjectPort, WorkflowEngine } from "@/contracts";
 import { createKnowledgeGraph, createReasoner, type KnowledgeGraph, type Reasoner } from "@/knowledge";
 import { createAuditLog, type AuditLog } from "@/platform/audit/log";
 import { createDocumentPort } from "@/platform/documents/port";
@@ -7,6 +7,8 @@ import { createJobOrchestrator, type JobOrchestrator } from "@/platform/jobs/orc
 import { createNotificationPort } from "@/platform/notifications/port";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
 import { createPermissionService } from "@/platform/permissions/service";
+import { createLocalBlobStorageAdapter } from "@/platform/storage/local-adapter";
+import { createStoredObjectPort } from "@/platform/storage/port";
 import { createScheduler, type Scheduler } from "@/platform/scheduler/scheduler";
 import { createTelemetry, type Telemetry } from "@/platform/telemetry/telemetry";
 import { createWorkflowEngine } from "@/platform/workflows/engine";
@@ -22,6 +24,7 @@ export type Platform = {
   jobs: JobOrchestrator;
   notifications: NotificationPort;
   documents: DocumentPort;
+  storedObjects: StoredObjectPort;
   knowledge: KnowledgeGraph;
   reasoner: Reasoner;
 };
@@ -63,16 +66,24 @@ export function createPlatform(): Platform {
     })();
   });
 
+  const permissions = createPermissionService(createDbMembershipStore());
+  const storedObjectAdapter = createLocalBlobStorageAdapter();
+
   return {
     events,
     scheduler,
     workflows: createWorkflowEngine(),
-    permissions: createPermissionService(createDbMembershipStore()),
+    permissions,
     audit,
     telemetry,
     jobs,
     notifications: createNotificationPort(),
     documents: createDocumentPort(),
+    storedObjects: createStoredObjectPort({
+      adapter: storedObjectAdapter,
+      audit,
+      permissions,
+    }),
     knowledge,
     reasoner: createReasoner(knowledge),
   };

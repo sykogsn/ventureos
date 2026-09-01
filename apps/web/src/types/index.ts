@@ -4,7 +4,7 @@ export type {
   VentureId,
   WorkspaceId,
   AgentId,
-  DocumentId,
+  StoredObjectId,
 } from "@/contracts";
 
 import type { UserId, VentureId } from "@/contracts";
