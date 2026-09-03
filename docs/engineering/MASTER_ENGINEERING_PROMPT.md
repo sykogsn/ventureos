@@ -1,15 +1,15 @@
 # VentureOS Master Engineering Prompt
 
 **Status.** Permanent engineering constitution of VentureOS  
-**Version.** 1.0.0  
-**Date.** 2026-08-22  
+**Version.** 1.1.0  
+**Date.** 2026-09-03  
 **Owner.** Engineering  
-**Applies to.** Every sprint, implementation, review, refactor, and bug fix on VentureOS, Qualora, Calviora, Farmora, and every future Venture on this OS  
+**Applies to.** Every sprint, implementation, review, refactor, bug fix, diagnosis, and certification on VentureOS, Qualora, Calviora, Farmora, Frigora, and every future Venture on this OS  
 **Index.** [Engineering Index](./README.md)
 
 This document is the authoritative engineering standard for this repository. It is subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) and the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md). The Project Constitution is the supreme governing document. If this document and a higher constitution conflict, the higher document wins.
 
-Read it before Diagnostic Mode. Obey it through Verification Mode. Close the sprint against it. Reviews, refactors, and bug fixes follow the same law. Do not start work until the pre-flight checklist is green.
+Read it before Diagnostic Mode. Obey it through Verification Mode. Close the sprint against it. Reviews, refactors, and bug fixes follow the same law. Do not start work until the pre-flight checklist is green. Unexplained failures, corrections, and certification follow [§10](#10-diagnostic-correction-and-certification-operating-protocol).
 
 Architecture still answers *what may exist*. This document answers *how a sprint is allowed to proceed*. Engineering may define implementation. Engineering may not redefine architecture.
 
@@ -90,6 +90,8 @@ Never patch symptoms.
 
 A restart, a cache wipe, or a copy-level edit is not a fix if the same class of failure can be generated again. A proven failure gets a guard that fails closed. If the same bug can return, the sprint is not complete.
 
+The diagnostic report, ownership classification, authorisation gate, and one-hypothesis correction rule are [§10](#10-diagnostic-correction-and-certification-operating-protocol).
+
 ---
 
 ## 5. Validation Requirements
@@ -109,6 +111,8 @@ Every sprint must pass the gates that apply to its work. An implementation sprin
 
 Do not commit on a failed gate. Do not skip a gate because the change “looks small.” Documentation-only sprints skip application implementation and UI verification; they do not skip accuracy, registration, or founder approval to commit.
 
+While diagnosing or correcting a narrow failure, run the [§10 verification ladder](#105-targeted-first-verification) first. That ladder does **not** waive this section. An implementation sprint is not complete until the workspace tests and the other gates above still pass.
+
 ---
 
 ## 6. Git Workflow
@@ -121,6 +125,8 @@ Do not commit on a failed gate. Do not skip a gate because the change “looks s
 - Protect `main`. No unverified land. No Foundation amendment hidden inside a feature branch.
 
 Do not commit secrets, local databases, or `.next` artefacts. Tags and GitHub Releases are not automatic with a push. Release only when the Release Process and the founder require it.
+
+Exact-path staging, working-tree provenance, and the ban on `git add .` / `git add -A` are [§10.8](#108-working-tree-provenance-and-git-safety) and the Foundation Library [Git Workflow](../foundation-library/04-ENGINEERING/Git-Workflow.md).
 
 ---
 
@@ -183,3 +189,140 @@ Never tell the founder a task is complete until it has been verified in the runn
 A passing test suite is not a substitute for a running desk when the sprint claims a running desk. A generated file is not healthy until the application that consumes it starts cleanly. A commit is not completion. A push is not completion. A statement in chat is not completion.
 
 Completion is a verified running system, or — for a documentation-only sprint — a registered document the founder can read in the tree.
+
+A passing assertion with a hanging or non-zero process is not a clean certification pass. Certification evidence is [§10.9](#109-certification-evidence).
+
+---
+
+## 10. Diagnostic, Correction, and Certification Operating Protocol
+
+Standing operating law for unexplained failures, authorised corrections, and certification. It refines [ERD-001](./DECISION_REGISTER.md#erd-001--diagnose-before-implementing). It does not replace §§1–9. It does not redefine architecture. It does not override Venture domain ownership.
+
+VentureOS owns shared platform capabilities. Each Venture owns its domain model, workflows, business logic, operational behaviour, and product experience. This section governs **how** work proceeds. It does not change **what** a Venture owns.
+
+### 10.1 Cursor-first execution
+
+Cursor is the default execution environment for repository inspection, implementation, codebase navigation, routine development commands, targeted and regression tests, build / typecheck / lint, repository-level diagnostics, certification evidence gathering, and read-only Git status, diff, and provenance inspection.
+
+Do not instruct the founder to execute sequences of terminal commands when Cursor can safely perform and interpret them.
+
+Manual founder terminal use is the exception. It is reserved for sensitive final Git operations where direct founder control is required, recovery when Cursor genuinely cannot perform the operation, and exceptional environment or tooling problems.
+
+Do not fall back to prolonged manual terminal debugging because the first diagnostic was inconclusive. Run another constrained Cursor diagnostic cycle first.
+
+### 10.2 Diagnose before fixing
+
+For any unexplained engineering failure, do not immediately modify code. First perform a strict read-only root-cause diagnosis.
+
+The diagnostic report must identify:
+
+| Field | Required |
+|---|---|
+| ROOT CAUSE | Precise explanation |
+| EVIDENCE | File paths, functions, lines, commands, or runtime facts |
+| OWNERSHIP | See below |
+| SMALLEST SAFE CORRECTION | Describe only until authorised |
+| REBUILD REQUIRED | YES / NO, with the exact boundary if YES |
+| REGRESSION RISK | LOW / MEDIUM / HIGH |
+| CERTIFICATION IMPACT | Exact tests or gates required after correction |
+| CONFIDENCE | HIGH / MEDIUM / LOW |
+
+Ownership must distinguish:
+
+| Class | Meaning |
+|---|---|
+| **A** | Venture-specific implementation |
+| **B** | VentureOS shared or Foundation capability |
+| **C** | Test, infrastructure, or tooling |
+| **D** | Interaction between layers |
+
+Do not speculate when repository evidence can establish the answer. Never patch a Venture merely to hide a VentureOS defect. Never modify VentureOS shared infrastructure to solve a purely local Venture test problem.
+
+If root cause cannot be established confidently, do not experiment indefinitely. Report what is known, what remains unknown, evidence gathered, competing hypotheses, and the safest next diagnostic step. LOW and MEDIUM confidence must be explicit.
+
+### 10.3 Founder authorisation gate
+
+After diagnosis, stop before corrective implementation when the correction:
+
+- affects shared VentureOS architecture;
+- changes certified behaviour;
+- changes product or domain boundaries;
+- modifies persistence, schema, or runtime infrastructure;
+- requires rebuilding an existing boundary;
+- has material regression risk;
+- or the active certification instructions require founder approval.
+
+Present the diagnosis and the proposed smallest correction. Wait for founder authorisation.
+
+### 10.4 One hypothesis, one controlled correction
+
+Do not stack speculative fixes. One diagnosed hypothesis receives one minimal correction.
+
+If confidence is MEDIUM or LOW, treat the correction explicitly as a hypothesis under verification.
+
+If the correction fails: stop. Return to Diagnostic Mode. Do not layer additional speculative changes.
+
+Certified phases are known-good checkpoints. A new failure does not automatically justify rebuilding, refactoring, resetting, restoring, or replacing architecture. Determine the actual failure boundary first.
+
+Prefer the smallest coherent implementation slice. Do not combine unrelated refactors, architecture changes, formatting churn, generated-file noise, or unrelated fixes with the active change.
+
+Before implementing new infrastructure or patterns, search VentureOS for an existing certified implementation. Shared capabilities belong in VentureOS. Venture-specific domain behaviour remains owned by the Venture.
+
+### 10.5 Targeted-first verification
+
+After a correction, run the smallest relevant test or gate first:
+
+1. Targeted test  
+2. Related domain tests  
+3. Broader regression tests  
+4. Full suite  
+5. Final certification  
+
+Do not repeatedly run expensive full suites while diagnosing a narrow failure.
+
+This ladder does **not** waive [§5 Validation Requirements](#5-validation-requirements) or the Definition of Done. Workspace tests (`pnpm test`) and the other completion gates remain required before an implementation sprint may be called complete.
+
+### 10.6 Failure stops verification
+
+If a certification or verification-only gate fails, hangs, cancels, exits unexpectedly, or produces unexplained working-tree changes: stop.
+
+Do not silently repair the problem during a verification-only run. Start a separate Diagnostic Mode cycle.
+
+### 10.7 Process improvement
+
+When development reveals a demonstrably faster, safer, more reliable, or more repeatable engineering method, identify it as a Process Improvement candidate. Do not silently change governance. Recommend it at the founder checkpoint. Once founder-approved, incorporate it into this document so future Ventures inherit the lesson.
+
+### 10.8 Working-tree provenance and Git safety
+
+Before staging or certification completion, classify dirty files:
+
+| Class | Meaning |
+|---|---|
+| **A** | Active implementation files |
+| **B** | Authorised correction files |
+| **C** | Known unrelated files |
+| **D** | Unexpected or unexplained files |
+| **E** | Staged files |
+
+Unexpected or unexplained files block staging until explained. Never assume every dirty file belongs to the current phase.
+
+Never automatically `git add .`, `git add -A`, stage unrelated files, commit, push, reset, restore, clean, or delete files unless explicitly authorised by the active workflow or the founder.
+
+When staging is authorised, use exact-path staging only.
+
+Do not add unwanted commit trailers, co-author metadata, or tool attribution unless explicitly requested.
+
+### 10.9 Certification evidence
+
+Certification is evidence, not assumption. A certification report must distinguish:
+
+- assertions passed;
+- process exited cleanly;
+- failures;
+- cancellations;
+- skipped tests;
+- warnings;
+- exact gates and commands executed;
+- working-tree provenance.
+
+Passing assertions with a hanging or non-zero process are **not** a clean certification pass.

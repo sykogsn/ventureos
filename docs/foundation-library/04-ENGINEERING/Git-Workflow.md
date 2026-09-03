@@ -10,11 +10,11 @@
 
 **Status.** Approved
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Engineering
 
-**Last Updated.** 2026-08-22
+**Last Updated.** 2026-09-03
 
 ---
 
@@ -33,6 +33,26 @@ Write commits for the why, not a file list.
 Prefer small, reviewable commits. Do not mix a Foundation amendment with an unrelated feature.
 
 Do not commit secrets, local databases, or `.next` artefacts.
+
+## Staging and working-tree provenance
+
+Branch strategy, commits, and certification staging follow the [Master Engineering Prompt](../../engineering/MASTER_ENGINEERING_PROMPT.md), including [§10.8](../../engineering/MASTER_ENGINEERING_PROMPT.md#108-working-tree-provenance-and-git-safety).
+
+Never use `git add .` or `git add -A` for controlled certification or staging. When the founder or the active workflow authorises staging, add exact paths only.
+
+Before staging or certification completion, classify every dirty file:
+
+| Class | Meaning |
+|---|---|
+| **A** | Active implementation files |
+| **B** | Authorised correction files |
+| **C** | Known unrelated files |
+| **D** | Unexpected or unexplained files |
+| **E** | Staged files |
+
+Unexpected or unexplained files block staging until explained. Do not assume every dirty file belongs to the current phase.
+
+Do not commit, push, reset, restore, clean, or delete unless authorised. Do not add unwanted commit trailers, co-author metadata, or tool attribution unless explicitly requested.
 
 ## Pull requests
 

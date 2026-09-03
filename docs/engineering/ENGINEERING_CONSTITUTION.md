@@ -10,7 +10,7 @@ This document is the official engineering lifecycle rulebook for VentureOS and e
 
 It is subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) and the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md). The Project Constitution is the supreme governing document of the repository. If this Constitution and a higher constitution conflict, the higher document wins.
 
-The authoritative engineering standard is the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. It binds pre-flight, development rules, root-cause policy, validation, git practice, completion, and reporting. If this Constitution and the Master Engineering Prompt appear to conflict on those subjects, the Master Engineering Prompt wins. Index: [Engineering Index](./README.md).
+The authoritative engineering standard is the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. It binds pre-flight, development rules, root-cause policy, validation, git practice, completion, reporting, and the diagnostic, correction, and certification operating protocol ([§10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol)). If this Constitution and the Master Engineering Prompt appear to conflict on those subjects, the Master Engineering Prompt wins. Index: [Engineering Index](./README.md).
 
 It does not replace the Project Constitution or the Platform Constitution. It does not restate locked architecture. Sprint shape remains in the Foundation Library [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Accepted method decisions remain in [DECISION_REGISTER.md](./DECISION_REGISTER.md).
 
@@ -28,7 +28,7 @@ Architecture answers *what the platform is*. This Constitution answers *how work
 
 ## 2. Engineering Principles
 
-These principles are the same method already accepted as ERD-001–ERD-007. They are stated here as standing law, not as a second unmarked copy of those outcomes.
+These principles are the same method already accepted as ERD-001–ERD-008. They are stated here as standing law, not as a second unmarked copy of those outcomes.
 
 | Principle | Meaning |
 |---|---|
@@ -76,7 +76,7 @@ Release
 | **GitHub Push** | Publish the verified history to the remote. Not a substitute for verification. |
 | **Release** | Declare a named release only when the Release Process and founder require it. Tags and GitHub Releases are not automatic with a push. |
 
-Pre-flight, validation, completion, and reporting stay in the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Sprint write-up shape (context, objective, constraints, validation, A/B close) stays in the [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Git branch and commit practice stays in [Git Workflow](../foundation-library/04-ENGINEERING/Git-Workflow.md). Release declaration stays in [Release Process](../foundation-library/04-ENGINEERING/Release-Process.md) and [RELEASE_HISTORY.md](./RELEASE_HISTORY.md). Index: [Engineering Index](./README.md).
+Pre-flight, validation, completion, reporting, and the diagnostic / certification operating protocol stay in the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Sprint write-up shape (context, objective, constraints, validation, A/B close) stays in the [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Git branch and commit practice stays in [Git Workflow](../foundation-library/04-ENGINEERING/Git-Workflow.md). Release declaration stays in [Release Process](../foundation-library/04-ENGINEERING/Release-Process.md) and [RELEASE_HISTORY.md](./RELEASE_HISTORY.md). Index: [Engineering Index](./README.md).
 
 ---
 
@@ -86,7 +86,7 @@ Pre-flight, validation, completion, and reporting stay in the [Master Engineerin
 
 **Purpose.** Establish facts.
 
-**Rules.** Do not modify application code. Do not guess. Record working vs broken vs root cause vs evidence. If the running process disagrees with source, treat the running process as a first-class suspect (VS-007).
+**Rules.** Do not modify application code. Do not guess. Record working vs broken vs root cause vs evidence. If the running process disagrees with source, treat the running process as a first-class suspect (VS-007). The diagnostic report fields, ownership classes, and Cursor-first execution rule are [Master Engineering Prompt §10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol).
 
 ### Design Mode
 
@@ -104,7 +104,7 @@ Pre-flight, validation, completion, and reporting stay in the [Master Engineerin
 
 **Purpose.** Prove the implementation matches the objective.
 
-**Rules.** Run lint, types, tests, and build as the sprint requires. Verify runtime (and UI where the sprint requires it). If verification fails, return to Diagnostic or Implementation — do not commit.
+**Rules.** Run lint, types, tests, and build as the sprint requires. Verify runtime (and UI where the sprint requires it). During diagnosis and correction, use the targeted-first verification ladder in [Master Engineering Prompt §10.5](./MASTER_ENGINEERING_PROMPT.md#105-targeted-first-verification); that ladder does not waive full-suite sprint completion. If a verification-only or certification gate fails, hangs, cancels, or exits unexpectedly, stop that run and return to Diagnostic Mode. Do not silently repair during verification-only. Do not commit on a failed gate.
 
 ### Release Mode
 
@@ -159,6 +159,6 @@ The [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTIT
 
 This Engineering Constitution defines the VES lifecycle: diagnose, design, approve, implement, verify, then commit, push, and release.
 
-The [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) defines pre-flight, development rules, root-cause policy, validation, completion, and reporting for every sprint, implementation, review, refactor, and bug fix.
+The [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) defines pre-flight, development rules, root-cause policy, validation, completion, reporting, and the diagnostic, correction, and certification operating protocol for every sprint, implementation, review, refactor, and bug fix.
 
 If documents appear to conflict, the Project Constitution wins first. Architecture wins on *what may exist*. The Master Engineering Prompt wins on checklist, validation, completion, and reporting. This document wins on lifecycle and mode sequence. Neither may be used to override a named implementation source of truth (`FOUNDATION.md`, Runtime README, IDS specifications) when a technical fact is in dispute — amend the Constitution that is wrong.

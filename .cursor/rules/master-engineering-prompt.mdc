@@ -7,7 +7,7 @@ alwaysApply: true
 
 The supreme governing document is `docs/PROJECT_CONSTITUTION.md`. Read it first. Obey the constitutions. Preserve architecture. Identify root causes. Validate before completion. Never mark work complete without evidence.
 
-Before any sprint, implementation, review, refactor, or bug fix, then read `docs/engineering/MASTER_ENGINEERING_PROMPT.md`. That file is the authoritative engineering standard. Follow it by default.
+Before any sprint, implementation, review, refactor, bug fix, diagnosis, or certification, read `docs/engineering/MASTER_ENGINEERING_PROMPT.md`. That file is the authoritative engineering standard. Follow it by default. Unexplained failures, corrections, and certification follow **§10**.
 
 Then use `docs/engineering/README.md` (Engineering Index) for the Foundation Runbook, architecture, coding standards, branch strategy, release process, and sprint process.
 
@@ -16,3 +16,14 @@ Then use `docs/engineering/README.md` (Engineering Index) for the Foundation Run
 - Find the root cause, explain why it occurred, and permanently prevent recurrence. Do not patch symptoms.
 - Do not redesign Runtime, IDS, Capability Registry, Definition Registry, persistence, or Executive Environments unless that is the named programme.
 - Never tell the founder a task is complete until it has been verified in the running application.
+
+## Operating checklist (MEP §10)
+
+- Cursor executes inspection, commands, tests, diagnostics, and read-only Git. Do not send the founder through routine terminal sequences.
+- Unexplained failure: **read-only diagnosis first**. Report ROOT CAUSE, EVIDENCE, OWNERSHIP (A Venture / B VentureOS / C test-infra / D interaction), SMALLEST SAFE CORRECTION, REBUILD REQUIRED, REGRESSION RISK, CERTIFICATION IMPACT, CONFIDENCE.
+- Stop for founder authorisation when the correction touches shared architecture, certified behaviour, persistence/schema/runtime, rebuild, or material regression risk.
+- One hypothesis, one minimal correction. MEDIUM/LOW confidence is a hypothesis under verification. If it fails, return to diagnosis — do not stack fixes.
+- Verify targeted test → related domain → broader regression → full suite → certification. Targeted-first does **not** waive full-suite sprint completion.
+- A failing, hanging, cancelled, or unexplained verification gate **stops** that run. Do not silently repair in verification-only mode.
+- Before staging: classify dirty files A–E. Unexpected files block staging. Never `git add .` or `git add -A`. Exact-path staging only when authorised.
+- Certification evidence must include assertions, process exit, failures, cancellations, skipped tests, warnings, exact commands, and working-tree provenance. Passing assertions with a hang or non-zero exit are not a clean pass.

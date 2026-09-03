@@ -6,7 +6,7 @@ Before any sprint, implementation, review, refactor, or bug fix, read that const
 
 [`docs/engineering/MASTER_ENGINEERING_PROMPT.md`](docs/engineering/MASTER_ENGINEERING_PROMPT.md)
 
-That document is the authoritative engineering standard. Follow it by default.
+That document is the authoritative engineering standard. Follow it by default. Unexplained failures, corrections, and certification follow [§10](docs/engineering/MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol).
 
 Then open the [Engineering Index](docs/engineering/README.md) for the Foundation Runbook, architecture, coding standards, branch strategy, release process, and sprint process.
 

@@ -3,7 +3,7 @@
 **Purpose.** Engineering method and recovery decisions that Engineering HQ should remember.  
 **Authority.** Engineering Records. Does not replace Architecture Decision Register (ADR) or Founder Decisions (FD).  
 **Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-09-03
 
 Cross-links:
 
@@ -94,4 +94,16 @@ Cross-links:
 | Decision | Do not open Qualora (or Calviora / Farmora) visual programmes until Foundation v1.1 is certified. Roadmap still sequences Qualora after atmosphere plumbing (RM-002). |
 | Reason | VS-007 stop-work. FD-003 products run on the OS. RM-002. |
 | Outcome | Certification recorded 2026-08-21. Qualora visual programme is not opened by VS-008A. |
+| Status | Accepted |
+
+## ERD-008 — Cursor-first diagnosis and certification discipline
+
+| Field | Record |
+|---|---|
+| Decision ID | ERD-008 |
+| Title | Cursor-first diagnosis and certification discipline |
+| Problem | Unexplained failures were being chased with pasted guardrail prompts and founder-operated terminal sequences. Assertions could pass while a process hung or exited non-zero, and speculative stacked fixes mixed with verification-only runs. |
+| Decision | Refine ERD-001: Cursor is the default execution environment for inspection, commands, tests, diagnostics, and read-only Git. Unexplained failures receive a read-only diagnostic report (root cause, evidence, ownership A–D, smallest correction, rebuild, regression, certification impact, confidence) before code changes. One hypothesis receives one authorised correction. Targeted verification precedes the full suite and does not waive sprint-completion gates. A failing or hanging verification-only gate stops; it does not silently repair. Dirty files are classified before staging. Exact-path staging only; never `git add .` or `git add -A`. Certification reports assertions and process-exit evidence. Approved process improvements are written into the Master Engineering Prompt so future Ventures inherit them. |
+| Reason | Frigora F2.0 certification: a hanging `visit-evidence` FileTest was diagnosed as a VentureOS kernel scheduler side-effect of `getPlatform()`, not as domain-logic failure. Constrained Cursor diagnosis outperformed manual terminal loops. [LL-008](./LESSONS_LEARNED.md#ll-008--cursor-read-only-diagnosis-before-correction). |
+| Outcome | Standing law in [Master Engineering Prompt §10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol). Cursor alwaysApply rule points at §10. Engineering Constitution Diagnostic and Verification Modes aligned. Git Workflow exact-path staging aligned. |
 | Status | Accepted |

@@ -3,7 +3,7 @@
 **Purpose.** Living engineering journal.  
 **Authority.** Engineering Records. Outcomes stay in [DECISION_REGISTER.md](./DECISION_REGISTER.md); this file records what the work taught.  
 **Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-09-03
 
 Grow this document after every major sprint. Do not invent lessons. Do not copy ADR/FD tables here — link them.
 
@@ -69,3 +69,14 @@ Definition of Done: [ENGINEERING_CONSTITUTION.md](./ENGINEERING_CONSTITUTION.md)
 Killing PID 3076 once would have restored login until the next missing generate. Guards (stamp, lock, generate, login assert) cost less than diagnosing the same 500 again.
 
 See [ERD-002](./DECISION_REGISTER.md#erd-002--never-fix-the-same-bug-twice).
+
+## LL-008 — Cursor read-only diagnosis before correction
+
+**Sprint.** Frigora F2.0 certification  
+**Date.** 2026-09-03
+
+Manual screenshot and terminal-driven debugging of a hanging certification test consumed substantial time. A constrained Cursor read-only diagnostic then identified the lifecycle defect (VentureOS kernel scheduler started via `getPlatform()`, missing test teardown) rapidly.
+
+Unexplained repository bugs start with Cursor read-only diagnosis, evidence, founder review where gated, one authorised minimal correction, targeted verification, then regression and certification. Do not send the founder through routine terminal sequences when Cursor can execute them.
+
+See [ERD-008](./DECISION_REGISTER.md#erd-008--cursor-first-diagnosis-and-certification-discipline) and [Master Engineering Prompt §10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol).

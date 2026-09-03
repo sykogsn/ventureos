@@ -4,7 +4,7 @@
 
 **Status.** Governance Foundation complete (VS-008A–C). Project Constitution registered as supreme law (2026-08-22).  
 **Owner.** Engineering  
-**Last Updated.** 2026-08-22
+**Last Updated.** 2026-09-03
 
 These records do not replace the Foundation Library, code-adjacent READMEs, or Runtime/IDS/Definition implementation sources. They index completed engineering work so the desk can remember it. They also name the standard every future change must follow.
 
@@ -12,7 +12,7 @@ These records do not replace the Foundation Library, code-adjacent READMEs, or R
 
 Read the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). It is the supreme governing document of the repository.
 
-Then read the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. Do not start work on an unhealthy foundation. Do not tell the founder a task is complete until it has been verified in the running application.
+Then read the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. Unexplained failures, corrections, and certification follow [§10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol). Do not start work on an unhealthy foundation. Do not tell the founder a task is complete until it has been verified in the running application.
 
 How the VES lifecycle and modes proceed remains in the [Engineering Constitution](./ENGINEERING_CONSTITUTION.md). How engineers are expected to think remains in the [Engineering Creed](./ENGINEERING_CREED.md). What the platform *is* remains the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) and the [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md).
 
@@ -34,6 +34,7 @@ Every future sprint, implementation, review, refactor, and bug fix uses this ind
 | Supreme governing document | [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) |
 | Architecture Constitution | [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) |
 | Authoritative engineering standard | [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) |
+| Diagnostic, correction, and certification protocol | [Master Engineering Prompt §10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol) |
 | Foundation Runbook | [FOUNDATION_RUNBOOK.md](./FOUNDATION_RUNBOOK.md) |
 | Architecture documentation | [Architecture Overview](../foundation-library/02-ARCHITECTURE/Architecture-Overview.md) · [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) |
 | Coding standards | [Engineering Standards](../foundation-library/04-ENGINEERING/Engineering-Standards.md) |
@@ -47,7 +48,7 @@ If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wi
 
 | Document | Role |
 |---|---|
-| [MASTER_ENGINEERING_PROMPT.md](./MASTER_ENGINEERING_PROMPT.md) | Permanent engineering constitution: pre-flight, rules, validation, completion, reporting |
+| [MASTER_ENGINEERING_PROMPT.md](./MASTER_ENGINEERING_PROMPT.md) | Permanent engineering constitution: pre-flight, rules, validation, completion, reporting, diagnostic and certification operating protocol (§10) |
 | [FOUNDATION_RUNBOOK.md](./FOUNDATION_RUNBOOK.md) | How to keep the certified foundation healthy |
 | [ENGINEERING_CREED.md](./ENGINEERING_CREED.md) | Culture: how we think, what we refuse, what we vow |
 | [ENGINEERING_CONSTITUTION.md](./ENGINEERING_CONSTITUTION.md) | Rulebook: VES lifecycle, modes, definition of done |
