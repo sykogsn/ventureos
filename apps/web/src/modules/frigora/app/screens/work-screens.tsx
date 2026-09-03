@@ -133,6 +133,22 @@ function VisitFactsReadBack({ facts }: { facts: VisitFactsView }) {
           </ul>
         </div>
       ) : null}
+
+      <div>
+        <h4 className="ids-caption text-muted">Evidence</h4>
+        {facts.evidence.length > 0 ? (
+          <ul className="ids-body list-none space-y-1">
+            {facts.evidence.map((row) => (
+              <li key={row.id}>
+                Evidence recorded: {row.originalFilename} ({row.category}
+                {row.description ? ` — ${row.description}` : ""}) · {row.capturedAt}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="ids-body">No evidence recorded</p>
+        )}
+      </div>
       </Stack>
     </div>
   );
@@ -422,6 +438,7 @@ export function WorkDetailScreen({
     visitAttendees,
     visitFacts,
     workOrderRecommendations,
+    workOrderEvidence,
     currentOperationalCondition,
     attentionSignals,
     latestVisitId,
@@ -576,6 +593,21 @@ export function WorkDetailScreen({
             </ul>
           </Stack>
         ) : null}
+
+        <Stack gap="compact">
+          <h2 className="ids-label text-foreground">Evidence</h2>
+          {workOrderEvidence.length > 0 ? (
+            <ul className="ids-body list-none space-y-2">
+              {workOrderEvidence.map((row) => (
+                <li key={row.id}>
+                  Evidence recorded: {row.originalFilename} ({row.category}) · {row.capturedAt}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="ids-body text-muted">No evidence recorded</p>
+          )}
+        </Stack>
 
         <Stack gap="compact">
           <h2 className="ids-label text-foreground">Field execution</h2>

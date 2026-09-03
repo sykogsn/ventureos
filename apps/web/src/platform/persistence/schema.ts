@@ -840,6 +840,40 @@ export const frigoraVisitCustomerAcknowledgements = sqliteTable(
   ],
 );
 
+export const frigoraVisitEvidence = sqliteTable(
+  "frigora_visit_evidence",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    visitId: text("visit_id").notNull(),
+    workOrderId: text("work_order_id").notNull(),
+    assetId: text("asset_id"),
+    storedObjectId: text("stored_object_id").notNull(),
+    category: text("category").notNull(),
+    description: text("description"),
+    capturedAt: text("captured_at").notNull(),
+    recordedByUserId: text("recorded_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    removedAt: text("removed_at"),
+    originalFilename: text("original_filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_visit_evidence_venture_stored_object_idx").on(
+      table.ventureId,
+      table.storedObjectId,
+    ),
+    index("frigora_visit_evidence_venture_visit_idx").on(table.ventureId, table.visitId),
+    index("frigora_visit_evidence_venture_work_order_idx").on(
+      table.ventureId,
+      table.workOrderId,
+    ),
+    index("frigora_visit_evidence_venture_asset_idx").on(table.ventureId, table.assetId),
+  ],
+);
+
 export const schema = {
   users,
   authIdentities,
@@ -882,4 +916,5 @@ export const schema = {
   frigoraPartUsages,
   frigoraAssetOperationalConditions,
   frigoraVisitCustomerAcknowledgements,
+  frigoraVisitEvidence,
 };

@@ -7,7 +7,8 @@ export type FrigoraErrorCode =
   | "invalid_input"
   | "invalid_status"
   | "invalid_kind"
-  | "cross_venture";
+  | "cross_venture"
+  | "evidence_bytes_delete_failed";
 
 export class FrigoraError extends Error {
   readonly code: FrigoraErrorCode;

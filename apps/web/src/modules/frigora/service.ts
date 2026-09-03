@@ -1,6 +1,8 @@
-import type { Permission, PermissionService, UserId, VentureId, WorkspaceId } from "@/contracts";
+import type { Permission, PermissionService, StoredObjectId, UserId, VentureId, WorkspaceId } from "@/contracts";
 import { createId, nowIso } from "@/platform/ids";
 import { getPlatform } from "@/platform/kernel";
+import { StoredObjectError } from "@/platform/storage/errors";
+import { findStoredObjectById } from "@/platform/storage/metadata";
 import { getPersistence } from "@/platform/persistence/repositories";
 import { FrigoraError } from "./errors";
 import { createFrigoraStore, type FrigoraStore } from "./store";
@@ -51,6 +53,10 @@ import type {
   FrigoraVisitCustomerAcknowledgement,
   FrigoraVisitCustomerAcknowledgementId,
   RecordVisitCustomerAcknowledgementInput,
+  FrigoraVisitEvidence,
+  FrigoraVisitEvidenceId,
+  RecordVisitEvidenceWithFileInput,
+  LinkVisitEvidenceInput,
   FrigoraAssetHistoryEntry,
   FrigoraAssetHistoryEventKind,
   UpdateAssetInput,
@@ -77,6 +83,8 @@ import {
   recordPartUsageSchema,
   recordAssetOperationalConditionSchema,
   recordVisitCustomerAcknowledgementSchema,
+  recordVisitEvidenceWithFileSchema,
+  linkVisitEvidenceSchema,
   updateAssetSchema,
   updateCustomerSchema,
   updateSiteSchema,
@@ -350,6 +358,32 @@ export type FrigoraService = {
     scope: FrigoraScope,
     workOrderId: FrigoraWorkOrderId,
   ): Promise<FrigoraVisitCustomerAcknowledgement[]>;
+  recordVisitEvidenceWithFile(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: RecordVisitEvidenceWithFileInput,
+  ): Promise<FrigoraVisitEvidence>;
+  linkVisitEvidence(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: LinkVisitEvidenceInput,
+  ): Promise<FrigoraVisitEvidence>;
+  getVisitEvidence(
+    scope: FrigoraScope,
+    id: FrigoraVisitEvidenceId,
+  ): Promise<FrigoraVisitEvidence | null>;
+  listVisitEvidenceByVisit(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraVisitEvidence[]>;
+  listVisitEvidenceByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraVisitEvidence[]>;
+  removeVisitEvidence(
+    scope: FrigoraScope,
+    id: FrigoraVisitEvidenceId,
+  ): Promise<FrigoraVisitEvidence>;
   listAssetHistory(
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
@@ -1674,6 +1708,155 @@ export function createFrigoraService(options: {
         workOrderId,
       );
     },
+    async recordVisitEvidenceWithFile(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsVisitEvidence(visit);
+      requireOpenVisitForEvidence(visit);
+      const workOrder = await requireOpenWorkOrder(store, scope, visit.workOrderId);
+      const parsed = parseWithFrigora(recordVisitEvidenceWithFileSchema, input);
+      const recordedByUserId = parsed.userId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const assetId = await resolveVisitEvidenceAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+      const storedMetadata = await getPlatform().storedObjects.store({
+        scope: { workspaceId: scope.workspaceId, ventureId: scope.ventureId },
+        actorUserId: scope.userId,
+        activeWorkspaceId: scope.workspaceId,
+        body: parsed.body,
+        originalFilename: parsed.originalFilename,
+        mimeType: parsed.mimeType,
+      });
+      try {
+        return await insertVisitEvidenceRow(
+          store,
+          scope,
+          visit,
+          workOrder,
+          assetId,
+          storedMetadata,
+          parsed.category,
+          parsed.description ?? null,
+          recordedByUserId,
+        );
+      } catch (error) {
+        try {
+          await getPlatform().storedObjects.delete({
+            actorUserId: scope.userId,
+            activeWorkspaceId: scope.workspaceId,
+            objectId: storedMetadata.id,
+          });
+        } catch {
+          // Best-effort compensation.
+        }
+        throw error;
+      }
+    },
+    async linkVisitEvidence(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsVisitEvidence(visit);
+      requireOpenVisitForEvidence(visit);
+      const workOrder = await requireOpenWorkOrder(store, scope, visit.workOrderId);
+      const parsed = parseWithFrigora(linkVisitEvidenceSchema, input);
+      const recordedByUserId = parsed.userId as UserId;
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const assetId = await resolveVisitEvidenceAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+      const storedMetadata = await validateStoredObjectForEvidenceLink(
+        store,
+        scope,
+        parsed.storedObjectId as StoredObjectId,
+      );
+      return await insertVisitEvidenceRow(
+        store,
+        scope,
+        visit,
+        workOrder,
+        assetId,
+        storedMetadata,
+        parsed.category,
+        parsed.description ?? null,
+        recordedByUserId,
+      );
+    },
+    async getVisitEvidence(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findVisitEvidence(scope.workspaceId, scope.ventureId, id);
+    },
+    async listVisitEvidenceByVisit(scope, visitId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
+      if (!visit) {
+        return [];
+      }
+      return store.listActiveVisitEvidenceByVisit(
+        scope.workspaceId,
+        scope.ventureId,
+        visitId,
+      );
+    },
+    async listVisitEvidenceByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        return [];
+      }
+      return store.listActiveVisitEvidenceByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
+    async removeVisitEvidence(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await store.findVisitEvidence(scope.workspaceId, scope.ventureId, id);
+      if (!existing || existing.removedAt) {
+        throw new FrigoraError("not_found", "Visit evidence was not found.");
+      }
+      const visit = await requireVisit(store, scope, existing.visitId);
+      requireOpenVisitForEvidence(visit);
+      assertVisitAcceptsVisitEvidence(visit);
+      const tombstoned: FrigoraVisitEvidence = {
+        ...existing,
+        removedAt: nowIso(),
+      };
+      await store.updateVisitEvidence(tombstoned);
+      try {
+        await getPlatform().storedObjects.delete({
+          actorUserId: scope.userId,
+          activeWorkspaceId: scope.workspaceId,
+          objectId: existing.storedObjectId,
+        });
+      } catch (error) {
+        if (error instanceof StoredObjectError) {
+          throw new FrigoraError(
+            "evidence_bytes_delete_failed",
+            "Evidence was removed but stored object bytes could not be deleted.",
+          );
+        }
+        throw error;
+      }
+      return tombstoned;
+    },
     async listAssetHistory(scope, assetId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
@@ -2205,6 +2388,100 @@ function assertDepartedAfterArrived(arrivedAt: string, departedAt: string) {
       "Departure must not precede arrival.",
     );
   }
+}
+
+function assertVisitAcceptsVisitEvidence(visit: FrigoraVisit) {
+  if (visit.status === "cancelled") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Visit evidence cannot be recorded against a cancelled visit.",
+    );
+  }
+}
+
+function requireOpenVisitForEvidence(visit: FrigoraVisit) {
+  if (visit.status !== "open") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Visit evidence can only be changed while the visit is open.",
+    );
+  }
+}
+
+async function resolveVisitEvidenceAsset(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  workOrder: FrigoraWorkOrder,
+  assetIdInput: string | null | undefined,
+): Promise<FrigoraAssetId | null> {
+  if (assetIdInput === undefined || assetIdInput === null || assetIdInput.trim().length === 0) {
+    return workOrder.primaryAssetId ?? null;
+  }
+  return resolveFieldCaptureAsset(store, scope, workOrder, assetIdInput);
+}
+
+async function validateStoredObjectForEvidenceLink(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  storedObjectId: StoredObjectId,
+) {
+  const row = await findStoredObjectById(storedObjectId);
+  if (!row || row.deletedAt) {
+    throw new FrigoraError("not_found", "Stored object was not found.");
+  }
+  if (row.workspaceId !== scope.workspaceId || row.ventureId !== scope.ventureId) {
+    throw new FrigoraError("forbidden", "Stored object does not match this venture.");
+  }
+  const existing = await store.findVisitEvidenceByStoredObjectId(
+    scope.ventureId,
+    storedObjectId,
+  );
+  if (existing) {
+    throw new FrigoraError(
+      "duplicate",
+      "Stored object is already linked to evidence in this venture.",
+    );
+  }
+  return row;
+}
+
+async function insertVisitEvidenceRow(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  visit: FrigoraVisit,
+  workOrder: FrigoraWorkOrder,
+  assetId: FrigoraAssetId | null,
+  storedMetadata: {
+    id: StoredObjectId;
+    originalFilename: string;
+    mimeType: string;
+    sizeBytes: number;
+  },
+  category: FrigoraVisitEvidence["category"],
+  description: string | null,
+  recordedByUserId: UserId,
+): Promise<FrigoraVisitEvidence> {
+  const now = nowIso();
+  const evidence: FrigoraVisitEvidence = {
+    id: createId<FrigoraVisitEvidenceId>(),
+    workspaceId: visit.workspaceId,
+    ventureId: visit.ventureId,
+    visitId: visit.id,
+    workOrderId: workOrder.id,
+    assetId,
+    storedObjectId: storedMetadata.id,
+    category,
+    description,
+    capturedAt: now,
+    recordedByUserId,
+    createdAt: now,
+    removedAt: null,
+    originalFilename: storedMetadata.originalFilename,
+    mimeType: storedMetadata.mimeType,
+    sizeBytes: storedMetadata.sizeBytes,
+  };
+  await store.insertVisitEvidence(evidence);
+  return evidence;
 }
 
 function assertVisitAcceptsFieldCapture(visit: FrigoraVisit) {

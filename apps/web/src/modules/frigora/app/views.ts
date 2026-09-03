@@ -25,6 +25,8 @@ import {
   listTechnicalFindingsByWorkOrderQuery,
   listVisitCustomerAcknowledgementsByVisitQuery,
   listVisitCustomerAcknowledgementsByWorkOrderQuery,
+  listVisitEvidenceByVisitQuery,
+  listVisitEvidenceByWorkOrderQuery,
   listVisitOutcomesByWorkOrderQuery,
   listVisitsByWorkOrderQuery,
   listWorkOrdersByAssigneeQuery,
@@ -54,6 +56,7 @@ import type {
   FrigoraTechnicalFinding,
   FrigoraVisit,
   FrigoraVisitCustomerAcknowledgement,
+  FrigoraVisitEvidence,
   FrigoraVisitOutcome,
   FrigoraWorkOrder,
   FrigoraWorkOrderStatus,
@@ -110,6 +113,7 @@ export type VisitFactsView = {
   recommendedActions: FrigoraRecommendedAction[];
   operationalConditions: FrigoraAssetOperationalCondition[];
   acknowledgements: FrigoraVisitCustomerAcknowledgement[];
+  evidence: FrigoraVisitEvidence[];
 };
 
 export type WorkOrderDetailView = {
@@ -122,6 +126,7 @@ export type WorkOrderDetailView = {
   visitAttendees: Record<string, UserDisplay | null>;
   visitFacts: VisitFactsView[];
   workOrderRecommendations: FrigoraRecommendedAction[];
+  workOrderEvidence: FrigoraVisitEvidence[];
   currentOperationalCondition: FrigoraAssetOperationalCondition | null;
   attentionSignals: OperationalAttentionSignal[];
   latestVisitId: string | null;
@@ -158,6 +163,7 @@ export type VisitRecorderView = {
   visitOutcome: FrigoraVisitOutcome | null;
   recommendedActions: FrigoraRecommendedAction[];
   acknowledgements: FrigoraVisitCustomerAcknowledgement[];
+  evidence: FrigoraVisitEvidence[];
   currentOperationalCondition: FrigoraAssetOperationalCondition | null;
   visitOperationalConditions: FrigoraAssetOperationalCondition[];
   canRecord: boolean;
@@ -198,6 +204,7 @@ async function loadVisitFacts(
     outcomeResult,
     recommendedResult,
     acknowledgementsResult,
+    evidenceResult,
   ] = await Promise.all([
     resolveUserDisplay(visit.attendingUserId),
     listFieldCapturesByVisitQuery({ ...scope, visitId: visit.id }),
@@ -208,6 +215,7 @@ async function loadVisitFacts(
     getVisitOutcomeByVisitQuery({ ...scope, visitId: visit.id }),
     listRecommendedActionsByVisitQuery({ ...scope, visitId: visit.id }),
     listVisitCustomerAcknowledgementsByVisitQuery({ ...scope, visitId: visit.id }),
+    listVisitEvidenceByVisitQuery({ ...scope, visitId: visit.id }),
   ]);
 
   let operationalConditions: FrigoraAssetOperationalCondition[] = [];
@@ -235,6 +243,7 @@ async function loadVisitFacts(
     recommendedActions: recommendedResult.record ?? [],
     operationalConditions,
     acknowledgements: acknowledgementsResult.record ?? [],
+    evidence: evidenceResult.record ?? [],
   };
 }
 
@@ -382,6 +391,7 @@ export async function loadVisitRecorder(
     outcomeResult,
     recommendedResult,
     acknowledgementsResult,
+    evidenceResult,
   ] = await Promise.all([
     getCustomerQuery({ ...scope, id: workOrder.customerId }),
     getSiteQuery({ ...scope, id: workOrder.siteId }),
@@ -398,6 +408,7 @@ export async function loadVisitRecorder(
     getVisitOutcomeByVisitQuery({ ...scope, visitId: visit.id }),
     listRecommendedActionsByVisitQuery({ ...scope, visitId: visit.id }),
     listVisitCustomerAcknowledgementsByVisitQuery({ ...scope, visitId: visit.id }),
+    listVisitEvidenceByVisitQuery({ ...scope, visitId: visit.id }),
   ]);
 
   let currentOperationalCondition: FrigoraAssetOperationalCondition | null = null;
@@ -441,6 +452,7 @@ export async function loadVisitRecorder(
       visitOutcome: outcomeResult.record ?? null,
       recommendedActions: recommendedResult.record ?? [],
       acknowledgements: acknowledgementsResult.record ?? [],
+      evidence: evidenceResult.record ?? [],
       currentOperationalCondition,
       visitOperationalConditions,
       canRecord,
@@ -820,7 +832,7 @@ export async function loadWorkOrderDetail(
     return { view: null };
   }
 
-  const [customer, site, asset, assignee, visitsResult, recommendationsResult] =
+  const [customer, site, asset, assignee, visitsResult, recommendationsResult, evidenceResult] =
     await Promise.all([
       getCustomerQuery({ ...scope, id: workOrder.customerId }),
       getSiteQuery({ ...scope, id: workOrder.siteId }),
@@ -830,6 +842,7 @@ export async function loadWorkOrderDetail(
       resolveUserDisplay(workOrder.assignedUserId),
       listVisitsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
       listRecommendedActionsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
+      listVisitEvidenceByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
     ]);
 
   if (visitsResult.error) {
@@ -867,6 +880,7 @@ export async function loadWorkOrderDetail(
       visitAttendees,
       visitFacts,
       workOrderRecommendations: recommendationsResult.record ?? [],
+      workOrderEvidence: evidenceResult.record ?? [],
       currentOperationalCondition,
       attentionSignals,
       latestVisitId: latestVisit?.id ?? null,

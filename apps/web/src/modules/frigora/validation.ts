@@ -6,6 +6,7 @@ import {
   FRIGORA_FIELD_CAPTURE_UNITS,
   FRIGORA_PART_USAGE_UNITS,
   FRIGORA_REFRIGERANT_EVENT_KINDS,
+  FRIGORA_VISIT_EVIDENCE_CATEGORIES,
   FRIGORA_WORK_KINDS,
 } from "./types";
 import { FrigoraError } from "./errors";
@@ -440,6 +441,44 @@ export const recordVisitCustomerAcknowledgementSchema = z.object({
   recordedByUserId: requiredText,
 });
 
+const evidenceDescription = z
+  .string()
+  .trim()
+  .max(2000, "Description must be 2000 characters or fewer.")
+  .transform((value) => (value.length === 0 ? null : value))
+  .nullable()
+  .optional();
+
+export const recordVisitEvidenceSchema = z
+  .object({
+    category: z.enum(FRIGORA_VISIT_EVIDENCE_CATEGORIES),
+    description: evidenceDescription,
+    userId: requiredText,
+    assetId: nullableText.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.category === "OTHER") {
+      const description = value.description?.trim() ?? "";
+      if (description.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "OTHER evidence requires a description.",
+          path: ["description"],
+        });
+      }
+    }
+  });
+
+export const recordVisitEvidenceWithFileSchema = recordVisitEvidenceSchema.extend({
+  body: z.instanceof(Uint8Array),
+  originalFilename: requiredText,
+  mimeType: requiredText,
+});
+
+export const linkVisitEvidenceSchema = recordVisitEvidenceSchema.extend({
+  storedObjectId: requiredText,
+});
+
 export const listWorkOrdersSchema = z.object({
   status: z.enum(["open", "closed", "cancelled"]).optional(),
 });
@@ -470,6 +509,7 @@ export function parseWithFrigora<T>(
     issue?.path.includes("eventKind") ||
     issue?.path.includes("quantityUnit") ||
     issue?.path.includes("conditionKind") ||
+    issue?.path.includes("category") ||
     /Invalid option|Invalid enum/i.test(message)
   ) {
     if (issue?.path.includes("workKind")) {

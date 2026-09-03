@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Role, UserId, VentureId, WorkspaceId } from "@/contracts";
 import { createPermissionService } from "@/platform/permissions/service";
@@ -65,7 +65,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.15.0",
+    definitionVersion: "0.16.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -105,7 +105,7 @@ async function seed(options: {
       id: ventureId,
       workspaceId,
       slug: `venture-${ventureId}`,
-      definitionVersion: "0.15.0",
+      definitionVersion: "0.16.0",
     }),
   );
 
@@ -470,11 +470,38 @@ describe("F1.2 Field Visit Recorder", () => {
     assert.match(refrigerantForm, /Added does not mean leaked/);
   });
 
+  it("ships F2.0 evidence UX and locks without verification language", () => {
+    const recorderScreen = readFileSync(
+      join(WEB_ROOT, "modules/frigora/app/screens/visit-recorder-screen.tsx"),
+      "utf8",
+    );
+    const workScreens = readFileSync(
+      join(WEB_ROOT, "modules/frigora/app/screens/work-screens.tsx"),
+      "utf8",
+    );
+    assert.match(recorderScreen, /Evidence & Photos/);
+    assert.match(recorderScreen, /No evidence recorded yet/);
+    assert.match(recorderScreen, /read-only after departure/i);
+    assert.equal(recorderScreen.includes("verified"), false);
+    assert.equal(recorderScreen.includes("compliance"), false);
+    assert.match(workScreens, /No evidence recorded/);
+    assert.match(workScreens, /Evidence recorded/);
+    assert.equal(workScreens.includes("verified"), false);
+
+    assert.ok(
+      existsSync(join(WEB_ROOT, "modules/frigora/app/forms/record-visit-evidence-form.tsx")),
+    );
+    assert.ok(
+      existsSync(join(WEB_ROOT, "modules/frigora/app/forms/remove-visit-evidence-form.tsx")),
+    );
+    assert.ok(existsSync(join(WEB_ROOT, "modules/frigora/visit-evidence.test.ts")));
+  });
+
   it("ships F1.2 routes and field mutation module without F0 edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.15.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.16.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 21/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 22/);
 
     const assignedPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/work/assigned/page.tsx"),

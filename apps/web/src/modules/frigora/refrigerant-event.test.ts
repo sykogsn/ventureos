@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { beforeEach, describe, it } from "node:test";
+import { after, beforeEach, describe, it } from "node:test";
 import { platformVentureRegistry } from "@/core/venture-definition/catalog";
 import type { Role, UserId, VentureId, WorkspaceId } from "@/contracts";
 import { createPermissionService } from "@/platform/permissions/service";
@@ -17,6 +17,10 @@ const OCCURRED = "2026-08-28T10:30:00.000Z";
 const DEPARTED = "2026-08-28T11:00:00.000Z";
 const EARLY_OCCURRED = "2026-08-28T09:00:00.000Z";
 const LATE_OCCURRED = "2026-08-28T12:00:00.000Z";
+
+after(async () => {
+  await resetPersistenceLifecycle(":memory:");
+});
 
 beforeEach(async () => {
   await resetPersistenceLifecycle();
@@ -60,7 +64,7 @@ async function seed(options: {
       workspaceId,
       slug: `venture-${ventureId}`,
       definitionId: options.definitionId ?? "frigora",
-      definitionVersion: options.definitionVersion ?? "0.15.0",
+      definitionVersion: options.definitionVersion ?? "0.16.0",
     }),
   );
   return {
@@ -115,7 +119,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.15.0",
+    definitionVersion: "0.16.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -843,8 +847,8 @@ describe("Frigora Refrigerant event", () => {
     assert.equal(event.eventKind, "added");
   });
 
-  it("resolves frigora@0.15.0 from catalog with refrigerant event admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.15.0");
+  it("resolves frigora@0.16.0 from catalog with refrigerant event admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.16.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /refrigerant events/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /part usages/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /parts catalogue/);

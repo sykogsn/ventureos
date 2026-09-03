@@ -15,6 +15,8 @@ import {
   recordVisitArrivalAction,
   recordVisitCustomerAcknowledgementAction,
   recordVisitDepartureAction,
+  recordVisitEvidenceWithFileAction,
+  removeVisitEvidenceAction,
   recordVisitOutcomeAction,
 } from "@/modules/frigora/actions";
 import { getWorkOrderQuery } from "@/modules/frigora/queries";
@@ -31,6 +33,7 @@ import {
   type FrigoraRefrigerantEventKind,
   type FrigoraTechnicalFindingKind,
   type FrigoraAssetOperationalConditionKind,
+  type FrigoraVisitEvidenceCategory,
 } from "@/modules/frigora/types";
 
 export type FieldFormState = {
@@ -570,6 +573,79 @@ export async function recordCustomerAcknowledgementFormAction(
 
   if (result.error) {
     return { error: result.error, values };
+  }
+
+  revalidateFieldSurfaces(scope.ventureId, workOrderId, visitId);
+  return {};
+}
+
+export async function recordVisitEvidenceFormAction(
+  _prev: FieldFormState,
+  formData: FormData,
+): Promise<FieldFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const visitId = text(formData, "visitId");
+  const values = {
+    category: text(formData, "category"),
+    description: text(formData, "description"),
+  };
+
+  const gate = await requireSessionWriterForWorkOrder(scope, workOrderId);
+  if (gate.error) {
+    return { error: gate.error, values };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose a photo or file to upload.", values };
+  }
+
+  const body = new Uint8Array(await file.arrayBuffer());
+  const originalFilename = file.name.trim().length > 0 ? file.name : "evidence.jpg";
+  const mimeType = file.type.trim().length > 0 ? file.type : "image/jpeg";
+
+  const result = await recordVisitEvidenceWithFileAction({
+    ...scope,
+    visitId,
+    category: values.category as FrigoraVisitEvidenceCategory,
+    description: optionalText(formData, "description"),
+    userId: gate.session.id,
+    assetId: parseOptionalAssetId(formData),
+    body,
+    originalFilename,
+    mimeType,
+  });
+
+  if (result.error) {
+    return { error: result.error, values };
+  }
+
+  revalidateFieldSurfaces(scope.ventureId, workOrderId, visitId);
+  return {};
+}
+
+export async function removeVisitEvidenceFormAction(
+  _prev: FieldFormState,
+  formData: FormData,
+): Promise<FieldFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const visitId = text(formData, "visitId");
+  const evidenceId = text(formData, "evidenceId");
+
+  const gate = await requireSessionWriterForWorkOrder(scope, workOrderId);
+  if (gate.error) {
+    return { error: gate.error };
+  }
+
+  const result = await removeVisitEvidenceAction({
+    ...scope,
+    id: evidenceId,
+  });
+
+  if (result.error) {
+    return { error: result.error };
   }
 
   revalidateFieldSurfaces(scope.ventureId, workOrderId, visitId);

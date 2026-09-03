@@ -5,6 +5,8 @@ import { Stack } from "@/core/layout";
 import { FinishVisitForm } from "@/modules/frigora/app/forms/finish-visit-form";
 import { RecordCorrectiveActionForm } from "@/modules/frigora/app/forms/record-corrective-action-form";
 import { RecordCustomerAcknowledgementForm } from "@/modules/frigora/app/forms/record-customer-acknowledgement-form";
+import { RecordVisitEvidenceForm } from "@/modules/frigora/app/forms/record-visit-evidence-form";
+import { RemoveVisitEvidenceForm } from "@/modules/frigora/app/forms/remove-visit-evidence-form";
 import { RecordFieldCaptureForm } from "@/modules/frigora/app/forms/record-field-capture-form";
 import { RecordOperationalConditionForm } from "@/modules/frigora/app/forms/record-operational-condition-form";
 import { RecordPartUsageForm } from "@/modules/frigora/app/forms/record-part-usage-form";
@@ -80,6 +82,7 @@ export function VisitRecorderScreen({
     visitOutcome,
     recommendedActions,
     acknowledgements,
+    evidence,
     currentOperationalCondition,
     visitOperationalConditions,
     canRecord,
@@ -298,6 +301,65 @@ export function VisitRecorderScreen({
             )}
           />
           {canRecord ? <RecordRecommendedActionForm {...formProps} /> : null}
+        </Section>
+
+        <Section
+          title="Evidence & Photos"
+          description="Files recorded during this visit for provenance and traceability."
+        >
+          {evidence.length === 0 ? (
+            <p className="ids-caption text-muted">No evidence recorded yet.</p>
+          ) : (
+            <ul className="list-none space-y-3">
+              {evidence.map((row) => (
+                <li
+                  key={row.id}
+                  className="rounded-[var(--ids-foundation-radius-sm)] bg-[var(--ids-foundation-surface-subtle)] p-3"
+                >
+                  <div className="ids-body">{row.originalFilename}</div>
+                  <div className="ids-caption text-muted">
+                    {row.category}
+                    {row.description ? ` · ${row.description}` : ""} · captured {row.capturedAt}
+                  </div>
+                  <div className="mt-2">
+                    <a
+                      href={`/api/stored-objects/${row.storedObjectId}`}
+                      className="vos-btn-secondary inline-block"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open file
+                    </a>
+                  </div>
+                  {canRecord ? (
+                    <div className="mt-2">
+                      <RemoveVisitEvidenceForm
+                        workspaceId={ctx.workspaceId}
+                        ventureId={ctx.ventureId}
+                        workOrderId={workOrder.id}
+                        visitId={visit.id}
+                        evidenceId={row.id}
+                        filename={row.originalFilename}
+                      />
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          {canRecord ? (
+            <RecordVisitEvidenceForm
+              workspaceId={ctx.workspaceId}
+              ventureId={ctx.ventureId}
+              workOrderId={workOrder.id}
+              visitId={visit.id}
+              primaryAssetId={primaryAssetId}
+            />
+          ) : (
+            <p className="ids-caption text-muted">
+              Evidence is read-only after departure.
+            </p>
+          )}
         </Section>
 
         <Section

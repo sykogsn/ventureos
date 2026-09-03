@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 21; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 22; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -940,6 +940,39 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_visit_customer_acknowledgements_venture_work_order_idx ON frigora_visit_customer_acknowledgements (venture_id, work_order_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_visit_evidence (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          visit_id TEXT NOT NULL,
+          work_order_id TEXT NOT NULL,
+          asset_id TEXT,
+          stored_object_id TEXT NOT NULL,
+          category TEXT NOT NULL,
+          description TEXT,
+          captured_at TEXT NOT NULL,
+          recorded_by_user_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          removed_at TEXT,
+          original_filename TEXT NOT NULL,
+          mime_type TEXT NOT NULL,
+          size_bytes INTEGER NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS frigora_visit_evidence_venture_stored_object_idx ON frigora_visit_evidence (venture_id, stored_object_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_visit_evidence_venture_visit_idx ON frigora_visit_evidence (venture_id, visit_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_visit_evidence_venture_work_order_idx ON frigora_visit_evidence (venture_id, work_order_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_visit_evidence_venture_asset_idx ON frigora_visit_evidence (venture_id, asset_id)`,
       );
     })();
   }

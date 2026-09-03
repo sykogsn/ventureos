@@ -1,4 +1,4 @@
-import type { UserId, VentureId, WorkspaceId } from "@/contracts";
+import type { StoredObjectId, UserId, VentureId, WorkspaceId } from "@/contracts";
 
 export type FrigoraCustomerId = string & { readonly __brand: "FrigoraCustomerId" };
 export type FrigoraSiteId = string & { readonly __brand: "FrigoraSiteId" };
@@ -18,6 +18,20 @@ export type FrigoraAssetOperationalConditionId = string & {
 export type FrigoraVisitCustomerAcknowledgementId = string & {
   readonly __brand: "FrigoraVisitCustomerAcknowledgementId";
 };
+export type FrigoraVisitEvidenceId = string & { readonly __brand: "FrigoraVisitEvidenceId" };
+
+export const FRIGORA_VISIT_EVIDENCE_CATEGORIES = [
+  "SITE_CONDITION",
+  "BEFORE_WORK",
+  "AFTER_WORK",
+  "TECHNICAL",
+  "PARTS",
+  "REFRIGERANT",
+  "DOCUMENTATION",
+  "OTHER",
+] as const;
+
+export type FrigoraVisitEvidenceCategory = (typeof FRIGORA_VISIT_EVIDENCE_CATEGORIES)[number];
 
 export type FrigoraCustomerStatus = "active" | "archived";
 export type FrigoraSiteStatus = "active" | "archived";
@@ -495,6 +509,42 @@ export type RecordVisitCustomerAcknowledgementInput = {
   acknowledgerName: string;
   acknowledgedAt: string;
   recordedByUserId: string;
+};
+
+export type FrigoraVisitEvidence = {
+  id: FrigoraVisitEvidenceId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  visitId: FrigoraVisitId;
+  workOrderId: FrigoraWorkOrderId;
+  assetId: FrigoraAssetId | null;
+  storedObjectId: StoredObjectId;
+  category: FrigoraVisitEvidenceCategory;
+  description: string | null;
+  capturedAt: string;
+  recordedByUserId: UserId;
+  createdAt: string;
+  removedAt: string | null;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
+export type RecordVisitEvidenceInput = {
+  category: FrigoraVisitEvidenceCategory;
+  description?: string | null;
+  userId: string;
+  assetId?: string | null;
+};
+
+export type RecordVisitEvidenceWithFileInput = RecordVisitEvidenceInput & {
+  body: Uint8Array;
+  originalFilename: string;
+  mimeType: string;
+};
+
+export type LinkVisitEvidenceInput = RecordVisitEvidenceInput & {
+  storedObjectId: string;
 };
 
 export const FRIGORA_ASSET_HISTORY_EVENT_KINDS = [

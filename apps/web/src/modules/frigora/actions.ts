@@ -39,6 +39,10 @@ import type {
   RecordVisitCustomerAcknowledgementInput,
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
+  FrigoraVisitEvidence,
+  FrigoraVisitEvidenceId,
+  RecordVisitEvidenceWithFileInput,
+  LinkVisitEvidenceInput,
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
@@ -305,5 +309,33 @@ export async function recordVisitCustomerAcknowledgementAction(
       input.visitId as FrigoraVisitId,
       input,
     ),
+  );
+}
+
+export async function recordVisitEvidenceWithFileAction(
+  input: ScopedInput & { visitId: string } & RecordVisitEvidenceWithFileInput,
+): Promise<FrigoraMutationResult<FrigoraVisitEvidence>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitEvidenceWithFile(
+      scope,
+      input.visitId as FrigoraVisitId,
+      input,
+    ),
+  );
+}
+
+export async function linkVisitEvidenceAction(
+  input: ScopedInput & { visitId: string } & LinkVisitEvidenceInput,
+): Promise<FrigoraMutationResult<FrigoraVisitEvidence>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().linkVisitEvidence(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function removeVisitEvidenceAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraVisitEvidence>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().removeVisitEvidence(scope, input.id as FrigoraVisitEvidenceId),
   );
 }

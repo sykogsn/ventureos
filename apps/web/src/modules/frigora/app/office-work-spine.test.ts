@@ -67,7 +67,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.15.0",
+    definitionVersion: "0.16.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
@@ -109,7 +109,7 @@ async function seed(options: {
       workspaceId,
       slug: `venture-${ventureId}`,
       definitionId: options.definitionId ?? "frigora",
-      definitionVersion: "0.15.0",
+      definitionVersion: "0.16.0",
     }),
   );
 
@@ -350,10 +350,10 @@ describe("F1.1 Office Work Spine", () => {
   });
 
   it("keeps F0 version and schema locks and ships F1.1 routes without F0 edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.15.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.16.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 21/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 22/);
 
     const customersPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/customers/page.tsx"),

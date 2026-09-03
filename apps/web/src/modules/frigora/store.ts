@@ -1,5 +1,5 @@
-import { and, asc, eq } from "drizzle-orm";
-import type { VentureId, WorkspaceId, UserId } from "@/contracts";
+import { and, asc, eq, isNull } from "drizzle-orm";
+import type { VentureId, WorkspaceId, UserId, StoredObjectId } from "@/contracts";
 import { ensureSchema, getDb } from "@/platform/persistence/db";
 import {
   frigoraAssets,
@@ -15,6 +15,7 @@ import {
   frigoraPartUsages,
   frigoraAssetOperationalConditions,
   frigoraVisitCustomerAcknowledgements,
+  frigoraVisitEvidence,
   frigoraWorkOrders,
 } from "@/platform/persistence/schema";
 import { FrigoraError } from "./errors";
@@ -61,6 +62,9 @@ import type {
   FrigoraAssetOperationalConditionKind,
   FrigoraVisitCustomerAcknowledgement,
   FrigoraVisitCustomerAcknowledgementId,
+  FrigoraVisitEvidence,
+  FrigoraVisitEvidenceId,
+  FrigoraVisitEvidenceCategory,
 } from "./types";
 
 export type FrigoraStore = {
@@ -349,6 +353,27 @@ export type FrigoraStore = {
     ventureId: VentureId,
     workOrderId: FrigoraWorkOrderId,
   ): Promise<FrigoraVisitCustomerAcknowledgement[]>;
+  insertVisitEvidence(row: FrigoraVisitEvidence): Promise<void>;
+  updateVisitEvidence(row: FrigoraVisitEvidence): Promise<void>;
+  findVisitEvidence(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraVisitEvidenceId,
+  ): Promise<FrigoraVisitEvidence | null>;
+  findVisitEvidenceByStoredObjectId(
+    ventureId: VentureId,
+    storedObjectId: string,
+  ): Promise<FrigoraVisitEvidence | null>;
+  listActiveVisitEvidenceByVisit(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    visitId: FrigoraVisitId,
+  ): Promise<FrigoraVisitEvidence[]>;
+  listActiveVisitEvidenceByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraVisitEvidence[]>;
 };
 
 export function createFrigoraStore(): FrigoraStore {
@@ -1326,6 +1351,89 @@ export function createFrigoraStore(): FrigoraStore {
         );
       return rows.map(mapVisitCustomerAcknowledgement);
     },
+    async insertVisitEvidence(row) {
+      await ensureSchema();
+      try {
+        await getDb().insert(frigoraVisitEvidence).values(toVisitEvidenceValues(row));
+      } catch (error) {
+        throw uniqueOrOriginal(
+          error,
+          "Stored object is already linked to evidence in this venture.",
+        );
+      }
+    },
+    async updateVisitEvidence(row) {
+      await ensureSchema();
+      await getDb()
+        .update(frigoraVisitEvidence)
+        .set(toVisitEvidenceValues(row))
+        .where(
+          and(
+            eq(frigoraVisitEvidence.id, row.id),
+            eq(frigoraVisitEvidence.workspaceId, row.workspaceId),
+            eq(frigoraVisitEvidence.ventureId, row.ventureId),
+          ),
+        );
+    },
+    async findVisitEvidence(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisitEvidence)
+        .where(
+          and(
+            eq(frigoraVisitEvidence.id, id),
+            eq(frigoraVisitEvidence.workspaceId, workspaceId),
+            eq(frigoraVisitEvidence.ventureId, ventureId),
+          ),
+        );
+      return rows[0] ? mapVisitEvidence(rows[0]) : null;
+    },
+    async findVisitEvidenceByStoredObjectId(ventureId, storedObjectId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisitEvidence)
+        .where(
+          and(
+            eq(frigoraVisitEvidence.ventureId, ventureId),
+            eq(frigoraVisitEvidence.storedObjectId, storedObjectId),
+          ),
+        );
+      return rows[0] ? mapVisitEvidence(rows[0]) : null;
+    },
+    async listActiveVisitEvidenceByVisit(workspaceId, ventureId, visitId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisitEvidence)
+        .where(
+          and(
+            eq(frigoraVisitEvidence.workspaceId, workspaceId),
+            eq(frigoraVisitEvidence.ventureId, ventureId),
+            eq(frigoraVisitEvidence.visitId, visitId),
+            isNull(frigoraVisitEvidence.removedAt),
+          ),
+        )
+        .orderBy(asc(frigoraVisitEvidence.capturedAt), asc(frigoraVisitEvidence.id));
+      return rows.map(mapVisitEvidence);
+    },
+    async listActiveVisitEvidenceByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVisitEvidence)
+        .where(
+          and(
+            eq(frigoraVisitEvidence.workspaceId, workspaceId),
+            eq(frigoraVisitEvidence.ventureId, ventureId),
+            eq(frigoraVisitEvidence.workOrderId, workOrderId),
+            isNull(frigoraVisitEvidence.removedAt),
+          ),
+        )
+        .orderBy(asc(frigoraVisitEvidence.capturedAt), asc(frigoraVisitEvidence.id));
+      return rows.map(mapVisitEvidence);
+    },
   };
 }
 
@@ -1904,6 +2012,48 @@ function mapVisitCustomerAcknowledgement(
     recordedByUserId: row.recordedByUserId as UserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+function toVisitEvidenceValues(row: FrigoraVisitEvidence) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    visitId: row.visitId,
+    workOrderId: row.workOrderId,
+    assetId: row.assetId,
+    storedObjectId: row.storedObjectId,
+    category: row.category,
+    description: row.description,
+    capturedAt: row.capturedAt,
+    recordedByUserId: row.recordedByUserId,
+    createdAt: row.createdAt,
+    removedAt: row.removedAt,
+    originalFilename: row.originalFilename,
+    mimeType: row.mimeType,
+    sizeBytes: row.sizeBytes,
+  };
+}
+
+function mapVisitEvidence(row: typeof frigoraVisitEvidence.$inferSelect): FrigoraVisitEvidence {
+  return {
+    id: row.id as FrigoraVisitEvidenceId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    visitId: row.visitId as FrigoraVisitId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    assetId: (row.assetId as FrigoraAssetId | null) ?? null,
+    storedObjectId: row.storedObjectId as StoredObjectId,
+    category: row.category as FrigoraVisitEvidenceCategory,
+    description: row.description ?? null,
+    capturedAt: row.capturedAt,
+    recordedByUserId: row.recordedByUserId as UserId,
+    createdAt: row.createdAt,
+    removedAt: row.removedAt ?? null,
+    originalFilename: row.originalFilename,
+    mimeType: row.mimeType,
+    sizeBytes: row.sizeBytes,
   };
 }
 
