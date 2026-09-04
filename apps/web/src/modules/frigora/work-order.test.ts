@@ -6,6 +6,7 @@ import { createPermissionService } from "@/platform/permissions/service";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
+import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -17,6 +18,8 @@ import {
 } from "./validation";
 
 const NOW = "2026-08-28T00:00:00.000Z";
+
+closeFrigoraPersistenceAfterFile();
 
 beforeEach(async () => {
   await resetPersistenceLifecycle();

@@ -7,6 +7,7 @@ import { createPermissionService } from "@/platform/permissions/service";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
+import { closeFrigoraPersistenceAfterFile } from "../test-persistence-lifecycle";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { buildVentureSurfaceLinks } from "@/modules/frigora/app/nav";
 import {
@@ -30,6 +31,8 @@ const NOW = "2026-08-29T00:00:00.000Z";
 const ARRIVED = "2026-08-29T10:00:00.000Z";
 const DEPARTED = "2026-08-29T12:00:00.000Z";
 const WEB_ROOT = join(process.cwd(), "src");
+
+closeFrigoraPersistenceAfterFile();
 
 beforeEach(async () => {
   await resetPersistenceLifecycle();

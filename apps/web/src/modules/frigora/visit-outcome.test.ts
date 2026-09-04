@@ -6,6 +6,7 @@ import { createPermissionService } from "@/platform/permissions/service";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
+import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -17,6 +18,8 @@ const OUTCOME_AT = "2026-08-28T10:45:00.000Z";
 const DEPARTED = "2026-08-28T11:00:00.000Z";
 const EARLY_OUTCOME = "2026-08-28T09:00:00.000Z";
 const LATE_OUTCOME = "2026-08-28T12:00:00.000Z";
+
+closeFrigoraPersistenceAfterFile();
 
 beforeEach(async () => {
   await resetPersistenceLifecycle();
