@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { loadEngineeringCatalogue } from "../records/catalogue";
 import { analyseEngineering } from "./analyse";
+import { analyseMonthlyProcess, analyseProcess } from "./process";
 import { filterTimeline } from "./timeline";
 import type { ProjectSignals } from "./types";
 
@@ -60,5 +61,119 @@ describe("Engineering Intelligence", () => {
     const filtered = filterTimeline(intelligence.timeline, "certified");
     assert.ok(filtered.some((item) => item.id === "VS-007"));
     assert.ok(!intelligence.timeline.some((item) => item.id === "VS-009"));
+  });
+
+  it("projects ECE-001 as a process baseline without inventing a trend", () => {
+    const intelligence = analyseEngineering(loadEngineeringCatalogue(), project);
+    assert.equal(intelligence.process.sampleSize, 1);
+    assert.equal(intelligence.process.posture, "baseline");
+    assert.equal(intelligence.process.leadTime.trend, "unknown");
+    assert.match(intelligence.process.leadTime.label, /Unknown/);
+    assert.match(intelligence.process.certificationFirstPass.label, /Unknown/);
+    assert.doesNotMatch(intelligence.process.certificationFirstPass.label, /%/);
+    assert.equal(intelligence.process.certificationFirstPass.known, 0);
+    assert.equal(intelligence.process.firstCorrectionHeld.held, 1);
+    assert.equal(intelligence.process.firstCorrectionHeld.known, 1);
+    assert.match(intelligence.process.firstCorrectionHeld.label, /rate withheld/);
+    assert.equal(intelligence.process.cleanExit.held, 1);
+    assert.equal(intelligence.process.correctionAttempts.total, null);
+    assert.equal(intelligence.process.failedCorrections.total, null);
+    assert.match(intelligence.process.correctionAttempts.label, /Unknown/);
+    assert.match(intelligence.process.failedCorrections.label, /Unknown/);
+    assert.ok(intelligence.process.failureClasses.includes("filetest-lifecycle"));
+    assert.ok(intelligence.process.linkedImprovements.some((item) => item.id === "ERD-008"));
+    assert.ok(intelligence.process.linkedImprovements.some((item) => item.id === "LL-008"));
+    const baseline = intelligence.recommendations.find((item) => item.id === "process-baseline");
+    assert.ok(baseline);
+    assert.match(baseline?.why ?? "", /n<5/);
+    assert.match(baseline?.source ?? "", /ECE-001/);
+    assert.equal(intelligence.process.nextRecommendation?.id, "process-baseline");
+  });
+
+  it("withholds monthly rates when a window has fewer than five cycles", () => {
+    const monthly = analyseMonthlyProcess(
+      [
+        {
+          id: "ECE-010",
+          title: "Prior",
+          scope: "foundation",
+          ownershipClass: "B",
+          workItem: "Prior",
+          checkpointSha: null,
+          erdRef: null,
+          llRef: null,
+          openedAt: "2026-08-01",
+          closedAt: "2026-08-02",
+          closedAs: "certified",
+          diagnosticCycles: null,
+          correctionAttempts: 1,
+          failedCorrections: 0,
+          targetedTestRuns: null,
+          relatedDomainTestRuns: null,
+          fullSuiteRuns: 1,
+          certificationFailures: 0,
+          regressionsFound: null,
+          manualFounderInterventions: 0,
+          manualTerminalInterventions: 0,
+          tests: 10,
+          pass: 10,
+          fail: 0,
+          cancelled: 0,
+          skipped: 0,
+          exitCode: 0,
+          cleanProcessExit: "YES",
+          failureClass: null,
+          firstCorrectionHeld: "YES",
+          notes: "",
+        },
+      ],
+      new Date("2026-09-04T00:00:00.000Z"),
+    );
+    assert.equal(monthly.current.sampleSize, 0);
+    assert.equal(monthly.previous.sampleSize, 1);
+    assert.equal(monthly.current.posture, "unknown");
+    assert.equal(monthly.previous.posture, "baseline");
+    assert.match(monthly.previous.certificationFirstPass.label, /rate withheld/);
+    const july = analyseProcess(
+      [
+        {
+          id: "ECE-010",
+          title: "Prior",
+          scope: "foundation",
+          ownershipClass: "B",
+          workItem: "Prior",
+          checkpointSha: null,
+          erdRef: null,
+          llRef: null,
+          openedAt: "2026-07-01",
+          closedAt: "2026-07-02",
+          closedAs: "certified",
+          diagnosticCycles: null,
+          correctionAttempts: 1,
+          failedCorrections: 0,
+          targetedTestRuns: null,
+          relatedDomainTestRuns: null,
+          fullSuiteRuns: 1,
+          certificationFailures: 0,
+          regressionsFound: null,
+          manualFounderInterventions: 0,
+          manualTerminalInterventions: 0,
+          tests: 10,
+          pass: 10,
+          fail: 0,
+          cancelled: 0,
+          skipped: 0,
+          exitCode: 0,
+          cleanProcessExit: "YES",
+          failureClass: null,
+          firstCorrectionHeld: "YES",
+          notes: "",
+        },
+      ],
+      { nextRecommendation: null, windowLabel: "2026-07" },
+    );
+    assert.equal(july.posture, "baseline");
+    assert.match(july.certificationFirstPass.label, /rate withheld/);
+    assert.equal(july.leadTime.trend, "unknown");
   });
 });

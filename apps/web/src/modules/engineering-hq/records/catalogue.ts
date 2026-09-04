@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { EngineeringCatalogue } from "../types";
 import { parseCertification } from "./parse-certification";
+import { parseCycleEvidence } from "./parse-cycles";
 import { parseDecisionRegister } from "./parse-decisions";
 import { parseDebtRegister } from "./parse-debt";
 import { parseEngineeringHistory } from "./parse-history";
@@ -21,6 +22,7 @@ export function loadEngineeringCatalogue(): EngineeringCatalogue {
     decisions: parseDecisionRegister(read(recordFiles.decisions)),
     debt: parseDebtRegister(read(recordFiles.debt)),
     lessons: parseLessonsLearned(read(recordFiles.lessons)),
+    cycles: parseCycleEvidence(read(recordFiles.cycles)),
     releases: parseReleaseHistory(read(recordFiles.releases)),
     certification: parseCertification(read(recordFiles.certification)),
     constitution: [

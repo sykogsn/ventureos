@@ -15,6 +15,16 @@ export function analyseRecommendations(
   );
   const nextVisual = /RM-002/i.test(catalogue.upcomingNote);
 
+  if (catalogue.cycles.length > 0 && catalogue.cycles.length < 5) {
+    const first = catalogue.cycles[0];
+    items.push({
+      id: "process-baseline",
+      title: "Keep engineering process conclusions at BASELINE",
+      why: `CYCLE_EVIDENCE.md records ${catalogue.cycles.length} cycle${catalogue.cycles.length === 1 ? "" : "s"}. n<5, so rates and trends are withheld. ECE-001 is a verified baseline, not proof that cycle time or certification reliability has improved.`,
+      source: first ? `CYCLE_EVIDENCE.md · ${first.id}` : "CYCLE_EVIDENCE.md",
+    });
+  }
+
   if (hqNotOnLedger && project.engineeringHqModulePresent) {
     items.push({
       id: "record-hq",

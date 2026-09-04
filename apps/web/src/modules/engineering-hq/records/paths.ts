@@ -27,6 +27,7 @@ export const recordFiles = {
   decisions: join(engineeringRecordsRoot, "DECISION_REGISTER.md"),
   debt: join(engineeringRecordsRoot, "TECHNICAL_DEBT_REGISTER.md"),
   lessons: join(engineeringRecordsRoot, "LESSONS_LEARNED.md"),
+  cycles: join(engineeringRecordsRoot, "CYCLE_EVIDENCE.md"),
   releases: join(engineeringRecordsRoot, "RELEASE_HISTORY.md"),
   certification: join(engineeringRecordsRoot, "FOUNDATION_CERTIFICATION_v1.1.md"),
   engineeringConstitution: join(

@@ -4,7 +4,7 @@
 
 **Status.** Governance Foundation complete (VS-008A–C). Project Constitution registered as supreme law (2026-08-22).  
 **Owner.** Engineering  
-**Last Updated.** 2026-09-03
+**Last Updated.** 2026-09-04
 
 These records do not replace the Foundation Library, code-adjacent READMEs, or Runtime/IDS/Definition implementation sources. They index completed engineering work so the desk can remember it. They also name the standard every future change must follow.
 
@@ -59,6 +59,7 @@ If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wi
 | [DECISION_REGISTER.md](./DECISION_REGISTER.md) | Named decisions with problem / outcome (distinct from ADR / FD) |
 | [TECHNICAL_DEBT_REGISTER.md](./TECHNICAL_DEBT_REGISTER.md) | Follow-up items from Foundation Certification v1.1 |
 | [RELEASE_HISTORY.md](./RELEASE_HISTORY.md) | Declared Foundation releases as engineering history |
+| [CYCLE_EVIDENCE.md](./CYCLE_EVIDENCE.md) | Append-only engineering cycle evidence (ECE) for process intelligence |
 
 The Project Constitution is supreme. The Master Engineering Prompt is the default sprint standard. The Creed is culture. The Constitution is lifecycle law. The Decision Register is the dated acceptances of that law. Lessons Learned is what the sprints taught. History, certification, debt, and releases are the memory HQ will query. Do not copy those tables into the Creed, the Constitution, or the Master Engineering Prompt.
 
@@ -88,5 +89,6 @@ When it is built, it should consume these files directly as the engineering work
 - Decision register → method the organisation already chose
 - Technical debt → work the desk still owes
 - Release history → what “certified” named
+- Cycle evidence → certified-checkpoint process facts for Engineering HQ
 
 Do not create a parallel engineering database that disagrees with this folder. If HQ needs structured fields, parse or project from these documents; do not fork the memory.
