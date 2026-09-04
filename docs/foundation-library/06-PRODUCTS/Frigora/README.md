@@ -2,7 +2,7 @@
 
 **Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.15.0` in the Definition Registry.
+**Authority.** Product page. Live definition: `frigora@0.16.0` in the Definition Registry. Certified product checkpoint: F2.0 Visit Evidence.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
@@ -10,17 +10,17 @@
 
 **Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, and Visit customer acknowledgements
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence
 
-**Version.** 0.15.0
+**Version.** 0.16.0
 
 **Owner.** Founder (definition owner)
 
-**Last Updated.** 2026-08-29
+**Last Updated.** 2026-09-04
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, and Visit customer acknowledgements as durable or derived operational views beside VIC. Asset history projection is a read-only, asset-rooted composition of certified operational truths — not a separate persisted store. Asset operational condition is a human-asserted, append-only fact about present operational capability and is not inferred from other Frigora truths. Visit customer acknowledgement is a human-recorded, text-only, visit-rooted fact that a named customer or site representative acknowledged information about a Visit; it is not evidence, signature, satisfaction, commercial acceptance, or AssetHistory. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, evidence, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence as durable or derived operational views beside VIC. Asset history projection is a read-only, asset-rooted composition of certified operational truths — not a separate persisted store. Asset operational condition is a human-asserted, append-only fact about present operational capability and is not inferred from other Frigora truths. Visit customer acknowledgement is a human-recorded, text-only, visit-rooted fact that a named customer or site representative acknowledged information about a Visit; it is not Visit evidence, signature, satisfaction, commercial acceptance, or AssetHistory. Visit evidence (F2.0) is stored visit-attached photo/file evidence recorded against a Visit; it is not verification, compliance certification, commercial acceptance, customer signature, CSAM capability, offline field capability, or generic document management. It is not projected into AssetHistory. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
 
 ## Profile
 
@@ -49,11 +49,12 @@ Admitted in this version, persisted beside VIC for Frigora instances:
 - Visit refrigerant events (human-recorded refrigerant handling that actually occurred during a Visit attendance episode; append-only facts, not leak inference)
 - Visit part usages (human-recorded part or material that was actually used during a Visit attendance episode; append-only facts, not inventory)
 - Asset operational condition assertions (human-asserted present ability of an Asset to perform its intended function; append-only; current condition is derived)
-- Visit customer acknowledgements (human-recorded text-only acknowledgement by a named customer or site representative about a Visit; append-only; not evidence or commercial acceptance)
+- Visit customer acknowledgements (human-recorded text-only acknowledgement by a named customer or site representative about a Visit; append-only; not Visit evidence or commercial acceptance)
+- Visit evidence (F2.0) (stored visit-attached photo/file evidence recorded against a Visit; append-only until removed; not verification, compliance certification, commercial acceptance, customer signature, CSAM, offline field capability, or generic document management)
 
 Derived read model (not persisted):
 
-- Asset history projection (chronological, asset-rooted composition of certified asset-related truths above; read-only; provenance-preserving; does not include Visit customer acknowledgement because that fact has no asset root)
+- Asset history projection (chronological, asset-rooted composition of certified asset-related truths above; read-only; provenance-preserving; does not include Visit customer acknowledgement because that fact has no asset root; does not include Visit evidence)
 
 RefrigerationSystem and Component remain deferred. Assets may exist at a site without a system grouping.
 
@@ -79,8 +80,9 @@ At visit-episode maturity, authoritative records separate:
 8. **Forward operational intent** — Visit recommended action
 9. **Asserted asset operational condition** — Asset operational condition (asset-rooted; not inferred)
 10. **Customer/site acknowledgement** — Visit customer acknowledgement (visit-rooted text fact; not AssetHistory)
+11. **Stored visit-attached photo/file evidence** — Visit evidence (F2.0) (not verification of the records above; not AssetHistory)
 
-Asset history projection surfaces asset-rooted certified facts as typed, chronological entries without collapsing truth layers or inventing inference. Visit customer acknowledgement is not projected into AssetHistory.
+Asset history projection surfaces asset-rooted certified facts as typed, chronological entries without collapsing truth layers or inventing inference. Visit customer acknowledgement and Visit evidence are not projected into AssetHistory.
 
 **Asset.status** remains identity/lifecycle (`active` / `decommissioned`) and is not operational condition.
 
@@ -100,7 +102,7 @@ The following are not part of this definition version and must not be read as bu
 - purchasing, suppliers, purchase orders, pricing, unit costing, invoice lines
 - PPM requirements, obligations, planned visits, work execution
 - commercial operations
-- evidence packages, operational memory
+- generic document management, evidence packages as a document store, operational memory
 - FACT → PATTERN → SIGNAL
 - employee agents, workforce bindings, executors, verifiers
 - REST APIs, external integrations

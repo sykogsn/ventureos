@@ -16,7 +16,7 @@
 
 **Owner.** Definition Registry
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-09-04
 
 ---
 
@@ -53,7 +53,7 @@ Rows stored before definition columns existed may have empty `definition_id` / `
 | `qualora` | 0.3.0 | Qualora | incubating | Full intelligence pack including briefing |
 | `calviora` | 0.1.0 | Calviora | concept | Excludes `intelligence.briefing` / morning-briefing |
 | `farmora` | 0.1.0 | Farmora | concept | Excludes executive-office feature; still uses office capability for VIC |
-| `frigora` | 0.15.0 | Frigora | concept | Full intelligence pack including briefing. Customer, Site, Asset, WorkOrder identity, current assignment, Visit attendance, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, and Visit customer acknowledgements admitted beside VIC |
+| `frigora` | 0.16.0 | Frigora | concept | Full intelligence pack including briefing. Customer, Site, Asset, WorkOrder identity, current assignment, Visit attendance, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence admitted beside VIC |
 
 The Runtime skips briefing assembly when the instance cannot consume `intelligence.briefing`. Projections hide excluded Situation Room, HQ, and Executive Office surfaces.
 
