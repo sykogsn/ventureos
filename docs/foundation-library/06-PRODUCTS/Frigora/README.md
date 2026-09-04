@@ -8,9 +8,9 @@
 
 **Dependencies.** [Products](../README.md) · [Venture Definitions](../../02-ARCHITECTURE/Venture-Definitions.md)
 
-**Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md) · [Programme 1 lock](./Programme-1.md) · [Founder Decisions](../../05-GOVERNANCE/Founder-Decisions.md) (FD-007)
+**Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md) · [Programme 1 lock](./Programme-1.md) · [Founder Decisions](../../05-GOVERNANCE/Founder-Decisions.md) (FD-007, FD-008)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence. Programme 1 (F2.1–F2.3) is founder-authorised and not implemented.
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence. Programme 1 (F2.1–F2.3) is founder-authorised and not implemented. F2.1 is scope-locked (FD-008) and not implemented.
 
 **Version.** 0.16.0
 
@@ -68,12 +68,12 @@ Frigora receives the full executive desk. Theme must not invent a private Runtim
 
 ## Authorised next programme (not this definition version)
 
-Founder Decision [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) locks [Programme 1 — Reactive Service Operations](./Programme-1.md). Live definition remains `frigora@0.16.0` / F2.0 until each increment is certified and the definition is legitimately changed.
+Founder Decision [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) locks [Programme 1 — Reactive Service Operations](./Programme-1.md). Founder Decision [FD-008](../../05-GOVERNANCE/Founder-Decisions.md) scope-locks F2.1 for implementation. Live definition remains `frigora@0.16.0` / F2.0 until each increment is certified and the definition is legitimately changed. FD-008 does not certify F2.1 and does not open F2.2 or F2.3.
 
 | Milestone | Product purpose | Status |
 |---|---|---|
 | F2.0 Visit Evidence | Stored visit-attached photo/file evidence | Certified (this version) |
-| F2.1 Work Execution | Governed WorkOrder completion distinct from Visit departure | Authorised, not implemented |
+| F2.1 Work Execution | Governed WorkOrder completion distinct from Visit departure | Authorised, scope-locked (FD-008), not implemented |
 | F2.2 Service Desk & Dispatch | Scheduling, assignment, acceptance, day board | Authorised, not implemented; after certified F2.1 |
 | F2.3 Engineer Job Workflow | End-to-end engineer job card on certified truths | Authorised, not implemented; after certified F2.2 |
 
