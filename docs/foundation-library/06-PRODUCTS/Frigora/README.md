@@ -8,9 +8,9 @@
 
 **Dependencies.** [Products](../README.md) · [Venture Definitions](../../02-ARCHITECTURE/Venture-Definitions.md)
 
-**Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md)
+**Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md) · [Programme 1 lock](./Programme-1.md) · [Founder Decisions](../../05-GOVERNANCE/Founder-Decisions.md) (FD-007)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence
+**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence. Programme 1 (F2.1–F2.3) is founder-authorised and not implemented.
 
 **Version.** 0.16.0
 
@@ -66,6 +66,19 @@ IDS key: `frigora`. Brand and atmosphere selectors exist so the instance is reco
 
 Frigora receives the full executive desk. Theme must not invent a private Runtime or a private navigation model. The VentureOS Situation Room remains the founder/executive brief. Frigora operational presentation must not replace `/dashboard`.
 
+## Authorised next programme (not this definition version)
+
+Founder Decision [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) locks [Programme 1 — Reactive Service Operations](./Programme-1.md). Live definition remains `frigora@0.16.0` / F2.0 until each increment is certified and the definition is legitimately changed.
+
+| Milestone | Product purpose | Status |
+|---|---|---|
+| F2.0 Visit Evidence | Stored visit-attached photo/file evidence | Certified (this version) |
+| F2.1 Work Execution | Governed WorkOrder completion distinct from Visit departure | Authorised, not implemented |
+| F2.2 Service Desk & Dispatch | Scheduling, assignment, acceptance, day board | Authorised, not implemented; after certified F2.1 |
+| F2.3 Engineer Job Workflow | End-to-end engineer job card on certified truths | Authorised, not implemented; after certified F2.2 |
+
+Do not add F2.4. Capabilities after F2.3 are provisional and unnumbered. See the Programme 1 document for boundaries, exclusions, the certification gate, and architectural guardrails.
+
 ## Truth chain (operational)
 
 At visit-episode maturity, authoritative records separate:
@@ -92,7 +105,7 @@ Corrective action, part usage, refrigerant event, visit outcome, recommended act
 
 ## Deferred
 
-The following are not part of this definition version and must not be read as built:
+The following are not part of this definition version (`frigora@0.16.0`) and must not be read as built. Programme 1 is authorised to admit **work execution**, **dispatch**, and **engineer field workflows** only through certified F2.1–F2.3; they are not admitted until those increments land. Everything else below remains excluded from Programme 1.
 
 - refrigeration systems, asset components
 - work execution, dispatch, engineer field workflows
@@ -107,3 +120,4 @@ The following are not part of this definition version and must not be read as bu
 - employee agents, workforce bindings, executors, verifiers
 - REST APIs, external integrations
 - Lovable L0.1–L0.9 screen implementation
+- offline field capability, PWA as a separate application, customer signature
