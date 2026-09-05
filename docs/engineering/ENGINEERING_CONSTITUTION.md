@@ -1,8 +1,8 @@
 # VentureOS Engineering Constitution
 
 **Status.** Constitutional for engineering method  
-**Version.** 1.0.0  
-**Date.** 2026-08-21  
+**Version.** 1.1.0  
+**Date.** 2026-09-05  
 **Programme.** VS-008B  
 **Owner.** Engineering
 
@@ -40,6 +40,77 @@ These principles are the same method already accepted as ERD-001–ERD-007. They
 | Never fix the same bug twice | A proven development-environment failure gets a guard that fails closed. |
 | VentureOS builds itself | Engineering knowledge is recorded in-repo so Engineering HQ can consume it. [ERD-004](./DECISION_REGISTER.md#erd-004--ventureos-builds-itself). |
 | Quality over speed | A sprint that skips verification is not done. Speed that reopens a certified foundation is not progress. |
+
+---
+
+## 2A. Permanent Planning–Execution Workflow
+
+**Status. Constitutional and locked.** This is the default development workflow for VentureOS and every Venture built on it. It remains in force regardless of subscription tier, AI model, coding assistant, or vendor. It may be changed only by an explicit founder-approved constitutional amendment that names the replacement workflow and updates this Constitution and the repository agent rules in the same approved change.
+
+The purpose of this separation is to reduce cost, avoid wasted agent exploration, improve scope discipline, and preserve or improve engineering quality without weakening repository verification.
+
+### Role separation
+
+| Layer | Current assignment | Owns | May not do |
+|---|---|---|---|
+| **Planning and decision layer** | ChatGPT | Roadmap, architecture reasoning, scope, sequencing, acceptance criteria, certification planning, implementation packets, risk analysis, and cost-conscious model-routing decisions | Claim live repository state, claim implementation completion, or override repository evidence |
+| **Repository execution layer** | Cursor | Read-only repository verification, implementation, testing, debugging, runtime checks, diffs, Git evidence, and certification execution | Treat an external plan as repository fact, redesign locked architecture without approval, or continue when the repository contradicts the approved plan |
+| **Visual frontend layer** | Lovable, where explicitly named | Approved frontend visual implementation and refinement | Redefine platform architecture, domain/business logic, or replace repository verification |
+
+Tool assignments may be replaced by the founder without changing this workflow. The separation of planning, repository execution, and verification is the protected method.
+
+### Mandatory implementation packet
+
+Before implementation begins, the planning layer must provide an approved execution packet that names, as applicable:
+
+- objective
+- scope and non-goals
+- locked architecture and constraints
+- likely files, modules, or investigation targets
+- required behaviour
+- acceptance criteria
+- tests and certification requirements
+- Git scope
+- stop conditions
+- required close-out evidence
+
+If no approved execution packet exists, the repository execution layer may perform read-only investigation and return findings, but it must not begin implementation by inventing scope.
+
+### Mandatory repository verification gate
+
+Every implementation packet begins with a read-only repository verification step before any modification.
+
+The repository execution layer must inspect the current branch, working tree, relevant files, existing architecture, dependencies, and prior certified behaviour required by the task. The purpose is to prove that the planning assumptions still match the live repository.
+
+If the repository contradicts the plan, the execution layer must **stop and report the contradiction before modifying files**. It must not force a stale or incorrect plan through the codebase.
+
+An external plan is a proposal until the live repository verifies it.
+
+### Non-negotiable rule
+
+Planning may be moved out of Cursor or any future repository agent to save time and money. **Repository verification and post-implementation verification may never be removed.**
+
+The permanent sequence is:
+
+```
+Plan and stress-test
+    ↓
+Approved implementation packet
+    ↓
+Read-only live repository verification
+    ↓
+Implement approved scope
+    ↓
+Test and debug
+    ↓
+Diff and Git evidence
+    ↓
+Certification / verification
+    ↓
+Commit and push when approved
+```
+
+No planning system may claim implementation is complete. No repository agent may bypass the planning scope or verification gates. Quality is protected by making planning explicit and verification repository-grounded.
 
 ---
 
@@ -148,6 +219,7 @@ Permanent. Not optional inside a feature crunch.
 - Never duplicate architecture (no second orchestrator, no Product Registry, no second type system).
 - Never create a second source of truth.
 - No engineering knowledge should exist only in conversations. Close the sprint in [ENGINEERING_HISTORY.md](./ENGINEERING_HISTORY.md) and grow [LESSONS_LEARNED.md](./LESSONS_LEARNED.md).
+- Never remove the Planning–Execution Workflow, repository verification gate, or post-implementation verification gate without an explicit founder-approved constitutional amendment.
 
 ---
 
