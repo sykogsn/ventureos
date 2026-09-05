@@ -1,8 +1,8 @@
 # VentureOS Master Engineering Prompt
 
 **Status.** Permanent engineering constitution of VentureOS  
-**Version.** 1.0.0  
-**Date.** 2026-08-22  
+**Version.** 1.1.0  
+**Date.** 2026-09-05  
 **Owner.** Engineering  
 **Applies to.** Every sprint, implementation, review, refactor, and bug fix on VentureOS, Qualora, Calviora, Farmora, and every future Venture on this OS  
 **Index.** [Engineering Index](./README.md)
@@ -13,7 +13,7 @@ Read it before Diagnostic Mode. Obey it through Verification Mode. Close the spr
 
 Architecture still answers *what may exist*. This document answers *how a sprint is allowed to proceed*. Engineering may define implementation. Engineering may not redefine architecture.
 
-The [Engineering Constitution](./ENGINEERING_CONSTITUTION.md) remains the VES lifecycle and mode law. The [Engineering Creed](./ENGINEERING_CREED.md) remains the culture. Sprint write-up shape remains in the Foundation Library [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). If those documents appear to conflict with this one on checklist, validation, completion, or reporting, this document wins.
+The [Engineering Constitution](./ENGINEERING_CONSTITUTION.md) remains the VES lifecycle, role-ownership, and mode law. The [Engineering Creed](./ENGINEERING_CREED.md) remains the culture. Sprint write-up shape remains in the Foundation Library [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). If those documents appear to conflict with this one on checklist, validation, completion, reporting, or current execution-profile details, this document wins unless a higher constitution says otherwise.
 
 ---
 
@@ -75,10 +75,64 @@ Further standing rules:
 - Do not create a second orchestrator, Product Registry, type system, or engineering-memory store.
 - Do not mix a Foundation amendment with an unrelated feature.
 - Do not leave knowledge only in a conversation. Record facts in this folder.
+- The planning and decision layer must select the execution profile before every repository implementation task.
+- The founder/operator should not be asked to independently judge which model, reasoning effort, or speed tier to use. The approved implementation packet must state it.
 
 ---
 
-## 4. Root Cause Policy
+## 4. Execution Profile Standard
+
+Every implementation packet must include an **Execution Profile** before repository execution begins. This rule applies to VentureOS, Frigora, Farmora, Qualora, Calviora, and every future Venture built under this engineering system.
+
+### 4.1 Ownership
+
+The planning and decision layer selects the profile based on task complexity, architecture risk, failure history, certification sensitivity, expected context size, speed requirements, and cost. The founder/operator only performs any UI selection required to activate the approved profile.
+
+If the selected tool or model is unavailable, deprecated, materially repriced, or demonstrably unsuitable, stop and return to the planning layer for a replacement profile. Do not improvise an expensive or weaker substitute silently.
+
+### 4.2 Current Cursor routing matrix
+
+The following matrix is the default while these Cursor capabilities remain available:
+
+| Work class | Default execution profile | Use when |
+|---|---|---|
+| **Routine** | **Cursor Composer 2.5 Standard; Fast OFF** | Read-only repo verification, well-scoped implementation, ordinary tests, straightforward fixes, mechanical refactors within approved scope |
+| **Complex** | **Cursor Grok 4.6 Medium; Fast OFF** | Non-trivial debugging, multi-module implementation, ambiguous runtime behaviour after repo inspection, or tasks where routine execution is unlikely to be reliable |
+| **Exceptional** | **Cursor Grok 4.6 High; Fast OFF unless explicitly justified** | Architecture-sensitive work, repeated failure after a lower profile, difficult certification blockers, high-risk root-cause analysis, or major cross-cutting implementation |
+
+**Fast mode is opt-in.** It may be selected only when the planning layer states why lower latency is worth the additional cost for that named task.
+
+**On-demand spending is disabled by default.** No implementation packet may authorize paid on-demand usage unless the founder explicitly approves the spend for that task or period. A subscription allowance is a capacity budget, not permission to incur uncapped overage.
+
+### 4.3 Quality rule
+
+The cheapest profile is not automatically the correct profile. The planning layer must choose the **lowest-cost profile that can reliably meet the approved acceptance criteria and certification standard**. If a lower profile produces weak results, repeated failures, architecture uncertainty, or materially more rework, escalate deliberately.
+
+Likewise, the strongest profile is not automatically the best default. Expensive reasoning must have a named engineering reason.
+
+### 4.4 Mandatory implementation-packet header
+
+Every repository implementation packet must begin with a block equivalent to:
+
+```text
+EXECUTION PROFILE
+Tool: Cursor
+Model: <selected model>
+Effort: <selected effort, if applicable>
+Speed: Standard / Fast
+On-demand spend: Disabled / Explicitly approved
+Reason: <one sentence explaining why this profile fits the task>
+```
+
+The packet must then proceed to mandatory read-only repository verification before any modification.
+
+### 4.5 Future-proofing
+
+Model names, effort labels, prices, and vendors are operational details and may change. The planning layer must periodically reassess this matrix when capabilities or economics materially change. Updating the routing matrix does not weaken the constitutional rule that the planning layer owns execution-profile selection and repository verification remains mandatory.
+
+---
+
+## 5. Root Cause Policy
 
 Every issue must:
 
@@ -92,7 +146,7 @@ A restart, a cache wipe, or a copy-level edit is not a fix if the same class of 
 
 ---
 
-## 5. Validation Requirements
+## 6. Validation Requirements
 
 Every sprint must pass the gates that apply to its work. An implementation sprint must pass all of the following before it may be called complete:
 
@@ -111,7 +165,7 @@ Do not commit on a failed gate. Do not skip a gate because the change “looks s
 
 ---
 
-## 6. Git Workflow
+## 7. Git Workflow
 
 - Feature branches. Default integration branch is `main`.
 - Conventional commits. Write the why, not a file list.
@@ -124,7 +178,7 @@ Do not commit secrets, local databases, or `.next` artefacts. Tags and GitHub Re
 
 ---
 
-## 7. Sprint Completion Standard
+## 8. Sprint Completion Standard
 
 A sprint is **not** complete until all of the following are true:
 
@@ -139,7 +193,7 @@ Documentation-only sprints still require the documents to exist, the standard to
 
 ---
 
-## 8. Reporting Format
+## 9. Reporting Format
 
 Every sprint must end with this close-out. Do not substitute a file list or a chat summary.
 
@@ -176,7 +230,7 @@ Exactly one recommendation:
 
 ---
 
-## 9. Absolute Rule
+## 10. Absolute Rule
 
 Never tell the founder a task is complete until it has been verified in the running application.
 
