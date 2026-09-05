@@ -20,6 +20,12 @@ Then use `docs/engineering/README.md` (Engineering Index) for the Foundation Run
 ## Operating checklist (MEP §10)
 
 - Cursor executes inspection, commands, tests, diagnostics, and read-only Git. Do not send the founder through routine terminal sequences.
+- Planning-first (Engineering Constitution §2A): before modifying files,
+  require a proportionate Founder-approved implementation or correction
+  packet and verify its material assumptions read-only against the live
+  repository. If repository evidence materially contradicts it, preserve
+  the tree, stop, report evidence, and return for reconciliation; do not
+  invent scope or architecture.
 - Unexplained failure: **read-only diagnosis first**. Report ROOT CAUSE, EVIDENCE, OWNERSHIP (A Venture / B VentureOS / C test-infra / D interaction), SMALLEST SAFE CORRECTION, REBUILD REQUIRED, REGRESSION RISK, CERTIFICATION IMPACT, CONFIDENCE.
 - Stop for founder authorisation when the correction touches shared architecture, certified behaviour, persistence/schema/runtime, rebuild, or material regression risk.
 - One hypothesis, one minimal correction. MEDIUM/LOW confidence is a hypothesis under verification. If it fails, return to diagnosis — do not stack fixes.

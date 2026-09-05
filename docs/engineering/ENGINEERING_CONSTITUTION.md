@@ -1,8 +1,8 @@
 # VentureOS Engineering Constitution
 
 **Status.** Constitutional for engineering method  
-**Version.** 1.0.0  
-**Date.** 2026-08-21  
+**Version.** 1.1.0  
+**Date.** 2026-09-05  
 **Programme.** VS-008B  
 **Owner.** Engineering
 
@@ -22,7 +22,7 @@ This document defines **how VentureOS software is engineered**.
 
 It binds the lifecycle, modes, definition of done, and permanent rules that every VS programme must follow. It applies to the operating system and to products that run on it (Qualora, Calviora, Farmora, and future Ventures).
 
-Architecture answers *what the platform is*. This Constitution answers *how work is allowed to proceed*.
+Architecture answers _what the platform is_. This Constitution answers _how work is allowed to proceed_.
 
 ---
 
@@ -30,16 +30,86 @@ Architecture answers *what the platform is*. This Constitution answers *how work
 
 These principles are the same method already accepted as ERD-001–ERD-008. They are stated here as standing law, not as a second unmarked copy of those outcomes.
 
-| Principle | Meaning |
-|---|---|
-| Investigate before implementing | Written diagnostic with evidence before code. [ERD-001](./DECISION_REGISTER.md#erd-001--diagnose-before-implementing). |
-| Evidence before approval | Founder approval is on a named root cause and a named design, not on a guess. |
-| Root cause over symptoms | Restarting a process or patching a copy is not a fix if the class of failure remains. [ERD-002](./DECISION_REGISTER.md#erd-002--never-fix-the-same-bug-twice). |
-| Foundation before features | Locked layers and a certified running foundation come before product headquarters paint. [ERD-006](./DECISION_REGISTER.md#erd-006--freeze-certified-foundation), [ERD-007](./DECISION_REGISTER.md#erd-007--build-qualora-only-after-foundation-certification). |
-| One source of truth | One orchestrator, one definition registry, one generated token pipeline, one engineering-memory folder. [ERD-003](./DECISION_REGISTER.md#erd-003--one-source-of-truth). |
-| Never fix the same bug twice | A proven development-environment failure gets a guard that fails closed. |
-| VentureOS builds itself | Engineering knowledge is recorded in-repo so Engineering HQ can consume it. [ERD-004](./DECISION_REGISTER.md#erd-004--ventureos-builds-itself). |
-| Quality over speed | A sprint that skips verification is not done. Speed that reopens a certified foundation is not progress. |
+| Principle                       | Meaning                                                                                                                                                                                                                                                        |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Investigate before implementing | Written diagnostic with evidence before code. [ERD-001](./DECISION_REGISTER.md#erd-001--diagnose-before-implementing).                                                                                                                                         |
+| Evidence before approval        | Founder approval is on a named root cause and a named design, not on a guess.                                                                                                                                                                                  |
+| Root cause over symptoms        | Restarting a process or patching a copy is not a fix if the class of failure remains. [ERD-002](./DECISION_REGISTER.md#erd-002--never-fix-the-same-bug-twice).                                                                                                 |
+| Foundation before features      | Locked layers and a certified running foundation come before product headquarters paint. [ERD-006](./DECISION_REGISTER.md#erd-006--freeze-certified-foundation), [ERD-007](./DECISION_REGISTER.md#erd-007--build-qualora-only-after-foundation-certification). |
+| One source of truth             | One orchestrator, one definition registry, one generated token pipeline, one engineering-memory folder. [ERD-003](./DECISION_REGISTER.md#erd-003--one-source-of-truth).                                                                                        |
+| Never fix the same bug twice    | A proven development-environment failure gets a guard that fails closed.                                                                                                                                                                                       |
+| VentureOS builds itself         | Engineering knowledge is recorded in-repo so Engineering HQ can consume it. [ERD-004](./DECISION_REGISTER.md#erd-004--ventureos-builds-itself).                                                                                                                |
+| Quality over speed              | A sprint that skips verification is not done. Speed that reopens a certified foundation is not progress.                                                                                                                                                       |
+
+---
+
+## 2A. Planning–Execution Workflow
+
+This workflow applies to VentureOS and every Venture built on it. It protects
+responsibility boundaries and verification gates; it does not permanently
+bind those roles to a vendor, tool, or model.
+
+### Responsibility boundaries
+
+The Planning and Decision Layer prepares and stress-tests upstream product
+and engineering intent before repository implementation. To the degree
+appropriate for the work and possible without live-repository access, it
+covers roadmap interpretation, architecture proposals, specification, scope
+and non-goals, edge cases, acceptance criteria, implementation sequencing,
+risks, and certification planning. Architecture and implementation remain
+subject to Founder approval and higher governance.
+
+The Repository Execution Layer owns live-repository verification,
+repository-grounded implementation, testing, debugging, diagnostics, diffs,
+build/type/lint evidence, Git evidence, runtime checks, and certification
+execution. It retains engineering judgement and may not treat an external
+plan as repository fact.
+
+A Frontend Implementation Specialist may implement or refine approved
+frontend presentation when explicitly assigned. It may not independently
+redefine architecture, Runtime, domain boundaries, routes, registries,
+shared packages, or governance. Its output remains subject to repository
+integration and verification.
+
+Current tool assignments are operational guidance. They may change without
+constitutional amendment provided these responsibilities and gates remain
+intact. Specific model names, tiers, speed modes, prices, and temporary
+routing preferences are not constitutional law.
+
+### Proportionate approved packet
+
+Substantive implementation begins from a Founder-approved implementation
+packet proportionate to the work. Where applicable, it names the objective,
+scope, constraints, approved architecture decisions, acceptance criteria,
+sequencing, verification requirements, certification requirements, stop
+conditions, and Git boundary.
+
+A small authorised correction may use a concise correction packet naming the
+established cause, exact permitted change, boundaries, and required
+verification. Proportionality reduces ceremony; it never removes approval,
+repository verification, testing, or certification appropriate to the change.
+
+### Live-repository verification gate
+
+Before modifying the repository, the Repository Execution Layer must verify
+the packet's material assumptions against the live branch, working tree,
+relevant implementation sources, dependencies, architecture, and prior
+certified behaviour.
+
+The live repository is authoritative for repository technical facts. An
+approved plan does not override contradictory repository evidence, Founder
+authority, or higher governance.
+
+If material repository evidence contradicts the packet, execution must stop
+before unsafe modification, preserve the tree, report the contradiction and
+evidence, and return the issue to the Planning and Decision Layer and Founder
+for reconciliation. No layer may silently invent a third architecture or
+broaden scope.
+
+Planning should not be unnecessarily delegated to repository execution
+tooling when it can be completed upstream without repository access. This
+efficiency rule may not reduce engineering quality, repository inspection,
+engineering judgement, testing, or certification.
 
 ---
 
@@ -65,16 +135,16 @@ GitHub Push
 Release
 ```
 
-| Stage | Purpose |
-|---|---|
-| **Diagnostic Mode** | Prove what is true. Name the single root cause with files and runtime evidence. No implementation. |
-| **Design Mode** | Name the smallest change that removes that class of failure. State what must not be redesigned. |
-| **Founder Approval** | The founder accepts the diagnosis and the design before code changes (or accepts a documentation-only design). |
-| **Implementation Mode** | Execute only the approved design. No side-quest architecture. |
-| **Verification Mode** | Run the quality gates and the runtime checks the sprint named. Do not commit on a failed gate. |
-| **Git Commit** | Record the why on the branch after verification. Only when the founder has asked, or the sprint has reached this stage with approval. |
-| **GitHub Push** | Publish the verified history to the remote. Not a substitute for verification. |
-| **Release** | Declare a named release only when the Release Process and founder require it. Tags and GitHub Releases are not automatic with a push. |
+| Stage                   | Purpose                                                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Diagnostic Mode**     | Prove what is true. Name the single root cause with files and runtime evidence. No implementation.                                    |
+| **Design Mode**         | Name the smallest change that removes that class of failure. State what must not be redesigned.                                       |
+| **Founder Approval**    | The founder accepts the diagnosis and the design before code changes (or accepts a documentation-only design).                        |
+| **Implementation Mode** | Execute only the approved design. No side-quest architecture.                                                                         |
+| **Verification Mode**   | Run the quality gates and the runtime checks the sprint named. Do not commit on a failed gate.                                        |
+| **Git Commit**          | Record the why on the branch after verification. Only when the founder has asked, or the sprint has reached this stage with approval. |
+| **GitHub Push**         | Publish the verified history to the remote. Not a substitute for verification.                                                        |
+| **Release**             | Declare a named release only when the Release Process and founder require it. Tags and GitHub Releases are not automatic with a push. |
 
 Pre-flight, validation, completion, reporting, and the diagnostic / certification operating protocol stay in the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Sprint write-up shape (context, objective, constraints, validation, A/B close) stays in the [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Git branch and commit practice stays in [Git Workflow](../foundation-library/04-ENGINEERING/Git-Workflow.md). Release declaration stays in [Release Process](../foundation-library/04-ENGINEERING/Release-Process.md) and [RELEASE_HISTORY.md](./RELEASE_HISTORY.md). Index: [Engineering Index](./README.md).
 
@@ -118,20 +188,20 @@ Pre-flight, validation, completion, reporting, and the diagnostic / certificatio
 
 A sprint is complete only when all of the following that apply to that sprint are true:
 
-| Gate | Required |
-|---|---|
-| Architecture reviewed | Locked layers named; no silent Foundation amendment |
-| Root cause understood | Diagnostic written when the sprint is a failure class |
-| Solution approved | Founder (or named approver) accepted the design |
-| Feature implemented | Only if the sprint is an implementation programme |
-| Build passes | `pnpm build` (or the sprint’s stated build) |
-| TypeScript passes | `pnpm check-types` |
-| Lint passes | `pnpm lint` |
-| Tests pass | Workspace tests (`pnpm test`) |
-| Runtime verified | The running app matches the claim (for example login 200) |
-| UI verified | Where the sprint claims a visible change |
-| Git committed | After verification, and after founder approval to commit |
-| GitHub pushed | After commit, when the founder has asked to publish |
+| Gate                  | Required                                                                      |
+| --------------------- | ----------------------------------------------------------------------------- |
+| Architecture reviewed | Locked layers named; no silent Foundation amendment                           |
+| Root cause understood | Diagnostic written when the sprint is a failure class                         |
+| Solution approved     | Founder (or named approver) accepted the design                               |
+| Feature implemented   | Only if the sprint is an implementation programme                             |
+| Build passes          | `pnpm build` (or the sprint’s stated build)                                   |
+| TypeScript passes     | `pnpm check-types`                                                            |
+| Lint passes           | `pnpm lint`                                                                   |
+| Tests pass            | Workspace tests (`pnpm test`)                                                 |
+| Runtime verified      | The running app matches the claim (for example login 200)                     |
+| UI verified           | Where the sprint claims a visible change                                      |
+| Git committed         | After verification, and after founder approval to commit                      |
+| GitHub pushed         | After commit, when the founder has asked to publish                           |
 | Documentation updated | Engineering Records and, if a Foundation fact changed, the Foundation Library |
 
 Documentation-only sprints (VS-008A, VS-008B) skip application implementation and UI verification. They are not done until the documents exist and the founder has approved the commit.
@@ -161,4 +231,4 @@ This Engineering Constitution defines the VES lifecycle: diagnose, design, appro
 
 The [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) defines pre-flight, development rules, root-cause policy, validation, completion, reporting, and the diagnostic, correction, and certification operating protocol for every sprint, implementation, review, refactor, and bug fix.
 
-If documents appear to conflict, the Project Constitution wins first. Architecture wins on *what may exist*. The Master Engineering Prompt wins on checklist, validation, completion, and reporting. This document wins on lifecycle and mode sequence. Neither may be used to override a named implementation source of truth (`FOUNDATION.md`, Runtime README, IDS specifications) when a technical fact is in dispute — amend the Constitution that is wrong.
+If documents appear to conflict, the Project Constitution wins first. Architecture wins on _what may exist_. The Master Engineering Prompt wins on checklist, validation, completion, and reporting. This document wins on lifecycle and mode sequence. Neither may be used to override a named implementation source of truth (`FOUNDATION.md`, Runtime README, IDS specifications) when a technical fact is in dispute — amend the Constitution that is wrong.

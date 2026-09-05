@@ -1,8 +1,8 @@
 # VentureOS Master Engineering Prompt
 
 **Status.** Permanent engineering constitution of VentureOS  
-**Version.** 1.1.0  
-**Date.** 2026-09-03  
+**Version.** 1.2.0  
+**Date.** 2026-09-05  
 **Owner.** Engineering  
 **Applies to.** Every sprint, implementation, review, refactor, bug fix, diagnosis, and certification on VentureOS, Qualora, Calviora, Farmora, Frigora, and every future Venture on this OS  
 **Index.** [Engineering Index](./README.md)
@@ -11,7 +11,7 @@ This document is the authoritative engineering standard for this repository. It 
 
 Read it before Diagnostic Mode. Obey it through Verification Mode. Close the sprint against it. Reviews, refactors, and bug fixes follow the same law. Do not start work until the pre-flight checklist is green. Unexplained failures, corrections, and certification follow [§10](#10-diagnostic-correction-and-certification-operating-protocol).
 
-Architecture still answers *what may exist*. This document answers *how a sprint is allowed to proceed*. Engineering may define implementation. Engineering may not redefine architecture.
+Architecture still answers _what may exist_. This document answers _how a sprint is allowed to proceed_. Engineering may define implementation. Engineering may not redefine architecture.
 
 The [Engineering Constitution](./ENGINEERING_CONSTITUTION.md) remains the VES lifecycle and mode law. The [Engineering Creed](./ENGINEERING_CREED.md) remains the culture. Sprint write-up shape remains in the Foundation Library [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). If those documents appear to conflict with this one on checklist, validation, completion, or reporting, this document wins.
 
@@ -19,16 +19,16 @@ The [Engineering Constitution](./ENGINEERING_CONSTITUTION.md) remains the VES li
 
 ## 1. Engineering Principles
 
-| Principle | Meaning |
-|---|---|
-| Production quality only | Ship work that belongs in a company we will still owe in ten years. Prototype quality is not a delivery. |
-| No temporary fixes | A workaround that leaves the class of failure alive is unfinished work. Do not land it. |
-| Root cause first | Name the cause with evidence before changing code. Guessing is not engineering. |
-| Protect architecture | One Runtime, one Capability Registry, one Definition Registry, one persistence owner, IDS as presentation. Do not invent a second source of truth. |
-| Minimise technical debt | Accept debt only when it is named, justified, and recorded. Silent debt is a defect. |
-| Scalability first | Prefer the change that still holds when the desk, the Ventures, and the team grow. Do not solve only for the file in front of you. |
-| Security by default | Fail closed at auth, capability, definition, and secret boundaries. Do not commit secrets. Do not swallow redirect or schema errors. |
-| Testability by default | New behaviour is proven at the layer it belongs to. A change that cannot be verified is not done. |
+| Principle               | Meaning                                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Production quality only | Ship work that belongs in a company we will still owe in ten years. Prototype quality is not a delivery.                                           |
+| No temporary fixes      | A workaround that leaves the class of failure alive is unfinished work. Do not land it.                                                            |
+| Root cause first        | Name the cause with evidence before changing code. Guessing is not engineering.                                                                    |
+| Protect architecture    | One Runtime, one Capability Registry, one Definition Registry, one persistence owner, IDS as presentation. Do not invent a second source of truth. |
+| Minimise technical debt | Accept debt only when it is named, justified, and recorded. Silent debt is a defect.                                                               |
+| Scalability first       | Prefer the change that still holds when the desk, the Ventures, and the team grow. Do not solve only for the file in front of you.                 |
+| Security by default     | Fail closed at auth, capability, definition, and secret boundaries. Do not commit secrets. Do not swallow redirect or schema errors.               |
+| Testability by default  | New behaviour is proven at the layer it belongs to. A change that cannot be verified is not done.                                                  |
 
 These principles are standing law. They are not optional inside a feature crunch.
 
@@ -38,23 +38,23 @@ These principles are standing law. They are not optional inside a feature crunch
 
 Never continue on an unhealthy foundation. Verify every item below before implementation. If any item fails, stop, recover, and re-run the checklist. Do not start a sprint on a broken desk.
 
-| Check | Prove |
-|---|---|
-| Git status | Working tree understood. No surprise dirty files. No accidental mix of unrelated work. |
-| Current branch | Feature branch for the sprint. Not `main` unless the founder opened a documentation-only exception. |
-| Node version | Node 18+ as required by the workspace. |
-| pnpm version | Workspace package manager is pnpm. Do not introduce npm or yarn as a second installer. |
-| Dependencies | Install and lockfile are consistent. Do not invent missing packages that already exist in the workspace. |
-| Generated design tokens | `pnpm --filter @repo/ids generate` (or `generate --check`) succeeds. Tokens come from the pipeline, not from a hand-edited copy. |
-| Generated CSS | Generated CSS is present, imported, and valid. No `@custom-media`. No `var()` inside `@media`. No `--breakpoint-*: var(...)`. |
-| TypeScript | `pnpm check-types` (or the sprint’s stated type gate) passes. |
-| ESLint | `pnpm lint` passes. |
-| Tests | Workspace tests pass (`pnpm test`). |
-| Build | `pnpm build` (or the sprint’s stated build) passes. |
-| Next.js health | The application starts without CSS parse errors, missing generated files, or server crash. |
-| Running processes | No stale `next dev` or leftover lock PID serving a failed graph. Recover with `pnpm recover-dev` when the running process disagrees with source. |
-| Port availability | The intended port (default 3000) is free, or the occupant is the current healthy server. |
-| Localhost accessibility | The running application answers on localhost. A process that is up but unreachable is not healthy. |
+| Check                   | Prove                                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Git status              | Working tree understood. No surprise dirty files. No accidental mix of unrelated work.                                                           |
+| Current branch          | Feature branch for the sprint. Not `main` unless the founder opened a documentation-only exception.                                              |
+| Node version            | Node 18+ as required by the workspace.                                                                                                           |
+| pnpm version            | Workspace package manager is pnpm. Do not introduce npm or yarn as a second installer.                                                           |
+| Dependencies            | Install and lockfile are consistent. Do not invent missing packages that already exist in the workspace.                                         |
+| Generated design tokens | `pnpm --filter @repo/ids generate` (or `generate --check`) succeeds. Tokens come from the pipeline, not from a hand-edited copy.                 |
+| Generated CSS           | Generated CSS is present, imported, and valid. No `@custom-media`. No `var()` inside `@media`. No `--breakpoint-*: var(...)`.                    |
+| TypeScript              | `pnpm check-types` (or the sprint’s stated type gate) passes.                                                                                    |
+| ESLint                  | `pnpm lint` passes.                                                                                                                              |
+| Tests                   | Workspace tests pass (`pnpm test`).                                                                                                              |
+| Build                   | `pnpm build` (or the sprint’s stated build) passes.                                                                                              |
+| Next.js health          | The application starts without CSS parse errors, missing generated files, or server crash.                                                       |
+| Running processes       | No stale `next dev` or leftover lock PID serving a failed graph. Recover with `pnpm recover-dev` when the running process disagrees with source. |
+| Port availability       | The intended port (default 3000) is free, or the occupant is the current healthy server.                                                         |
+| Localhost accessibility | The running application answers on localhost. A process that is up but unreachable is not healthy.                                               |
 
 If the running process disagrees with source, treat the running process as a first-class suspect. Restarting is recovery, not a root-cause fix.
 
@@ -78,6 +78,49 @@ Further standing rules:
 
 ---
 
+## 3A. Planning-first packet and repository verification
+
+The constitutional responsibility boundary is Engineering Constitution §2A.
+
+For the current operating model, ChatGPT is the default Planning and Decision
+Layer, Cursor is the default Repository Execution Layer, and Lovable may act
+as Frontend Implementation Specialist when explicitly assigned. These are
+operational assignments, not permanent vendor or model locks.
+
+Before repository modification:
+
+1. Confirm a Founder-approved implementation packet exists and is
+   proportionate to the work.
+
+2. For substantive work, confirm it names the objective, scope, constraints,
+   approved architecture decisions, acceptance criteria, sequencing,
+   verification/certification requirements, stop conditions, and Git boundary
+   where applicable.
+
+3. For a small authorised correction, a concise correction packet naming the
+   established cause, exact permitted change, boundaries, and verification is
+   sufficient.
+
+4. Perform read-only verification of the packet's material assumptions against
+   the live branch, working tree, relevant implementation sources,
+   dependencies, architecture, and prior certified behaviour.
+
+5. If repository evidence materially contradicts the packet, preserve the tree
+   and stop before unsafe modification. Report the contradiction, evidence,
+   affected assumptions, and required planning reconciliation. Do not invent
+   scope or force the packet through the repository.
+
+Upstream planning should be completed before repository execution when
+live-repository access is not required. Cursor retains repository-grounded
+engineering judgement and remains responsible for implementation quality and
+certification evidence.
+
+Specific model names, tiers, speed modes, prices, and temporary routing
+preferences belong to operational configuration outside constitutional
+governance.
+
+---
+
 ## 4. Root Cause Policy
 
 Every issue must:
@@ -98,16 +141,16 @@ The diagnostic report, ownership classification, authorisation gate, and one-hyp
 
 Every sprint must pass the gates that apply to its work. An implementation sprint must pass all of the following before it may be called complete:
 
-| Gate | Requirement |
-|---|---|
-| Lint | `pnpm lint` |
-| Types | `pnpm check-types` |
-| Tests | Workspace tests. New behaviour has tests at the layer it belongs to. |
-| Build | `pnpm build` |
-| Token generation | Design tokens generate cleanly from source. |
-| CSS validation | Generated and authored CSS remain parseable. Illegal media CSS is rejected by the pipeline. |
-| Application startup | Next.js starts cleanly. No CSS parse errors. No crash on boot. |
-| Regression checks | Prior certified behaviour still holds. Locked layers were not silently amended. |
+| Gate                | Requirement                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| Lint                | `pnpm lint`                                                                                 |
+| Types               | `pnpm check-types`                                                                          |
+| Tests               | Workspace tests. New behaviour has tests at the layer it belongs to.                        |
+| Build               | `pnpm build`                                                                                |
+| Token generation    | Design tokens generate cleanly from source.                                                 |
+| CSS validation      | Generated and authored CSS remain parseable. Illegal media CSS is rejected by the pipeline. |
+| Application startup | Next.js starts cleanly. No CSS parse errors. No crash on boot.                              |
+| Regression checks   | Prior certified behaviour still holds. Locked layers were not silently amended.             |
 
 Do not commit on a failed gate. Do not skip a gate because the change “looks small.” Documentation-only sprints skip application implementation and UI verification; they do not skip accuracy, registration, or founder approval to commit.
 
@@ -216,25 +259,25 @@ For any unexplained engineering failure, do not immediately modify code. First p
 
 The diagnostic report must identify:
 
-| Field | Required |
-|---|---|
-| ROOT CAUSE | Precise explanation |
-| EVIDENCE | File paths, functions, lines, commands, or runtime facts |
-| OWNERSHIP | See below |
-| SMALLEST SAFE CORRECTION | Describe only until authorised |
-| REBUILD REQUIRED | YES / NO, with the exact boundary if YES |
-| REGRESSION RISK | LOW / MEDIUM / HIGH |
-| CERTIFICATION IMPACT | Exact tests or gates required after correction |
-| CONFIDENCE | HIGH / MEDIUM / LOW |
+| Field                    | Required                                                 |
+| ------------------------ | -------------------------------------------------------- |
+| ROOT CAUSE               | Precise explanation                                      |
+| EVIDENCE                 | File paths, functions, lines, commands, or runtime facts |
+| OWNERSHIP                | See below                                                |
+| SMALLEST SAFE CORRECTION | Describe only until authorised                           |
+| REBUILD REQUIRED         | YES / NO, with the exact boundary if YES                 |
+| REGRESSION RISK          | LOW / MEDIUM / HIGH                                      |
+| CERTIFICATION IMPACT     | Exact tests or gates required after correction           |
+| CONFIDENCE               | HIGH / MEDIUM / LOW                                      |
 
 Ownership must distinguish:
 
-| Class | Meaning |
-|---|---|
-| **A** | Venture-specific implementation |
+| Class | Meaning                                   |
+| ----- | ----------------------------------------- |
+| **A** | Venture-specific implementation           |
 | **B** | VentureOS shared or Foundation capability |
-| **C** | Test, infrastructure, or tooling |
-| **D** | Interaction between layers |
+| **C** | Test, infrastructure, or tooling          |
+| **D** | Interaction between layers                |
 
 Do not speculate when repository evidence can establish the answer. Never patch a Venture merely to hide a VentureOS defect. Never modify VentureOS shared infrastructure to solve a purely local Venture test problem.
 
@@ -272,11 +315,11 @@ Before implementing new infrastructure or patterns, search VentureOS for an exis
 
 After a correction, run the smallest relevant test or gate first:
 
-1. Targeted test  
-2. Related domain tests  
-3. Broader regression tests  
-4. Full suite  
-5. Final certification  
+1. Targeted test
+2. Related domain tests
+3. Broader regression tests
+4. Full suite
+5. Final certification
 
 Do not repeatedly run expensive full suites while diagnosing a narrow failure.
 
@@ -296,13 +339,13 @@ When development reveals a demonstrably faster, safer, more reliable, or more re
 
 Before staging or certification completion, classify dirty files:
 
-| Class | Meaning |
-|---|---|
-| **A** | Active implementation files |
-| **B** | Authorised correction files |
-| **C** | Known unrelated files |
+| Class | Meaning                         |
+| ----- | ------------------------------- |
+| **A** | Active implementation files     |
+| **B** | Authorised correction files     |
+| **C** | Known unrelated files           |
 | **D** | Unexpected or unexplained files |
-| **E** | Staged files |
+| **E** | Staged files                    |
 
 Unexpected or unexplained files block staging until explained. Never assume every dirty file belongs to the current phase.
 
