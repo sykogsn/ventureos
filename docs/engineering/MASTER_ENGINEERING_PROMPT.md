@@ -1,7 +1,7 @@
 # VentureOS Master Engineering Prompt
 
 **Status.** Permanent engineering constitution of VentureOS  
-**Version.** 1.1.0  
+**Version.** 1.2.0  
 **Date.** 2026-09-05  
 **Owner.** Engineering  
 **Applies to.** Every sprint, implementation, review, refactor, and bug fix on VentureOS, Qualora, Calviora, Farmora, and every future Venture on this OS  
@@ -88,17 +88,23 @@ Every implementation packet must include an **Execution Profile** before reposit
 
 The planning and decision layer selects the profile based on task complexity, architecture risk, failure history, certification sensitivity, expected context size, speed requirements, and cost. The founder/operator only performs any UI selection required to activate the approved profile.
 
-If the selected tool or model is unavailable, deprecated, materially repriced, or demonstrably unsuitable, stop and return to the planning layer for a replacement profile. Do not improvise an expensive or weaker substitute silently.
+If the selected tool or model is unavailable, deprecated, materially repriced, renamed, or demonstrably unsuitable, stop and return to the planning layer for a replacement profile. Do not improvise an expensive or weaker substitute silently.
+
+A task-specific execution profile selected by the planning layer **overrides the generic defaults below**. The routing matrix is a starting point, not permission for the operator or repository agent to substitute a different model.
 
 ### 4.2 Current Cursor routing matrix
 
-The following matrix is the default while these Cursor capabilities remain available:
+**Operational baseline updated 2026-09-05.** Cursor model availability changes over time. The current picker observed for repository work includes GPT-5.6 Sol Medium, GPT-5.6 Terra Medium, GPT-5.5 Medium, Claude Sonnet 4.6 Medium, Claude Sonnet 5 High, Cursor Grok 4.6 High, Gemini Flash High variants, Claude Opus High variants, and Composer 2.5 Fast. The former Composer 2.5 Standard entry is no longer treated as an assumed default when it is not explicitly available in the picker.
 
-| Work class | Default execution profile | Use when |
+| Work class | Current default / routing policy | Use when |
 |---|---|---|
-| **Routine** | **Cursor Composer 2.5 Standard; Fast OFF** | Read-only repo verification, well-scoped implementation, ordinary tests, straightforward fixes, mechanical refactors within approved scope |
-| **Complex** | **Cursor Grok 4.6 Medium; Fast OFF** | Non-trivial debugging, multi-module implementation, ambiguous runtime behaviour after repo inspection, or tasks where routine execution is unlikely to be reliable |
-| **Exceptional** | **Cursor Grok 4.6 High; Fast OFF unless explicitly justified** | Architecture-sensitive work, repeated failure after a lower profile, difficult certification blockers, high-risk root-cause analysis, or major cross-cutting implementation |
+| **Routine** | **GPT-5.6 Sol Medium; Fast OFF** | Read-only repository verification, well-scoped implementation, ordinary tests, straightforward fixes, mechanical refactors within approved scope, documentation/certification packets, and other bounded work |
+| **Complex** | **Planning layer selects GPT-5.6 Sol Medium, GPT-5.6 Terra Medium, or Claude Sonnet 4.6 Medium; Fast OFF; the implementation packet must name exactly one** | Non-trivial debugging, multi-module implementation, ambiguous runtime behaviour after repository inspection, larger context requirements, or tasks where routine execution may be unreliable |
+| **Exceptional** | **Planning layer selects Cursor Grok 4.6 High or Claude Sonnet 5 High unless another currently available model is explicitly justified; Fast OFF unless explicitly justified** | Architecture-sensitive work, repeated failure after a lower profile, difficult certification blockers, high-risk root-cause analysis, or major cross-cutting implementation |
+
+**Composer 2.5 Fast is not a default execution profile.** Use it only when the planning layer explicitly decides that its speed/capability trade-off is justified for the named task. Do not infer that a picker entry labelled `Composer 2.5 Fast` is equivalent to the former Standard profile.
+
+**Auto is not the default.** The planning layer should name a specific model whenever practical so cost, reasoning level, and repeatability remain explicit. Auto may be used only when the implementation packet explicitly justifies it.
 
 **Fast mode is opt-in.** It may be selected only when the planning layer states why lower latency is worth the additional cost for that named task.
 
@@ -109,6 +115,8 @@ The following matrix is the default while these Cursor capabilities remain avail
 The cheapest profile is not automatically the correct profile. The planning layer must choose the **lowest-cost profile that can reliably meet the approved acceptance criteria and certification standard**. If a lower profile produces weak results, repeated failures, architecture uncertainty, or materially more rework, escalate deliberately.
 
 Likewise, the strongest profile is not automatically the best default. Expensive reasoning must have a named engineering reason.
+
+The routing decision must optimize **total delivery cost and completion time**, not token price alone. A slightly more expensive model may be preferable when it materially reduces retries, rework, or certification risk. Conversely, premium speed or high-reasoning modes must not be used simply because they are available.
 
 ### 4.4 Mandatory implementation-packet header
 
@@ -126,7 +134,19 @@ Reason: <one sentence explaining why this profile fits the task>
 
 The packet must then proceed to mandatory read-only repository verification before any modification.
 
-### 4.5 Future-proofing
+### 4.5 Availability-change rule
+
+When Cursor changes the model picker, removes a profile, renames a model, changes effort levels, or changes Fast/Standard presentation:
+
+1. Do **not** change the constitutional Planning–Execution Workflow.
+2. Do **not** ask the founder/operator to guess a substitute.
+3. The planning layer must inspect the currently available choices and select a replacement execution profile.
+4. If the change materially affects the default routing strategy, update **this section of the Master Engineering Prompt**, not the Engineering Constitution.
+5. Existing task-specific packets remain valid only if their named profile is still available and appropriate. Otherwise return to the planning layer for a revised packet before repository execution.
+
+This keeps the engineering method stable while allowing operational model routing to evolve with Cursor.
+
+### 4.6 Future-proofing
 
 Model names, effort labels, prices, and vendors are operational details and may change. The planning layer must periodically reassess this matrix when capabilities or economics materially change. Updating the routing matrix does not weaken the constitutional rule that the planning layer owns execution-profile selection and repository verification remains mandatory.
 
