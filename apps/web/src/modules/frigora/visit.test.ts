@@ -7,6 +7,10 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
+import {
+  completeWorkOrderFromVisit,
+  TEST_CANCELLATION_REASON,
+} from "./test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -457,7 +461,18 @@ describe("Frigora Visit attendance", () => {
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    const setupVisit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: attendeeId,
+      arrivedAt: ARRIVED,
+    });
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      setupVisit,
+      attendeeId,
+      { departedAt: DEPARTED },
+    );
     await expectCode(
       () =>
         owner.service.recordVisitArrival(owner.scope, workOrder.id, {
@@ -473,7 +488,9 @@ describe("Frigora Visit attendance", () => {
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.cancelWorkOrder(owner.scope, workOrder.id);
+    await owner.service.cancelWorkOrder(owner.scope, workOrder.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
     await expectCode(
       () =>
         owner.service.recordVisitArrival(owner.scope, workOrder.id, {
@@ -530,7 +547,7 @@ describe("Frigora Visit attendance", () => {
     assert.notEqual(visit.attendingUserId, assigneeId);
   });
 
-  it("allows open Visit to depart after parent WorkOrder closes", async () => {
+  it("does not complete the WorkOrder on Visit departure", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -539,15 +556,19 @@ describe("Frigora Visit attendance", () => {
       userId: attendeeId,
       arrivedAt: ARRIVED,
     });
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
-    const departed = await owner.service.recordVisitDeparture(owner.scope, visit.id, {
+    await owner.service.recordVisitOutcome(owner.scope, visit.id, {
+      description: "Temporary cooling restored",
+      outcomeAt: "2026-08-28T11:00:00.000Z",
+      recordedByUserId: attendeeId,
+    });
+    await owner.service.recordVisitDeparture(owner.scope, visit.id, {
       departedAt: DEPARTED,
     });
-    assert.equal(departed.status, "departed");
-    assert.equal(departed.departedAt, DEPARTED);
+    const loaded = await owner.service.getWorkOrder(owner.scope, workOrder.id);
+    assert.equal(loaded?.status, "open");
   });
 
-  it("allows open Visit to depart after parent WorkOrder cancels", async () => {
+  it("rejects cancellation while a Visit is open and allows departure beforehand", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -556,11 +577,21 @@ describe("Frigora Visit attendance", () => {
       userId: attendeeId,
       arrivedAt: ARRIVED,
     });
-    await owner.service.cancelWorkOrder(owner.scope, workOrder.id);
+    await expectCode(
+      () =>
+        owner.service.cancelWorkOrder(owner.scope, workOrder.id, {
+          reason: TEST_CANCELLATION_REASON,
+        }),
+      "invalid_status",
+    );
     const departed = await owner.service.recordVisitDeparture(owner.scope, visit.id, {
       departedAt: DEPARTED,
     });
     assert.equal(departed.status, "departed");
+    const cancelled = await owner.service.cancelWorkOrder(owner.scope, workOrder.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
+    assert.equal(cancelled.status, "cancelled");
   });
 
   it("preserves Visit records after WorkOrder close", async () => {
@@ -572,7 +603,14 @@ describe("Frigora Visit attendance", () => {
       userId: attendeeId,
       arrivedAt: ARRIVED,
     });
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      visit,
+      attendeeId,
+      { departedAt: DEPARTED },
+    );
     const loaded = await owner.service.getVisit(owner.scope, visit.id);
     assert.equal(loaded?.id, visit.id);
     assert.equal(loaded?.arrivedAt, ARRIVED);
@@ -587,7 +625,12 @@ describe("Frigora Visit attendance", () => {
       userId: attendeeId,
       arrivedAt: ARRIVED,
     });
-    await owner.service.cancelWorkOrder(owner.scope, workOrder.id);
+    await owner.service.recordVisitDeparture(owner.scope, visit.id, {
+      departedAt: DEPARTED,
+    });
+    await owner.service.cancelWorkOrder(owner.scope, workOrder.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
     const loaded = await owner.service.getVisit(owner.scope, visit.id);
     assert.equal(loaded?.id, visit.id);
   });

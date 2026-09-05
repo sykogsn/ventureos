@@ -632,7 +632,7 @@ describe("Frigora asset operational condition (F0.14)", () => {
     );
   });
 
-  it("persists through restart and keeps SCHEMA_GENERATION at 22", async () => {
+  it("persists through restart and keeps SCHEMA_GENERATION at 23", async () => {
     const owner = await seed();
     const asserterId = "user-asserter" as UserId;
     const recorderId = "user-recorder" as UserId;
@@ -649,7 +649,7 @@ describe("Frigora asset operational condition (F0.14)", () => {
 
     const dbPath = fileURLToPath(new URL("../../platform/persistence/db.ts", import.meta.url));
     const schemaPath = fileURLToPath(new URL("../../platform/persistence/schema.ts", import.meta.url));
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 22/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 23/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_asset_operational_conditions/);
     assert.equal(readFileSync(schemaPath, "utf8").includes("frigora_asset_history"), false);
   });

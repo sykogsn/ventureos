@@ -574,7 +574,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     assert.equal(FRIGORA_ASSET_OPERATIONAL_CONDITION_KINDS.includes("evidence" as never), false);
   });
 
-  it("persists through restart with SCHEMA_GENERATION 22 and frigora@0.16.0", async () => {
+  it("persists through restart with SCHEMA_GENERATION 23 and frigora@0.16.0", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -591,7 +591,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     const schemaPath = fileURLToPath(
       new URL("../../platform/persistence/schema.ts", import.meta.url),
     );
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 22/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 23/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_visit_evidence/);
     assert.match(
       readFileSync(schemaPath, "utf8"),

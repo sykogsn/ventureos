@@ -7,6 +7,10 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
+import {
+  cancelWorkOrderAfterDepartingOpenVisit,
+  completeWorkOrderFromVisit,
+} from "./test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -348,7 +352,13 @@ describe("Frigora Visit technical finding", () => {
       assertedAt: ASSERTED,
       userId: attendeeId,
     });
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      visit,
+      attendeeId,
+    );
     const afterClose = await owner.service.recordTechnicalFinding(owner.scope, visit.id, {
       findingKind: "confirmed_fault",
       description: "compressor electrical failure",
@@ -383,7 +393,12 @@ describe("Frigora Visit technical finding", () => {
       assertedAt: ASSERTED,
       userId: attendeeId,
     });
-    await owner2.service.cancelWorkOrder(owner2.scope, wo2.id);
+    await cancelWorkOrderAfterDepartingOpenVisit(
+      owner2.service,
+      owner2.scope,
+      wo2.id,
+      visit2,
+    );
     const afterCancel = await owner2.service.getTechnicalFinding(owner2.scope, beforeCancel.id);
     assert.equal(afterCancel?.id, beforeCancel.id);
     assert.deepEqual(

@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 22; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 23; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -674,6 +674,11 @@ export async function ensureSchema() {
       await addColumn("frigora_work_orders", "assigned_user_id", "TEXT");
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_work_orders_venture_assignee_idx ON frigora_work_orders (venture_id, assigned_user_id)`,
+      );
+      await addColumn("frigora_work_orders", "cancellation_reason", "TEXT");
+      await addColumn("frigora_work_orders", "source_recommended_action_id", "TEXT");
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS frigora_work_orders_source_recommended_action_idx ON frigora_work_orders (source_recommended_action_id) WHERE source_recommended_action_id IS NOT NULL`,
       );
 
       await exec(`

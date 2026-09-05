@@ -3,9 +3,13 @@ import { PageFrame } from "@/core";
 import { EmptyCopy } from "@/core/shell/empty-copy";
 import { Fit, Stack } from "@/core/layout";
 import { AssignmentControls } from "@/modules/frigora/app/forms/assignment-controls";
+import { ConvertRecommendedActionForm } from "@/modules/frigora/app/forms/convert-recommended-action-form";
 import { CreateWorkOrderForm } from "@/modules/frigora/app/forms/create-work-order-form";
 import { WorkOrderLifecycleControls } from "@/modules/frigora/app/forms/work-order-lifecycle-controls";
-import { formatVisitStatusLabel } from "@/modules/frigora/app/operational-derivations";
+import {
+  formatVisitStatusLabel,
+  formatWorkOrderStatusLabel,
+} from "@/modules/frigora/app/operational-derivations";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
 import {
   ATTENTION_SIGNAL_LABELS,
@@ -233,7 +237,7 @@ export function WorkListScreen({
                 filters.status === "closed" ? "vos-btn-primary" : "vos-btn-secondary"
               }
             >
-              Closed
+              Completed
             </Link>
             <Link
               href={filterHref({ status: "cancelled" })}
@@ -315,7 +319,9 @@ export function WorkListScreen({
                           {workOrder.workReference}
                         </Link>
                       </td>
-                      <td className="py-3 pr-4 ids-caption text-muted">{workOrder.status}</td>
+                      <td className="py-3 pr-4 ids-caption text-muted">
+                        {formatWorkOrderStatusLabel(workOrder.status)}
+                      </td>
                       <td className="py-3 pr-4 ids-caption text-muted">{workOrder.workKind}</td>
                       <td className="py-3 pr-4 ids-body">
                         {customer?.displayName ?? "—"}
@@ -438,6 +444,7 @@ export function WorkDetailScreen({
     visitAttendees,
     visitFacts,
     workOrderRecommendations,
+    followUpByRecommendedActionId,
     workOrderEvidence,
     currentOperationalCondition,
     attentionSignals,
@@ -462,7 +469,7 @@ export function WorkDetailScreen({
       kicker="Work order"
       title={workOrder.workReference}
       description={`${customer?.displayName ?? "Customer"} · ${site?.name ?? "Site"}`}
-      meta={workOrder.status}
+      meta={formatWorkOrderStatusLabel(workOrder.status)}
       ventureId={ctx.ventureId}
       actions={
         <Fit>
@@ -476,8 +483,22 @@ export function WorkDetailScreen({
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="ids-caption text-muted">Status</dt>
-            <dd className="ids-body">{workOrder.status}</dd>
+            <dd className="ids-body">{formatWorkOrderStatusLabel(workOrder.status)}</dd>
           </div>
+          {workOrder.status === "cancelled" ? (
+            <div className="sm:col-span-2">
+              <dt className="ids-caption text-muted">Cancellation reason</dt>
+              <dd className="ids-body whitespace-pre-wrap">
+                {workOrder.cancellationReason ?? "—"}
+              </dd>
+            </div>
+          ) : null}
+          {workOrder.sourceRecommendedActionId ? (
+            <div className="sm:col-span-2">
+              <dt className="ids-caption text-muted">Provenance</dt>
+              <dd className="ids-body">Follow-up work from a recommended action</dd>
+            </div>
+          ) : null}
           <div>
             <dt className="ids-caption text-muted">Work kind</dt>
             <dd className="ids-body">{workOrder.workKind}</dd>
@@ -552,6 +573,7 @@ export function WorkDetailScreen({
             ventureId={ctx.ventureId}
             workOrderId={workOrder.id}
             status={workOrder.status}
+            cancellationReason={workOrder.cancellationReason}
             canWrite={ctx.canWrite}
           />
         </Stack>
@@ -582,14 +604,39 @@ export function WorkDetailScreen({
 
         {workOrderRecommendations.length > 0 ? (
           <Stack gap="compact">
-            <h2 className="ids-label text-foreground">Recommendations recorded</h2>
-            <ul className="ids-body list-none space-y-2">
-              {workOrderRecommendations.map((row) => (
-                <li key={row.id}>
-                  <span className="ids-caption text-muted">{row.recommendedAt}</span>
-                  <p>{row.description}</p>
-                </li>
-              ))}
+            <h2 className="ids-label text-foreground">Recommended Actions</h2>
+            <ul className="ids-body list-none space-y-3">
+              {workOrderRecommendations.map((row) => {
+                const followUp = followUpByRecommendedActionId[row.id];
+                return (
+                  <li key={row.id} className="space-y-1">
+                    <span className="ids-caption text-muted">{row.recommendedAt}</span>
+                    <p>{row.description}</p>
+                    {followUp ? (
+                      <p className="ids-caption">
+                        Follow-up WorkOrder:{" "}
+                        <Link
+                          href={`/ventures/${ctx.ventureId}/work/${followUp.id}`}
+                          className="underline-offset-2 hover:underline"
+                        >
+                          {followUp.workReference}
+                        </Link>
+                      </p>
+                    ) : ctx.canWrite ? (
+                      <ConvertRecommendedActionForm
+                        workspaceId={ctx.workspaceId}
+                        ventureId={ctx.ventureId}
+                        workOrderId={workOrder.id}
+                        recommendedActionId={row.id}
+                      />
+                    ) : (
+                      <p className="ids-caption text-muted">
+                        Recommended actions remain advisory until converted.
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </Stack>
         ) : null}

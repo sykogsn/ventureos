@@ -438,6 +438,6 @@ describe("Stored object platform", () => {
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 22/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 23/);
   });
 });

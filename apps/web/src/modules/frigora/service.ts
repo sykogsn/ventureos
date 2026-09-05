@@ -8,6 +8,7 @@ import { FrigoraError } from "./errors";
 import { createFrigoraStore, type FrigoraStore } from "./store";
 import type {
   AssignWorkOrderInput,
+  CancelWorkOrderInput,
   CreateAssetInput,
   CreateCustomerInput,
   CreateSiteInput,
@@ -67,6 +68,8 @@ import type {
 import { FRIGORA_ASSET_HISTORY_EVENT_KINDS } from "./types";
 import {
   assignWorkOrderSchema,
+  cancelWorkOrderSchema,
+  convertRecommendedActionSchema,
   createAssetSchema,
   createCustomerSchema,
   createSiteSchema,
@@ -125,8 +128,20 @@ export type FrigoraService = {
     input: UpdateWorkOrderInput,
   ): Promise<FrigoraWorkOrder>;
   closeWorkOrder(scope: FrigoraScope, id: FrigoraWorkOrderId): Promise<FrigoraWorkOrder>;
-  cancelWorkOrder(scope: FrigoraScope, id: FrigoraWorkOrderId): Promise<FrigoraWorkOrder>;
+  cancelWorkOrder(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+    input: CancelWorkOrderInput,
+  ): Promise<FrigoraWorkOrder>;
   reopenWorkOrder(scope: FrigoraScope, id: FrigoraWorkOrderId): Promise<FrigoraWorkOrder>;
+  convertRecommendedActionToFollowUpWorkOrder(
+    scope: FrigoraScope,
+    recommendedActionId: FrigoraRecommendedActionId,
+  ): Promise<FrigoraWorkOrder>;
+  getFollowUpWorkOrderByRecommendedAction(
+    scope: FrigoraScope,
+    recommendedActionId: FrigoraRecommendedActionId,
+  ): Promise<FrigoraWorkOrder | null>;
   getWorkOrder(
     scope: FrigoraScope,
     id: FrigoraWorkOrderId,
@@ -712,6 +727,8 @@ export function createFrigoraService(options: {
         reportedCondition: parsed.reportedCondition ?? null,
         status: "open",
         assignedUserId: null,
+        cancellationReason: null,
+        sourceRecommendedActionId: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -756,6 +773,7 @@ export function createFrigoraService(options: {
           "Only open work orders can be closed.",
         );
       }
+      await assertWorkOrderMayComplete(store, scope, existing.id);
       const next: FrigoraWorkOrder = {
         ...existing,
         status: "closed",
@@ -764,7 +782,7 @@ export function createFrigoraService(options: {
       await store.updateWorkOrder(next);
       return next;
     },
-    async cancelWorkOrder(scope, id) {
+    async cancelWorkOrder(scope, id, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
       const existing = await requireWorkOrder(store, scope, id);
       if (existing.status === "cancelled") {
@@ -776,9 +794,12 @@ export function createFrigoraService(options: {
           "Only open work orders can be cancelled.",
         );
       }
+      const parsed = parseWithFrigora(cancelWorkOrderSchema, input);
+      await assertWorkOrderHasNoOpenVisit(store, scope, existing.id);
       const next: FrigoraWorkOrder = {
         ...existing,
         status: "cancelled",
+        cancellationReason: parsed.reason,
         updatedAt: nowIso(),
       };
       await store.updateWorkOrder(next);
@@ -803,6 +824,75 @@ export function createFrigoraService(options: {
       };
       await store.updateWorkOrder(next);
       return next;
+    },
+    async convertRecommendedActionToFollowUpWorkOrder(scope, recommendedActionId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const parsed = parseWithFrigora(convertRecommendedActionSchema, {
+        recommendedActionId,
+      });
+      const recommendation = await store.findRecommendedAction(
+        scope.workspaceId,
+        scope.ventureId,
+        parsed.recommendedActionId as FrigoraRecommendedActionId,
+      );
+      if (!recommendation) {
+        throw new FrigoraError("not_found", "Recommended action was not found.");
+      }
+      const existingFollowUp = await store.findWorkOrderBySourceRecommendedActionId(
+        scope.workspaceId,
+        scope.ventureId,
+        recommendation.id,
+      );
+      if (existingFollowUp) {
+        throw new FrigoraError(
+          "duplicate",
+          "This recommended action already has a follow-up work order.",
+        );
+      }
+      const sourceWorkOrder = await requireWorkOrder(store, scope, recommendation.workOrderId);
+      const site = await requireSite(store, scope, sourceWorkOrder.siteId);
+      await assertSiteAcceptsWorkOrder(store, scope, site);
+      let primaryAssetId = sourceWorkOrder.primaryAssetId;
+      if (recommendation.assetId) {
+        const recommendedAsset = await store.findAsset(
+          scope.workspaceId,
+          scope.ventureId,
+          recommendation.assetId,
+        );
+        if (recommendedAsset && recommendedAsset.siteId === sourceWorkOrder.siteId) {
+          primaryAssetId = recommendedAsset.id;
+        }
+      }
+      const now = nowIso();
+      const row: FrigoraWorkOrder = {
+        id: createId<FrigoraWorkOrderId>(),
+        workspaceId: sourceWorkOrder.workspaceId,
+        ventureId: sourceWorkOrder.ventureId,
+        customerId: sourceWorkOrder.customerId,
+        siteId: sourceWorkOrder.siteId,
+        primaryAssetId,
+        workReference: `FUP-${recommendation.id}`,
+        workKind: "reactive",
+        reportedCondition: recommendation.description,
+        status: "open",
+        assignedUserId: null,
+        cancellationReason: null,
+        sourceRecommendedActionId: recommendation.id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertWorkOrder(row);
+      return row;
+    },
+    async getFollowUpWorkOrderByRecommendedAction(scope, recommendedActionId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findWorkOrderBySourceRecommendedActionId(
+        scope.workspaceId,
+        scope.ventureId,
+        recommendedActionId,
+      );
     },
     async getWorkOrder(scope, id) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -2352,6 +2442,67 @@ async function requireOpenWorkOrder(
     );
   }
   return row;
+}
+
+async function assertWorkOrderMayComplete(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  workOrderId: FrigoraWorkOrderId,
+) {
+  const visits = await store.listVisitsByWorkOrder(
+    scope.workspaceId,
+    scope.ventureId,
+    workOrderId,
+  );
+  if (visits.length === 0) {
+    throw new FrigoraError(
+      "invalid_status",
+      "A work order can be completed only after at least one visit exists.",
+    );
+  }
+  if (visits.some((visit) => visit.status === "open")) {
+    throw new FrigoraError(
+      "invalid_status",
+      "A work order cannot be completed while a visit is still open.",
+    );
+  }
+  const departed = visits.filter((visit) => visit.status === "departed");
+  if (departed.length === 0) {
+    throw new FrigoraError(
+      "invalid_status",
+      "A work order can be completed only when at least one visit has departed.",
+    );
+  }
+  const outcomes = await store.listVisitOutcomesByWorkOrder(
+    scope.workspaceId,
+    scope.ventureId,
+    workOrderId,
+  );
+  const departedIds = new Set(departed.map((visit) => visit.id));
+  if (!outcomes.some((outcome) => departedIds.has(outcome.visitId))) {
+    throw new FrigoraError(
+      "invalid_status",
+      "A work order can be completed only when at least one departed visit has a visit outcome.",
+    );
+  }
+}
+
+async function assertWorkOrderHasNoOpenVisit(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  workOrderId: FrigoraWorkOrderId,
+) {
+  const visits = await store.listVisitsByWorkOrder(
+    scope.workspaceId,
+    scope.ventureId,
+    workOrderId,
+  );
+  if (visits.some((visit) => visit.status === "open")) {
+    throw new FrigoraError(
+      "invalid_status",
+      "A work order cannot be cancelled while a visit is still open.",
+    );
+  }
 }
 
 async function requireVisit(

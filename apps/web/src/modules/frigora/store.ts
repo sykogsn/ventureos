@@ -162,6 +162,11 @@ export type FrigoraStore = {
     ventureId: VentureId,
     userId: UserId,
   ): Promise<FrigoraWorkOrder[]>;
+  findWorkOrderBySourceRecommendedActionId(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    sourceRecommendedActionId: FrigoraRecommendedActionId,
+  ): Promise<FrigoraWorkOrder | null>;
   insertVisit(row: FrigoraVisit): Promise<void>;
   updateVisit(row: FrigoraVisit): Promise<void>;
   findVisit(
@@ -611,7 +616,7 @@ export function createFrigoraStore(): FrigoraStore {
       } catch (error) {
         throw uniqueOrOriginal(
           error,
-          "Work reference already exists in this venture.",
+          duplicateWorkOrderMessage(error),
         );
       }
     },
@@ -631,7 +636,7 @@ export function createFrigoraStore(): FrigoraStore {
       } catch (error) {
         throw uniqueOrOriginal(
           error,
-          "Work reference already exists in this venture.",
+          duplicateWorkOrderMessage(error),
         );
       }
     },
@@ -740,6 +745,25 @@ export function createFrigoraStore(): FrigoraStore {
         )
         .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
       return rows.map(mapWorkOrder);
+    },
+    async findWorkOrderBySourceRecommendedActionId(
+      workspaceId,
+      ventureId,
+      sourceRecommendedActionId,
+    ) {
+      await ensureSchema();
+      const [row] = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(
+          and(
+            eq(frigoraWorkOrders.workspaceId, workspaceId),
+            eq(frigoraWorkOrders.ventureId, ventureId),
+            eq(frigoraWorkOrders.sourceRecommendedActionId, sourceRecommendedActionId),
+          ),
+        )
+        .limit(1);
+      return row ? mapWorkOrder(row) : null;
     },
     async insertVisit(row) {
       await ensureSchema();
@@ -1510,6 +1534,8 @@ function toWorkOrderValues(row: FrigoraWorkOrder) {
     reportedCondition: row.reportedCondition,
     status: row.status,
     assignedUserId: row.assignedUserId,
+    cancellationReason: row.cancellationReason,
+    sourceRecommendedActionId: row.sourceRecommendedActionId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -1817,6 +1843,9 @@ function mapWorkOrder(row: typeof frigoraWorkOrders.$inferSelect): FrigoraWorkOr
     reportedCondition: row.reportedCondition ?? null,
     status: row.status as FrigoraWorkOrderStatus,
     assignedUserId: (row.assignedUserId as UserId | null) ?? null,
+    cancellationReason: row.cancellationReason ?? null,
+    sourceRecommendedActionId:
+      (row.sourceRecommendedActionId as FrigoraRecommendedActionId | null) ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -2055,6 +2084,14 @@ function mapVisitEvidence(row: typeof frigoraVisitEvidence.$inferSelect): Frigor
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,
   };
+}
+
+function duplicateWorkOrderMessage(error: unknown) {
+  const text = error instanceof Error ? error.message : String(error);
+  if (/source_recommended_action/i.test(text)) {
+    return "This recommended action already has a follow-up work order.";
+  }
+  return "Work reference already exists in this venture.";
 }
 
 function uniqueOrOriginal(error: unknown, message: string) {

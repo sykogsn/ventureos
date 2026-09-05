@@ -165,6 +165,8 @@ export type FrigoraWorkOrder = {
   reportedCondition: string | null;
   status: FrigoraWorkOrderStatus;
   assignedUserId: UserId | null;
+  cancellationReason: string | null;
+  sourceRecommendedActionId: FrigoraRecommendedActionId | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -252,6 +254,10 @@ export type UpdateWorkOrderInput = {
   workKind?: FrigoraWorkKind;
   reportedCondition?: string | null;
   primaryAssetId?: string | null;
+};
+
+export type CancelWorkOrderInput = {
+  reason: string;
 };
 
 export type AssignWorkOrderInput = {

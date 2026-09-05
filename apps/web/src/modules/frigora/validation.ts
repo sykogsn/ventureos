@@ -240,6 +240,14 @@ export const assignWorkOrderSchema = z.object({
   userId: requiredText,
 });
 
+export const cancelWorkOrderSchema = z.object({
+  reason: requiredText,
+});
+
+export const convertRecommendedActionSchema = z.object({
+  recommendedActionId: requiredText,
+});
+
 export const listWorkOrdersByAssigneeSchema = z.object({
   userId: requiredText,
 });

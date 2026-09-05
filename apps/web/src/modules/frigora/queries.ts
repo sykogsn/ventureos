@@ -382,6 +382,17 @@ export async function listRecommendedActionsByAssetQuery(
   );
 }
 
+export async function getFollowUpWorkOrderByRecommendedActionQuery(
+  input: ScopedInput & { recommendedActionId: string },
+): Promise<FrigoraQueryResult<FrigoraWorkOrder | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getFollowUpWorkOrderByRecommendedAction(
+      scope,
+      input.recommendedActionId as FrigoraRecommendedActionId,
+    ),
+  );
+}
+
 export async function getRefrigerantEventQuery(
   input: ScopedInput & { id: string },
 ): Promise<FrigoraQueryResult<FrigoraRefrigerantEvent | null>> {

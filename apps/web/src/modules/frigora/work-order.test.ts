@@ -7,6 +7,10 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
+import {
+  completeWorkOrderFromVisit,
+  TEST_CANCELLATION_REASON,
+} from "./test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -179,6 +183,9 @@ function assertNoOutFields(workOrder: FrigoraWorkOrder) {
   assert.equal("faultCode" in workOrder, false);
   assert.equal("cause" in workOrder, false);
   assert.equal("notes" in workOrder, false);
+  assert.equal("completedAt" in workOrder, false);
+  assert.equal(workOrder.cancellationReason, null);
+  assert.equal(workOrder.sourceRecommendedActionId, null);
 }
 
 describe("Frigora WorkOrder foundation", () => {
@@ -200,6 +207,8 @@ describe("Frigora WorkOrder foundation", () => {
     });
     assert.equal(workOrder.primaryAssetId, null);
     assert.equal(workOrder.assignedUserId, null);
+    assert.equal(workOrder.cancellationReason, null);
+    assert.equal(workOrder.sourceRecommendedActionId, null);
     assert.equal(workOrder.status, "open");
     assert.equal(workOrder.customerId, customer.id);
     assert.equal(workOrder.siteId, site.id);
@@ -650,10 +659,20 @@ describe("Frigora WorkOrder foundation", () => {
       workReference: "WO-1864",
       workKind: "reactive",
     });
-    const closed = await service.closeWorkOrder(scope, workOrder.id);
-    assert.equal(closed.status, "closed");
+    const visit = await service.recordVisitArrival(scope, workOrder.id, {
+      userId: scope.userId,
+      arrivedAt: "2026-08-28T10:00:00.000Z",
+    });
+    const closed = await completeWorkOrderFromVisit(
+      service,
+      scope,
+      workOrder.id,
+      visit,
+      scope.userId,
+    );
     assert.equal(closed.status, "closed");
     assert.notEqual(closed.status, "completed");
+    assert.equal("completedAt" in closed, false);
   });
 
   it("transitions open to cancelled", async () => {
@@ -664,8 +683,11 @@ describe("Frigora WorkOrder foundation", () => {
       workReference: "WO-1864",
       workKind: "reactive",
     });
-    const cancelled = await service.cancelWorkOrder(scope, workOrder.id);
+    const cancelled = await service.cancelWorkOrder(scope, workOrder.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
     assert.equal(cancelled.status, "cancelled");
+    assert.equal(cancelled.cancellationReason, TEST_CANCELLATION_REASON);
   });
 
   it("transitions closed to open", async () => {
@@ -676,7 +698,11 @@ describe("Frigora WorkOrder foundation", () => {
       workReference: "WO-1864",
       workKind: "reactive",
     });
-    await service.closeWorkOrder(scope, workOrder.id);
+    const visit = await service.recordVisitArrival(scope, workOrder.id, {
+      userId: scope.userId,
+      arrivedAt: "2026-08-28T10:00:00.000Z",
+    });
+    await completeWorkOrderFromVisit(service, scope, workOrder.id, visit, scope.userId);
     const reopened = await service.reopenWorkOrder(scope, workOrder.id);
     assert.equal(reopened.status, "open");
   });
@@ -689,7 +715,9 @@ describe("Frigora WorkOrder foundation", () => {
       workReference: "WO-1864",
       workKind: "reactive",
     });
-    await service.cancelWorkOrder(scope, workOrder.id);
+    await service.cancelWorkOrder(scope, workOrder.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
     await expectCode(() => service.reopenWorkOrder(scope, workOrder.id), "invalid_status");
     await expectCode(() => service.closeWorkOrder(scope, workOrder.id), "invalid_status");
   });
@@ -702,8 +730,18 @@ describe("Frigora WorkOrder foundation", () => {
       workReference: "WO-1864",
       workKind: "reactive",
     });
-    await service.closeWorkOrder(scope, workOrder.id);
-    await expectCode(() => service.cancelWorkOrder(scope, workOrder.id), "invalid_status");
+    const visit = await service.recordVisitArrival(scope, workOrder.id, {
+      userId: scope.userId,
+      arrivedAt: "2026-08-28T10:00:00.000Z",
+    });
+    await completeWorkOrderFromVisit(service, scope, workOrder.id, visit, scope.userId);
+    await expectCode(
+      () =>
+        service.cancelWorkOrder(scope, workOrder.id, {
+          reason: TEST_CANCELLATION_REASON,
+        }),
+      "invalid_status",
+    );
   });
 
   it("rejects updateWorkOrder while closed", async () => {
@@ -714,7 +752,11 @@ describe("Frigora WorkOrder foundation", () => {
       workReference: "WO-1864",
       workKind: "reactive",
     });
-    await service.closeWorkOrder(scope, workOrder.id);
+    const visit = await service.recordVisitArrival(scope, workOrder.id, {
+      userId: scope.userId,
+      arrivedAt: "2026-08-28T10:00:00.000Z",
+    });
+    await completeWorkOrderFromVisit(service, scope, workOrder.id, visit, scope.userId);
     await expectCode(
       () =>
         service.updateWorkOrder(scope, workOrder.id, {
@@ -732,7 +774,9 @@ describe("Frigora WorkOrder foundation", () => {
       workReference: "WO-1864",
       workKind: "reactive",
     });
-    await service.cancelWorkOrder(scope, workOrder.id);
+    await service.cancelWorkOrder(scope, workOrder.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
     await expectCode(
       () =>
         service.updateWorkOrder(scope, workOrder.id, {
@@ -903,7 +947,11 @@ describe("Frigora WorkOrder foundation", () => {
     assert.equal((await service.listWorkOrdersByAsset(scope, asset.id))[0]?.id, workOrder.id);
     assert.equal((await service.getWorkOrderByReference(scope, "WO-1864"))?.id, workOrder.id);
     assert.equal((await service.listWorkOrders(scope, "open")).length, 1);
-    await service.closeWorkOrder(scope, workOrder.id);
+    const visit = await service.recordVisitArrival(scope, workOrder.id, {
+      userId: scope.userId,
+      arrivedAt: "2026-08-28T10:00:00.000Z",
+    });
+    await completeWorkOrderFromVisit(service, scope, workOrder.id, visit, scope.userId);
     assert.equal((await service.listWorkOrders(scope, "open")).length, 0);
     assert.equal((await service.listWorkOrders(scope, "closed")).length, 1);
   });

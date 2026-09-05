@@ -7,6 +7,10 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
+import {
+  cancelWorkOrderAfterDepartingOpenVisit,
+  completeWorkOrderFromVisit,
+} from "./test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -360,7 +364,13 @@ describe("Frigora Visit corrective action", () => {
       performedByUserId: attendeeId,
       recordedByUserId: attendeeId,
     });
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      visit,
+      attendeeId,
+    );
     const afterClose = await owner.service.recordCorrectiveAction(owner.scope, visit.id, {
       description: "Adjusted thermostat setting",
       performedAt: PERFORMED,
@@ -390,7 +400,12 @@ describe("Frigora Visit corrective action", () => {
       performedByUserId: attendeeId,
       recordedByUserId: attendeeId,
     });
-    await owner2.service.cancelWorkOrder(owner2.scope, wo2.id);
+    await cancelWorkOrderAfterDepartingOpenVisit(
+      owner2.service,
+      owner2.scope,
+      wo2.id,
+      visit2,
+    );
     const afterCancel = await owner2.service.recordCorrectiveAction(owner2.scope, visit2.id, {
       description: "Temporarily secured damaged cable",
       performedAt: PERFORMED,
@@ -795,7 +810,13 @@ describe("Frigora Visit corrective action", () => {
     assert.equal(finding.findingKind, "symptom");
     assert.equal(action.description, "Cleaned evaporator coil");
     assert.notEqual(loadedWo?.reportedCondition, action.description);
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      visit,
+      attendeeId,
+    );
     const woAfter = await owner.service.getWorkOrder(owner.scope, workOrder.id);
     assert.equal(woAfter?.status, "closed");
   });

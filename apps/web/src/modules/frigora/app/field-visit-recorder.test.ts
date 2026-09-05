@@ -8,6 +8,7 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "../test-persistence-lifecycle";
+import { completeWorkOrderFromVisit } from "../test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { buildVentureSurfaceLinks } from "@/modules/frigora/app/nav";
 import { createFrigoraService } from "@/modules/frigora/service";
@@ -186,7 +187,21 @@ describe("F1.2 Field Visit Recorder", () => {
     await owner.service.assignWorkOrder(owner.scope, closed.id, {
       userId: owner.userId,
     });
-    await owner.service.closeWorkOrder(owner.scope, closed.id);
+    const closedVisit = await owner.service.recordVisitArrival(owner.scope, closed.id, {
+      userId: owner.userId,
+      arrivedAt: ARRIVED,
+    });
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      closed.id,
+      closedVisit,
+      owner.userId,
+      {
+        outcomeAt: "2026-08-29T10:30:00.000Z",
+        departedAt: "2026-08-29T11:00:00.000Z",
+      },
+    );
 
     const assigned = await owner.service.listWorkOrdersByAssignee(
       owner.scope,
@@ -504,7 +519,7 @@ describe("F1.2 Field Visit Recorder", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.16.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 22/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 23/);
 
     const assignedPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/work/assigned/page.tsx"),
@@ -534,5 +549,8 @@ describe("F1.2 Field Visit Recorder", () => {
     );
     assert.match(recorderScreen, /Asset identity status is not operational condition/);
     assert.equal(recorderScreen.includes("closeWorkOrder"), false);
+    assert.equal(recorderScreen.includes("cancelWorkOrder"), false);
+    assert.equal(recorderScreen.includes("Complete Work Order"), false);
+    assert.equal(recorderScreen.includes("Cancel Work Order"), false);
   });
 });

@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import {
   assignWorkOrderAction,
+  cancelWorkOrderAction,
   clearWorkOrderAssignmentAction,
   closeWorkOrderAction,
+  convertRecommendedActionToFollowUpWorkOrderAction,
   createAssetAction,
   createCustomerAction,
   createSiteAction,
@@ -276,6 +278,55 @@ export async function closeWorkOrderFormAction(
   revalidatePath(workPath(scope.ventureId));
   revalidatePath(operationsPath(scope.ventureId));
   redirect(workDetailPath(scope.ventureId, workOrderId));
+}
+
+export async function cancelWorkOrderFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const reason = text(formData, "reason");
+
+  const result = await cancelWorkOrderAction({
+    ...scope,
+    id: workOrderId,
+    reason,
+  });
+
+  if (result.error) {
+    return { error: result.error, values: { reason } };
+  }
+
+  revalidatePath(workDetailPath(scope.ventureId, workOrderId));
+  revalidatePath(workPath(scope.ventureId));
+  revalidatePath(operationsPath(scope.ventureId));
+  redirect(workDetailPath(scope.ventureId, workOrderId));
+}
+
+export async function convertRecommendedActionFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const recommendedActionId = text(formData, "recommendedActionId");
+
+  const result = await convertRecommendedActionToFollowUpWorkOrderAction({
+    ...scope,
+    recommendedActionId,
+  });
+
+  if (result.error) {
+    return { error: result.error };
+  }
+
+  const followUpId = result.record?.id ?? workOrderId;
+  revalidatePath(workDetailPath(scope.ventureId, workOrderId));
+  revalidatePath(workDetailPath(scope.ventureId, followUpId));
+  revalidatePath(workPath(scope.ventureId));
+  revalidatePath(operationsPath(scope.ventureId));
+  redirect(workDetailPath(scope.ventureId, followUpId));
 }
 
 export async function reopenWorkOrderFormAction(

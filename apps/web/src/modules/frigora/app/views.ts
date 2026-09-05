@@ -3,6 +3,7 @@ import {
   getAssetQuery,
   getCurrentAssetOperationalConditionQuery,
   getCustomerQuery,
+  getFollowUpWorkOrderByRecommendedActionQuery,
   getSiteQuery,
   getVisitOutcomeByVisitQuery,
   getVisitQuery,
@@ -126,6 +127,7 @@ export type WorkOrderDetailView = {
   visitAttendees: Record<string, UserDisplay | null>;
   visitFacts: VisitFactsView[];
   workOrderRecommendations: FrigoraRecommendedAction[];
+  followUpByRecommendedActionId: Record<string, FrigoraWorkOrder>;
   workOrderEvidence: FrigoraVisitEvidence[];
   currentOperationalCondition: FrigoraAssetOperationalCondition | null;
   attentionSignals: OperationalAttentionSignal[];
@@ -869,6 +871,20 @@ export async function loadWorkOrderDetail(
     visitFacts.push(await loadVisitFacts(scope, visit));
   }
 
+  const recommendations = recommendationsResult.record ?? [];
+  const followUpByRecommendedActionId: Record<string, FrigoraWorkOrder> = {};
+  await Promise.all(
+    recommendations.map(async (recommendation) => {
+      const followUpResult = await getFollowUpWorkOrderByRecommendedActionQuery({
+        ...scope,
+        recommendedActionId: recommendation.id,
+      });
+      if (followUpResult.record) {
+        followUpByRecommendedActionId[recommendation.id] = followUpResult.record;
+      }
+    }),
+  );
+
   return {
     view: {
       workOrder,
@@ -879,7 +895,8 @@ export async function loadWorkOrderDetail(
       visits,
       visitAttendees,
       visitFacts,
-      workOrderRecommendations: recommendationsResult.record ?? [],
+      workOrderRecommendations: recommendations,
+      followUpByRecommendedActionId,
       workOrderEvidence: evidenceResult.record ?? [],
       currentOperationalCondition,
       attentionSignals,

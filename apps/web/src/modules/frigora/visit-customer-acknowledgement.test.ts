@@ -9,6 +9,7 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
+import { completeWorkOrderFromVisit } from "./test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -322,7 +323,13 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     );
     assert.equal(afterDepart.acknowledgedAt, AFTER_DEPARTURE);
 
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      visit,
+      attendeeId,
+    );
     const afterClose = await owner.service.recordVisitCustomerAcknowledgement(
       owner.scope,
       visit.id,
@@ -602,7 +609,7 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     );
   });
 
-  it("persists through restart and keeps SCHEMA_GENERATION at 22", async () => {
+  it("persists through restart and keeps SCHEMA_GENERATION at 23", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -621,7 +628,7 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     const schemaPath = fileURLToPath(
       new URL("../../platform/persistence/schema.ts", import.meta.url),
     );
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 22/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 23/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_visit_customer_acknowledgements/);
     assert.equal(readFileSync(schemaPath, "utf8").includes("frigora_asset_history"), false);
   });

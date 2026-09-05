@@ -7,6 +7,10 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
+import {
+  completeWorkOrderFromVisit,
+  TEST_CANCELLATION_REASON,
+} from "./test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -347,7 +351,17 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: owner.userId,
+      arrivedAt: "2026-08-28T10:00:00.000Z",
+    });
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      visit,
+      owner.userId,
+    );
     await expectCode(
       () =>
         owner.service.assignWorkOrder(owner.scope, workOrder.id, {
@@ -371,7 +385,9 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.cancelWorkOrder(owner.scope, workOrder.id);
+    await owner.service.cancelWorkOrder(owner.scope, workOrder.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
     await expectCode(
       () =>
         owner.service.assignWorkOrder(owner.scope, workOrder.id, {
@@ -410,7 +426,17 @@ describe("Frigora WorkOrder assignment", () => {
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
-    const closed = await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: owner.userId,
+      arrivedAt: "2026-08-28T10:00:00.000Z",
+    });
+    const closed = await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      visit,
+      owner.userId,
+    );
     assert.equal(closed.assignedUserId, assigneeId);
     assert.equal(closed.status, "closed");
   });
@@ -426,7 +452,9 @@ describe("Frigora WorkOrder assignment", () => {
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
-    const cancelled = await owner.service.cancelWorkOrder(owner.scope, workOrder.id);
+    const cancelled = await owner.service.cancelWorkOrder(owner.scope, workOrder.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
     assert.equal(cancelled.assignedUserId, assigneeId);
     assert.equal(cancelled.status, "cancelled");
   });

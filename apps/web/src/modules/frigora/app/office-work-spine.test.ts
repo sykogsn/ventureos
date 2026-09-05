@@ -356,7 +356,7 @@ describe("F1.1 Office Work Spine", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.16.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 22/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 23/);
 
     const customersPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/customers/page.tsx"),
@@ -380,6 +380,6 @@ describe("F1.1 Office Work Spine", () => {
     assert.equal(mutationActions.includes("technician"), false);
     assert.match(mutationActions, /closeWorkOrderAction/);
     assert.match(mutationActions, /reopenWorkOrderAction/);
-    assert.equal(mutationActions.includes("cancelWorkOrderAction"), false);
+    assert.match(mutationActions, /cancelWorkOrderAction/);
   });
 });

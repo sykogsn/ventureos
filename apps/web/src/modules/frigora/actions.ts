@@ -5,6 +5,7 @@ import { isFrigoraError } from "./errors";
 import { createScope, getFrigoraService } from "./service";
 import type {
   AssignWorkOrderInput,
+  CancelWorkOrderInput,
   CreateAssetInput,
   CreateCustomerInput,
   CreateSiteInput,
@@ -39,6 +40,7 @@ import type {
   RecordVisitCustomerAcknowledgementInput,
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
+  FrigoraRecommendedActionId,
   FrigoraVisitEvidence,
   FrigoraVisitEvidenceId,
   RecordVisitEvidenceWithFileInput,
@@ -179,10 +181,21 @@ export async function closeWorkOrderAction(
 }
 
 export async function cancelWorkOrderAction(
-  input: ScopedInput & { id: string },
+  input: ScopedInput & { id: string } & CancelWorkOrderInput,
 ): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
   return mutate(input, (scope) =>
-    getFrigoraService().cancelWorkOrder(scope, input.id as FrigoraWorkOrderId),
+    getFrigoraService().cancelWorkOrder(scope, input.id as FrigoraWorkOrderId, input),
+  );
+}
+
+export async function convertRecommendedActionToFollowUpWorkOrderAction(
+  input: ScopedInput & { recommendedActionId: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().convertRecommendedActionToFollowUpWorkOrder(
+      scope,
+      input.recommendedActionId as FrigoraRecommendedActionId,
+    ),
   );
 }
 

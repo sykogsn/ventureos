@@ -2,6 +2,7 @@ import type {
   FrigoraVisit,
   FrigoraVisitStatus,
   FrigoraWorkOrder,
+  FrigoraWorkOrderStatus,
 } from "@/modules/frigora/types";
 
 export type OperationalAttentionSignal =
@@ -100,6 +101,17 @@ export function formatVisitStatusLabel(status: FrigoraVisitStatus): string {
       return "In progress";
     case "departed":
       return "Departed";
+    case "cancelled":
+      return "Cancelled";
+  }
+}
+
+export function formatWorkOrderStatusLabel(status: FrigoraWorkOrderStatus): string {
+  switch (status) {
+    case "open":
+      return "Open";
+    case "closed":
+      return "Completed";
     case "cancelled":
       return "Cancelled";
   }

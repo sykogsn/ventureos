@@ -8,6 +8,10 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "../test-persistence-lifecycle";
+import {
+  completeWorkOrderFromVisit,
+  TEST_CANCELLATION_REASON,
+} from "../test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { buildVentureSurfaceLinks } from "@/modules/frigora/app/nav";
 import {
@@ -411,7 +415,18 @@ describe("F1.3 Operational Visibility", () => {
       workReference: "WO-CLOSED",
       workKind: "reactive",
     });
-    await owner.service.closeWorkOrder(owner.scope, closed.id);
+    const closedVisit = await owner.service.recordVisitArrival(owner.scope, closed.id, {
+      userId: owner.userId,
+      arrivedAt: ARRIVED,
+    });
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      closed.id,
+      closedVisit,
+      owner.userId,
+      { departedAt: DEPARTED, outcomeAt: "2026-08-29T10:30:00.000Z" },
+    );
 
     const all = await owner.service.listWorkOrders(owner.scope);
     const openOnly = all.filter((row) => row.status === "open");
@@ -453,7 +468,7 @@ describe("F1.3 Operational Visibility", () => {
     assert.equal(formatVisitStatusLabel("open"), "In progress");
   });
 
-  it("closes and reopens work orders without visits and preserves visit state", async () => {
+  it("closes and reopens work orders after governed completion and preserves visit state", async () => {
     const owner = await seed();
     const { site } = await seedHierarchy(owner);
     const workOrder = await owner.service.createWorkOrder(owner.scope, {
@@ -461,7 +476,18 @@ describe("F1.3 Operational Visibility", () => {
       workReference: "WO-LIFE",
       workKind: "reactive",
     });
-    const closed = await owner.service.closeWorkOrder(owner.scope, workOrder.id);
+    const completionVisit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: owner.userId,
+      arrivedAt: ARRIVED,
+    });
+    const closed = await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      completionVisit,
+      owner.userId,
+      { departedAt: DEPARTED, outcomeAt: "2026-08-29T10:30:00.000Z" },
+    );
     assert.equal(closed.status, "closed");
     const reopened = await owner.service.reopenWorkOrder(owner.scope, workOrder.id);
     assert.equal(reopened.status, "open");
@@ -510,7 +536,9 @@ describe("F1.3 Operational Visibility", () => {
       workReference: "WO-CANCEL",
       workKind: "reactive",
     });
-    await owner.service.cancelWorkOrder(owner.scope, cancelled.id);
+    await owner.service.cancelWorkOrder(owner.scope, cancelled.id, {
+      reason: TEST_CANCELLATION_REASON,
+    });
     await assert.rejects(
       () => owner.service.reopenWorkOrder(owner.scope, cancelled.id),
       (error: unknown) => {
@@ -558,7 +586,7 @@ describe("F1.3 Operational Visibility", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.16.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 22/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 23/);
 
     const operationsPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/operations/page.tsx"),
@@ -571,9 +599,10 @@ describe("F1.3 Operational Visibility", () => {
       join(WEB_ROOT, "modules/frigora/app/forms/work-order-lifecycle-controls.tsx"),
       "utf8",
     );
-    assert.equal(lifecycleControls.includes("cancelWorkOrder"), false);
-    assert.match(lifecycleControls, /Close work order/);
-    assert.match(lifecycleControls, /Reopen work order/);
+    assert.match(lifecycleControls, /cancelWorkOrderFormAction/);
+    assert.match(lifecycleControls, /Complete Work Order/);
+    assert.match(lifecycleControls, /Cancel Work Order/);
+    assert.match(lifecycleControls, /Reopen/);
 
     const mutationActions = readFileSync(
       join(WEB_ROOT, "modules/frigora/app/mutation-actions.ts"),
@@ -581,7 +610,7 @@ describe("F1.3 Operational Visibility", () => {
     );
     assert.match(mutationActions, /closeWorkOrderAction/);
     assert.match(mutationActions, /reopenWorkOrderAction/);
-    assert.equal(mutationActions.includes("cancelWorkOrderAction"), false);
+    assert.match(mutationActions, /cancelWorkOrderAction/);
 
     const viewsSource = readFileSync(join(WEB_ROOT, "modules/frigora/app/views.ts"), "utf8");
     assert.equal(viewsSource.includes("getFrigoraService"), false);

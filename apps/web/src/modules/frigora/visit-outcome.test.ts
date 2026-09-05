@@ -7,6 +7,10 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { ensureSchema } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
+import {
+  cancelWorkOrderAfterDepartingOpenVisit,
+  completeWorkOrderFromVisit,
+} from "./test-work-execution";
 import type { PersistedVenture } from "@/platform/persistence/repositories/ports";
 import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
@@ -386,7 +390,7 @@ describe("Frigora Visit outcome", () => {
     assert.equal(persisted?.id, outcome.id);
   });
 
-  it("preserves outcomes after WorkOrder close or cancel and allows delayed entry", async () => {
+  it("preserves outcomes after WorkOrder close and allows delayed entry after cancel", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -396,26 +400,16 @@ describe("Frigora Visit outcome", () => {
       outcomeAt: OUTCOME_AT,
       recordedByUserId: attendeeId,
     });
-    await owner.service.closeWorkOrder(owner.scope, workOrder.id);
-    const owner2 = await seed({
-      reset: false,
-      ventureId: "ven-close-delay" as VentureId,
-      userId: owner.userId,
-    });
-    const { workOrder: wo2, visit: visit2 } = await seedOpenVisit(
-      owner2.service,
-      owner2.scope,
+    await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      workOrder.id,
+      visit,
       attendeeId,
     );
-    await owner2.service.closeWorkOrder(owner2.scope, wo2.id);
-    const afterClose = await owner2.service.recordVisitOutcome(owner2.scope, visit2.id, {
-      description: "Temporary operation was restored",
-      outcomeAt: OUTCOME_AT,
-      recordedByUserId: attendeeId,
-    });
-    assert.equal(afterClose.workOrderId, wo2.id);
     const persistedBeforeClose = await owner.service.getVisitOutcome(owner.scope, beforeClose.id);
     assert.equal(persistedBeforeClose?.id, beforeClose.id);
+    assert.equal(persistedBeforeClose?.workOrderId, workOrder.id);
 
     const owner3 = await seed({
       reset: false,
@@ -427,7 +421,12 @@ describe("Frigora Visit outcome", () => {
       owner3.scope,
       attendeeId,
     );
-    await owner3.service.cancelWorkOrder(owner3.scope, wo3.id);
+    await cancelWorkOrderAfterDepartingOpenVisit(
+      owner3.service,
+      owner3.scope,
+      wo3.id,
+      visit3,
+    );
     const afterCancel = await owner3.service.recordVisitOutcome(owner3.scope, visit3.id, {
       description: "Fault remained unresolved at end of visit",
       outcomeAt: OUTCOME_AT,
