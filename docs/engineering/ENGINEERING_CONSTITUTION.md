@@ -1,7 +1,7 @@
 # VentureOS Engineering Constitution
 
 **Status.** Constitutional for engineering method  
-**Version.** 1.1.0  
+**Version.** 1.2.0  
 **Date.** 2026-09-05  
 **Programme.** VS-008B  
 **Owner.** Engineering
@@ -73,8 +73,34 @@ Before implementation begins, the planning layer must provide an approved execut
 - Git scope
 - stop conditions
 - required close-out evidence
+- execution profile
 
 If no approved execution packet exists, the repository execution layer may perform read-only investigation and return findings, but it must not begin implementation by inventing scope.
+
+### Mandatory execution-profile ownership
+
+The planning and decision layer owns the execution-profile decision for every repository task. The founder or operator must not be required to independently decide which coding model, reasoning effort, or speed tier is appropriate.
+
+Every implementation packet must state an **Execution Profile** before the repository agent is invoked. The profile must name, as applicable:
+
+- repository execution tool or agent
+- model or model class
+- reasoning/effort level
+- speed mode
+- whether paid on-demand usage is permitted
+- any task-specific cost guard
+
+The founder/operator may then select the stated profile in the repository tool UI where direct control is unavailable to the planning layer. Selection is execution of an approved decision, not a new architecture or model-routing decision.
+
+The constitutional policy is **quality-first, cost-conscious routing**:
+
+- routine, well-scoped repository work uses the lowest-cost execution profile that can reliably satisfy the approved acceptance criteria;
+- complex debugging or implementation may use a stronger reasoning profile;
+- exceptional architecture-sensitive, repeated-failure, or certification-blocking work may use the highest justified reasoning profile;
+- faster premium modes are opt-in for a named reason, not the default;
+- paid on-demand usage is disabled by default and may be enabled only by explicit founder approval.
+
+Specific model names, prices, and vendor capabilities change over time and therefore belong in the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md), not in constitutional law. Changing a model name or replacing a vendor does not amend this Constitution as long as the planning layer still owns routing and repository verification remains mandatory.
 
 ### Mandatory repository verification gate
 
@@ -95,7 +121,7 @@ The permanent sequence is:
 ```
 Plan and stress-test
     ↓
-Approved implementation packet
+Approved implementation packet + execution profile
     ↓
 Read-only live repository verification
     ↓
@@ -218,8 +244,11 @@ Permanent. Not optional inside a feature crunch.
 - Never release without verification.
 - Never duplicate architecture (no second orchestrator, no Product Registry, no second type system).
 - Never create a second source of truth.
+- Every repository implementation packet must include an execution profile selected by the planning and decision layer.
+- The founder/operator is not responsible for independently choosing the execution model, reasoning effort, or speed tier for an approved task.
+- Paid on-demand repository-agent usage remains disabled unless the founder explicitly approves enabling it.
 - No engineering knowledge should exist only in conversations. Close the sprint in [ENGINEERING_HISTORY.md](./ENGINEERING_HISTORY.md) and grow [LESSONS_LEARNED.md](./LESSONS_LEARNED.md).
-- Never remove the Planning–Execution Workflow, repository verification gate, or post-implementation verification gate without an explicit founder-approved constitutional amendment.
+- Never remove the Planning–Execution Workflow, execution-profile ownership rule, repository verification gate, or post-implementation verification gate without an explicit founder-approved constitutional amendment.
 
 ---
 
@@ -231,6 +260,6 @@ The [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTIT
 
 This Engineering Constitution defines the VES lifecycle: diagnose, design, approve, implement, verify, then commit, push, and release.
 
-The [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) defines pre-flight, development rules, root-cause policy, validation, completion, and reporting for every sprint, implementation, review, refactor, and bug fix.
+The [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) defines pre-flight, development rules, root-cause policy, validation, completion, reporting, and the current operational model-routing matrix for every sprint, implementation, review, refactor, and bug fix.
 
-If documents appear to conflict, the Project Constitution wins first. Architecture wins on *what may exist*. The Master Engineering Prompt wins on checklist, validation, completion, and reporting. This document wins on lifecycle and mode sequence. Neither may be used to override a named implementation source of truth (`FOUNDATION.md`, Runtime README, IDS specifications) when a technical fact is in dispute — amend the Constitution that is wrong.
+If documents appear to conflict, the Project Constitution wins first. Architecture wins on *what may exist*. The Master Engineering Prompt wins on checklist, validation, completion, reporting, and current execution-profile details. This document wins on lifecycle, role ownership, and mode sequence. Neither may be used to override a named implementation source of truth (`FOUNDATION.md`, Runtime README, IDS specifications) when a technical fact is in dispute — amend the Constitution that is wrong.
