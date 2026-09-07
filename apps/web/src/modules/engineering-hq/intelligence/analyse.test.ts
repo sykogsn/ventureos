@@ -63,24 +63,30 @@ describe("Engineering Intelligence", () => {
     assert.ok(!intelligence.timeline.some((item) => item.id === "VS-009"));
   });
 
-  it("projects ECE-001 as a process baseline without inventing a trend", () => {
-    const intelligence = analyseEngineering(loadEngineeringCatalogue(), project);
-    assert.equal(intelligence.process.sampleSize, 1);
+  it("projects the current ECE catalogue as a process baseline without inventing a trend", () => {
+    const catalogue = loadEngineeringCatalogue();
+    const intelligence = analyseEngineering(catalogue, project);
+    assert.ok(catalogue.cycles.some((cycle) => cycle.id === "ECE-001"));
+    assert.ok(catalogue.cycles.some((cycle) => cycle.id === "ECE-002"));
+    assert.equal(intelligence.process.sampleSize, catalogue.cycles.length);
     assert.equal(intelligence.process.posture, "baseline");
     assert.equal(intelligence.process.leadTime.trend, "unknown");
     assert.match(intelligence.process.leadTime.label, /Unknown/);
-    assert.match(intelligence.process.certificationFirstPass.label, /Unknown/);
-    assert.doesNotMatch(intelligence.process.certificationFirstPass.label, /%/);
-    assert.equal(intelligence.process.certificationFirstPass.known, 0);
-    assert.equal(intelligence.process.firstCorrectionHeld.held, 1);
-    assert.equal(intelligence.process.firstCorrectionHeld.known, 1);
+    assert.match(intelligence.process.certificationFirstPass.label, /0\/1/);
+    assert.match(intelligence.process.certificationFirstPass.label, /rate withheld/);
+    assert.equal(intelligence.process.certificationFirstPass.held, 0);
+    assert.equal(intelligence.process.certificationFirstPass.known, 1);
+    assert.equal(intelligence.process.firstCorrectionHeld.held, 2);
+    assert.equal(intelligence.process.firstCorrectionHeld.known, 2);
     assert.match(intelligence.process.firstCorrectionHeld.label, /rate withheld/);
-    assert.equal(intelligence.process.cleanExit.held, 1);
-    assert.equal(intelligence.process.correctionAttempts.total, null);
-    assert.equal(intelligence.process.failedCorrections.total, null);
-    assert.match(intelligence.process.correctionAttempts.label, /Unknown/);
-    assert.match(intelligence.process.failedCorrections.label, /Unknown/);
+    assert.equal(intelligence.process.cleanExit.held, 2);
+    assert.equal(intelligence.process.cleanExit.known, 2);
+    assert.equal(intelligence.process.correctionAttempts.total, 1);
+    assert.equal(intelligence.process.correctionAttempts.knownCycles, 1);
+    assert.equal(intelligence.process.failedCorrections.total, 0);
+    assert.equal(intelligence.process.failedCorrections.knownCycles, 1);
     assert.ok(intelligence.process.failureClasses.includes("filetest-lifecycle"));
+    assert.ok(intelligence.process.failureClasses.includes("lint / test hygiene"));
     assert.ok(intelligence.process.linkedImprovements.some((item) => item.id === "ERD-008"));
     assert.ok(intelligence.process.linkedImprovements.some((item) => item.id === "LL-008"));
     const baseline = intelligence.recommendations.find((item) => item.id === "process-baseline");

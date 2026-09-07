@@ -352,8 +352,8 @@ describe("F1.1 Office Work Spine", () => {
     );
   });
 
-  it("keeps F0 version and schema locks and ships F1.1 routes without F0 edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.16.0");
+  it("keeps the schema lock and ships F1.1 routes without runtime edits", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.17.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
     assert.match(dbSource, /SCHEMA_GENERATION = 23/);

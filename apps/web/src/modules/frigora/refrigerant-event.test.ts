@@ -862,8 +862,8 @@ describe("Frigora Refrigerant event", () => {
     assert.equal(event.eventKind, "added");
   });
 
-  it("resolves frigora@0.16.0 from catalog with refrigerant event admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.16.0");
+  it("resolves frigora@0.17.0 from catalog with refrigerant event admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.17.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /refrigerant events/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /part usages/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /parts catalogue/);

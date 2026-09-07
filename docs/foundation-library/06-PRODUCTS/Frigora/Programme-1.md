@@ -2,7 +2,7 @@
 
 **Purpose.** Record the founder-locked first post-F2.0 Frigora development programme: sequential increments F2.1, F2.2, and F2.3.
 
-**Authority.** Founder product lock. Founder Decisions [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) (programme) and [FD-008](../../05-GOVERNANCE/Founder-Decisions.md) (F2.1 scope). This document does not change the live Venture Definition. It does not certify implementation.
+**Authority.** Founder product lock. Founder Decisions [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) (programme), [FD-008](../../05-GOVERNANCE/Founder-Decisions.md) (F2.1 scope), and [FD-009](../../05-GOVERNANCE/Founder-Decisions.md) (F2.1 certified-baseline admission).
 
 **Audience.** Product and engineers authorised to implement Programme 1.
 
@@ -10,28 +10,28 @@
 
 **Related Documents.** [Products](../README.md) · [Venture Definitions](../../02-ARCHITECTURE/Venture-Definitions.md) · [Master Engineering Prompt](../../../engineering/MASTER_ENGINEERING_PROMPT.md)
 
-**Status.** Authorised roadmap lock. F2.1 is **scope-locked for implementation** (FD-008) and **not implemented**. F2.2 and F2.3 remain authorised only, not opened. Live definition remains `frigora@0.16.0` (certified checkpoint F2.0 Visit Evidence).
+**Status.** Active programme. F2.1 is **implemented and certified** at `3d27699de63923c1cfc5a08bddab8ea8b356c422`. F2.2 is the current milestone and is open for Planning-First planning, not implemented. F2.3 remains authorised after certified F2.2.
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Founder
 
-**Last Updated.** 2026-09-04
+**Last Updated.** 2026-09-05
 
 ---
 
-## Live product law (unchanged by this lock)
+## Live product law
 
-| Field | Value |
-|---|---|
-| Live definition | `frigora@0.16.0` |
-| Certified product checkpoint | F2.0 — Visit Evidence · `6a188eb624c3327ec9bd4bd319d6d6b54ad23232` |
-| Product-record reconciliation | `573ab5d4f79bbfa239105bc0944c909e98c0c617` |
-| Programme 1 roadmap lock | `7aa46b5e200e9d03b224ca9a0eb7daf0491083a4` |
+| Field                                | Value                                                              |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| Live definition                      | `frigora@0.17.0`                                                   |
+| Prior certified product checkpoint   | F2.0 — Visit Evidence · `6a188eb624c3327ec9bd4bd319d6d6b54ad23232` |
+| Prior product-record reconciliation  | `573ab5d4f79bbfa239105bc0944c909e98c0c617`                         |
+| Certified product checkpoint         | F2.1 — Work Execution · `3d27699de63923c1cfc5a08bddab8ea8b356c422` |
+| Planning-First governance checkpoint | `ee5fee673d1f6f8c726f392c67b57cf8cde41e6d`                         |
+| Programme 1 roadmap lock             | `7aa46b5e200e9d03b224ca9a0eb7daf0491083a4`                         |
 
-F2.1, F2.2, and F2.3 are **authorised roadmap milestones**. They are not admitted in the live definition until each increment is implemented, tested, certified, documented, checkpointed, and the definition is legitimately bumped.
-
-Do not treat this lock as permission to change `catalog.ts` before that work. FD-008 authorises the F2.1 implementation **boundary**; it does not certify F2.1 and does not bump `frigora@0.16.0`.
+F2.1 is admitted in the live definition by FD-009 after implementation and certification. F2.2 is now open for Planning-First planning. F2.2 and F2.3 are not admitted until each increment is implemented, tested, certified, documented, checkpointed, and the definition is legitimately bumped.
 
 ## Programme purpose
 
@@ -47,8 +47,8 @@ Frigora remains a VentureOS-built Venture. This programme must not create a seco
 
 ```
 F2.0 Visit Evidence (certified, live)
-  → F2.1 Work Execution
-    → F2.2 Service Desk & Dispatch
+  → F2.1 Work Execution (certified, live)
+    → F2.2 Service Desk & Dispatch (open/current milestone)
       → F2.3 Engineer Job Workflow
         → Programme 1 certification gate
 ```
@@ -65,7 +65,7 @@ At that gate, a refrigeration service company can receive work, schedule and dis
 
 ## F2.1 — Work Execution
 
-**Status.** Authorised. **Scope-locked for implementation (FD-008).** Not implemented. Not certified. Does not open F2.2 or F2.3.
+**Status.** Implemented and certified. Scope lock: FD-008. Certified implementation checkpoint: `3d27699de63923c1cfc5a08bddab8ea8b356c422`. Admitted to the live product baseline by FD-009. F2.2 is open for Planning-First planning; F2.3 remains closed until certified F2.2.
 
 **Product purpose.** Create a governed WorkOrder execution/completion lifecycle on top of the existing certified WorkOrder, Visit, and operational truth model.
 
@@ -138,15 +138,15 @@ Do **not** add: `workRemaining` / `followUpRequired` booleans; completion status
 
 Derive operational meaning from existing certified truths wherever safe.
 
-### Persistence intent (not applied by this lock)
+### Certified persistence
 
-Implementation should bump `SCHEMA_GENERATION` 22 → 23 using existing `ensureSchema` / `addColumn` conventions (same pattern as `assigned_user_id` on `frigora_work_orders`):
+The certified implementation bumped `SCHEMA_GENERATION` 22 → 23 using existing `ensureSchema` / `addColumn` conventions:
 
 - `cancellation_reason TEXT`
 - `source_recommended_action_id TEXT`
 - uniqueness for non-null recommendation provenance (SQLite unique index; multiple nulls remain allowed)
 
-This scope lock does **not** apply that schema change.
+The implementation preserves SQLite uniqueness for non-null recommendation provenance while allowing multiple nulls.
 
 ### Minimum UI intent
 
@@ -179,7 +179,7 @@ Implementation must prove at minimum:
 
 ## F2.2 — Service Desk & Dispatch
 
-**Status.** Authorised. Not implemented. Depends on certified F2.1.
+**Status.** Open for Planning-First planning as the current Programme 1 milestone. Not implemented. Depends on the certified F2.1 baseline.
 
 **Product purpose.** Turn the existing assignment and operational visibility foundations into a genuine service-desk dispatch workflow.
 

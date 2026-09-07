@@ -857,9 +857,9 @@ describe("Frigora Part usage", () => {
     assert.equal(event.eventKind, "added");
   });
 
-  it("resolves frigora@0.16.0 from catalog with part usage admission and retained exclusions", () => {
+  it("resolves frigora@0.17.0 from catalog with part usage admission and retained exclusions", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.16.0");
+    assert.equal(frigora.version, "0.17.0");
     assert.match(frigora.description, /part usages/);
     assert.match(frigora.description, /refrigerant events/);
     assert.match(frigora.description, /parts catalogue/);

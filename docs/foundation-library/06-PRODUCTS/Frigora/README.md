@@ -2,25 +2,25 @@
 
 **Purpose.** Describe Frigora as a refrigeration venture on VentureOS.
 
-**Authority.** Product page. Live definition: `frigora@0.16.0` in the Definition Registry. Certified product checkpoint: F2.0 Visit Evidence.
+**Authority.** Product page. Live definition: `frigora@0.17.0` in the Definition Registry. Certified product checkpoint: F2.1 Work Execution at `3d27699de63923c1cfc5a08bddab8ea8b356c422`.
 
 **Audience.** Product, design, and engineers working on Frigora instances.
 
 **Dependencies.** [Products](../README.md) · [Venture Definitions](../../02-ARCHITECTURE/Venture-Definitions.md)
 
-**Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md) · [Programme 1 lock](./Programme-1.md) · [Founder Decisions](../../05-GOVERNANCE/Founder-Decisions.md) (FD-007, FD-008)
+**Related Documents.** [Product Philosophy](../../01-FOUNDATION/Product-Philosophy.md) · [Situation Room](../../02-ARCHITECTURE/Situation-Room.md) · [IDS](../../03-DESIGN/IDS.md) · [Future products](../Future/README.md) · [Programme 1](./Programme-1.md) · [Founder Decisions](../../05-GOVERNANCE/Founder-Decisions.md) (FD-007–FD-009)
 
-**Status.** Concept (definition); atmosphere not painted; operational product not built beyond Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence. Programme 1 (F2.1–F2.3) is founder-authorised and not implemented. F2.1 is scope-locked (FD-008) and not implemented.
+**Status.** Concept (definition); atmosphere not painted. F2.0 Visit Evidence remains certified history. F2.1 Work Execution is implemented and certified. Programme 1 remains active; F2.2 Service Desk & Dispatch is the next milestone and is open for Planning-First planning. F2.3 and the Programme 1 certification gate are not yet implemented.
 
-**Version.** 0.16.0
+**Version.** 0.17.0
 
 **Owner.** Founder (definition owner)
 
-**Last Updated.** 2026-09-04
+**Last Updated.** 2026-09-05
 
 ---
 
-Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence as durable or derived operational views beside VIC. Asset history projection is a read-only, asset-rooted composition of certified operational truths — not a separate persisted store. Asset operational condition is a human-asserted, append-only fact about present operational capability and is not inferred from other Frigora truths. Visit customer acknowledgement is a human-recorded, text-only, visit-rooted fact that a named customer or site representative acknowledged information about a Visit; it is not Visit evidence, signature, satisfaction, commercial acceptance, or AssetHistory. Visit evidence (F2.0) is stored visit-attached photo/file evidence recorded against a Visit; it is not verification, compliance certification, commercial acceptance, customer signature, CSAM capability, offline field capability, or generic document management. It is not projected into AssetHistory. Work execution, dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and field workflows are not part of this definition version.
+Frigora is a VentureOS venture. This definition admits Customer, Site, Asset, WorkOrder identity and F2.1 execution, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, and Visit evidence as durable or derived operational views beside VIC. Asset history projection is a read-only, asset-rooted composition of certified operational truths — not a separate persisted store. Asset operational condition is a human-asserted, append-only fact about present operational capability and is not inferred from other Frigora truths. Visit customer acknowledgement is a human-recorded, text-only, visit-rooted fact that a named customer or site representative acknowledged information about a Visit; it is not Visit evidence, signature, satisfaction, commercial acceptance, or AssetHistory. Visit evidence (F2.0) is stored visit-attached photo/file evidence recorded against a Visit; it is not verification, compliance certification, commercial acceptance, customer signature, CSAM capability, offline field capability, or generic document management. It is not projected into AssetHistory. F2.1 Work Execution governs WorkOrder completion, cancellation, reopen, and explicit Recommended Action conversion to follow-up work without conflating Visit departure with WorkOrder completion. Dispatch, full diagnosis workflow, root cause, full repair workflow, parts catalogue, inventory, cylinder inventory, PPM, commercial operations, FACT → PATTERN → SIGNAL, employee agents, and broader field workflows are not part of this definition version.
 
 ## Profile
 
@@ -38,7 +38,8 @@ Admitted in this version, persisted beside VIC for Frigora instances:
 - Customer
 - Site
 - Asset
-- WorkOrder (identity only: reference, kind, reported condition, lifecycle state)
+- WorkOrder (identity, reference, kind, reported condition, and `open` / `closed` / `cancelled` lifecycle)
+- F2.1 Work Execution (governed completion, reasoned cancellation, reopen, and explicit recommendation-to-follow-up conversion)
 - Current WorkOrder assignment (workspace member responsibility only)
 - Visit (attendance identity: who attended, arrival, departure, minimal lifecycle)
 - Visit field capture (raw measurement and condition facts recorded against a Visit)
@@ -66,16 +67,17 @@ IDS key: `frigora`. Brand and atmosphere selectors exist so the instance is reco
 
 Frigora receives the full executive desk. Theme must not invent a private Runtime or a private navigation model. The VentureOS Situation Room remains the founder/executive brief. Frigora operational presentation must not replace `/dashboard`.
 
-## Authorised next programme (not this definition version)
+## Active Programme 1
 
-Founder Decision [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) locks [Programme 1 — Reactive Service Operations](./Programme-1.md). Founder Decision [FD-008](../../05-GOVERNANCE/Founder-Decisions.md) scope-locks F2.1 for implementation. Live definition remains `frigora@0.16.0` / F2.0 until each increment is certified and the definition is legitimately changed. FD-008 does not certify F2.1 and does not open F2.2 or F2.3.
+Founder Decision [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) locks [Programme 1 — Reactive Service Operations](./Programme-1.md). Founder Decision [FD-008](../../05-GOVERNANCE/Founder-Decisions.md) scope-locked F2.1 for implementation. Founder Decision [FD-009](../../05-GOVERNANCE/Founder-Decisions.md) admits the certified F2.1 implementation checkpoint into the live `frigora@0.17.0` baseline. Planning-First governance follows at `ee5fee673d1f6f8c726f392c67b57cf8cde41e6d`. F2.2 is open for planning, not implemented.
 
-| Milestone | Product purpose | Status |
-|---|---|---|
-| F2.0 Visit Evidence | Stored visit-attached photo/file evidence | Certified (this version) |
-| F2.1 Work Execution | Governed WorkOrder completion distinct from Visit departure | Authorised, scope-locked (FD-008), not implemented |
-| F2.2 Service Desk & Dispatch | Scheduling, assignment, acceptance, day board | Authorised, not implemented; after certified F2.1 |
-| F2.3 Engineer Job Workflow | End-to-end engineer job card on certified truths | Authorised, not implemented; after certified F2.2 |
+| Milestone                      | Product purpose                                             | Status                                                                  |
+| ------------------------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------- |
+| F2.0 Visit Evidence            | Stored visit-attached photo/file evidence                   | Certified history                                                       |
+| F2.1 Work Execution            | Governed WorkOrder completion distinct from Visit departure | Implemented and certified at `3d27699de63923c1cfc5a08bddab8ea8b356c422` |
+| F2.2 Service Desk & Dispatch   | Scheduling, assignment, acceptance, day board               | Open/current milestone; not implemented                                 |
+| F2.3 Engineer Job Workflow     | End-to-end engineer job card on certified truths            | Authorised, not implemented; after certified F2.2                       |
+| Programme 1 Certification Gate | End-to-end reactive-service programme certification         | Not yet reached; after F2.3                                             |
 
 Do not add F2.4. Capabilities after F2.3 are provisional and unnumbered. See the Programme 1 document for boundaries, exclusions, the certification gate, and architectural guardrails.
 
@@ -105,15 +107,15 @@ Corrective action, part usage, refrigerant event, visit outcome, recommended act
 
 ## Deferred
 
-The following are not part of this definition version (`frigora@0.16.0`) and must not be read as built. Programme 1 is authorised to admit **work execution**, **dispatch**, and **engineer field workflows** only through certified F2.1–F2.3; they are not admitted until those increments land. Everything else below remains excluded from Programme 1.
+The following are not part of this definition version (`frigora@0.17.0`) and must not be read as built. Programme 1 may admit **dispatch** and **engineer field workflows** only through certified F2.2–F2.3; they are not admitted until those increments land. Everything else below remains excluded from Programme 1.
 
 - refrigeration systems, asset components
-- work execution, dispatch, engineer field workflows
+- dispatch, engineer field workflows
 - full diagnosis workflow, root cause, repairs
 - parts catalogue, SKU registry, inventory, stock balances, warehouse, van stock
 - cylinder inventory, stock ledger, refrigerant catalogue
 - purchasing, suppliers, purchase orders, pricing, unit costing, invoice lines
-- PPM requirements, obligations, planned visits, work execution
+- PPM requirements, obligations, planned visits
 - commercial operations
 - generic document management, evidence packages as a document store, operational memory
 - FACT → PATTERN → SIGNAL

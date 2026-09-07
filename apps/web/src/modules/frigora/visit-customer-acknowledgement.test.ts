@@ -633,9 +633,9 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     assert.equal(readFileSync(schemaPath, "utf8").includes("frigora_asset_history"), false);
   });
 
-  it("admits frigora@0.16.0 and remains compatible with persisted 0.14.0", async () => {
+  it("admits frigora@0.17.0 and remains compatible with persisted 0.14.0", async () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.16.0");
+    assert.equal(frigora.version, "0.17.0");
     assert.match(frigora.description, /Visit customer acknowledgement/i);
     assert.match(frigora.description, /evidence/);
     assert.match(frigora.description, /employee agents/);
