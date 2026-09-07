@@ -2,7 +2,7 @@
 
 **Purpose.** Record the founder-locked first post-F2.0 Frigora development programme: sequential increments F2.1, F2.2, and F2.3.
 
-**Authority.** Founder product lock. Founder Decisions [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) (programme), [FD-008](../../05-GOVERNANCE/Founder-Decisions.md) (F2.1 scope), and [FD-009](../../05-GOVERNANCE/Founder-Decisions.md) (F2.1 certified-baseline admission).
+**Authority.** Founder product lock. Founder Decisions [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) (programme), [FD-008](../../05-GOVERNANCE/Founder-Decisions.md) (F2.1 scope), [FD-009](../../05-GOVERNANCE/Founder-Decisions.md) (F2.1 admission), and [FD-010](../../05-GOVERNANCE/Founder-Decisions.md) (F2.2 admission).
 
 **Audience.** Product and engineers authorised to implement Programme 1.
 
@@ -10,28 +10,29 @@
 
 **Related Documents.** [Products](../README.md) · [Venture Definitions](../../02-ARCHITECTURE/Venture-Definitions.md) · [Master Engineering Prompt](../../../engineering/MASTER_ENGINEERING_PROMPT.md)
 
-**Status.** Active programme. F2.1 is **implemented and certified** at `3d27699de63923c1cfc5a08bddab8ea8b356c422`. F2.2 is the current milestone and is open for Planning-First planning, not implemented. F2.3 remains authorised after certified F2.2.
+**Status.** Active programme. F2.1 and F2.2 are implemented and certified. F2.2 is certified at `bee64990c10a28cc5df4c9b88c99c636cd37c38b`. F2.3 Engineer Job Workflow is next and not yet implemented. The Programme 1 certification gate remains incomplete.
 
-**Version.** 1.2.0
+**Version.** 1.3.0
 
 **Owner.** Founder
 
-**Last Updated.** 2026-09-05
+**Last Updated.** 2026-09-07
 
 ---
 
 ## Live product law
 
-| Field                                | Value                                                              |
-| ------------------------------------ | ------------------------------------------------------------------ |
-| Live definition                      | `frigora@0.17.0`                                                   |
-| Prior certified product checkpoint   | F2.0 — Visit Evidence · `6a188eb624c3327ec9bd4bd319d6d6b54ad23232` |
-| Prior product-record reconciliation  | `573ab5d4f79bbfa239105bc0944c909e98c0c617`                         |
-| Certified product checkpoint         | F2.1 — Work Execution · `3d27699de63923c1cfc5a08bddab8ea8b356c422` |
-| Planning-First governance checkpoint | `ee5fee673d1f6f8c726f392c67b57cf8cde41e6d`                         |
-| Programme 1 roadmap lock             | `7aa46b5e200e9d03b224ca9a0eb7daf0491083a4`                         |
+| Field                                | Value                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------- |
+| Live definition                      | `frigora@0.18.0`                                                            |
+| Prior certified product checkpoint   | F2.0 — Visit Evidence · `6a188eb624c3327ec9bd4bd319d6d6b54ad23232`          |
+| Prior product-record reconciliation  | `573ab5d4f79bbfa239105bc0944c909e98c0c617`                                  |
+| Prior Programme 1 checkpoint         | F2.1 — Work Execution · `3d27699de63923c1cfc5a08bddab8ea8b356c422`          |
+| Certified product checkpoint         | F2.2 — Service Desk & Dispatch · `bee64990c10a28cc5df4c9b88c99c636cd37c38b` |
+| Planning-First governance checkpoint | `ee5fee673d1f6f8c726f392c67b57cf8cde41e6d`                                  |
+| Programme 1 roadmap lock             | `7aa46b5e200e9d03b224ca9a0eb7daf0491083a4`                                  |
 
-F2.1 is admitted in the live definition by FD-009 after implementation and certification. F2.2 is now open for Planning-First planning. F2.2 and F2.3 are not admitted until each increment is implemented, tested, certified, documented, checkpointed, and the definition is legitimately bumped.
+F2.1 is admitted by FD-009. F2.2 is admitted by FD-010 after implementation and certification. F2.3 is the next Planning-First capability and is not admitted until it is implemented, tested, certified, documented, checkpointed, and the definition is legitimately bumped. The Programme 1 certification gate remains closed.
 
 ## Programme purpose
 
@@ -48,9 +49,9 @@ Frigora remains a VentureOS-built Venture. This programme must not create a seco
 ```
 F2.0 Visit Evidence (certified, live)
   → F2.1 Work Execution (certified, live)
-    → F2.2 Service Desk & Dispatch (open/current milestone)
-      → F2.3 Engineer Job Workflow
-        → Programme 1 certification gate
+    → F2.2 Service Desk & Dispatch (certified, live)
+      → F2.3 Engineer Job Workflow (next; not implemented)
+        → Programme 1 certification gate (not complete)
 ```
 
 Exactly three sequential product increments. **Do not add F2.4.** Do not assign F-numbers to later capabilities.
@@ -65,7 +66,7 @@ At that gate, a refrigeration service company can receive work, schedule and dis
 
 ## F2.1 — Work Execution
 
-**Status.** Implemented and certified. Scope lock: FD-008. Certified implementation checkpoint: `3d27699de63923c1cfc5a08bddab8ea8b356c422`. Admitted to the live product baseline by FD-009. F2.2 is open for Planning-First planning; F2.3 remains closed until certified F2.2.
+**Status.** Implemented and certified. Scope lock: FD-008. Certified implementation checkpoint: `3d27699de63923c1cfc5a08bddab8ea8b356c422`. Admitted to the live product baseline by FD-009. F2.2 is also certified and admitted; F2.3 is next and not yet implemented.
 
 **Product purpose.** Create a governed WorkOrder execution/completion lifecycle on top of the existing certified WorkOrder, Visit, and operational truth model.
 
@@ -179,24 +180,30 @@ Implementation must prove at minimum:
 
 ## F2.2 — Service Desk & Dispatch
 
-**Status.** Open for Planning-First planning as the current Programme 1 milestone. Not implemented. Depends on the certified F2.1 baseline.
+**Status.** Implemented and certified at `bee64990c10a28cc5df4c9b88c99c636cd37c38b`. Admitted to the live `frigora@0.18.0` product baseline by FD-010. F2.3 is next and not yet implemented.
 
 **Product purpose.** Turn the existing assignment and operational visibility foundations into a genuine service-desk dispatch workflow.
 
-**Should establish**
+**Certified capability**
 
-- scheduling of operational work
-- scheduled date/time or service window
-- operational priority where justified
-- engineer assignment using the existing workspace/member model
-- engineer acceptance/decline where appropriate
-- service-desk visibility of unassigned work, scheduled work, accepted work, active visits, completed work, and work requiring attention
-- a coherent dispatch/day-board experience
+- selected-UTC-day Service Desk coordination
+- persisted service windows with schedule, reschedule, and clear operations
+- assignment, reassignment, and unassignment through the existing WorkOrder assignment model
+- exact-assignee acceptance and reasoned decline
+- derived dispatch readiness, board buckets, and operational attention
+- repository-backed Service Desk and WorkOrder controls
+- `venture.update` dispatch authorization and member/`venture.read`/exact-assignee response authorization
+- additive WorkOrder persistence with no dispatch-specific table
 
 **Architectural rule.** Existing assignment semantics must be preserved where possible. Do not create a parallel engineer identity or second assignment architecture merely for dispatch.
 
 **Must not introduce**
 
+- a second WorkOrder lifecycle or persisted `dispatchStatus`
+- an Engineer entity or second assignment model
+- automatic Visit creation or assignee/Visit-attendee binding
+- operational priority vocabulary
+- F2.3 Engineer Job Workflow
 - route optimisation
 - GPS tracking
 - skills optimisation
@@ -210,7 +217,7 @@ Implementation must prove at minimum:
 
 ## F2.3 — Engineer Job Workflow
 
-**Status.** Authorised. Not implemented. Depends on certified F2.2.
+**Status.** Next Planning-First capability. Not implemented. Depends on certified F2.2.
 
 **Product purpose.** Transform the existing My Work / Visit Recorder foundations into the first genuine end-to-end Frigora engineer job workflow.
 

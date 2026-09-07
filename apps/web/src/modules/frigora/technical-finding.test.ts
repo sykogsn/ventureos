@@ -796,7 +796,7 @@ describe("Frigora Visit technical finding", () => {
   });
 
   it("resolves frigora@0.10.0 from catalog with technical finding admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.17.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.18.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /Visit technical findings/,

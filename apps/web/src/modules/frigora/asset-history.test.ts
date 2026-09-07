@@ -780,9 +780,9 @@ describe("Frigora asset history projection (F0.13)", () => {
     assert.equal(schemaSource.includes("frigora_asset_history"), false);
   });
 
-  it("admits frigora@0.17.0 with asset history projection in catalog", () => {
+  it("admits frigora@0.18.0 with asset history projection in catalog", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.17.0");
+    assert.equal(frigora.version, "0.18.0");
     assert.match(frigora.description, /Asset history projection/);
     assert.deepEqual([...FRIGORA_ASSET_HISTORY_EVENT_KINDS], [
       "reported_intake",

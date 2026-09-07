@@ -792,7 +792,7 @@ describe("Frigora Visit field capture", () => {
   });
 
   it("resolves frigora@0.10.0 from catalog with field capture admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.17.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.18.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /Visit field capture/,

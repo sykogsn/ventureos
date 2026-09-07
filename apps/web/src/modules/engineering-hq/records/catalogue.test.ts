@@ -20,8 +20,10 @@ describe("Engineering Records catalogue", () => {
     assert.equal(catalogue.lessons.length, 8);
     const ece001 = catalogue.cycles.find((cycle) => cycle.id === "ECE-001");
     const ece002 = catalogue.cycles.find((cycle) => cycle.id === "ECE-002");
+    const ece003 = catalogue.cycles.find((cycle) => cycle.id === "ECE-003");
     assert.equal(catalogue.cycles.filter((cycle) => cycle.id === "ECE-001").length, 1);
     assert.equal(catalogue.cycles.filter((cycle) => cycle.id === "ECE-002").length, 1);
+    assert.equal(catalogue.cycles.filter((cycle) => cycle.id === "ECE-003").length, 1);
     assert.equal(ece001?.tests, 753);
     assert.equal(ece001?.pass, 753);
     assert.equal(ece001?.fail, 0);
@@ -39,6 +41,15 @@ describe("Engineering Records catalogue", () => {
     assert.equal(ece002?.fail, 0);
     assert.equal(ece002?.cleanProcessExit, "YES");
     assert.equal(ece002?.firstCorrectionHeld, "YES");
+    assert.equal(ece003?.checkpointSha, "bee64990c10a28cc5df4c9b88c99c636cd37c38b");
+    assert.equal(ece003?.workItem, "Frigora F2.2 — Service Desk & Dispatch");
+    assert.equal(ece003?.closedAs, "certified");
+    assert.equal(ece003?.tests, 794);
+    assert.equal(ece003?.pass, 794);
+    assert.equal(ece003?.fail, 0);
+    assert.equal(ece003?.certificationFailures, 0);
+    assert.equal(ece003?.cleanProcessExit, "YES");
+    assert.equal(ece003?.firstCorrectionHeld, "UNKNOWN");
     assert.match(catalogue.certification.status, /CERTIFIED/);
     assert.ok(catalogue.releases.some((item) => item.name.includes("1.1")));
     assert.ok(catalogue.releases.some((item) => item.name.includes("1.0")));

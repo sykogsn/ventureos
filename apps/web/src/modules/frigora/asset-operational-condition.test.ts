@@ -654,9 +654,9 @@ describe("Frigora asset operational condition (F0.14)", () => {
     assert.equal(readFileSync(schemaPath, "utf8").includes("frigora_asset_history"), false);
   });
 
-  it("admits frigora@0.17.0 and remains compatible with persisted 0.14.0", async () => {
+  it("admits frigora@0.18.0 and remains compatible with persisted 0.14.0", async () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.17.0");
+    assert.equal(frigora.version, "0.18.0");
     assert.match(frigora.description, /Asset operational condition/);
     assert.match(frigora.description, /parts catalogue/);
 

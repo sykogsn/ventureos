@@ -516,7 +516,7 @@ describe("F1.2 Field Visit Recorder", () => {
   });
 
   it("ships F1.2 routes and field mutation module without F0 edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.17.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.18.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
     assert.match(dbSource, /SCHEMA_GENERATION = 24/);

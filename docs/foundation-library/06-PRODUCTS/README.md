@@ -12,23 +12,23 @@
 
 **Status.** Approved
 
-**Version.** 1.2.0
+**Version.** 1.3.0
 
 **Owner.** Product
 
-**Last Updated.** 2026-09-05
+**Last Updated.** 2026-09-07
 
 ---
 
 The founder selects a Product. The Definition Registry resolves it. The Runtime orchestrates. IDS may theme the instance later; it may not invent a Product Registry.
 
-| Product           | Definition id       | Lifecycle  | Distinctive exclusion                                                                                                                                                                                                                                                                 |
-| ----------------- | ------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| VentureOS Company | `ventureos.company` | operating  | None (full desk)                                                                                                                                                                                                                                                                      |
-| Qualora           | `qualora`           | incubating | None                                                                                                                                                                                                                                                                                  |
-| Calviora          | `calviora`          | concept    | Morning briefing                                                                                                                                                                                                                                                                      |
-| Farmora           | `farmora`           | concept    | Executive Office feature                                                                                                                                                                                                                                                              |
-| Frigora           | `frigora`           | concept    | None (full desk; F2.0 Visit Evidence remains certified history; F2.1 Work Execution is implemented and certified at `frigora@0.17.0`; F2.2 Service Desk & Dispatch is next and open for Planning-First planning; F2.3 and the Programme 1 certification gate are not yet implemented) |
+| Product           | Definition id       | Lifecycle  | Distinctive exclusion                                                                                                                                                                                                                                                                   |
+| ----------------- | ------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VentureOS Company | `ventureos.company` | operating  | None (full desk)                                                                                                                                                                                                                                                                        |
+| Qualora           | `qualora`           | incubating | None                                                                                                                                                                                                                                                                                    |
+| Calviora          | `calviora`          | concept    | Morning briefing                                                                                                                                                                                                                                                                        |
+| Farmora           | `farmora`           | concept    | Executive Office feature                                                                                                                                                                                                                                                                |
+| Frigora           | `frigora`           | concept    | None (full desk; F2.0 Visit Evidence remains certified history; F2.1 Work Execution and F2.2 Service Desk & Dispatch are certified and admitted at `frigora@0.18.0`; F2.3 Engineer Job Workflow is next and not yet implemented; the Programme 1 certification gate remains incomplete) |
 
 VentureOS Company is the default instance for founder-created companies. It is the OS’s generic company, not a fourth marketed product in the launch sense.
 
