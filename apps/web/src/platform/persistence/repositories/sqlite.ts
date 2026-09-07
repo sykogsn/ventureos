@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, isNull, lt } from "drizzle-orm";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import type { CompanyStory } from "@/core/company-story";
 import type { Decision } from "@/core/decision-engine";
@@ -345,6 +345,19 @@ function createMembershipRepository(): MembershipRepository {
         )
         .limit(1);
       return row?.role ?? null;
+    },
+    async listByWorkspace(workspaceId) {
+      const rows = await getDb()
+        .select()
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, workspaceId))
+        .orderBy(asc(workspaceMembers.createdAt), asc(workspaceMembers.userId));
+      return rows.map((row) => ({
+        workspaceId: row.workspaceId as WorkspaceId,
+        userId: row.userId as UserId,
+        role: row.role,
+        createdAt: row.createdAt,
+      }));
     },
     async setRole(row: MembershipRow) {
       const db = getDb();

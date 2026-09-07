@@ -2,9 +2,10 @@ import Link from "next/link";
 import { PageFrame } from "@/core";
 import { EmptyCopy } from "@/core/shell/empty-copy";
 import { Fit, Stack } from "@/core/layout";
-import { AssignmentControls } from "@/modules/frigora/app/forms/assignment-controls";
+import { AssignmentResponseControls } from "@/modules/frigora/app/forms/assignment-response-controls";
 import { ConvertRecommendedActionForm } from "@/modules/frigora/app/forms/convert-recommended-action-form";
 import { CreateWorkOrderForm } from "@/modules/frigora/app/forms/create-work-order-form";
+import { DispatchControls } from "@/modules/frigora/app/forms/dispatch-controls";
 import { WorkOrderLifecycleControls } from "@/modules/frigora/app/forms/work-order-lifecycle-controls";
 import {
   formatVisitStatusLabel,
@@ -449,6 +450,7 @@ export function WorkDetailScreen({
     currentOperationalCondition,
     attentionSignals,
     latestVisitId,
+    members,
   } = view;
 
   const workBase = `/ventures/${ctx.ventureId}/work/${workOrder.id}`;
@@ -534,20 +536,47 @@ export function WorkDetailScreen({
         </dl>
 
         <Stack gap="compact">
-          <h2 className="ids-label text-foreground">Assignment</h2>
-          {workOrder.status === "open" ? (
-            <AssignmentControls
-              workspaceId={ctx.workspaceId}
-              ventureId={ctx.ventureId}
-              workOrderId={workOrder.id}
-              assignedUserId={workOrder.assignedUserId}
-              canWrite={ctx.canWrite}
-            />
-          ) : (
-            <p className="ids-caption text-muted">
-              Assignment can only change on open work orders.
-            </p>
-          )}
+          <h2 className="ids-label text-foreground">Service window and assignment</h2>
+          <p className="ids-body">
+            {workOrder.scheduledStartAt && workOrder.scheduledEndAt
+              ? `${workOrder.scheduledStartAt} → ${workOrder.scheduledEndAt}`
+              : "Not scheduled"}
+          </p>
+          <p className="ids-caption text-muted">
+            Assigned to {assignee?.name ?? workOrder.assignedUserId ?? "nobody"}.
+          </p>
+          <DispatchControls
+            workspaceId={ctx.workspaceId}
+            ventureId={ctx.ventureId}
+            workOrderId={workOrder.id}
+            assignedUserId={workOrder.assignedUserId}
+            scheduledStartAt={workOrder.scheduledStartAt}
+            scheduledEndAt={workOrder.scheduledEndAt}
+            members={members}
+            canWrite={ctx.canWrite}
+            isOpen={isOpen}
+            hasActiveVisit={openVisits.length > 0}
+          />
+        </Stack>
+
+        <Stack gap="compact">
+          <h2 className="ids-label text-foreground">Engineer response</h2>
+          <AssignmentResponseControls
+            workspaceId={ctx.workspaceId}
+            ventureId={ctx.ventureId}
+            workOrderId={workOrder.id}
+            canRespond={
+              isOpen &&
+              assignedToMe &&
+              workOrder.scheduledStartAt !== null &&
+              workOrder.scheduledEndAt !== null &&
+              workOrder.assignmentAcceptedAt === null &&
+              workOrder.assignmentDeclinedAt === null
+            }
+            acceptedAt={workOrder.assignmentAcceptedAt}
+            declinedAt={workOrder.assignmentDeclinedAt}
+            declineReason={workOrder.assignmentDeclineReason}
+          />
         </Stack>
 
         {attentionSignals.length > 0 ? (

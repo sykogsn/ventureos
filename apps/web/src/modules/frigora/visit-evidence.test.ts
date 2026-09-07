@@ -423,7 +423,14 @@ describe("Frigora visit evidence (F2.0)", () => {
     const memberId = "user-member" as UserId;
     await addMember(owner.workspaceId, attendeeId);
     await addMember(owner.workspaceId, memberId);
-    const { visit, workOrder } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+    const { workOrder } = await seedHierarchy(owner.service, owner.scope);
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+      userId: memberId,
+    });
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: attendeeId,
+      arrivedAt: ARRIVED,
+    });
 
     const row = await owner.service.recordVisitEvidenceWithFile(owner.scope, visit.id, {
       ...fileInput({ userId: attendeeId }),
@@ -442,9 +449,6 @@ describe("Frigora visit evidence (F2.0)", () => {
       "forbidden",
     );
 
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
-      userId: memberId,
-    });
     await expectCode(
       () =>
         owner.service.recordVisitEvidenceWithFile(memberScope, visit.id, {
@@ -574,7 +578,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     assert.equal(FRIGORA_ASSET_OPERATIONAL_CONDITION_KINDS.includes("evidence" as never), false);
   });
 
-  it("persists through restart with SCHEMA_GENERATION 23 and admits frigora@0.17.0", async () => {
+  it("persists through restart with SCHEMA_GENERATION 24 and admits frigora@0.17.0", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -591,7 +595,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     const schemaPath = fileURLToPath(
       new URL("../../platform/persistence/schema.ts", import.meta.url),
     );
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 23/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 24/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_visit_evidence/);
     assert.match(
       readFileSync(schemaPath, "utf8"),

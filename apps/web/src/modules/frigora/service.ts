@@ -8,6 +8,7 @@ import { FrigoraError } from "./errors";
 import { createFrigoraStore, type FrigoraStore } from "./store";
 import type {
   AssignWorkOrderInput,
+  DeclineWorkOrderAssignmentInput,
   CancelWorkOrderInput,
   CreateAssetInput,
   CreateCustomerInput,
@@ -58,6 +59,8 @@ import type {
   FrigoraVisitEvidenceId,
   RecordVisitEvidenceWithFileInput,
   LinkVisitEvidenceInput,
+  ListScheduledWorkOrdersInput,
+  ScheduleWorkOrderInput,
   FrigoraAssetHistoryEntry,
   FrigoraAssetHistoryEventKind,
   UpdateAssetInput,
@@ -74,6 +77,8 @@ import {
   createCustomerSchema,
   createSiteSchema,
   createWorkOrderSchema,
+  declineWorkOrderAssignmentSchema,
+  listScheduledWorkOrdersSchema,
   parseWithFrigora,
   recordVisitArrivalSchema,
   recordVisitDepartureSchema,
@@ -87,6 +92,7 @@ import {
   recordAssetOperationalConditionSchema,
   recordVisitCustomerAcknowledgementSchema,
   recordVisitEvidenceWithFileSchema,
+  scheduleWorkOrderSchema,
   linkVisitEvidenceSchema,
   updateAssetSchema,
   updateCustomerSchema,
@@ -176,6 +182,28 @@ export type FrigoraService = {
     id: FrigoraWorkOrderId,
   ): Promise<FrigoraWorkOrder>;
   listWorkOrdersByAssignee(scope: FrigoraScope, userId: UserId): Promise<FrigoraWorkOrder[]>;
+  scheduleWorkOrder(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+    input: ScheduleWorkOrderInput,
+  ): Promise<FrigoraWorkOrder>;
+  clearWorkOrderSchedule(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+  ): Promise<FrigoraWorkOrder>;
+  acceptWorkOrderAssignment(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+  ): Promise<FrigoraWorkOrder>;
+  declineWorkOrderAssignment(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+    input: DeclineWorkOrderAssignmentInput,
+  ): Promise<FrigoraWorkOrder>;
+  listScheduledWorkOrders(
+    scope: FrigoraScope,
+    input: ListScheduledWorkOrdersInput,
+  ): Promise<FrigoraWorkOrder[]>;
   recordVisitArrival(
     scope: FrigoraScope,
     workOrderId: FrigoraWorkOrderId,
@@ -727,6 +755,11 @@ export function createFrigoraService(options: {
         reportedCondition: parsed.reportedCondition ?? null,
         status: "open",
         assignedUserId: null,
+        scheduledStartAt: null,
+        scheduledEndAt: null,
+        assignmentAcceptedAt: null,
+        assignmentDeclinedAt: null,
+        assignmentDeclineReason: null,
         cancellationReason: null,
         sourceRecommendedActionId: null,
         createdAt: now,
@@ -876,6 +909,11 @@ export function createFrigoraService(options: {
         reportedCondition: recommendation.description,
         status: "open",
         assignedUserId: null,
+        scheduledStartAt: null,
+        scheduledEndAt: null,
+        assignmentAcceptedAt: null,
+        assignmentDeclinedAt: null,
+        assignmentDeclineReason: null,
         cancellationReason: null,
         sourceRecommendedActionId: recommendation.id,
         createdAt: now,
@@ -961,12 +999,16 @@ export function createFrigoraService(options: {
     async assignWorkOrder(scope, id, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
       const existing = await requireOpenWorkOrder(store, scope, id);
+      await assertWorkOrderHasNoOpenVisit(store, scope, existing.id);
       const parsed = parseWithFrigora(assignWorkOrderSchema, input);
       const assigneeId = parsed.userId as UserId;
       await requireWorkspaceMember(scope.workspaceId, assigneeId);
       const next: FrigoraWorkOrder = {
         ...existing,
         assignedUserId: assigneeId,
+        assignmentAcceptedAt: null,
+        assignmentDeclinedAt: null,
+        assignmentDeclineReason: null,
         updatedAt: nowIso(),
       };
       await store.updateWorkOrder(next);
@@ -975,12 +1017,21 @@ export function createFrigoraService(options: {
     async clearWorkOrderAssignment(scope, id) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
       const existing = await requireOpenWorkOrder(store, scope, id);
-      if (existing.assignedUserId === null) {
+      await assertWorkOrderHasNoOpenVisit(store, scope, existing.id);
+      if (
+        existing.assignedUserId === null &&
+        existing.assignmentAcceptedAt === null &&
+        existing.assignmentDeclinedAt === null &&
+        existing.assignmentDeclineReason === null
+      ) {
         return existing;
       }
       const next: FrigoraWorkOrder = {
         ...existing,
         assignedUserId: null,
+        assignmentAcceptedAt: null,
+        assignmentDeclinedAt: null,
+        assignmentDeclineReason: null,
         updatedAt: nowIso(),
       };
       await store.updateWorkOrder(next);
@@ -998,6 +1049,93 @@ export function createFrigoraService(options: {
         scope.workspaceId,
         scope.ventureId,
         userId,
+      );
+    },
+    async scheduleWorkOrder(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireOpenWorkOrder(store, scope, id);
+      await assertWorkOrderHasNoOpenVisit(store, scope, existing.id);
+      const parsed = parseWithFrigora(scheduleWorkOrderSchema, input);
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        scheduledStartAt: parsed.scheduledStartAt,
+        scheduledEndAt: parsed.scheduledEndAt,
+        assignmentAcceptedAt: null,
+        assignmentDeclinedAt: null,
+        assignmentDeclineReason: null,
+        updatedAt: nowIso(),
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async clearWorkOrderSchedule(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireOpenWorkOrder(store, scope, id);
+      await assertWorkOrderHasNoOpenVisit(store, scope, existing.id);
+      if (
+        existing.scheduledStartAt === null &&
+        existing.scheduledEndAt === null &&
+        existing.assignmentAcceptedAt === null &&
+        existing.assignmentDeclinedAt === null &&
+        existing.assignmentDeclineReason === null
+      ) {
+        return existing;
+      }
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        scheduledStartAt: null,
+        scheduledEndAt: null,
+        assignmentAcceptedAt: null,
+        assignmentDeclinedAt: null,
+        assignmentDeclineReason: null,
+        updatedAt: nowIso(),
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async acceptWorkOrderAssignment(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
+      const existing = await requireOpenWorkOrder(store, scope, id);
+      assertCurrentAssignmentMayRespond(existing, scope.userId);
+      assertHasScheduledServiceWindow(existing);
+      const acceptedAt = nowIso();
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        assignmentAcceptedAt: acceptedAt,
+        assignmentDeclinedAt: null,
+        assignmentDeclineReason: null,
+        updatedAt: acceptedAt,
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async declineWorkOrderAssignment(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
+      const existing = await requireOpenWorkOrder(store, scope, id);
+      assertCurrentAssignmentMayRespond(existing, scope.userId);
+      const parsed = parseWithFrigora(declineWorkOrderAssignmentSchema, input);
+      assertHasScheduledServiceWindow(existing);
+      const declinedAt = nowIso();
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        assignmentAcceptedAt: null,
+        assignmentDeclinedAt: declinedAt,
+        assignmentDeclineReason: parsed.reason,
+        updatedAt: declinedAt,
+      };
+      await store.updateWorkOrder(next);
+      return next;
+    },
+    async listScheduledWorkOrders(scope, input) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const parsed = parseWithFrigora(listScheduledWorkOrdersSchema, input);
+      return store.listScheduledWorkOrders(
+        scope.workspaceId,
+        scope.ventureId,
+        parsed.rangeStart,
+        parsed.rangeEnd,
       );
     },
     async recordVisitArrival(scope, workOrderId, input) {
@@ -2500,7 +2638,40 @@ async function assertWorkOrderHasNoOpenVisit(
   if (visits.some((visit) => visit.status === "open")) {
     throw new FrigoraError(
       "invalid_status",
-      "A work order cannot be cancelled while a visit is still open.",
+      "A work order cannot be changed while a visit is still open.",
+    );
+  }
+}
+
+function assertCurrentAssignmentMayRespond(
+  workOrder: FrigoraWorkOrder,
+  actingUserId: UserId,
+) {
+  if (workOrder.assignedUserId === null || workOrder.assignedUserId !== actingUserId) {
+    throw new FrigoraError(
+      "forbidden",
+      "Only the current assignee can respond to this assignment.",
+    );
+  }
+  if (
+    workOrder.assignmentAcceptedAt !== null ||
+    workOrder.assignmentDeclinedAt !== null
+  ) {
+    throw new FrigoraError(
+      "invalid_status",
+      "The current assignment already has a response.",
+    );
+  }
+}
+
+function assertHasScheduledServiceWindow(workOrder: FrigoraWorkOrder) {
+  if (
+    workOrder.scheduledStartAt === null ||
+    workOrder.scheduledEndAt === null
+  ) {
+    throw new FrigoraError(
+      "invalid_status",
+      "Assignment responses require a scheduled service window.",
     );
   }
 }

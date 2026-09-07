@@ -480,8 +480,12 @@ describe("Frigora Refrigerant event", () => {
     await addMember(owner.workspaceId, handlerId);
     await addMember(owner.workspaceId, recorderId);
     await addMember(owner.workspaceId, assigneeId);
-    const { workOrder, visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+    const { workOrder } = await seedHierarchy(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: attendeeId,
+      arrivedAt: ARRIVED,
+    });
 
     await expectCode(
       () =>
@@ -643,8 +647,12 @@ describe("Frigora Refrigerant event", () => {
     await addMember(owner.workspaceId, assigneeId);
     await addMember(owner.workspaceId, attendeeId);
     await addMember(owner.workspaceId, recorderId);
-    const { workOrder, asset, visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+    const { workOrder, asset } = await seedHierarchy(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: attendeeId,
+      arrivedAt: ARRIVED,
+    });
 
     const capture = await owner.service.recordFieldCapture(owner.scope, visit.id, {
       captureKind: "measurement",

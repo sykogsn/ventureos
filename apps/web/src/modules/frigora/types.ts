@@ -165,6 +165,11 @@ export type FrigoraWorkOrder = {
   reportedCondition: string | null;
   status: FrigoraWorkOrderStatus;
   assignedUserId: UserId | null;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
+  assignmentAcceptedAt: string | null;
+  assignmentDeclinedAt: string | null;
+  assignmentDeclineReason: string | null;
   cancellationReason: string | null;
   sourceRecommendedActionId: FrigoraRecommendedActionId | null;
   createdAt: string;
@@ -262,6 +267,20 @@ export type CancelWorkOrderInput = {
 
 export type AssignWorkOrderInput = {
   userId: string;
+};
+
+export type ScheduleWorkOrderInput = {
+  scheduledStartAt: string;
+  scheduledEndAt: string;
+};
+
+export type DeclineWorkOrderAssignmentInput = {
+  reason: string;
+};
+
+export type ListScheduledWorkOrdersInput = {
+  rangeStart: string;
+  rangeEnd: string;
 };
 
 export type FrigoraVisit = {

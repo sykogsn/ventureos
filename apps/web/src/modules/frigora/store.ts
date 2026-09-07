@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import type { VentureId, WorkspaceId, UserId, StoredObjectId } from "@/contracts";
 import { ensureSchema, getDb } from "@/platform/persistence/db";
 import {
@@ -161,6 +161,12 @@ export type FrigoraStore = {
     workspaceId: WorkspaceId,
     ventureId: VentureId,
     userId: UserId,
+  ): Promise<FrigoraWorkOrder[]>;
+  listScheduledWorkOrders(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    rangeStart: string,
+    rangeEnd: string,
   ): Promise<FrigoraWorkOrder[]>;
   findWorkOrderBySourceRecommendedActionId(
     workspaceId: WorkspaceId,
@@ -744,6 +750,24 @@ export function createFrigoraStore(): FrigoraStore {
           ),
         )
         .orderBy(asc(frigoraWorkOrders.createdAt), asc(frigoraWorkOrders.id));
+      return rows.map(mapWorkOrder);
+    },
+    async listScheduledWorkOrders(workspaceId, ventureId, rangeStart, rangeEnd) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraWorkOrders)
+        .where(
+          and(
+            eq(frigoraWorkOrders.workspaceId, workspaceId),
+            eq(frigoraWorkOrders.ventureId, ventureId),
+            isNotNull(frigoraWorkOrders.scheduledStartAt),
+            isNotNull(frigoraWorkOrders.scheduledEndAt),
+            lt(frigoraWorkOrders.scheduledStartAt, rangeEnd),
+            gt(frigoraWorkOrders.scheduledEndAt, rangeStart),
+          ),
+        )
+        .orderBy(asc(frigoraWorkOrders.scheduledStartAt), asc(frigoraWorkOrders.id));
       return rows.map(mapWorkOrder);
     },
     async findWorkOrderBySourceRecommendedActionId(
@@ -1534,6 +1558,11 @@ function toWorkOrderValues(row: FrigoraWorkOrder) {
     reportedCondition: row.reportedCondition,
     status: row.status,
     assignedUserId: row.assignedUserId,
+    scheduledStartAt: row.scheduledStartAt,
+    scheduledEndAt: row.scheduledEndAt,
+    assignmentAcceptedAt: row.assignmentAcceptedAt,
+    assignmentDeclinedAt: row.assignmentDeclinedAt,
+    assignmentDeclineReason: row.assignmentDeclineReason,
     cancellationReason: row.cancellationReason,
     sourceRecommendedActionId: row.sourceRecommendedActionId,
     createdAt: row.createdAt,
@@ -1843,6 +1872,11 @@ function mapWorkOrder(row: typeof frigoraWorkOrders.$inferSelect): FrigoraWorkOr
     reportedCondition: row.reportedCondition ?? null,
     status: row.status as FrigoraWorkOrderStatus,
     assignedUserId: (row.assignedUserId as UserId | null) ?? null,
+    scheduledStartAt: row.scheduledStartAt ?? null,
+    scheduledEndAt: row.scheduledEndAt ?? null,
+    assignmentAcceptedAt: row.assignmentAcceptedAt ?? null,
+    assignmentDeclinedAt: row.assignmentDeclinedAt ?? null,
+    assignmentDeclineReason: row.assignmentDeclineReason ?? null,
     cancellationReason: row.cancellationReason ?? null,
     sourceRecommendedActionId:
       (row.sourceRecommendedActionId as FrigoraRecommendedActionId | null) ?? null,

@@ -581,8 +581,12 @@ describe("Frigora Visit technical finding", () => {
     const recorderId = "user-recorder" as UserId;
     await addMember(owner.workspaceId, assigneeId);
     await addMember(owner.workspaceId, recorderId);
-    const { workOrder, visit } = await seedOpenVisit(owner.service, owner.scope, recorderId);
+    const { workOrder } = await seedHierarchy(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: recorderId,
+      arrivedAt: ARRIVED,
+    });
     await owner.service.recordTechnicalFinding(owner.scope, visit.id, {
       findingKind: "symptom",
       description: "compressor unusually noisy",

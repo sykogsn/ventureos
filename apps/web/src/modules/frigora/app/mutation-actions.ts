@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import {
+  acceptWorkOrderAssignmentAction,
   assignWorkOrderAction,
   cancelWorkOrderAction,
+  clearWorkOrderScheduleAction,
   clearWorkOrderAssignmentAction,
   closeWorkOrderAction,
   convertRecommendedActionToFollowUpWorkOrderAction,
@@ -13,7 +15,9 @@ import {
   createCustomerAction,
   createSiteAction,
   createWorkOrderAction,
+  declineWorkOrderAssignmentAction,
   reopenWorkOrderAction,
+  scheduleWorkOrderAction,
 } from "@/modules/frigora/actions";
 import { FRIGORA_ASSET_KINDS, FRIGORA_WORK_KINDS } from "@/modules/frigora/types";
 
@@ -68,6 +72,19 @@ function revalidateOffice(ventureId: string) {
   revalidatePath(workPath(ventureId));
   revalidatePath(operationsPath(ventureId));
   revalidatePath(`/ventures/${ventureId}`, "layout");
+}
+
+function revalidateDispatch(ventureId: string, workOrderId: string) {
+  revalidatePath(workDetailPath(ventureId, workOrderId));
+  revalidatePath(workPath(ventureId));
+  revalidatePath(operationsPath(ventureId));
+}
+
+function utcInstant(formData: FormData, key: string): string {
+  const value = text(formData, key).trim();
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)
+    ? `${value}:00.000Z`
+    : value;
 }
 
 export async function createCustomerFormAction(
@@ -370,5 +387,104 @@ export async function clearAssignmentFormAction(
   revalidatePath(workDetailPath(scope.ventureId, workOrderId));
   revalidatePath(workPath(scope.ventureId));
   revalidatePath(operationsPath(scope.ventureId));
+  return {};
+}
+
+export async function assignWorkOrderFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const userId = text(formData, "userId");
+  const result = await assignWorkOrderAction({
+    ...scope,
+    id: workOrderId,
+    userId,
+  });
+  if (result.error) {
+    return { error: result.error, values: { userId } };
+  }
+  revalidateDispatch(scope.ventureId, workOrderId);
+  return {};
+}
+
+export async function scheduleWorkOrderFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const scheduledStartAt = utcInstant(formData, "scheduledStartAt");
+  const scheduledEndAt = utcInstant(formData, "scheduledEndAt");
+  const result = await scheduleWorkOrderAction({
+    ...scope,
+    id: workOrderId,
+    scheduledStartAt,
+    scheduledEndAt,
+  });
+  if (result.error) {
+    return {
+      error: result.error,
+      values: {
+        scheduledStartAt: text(formData, "scheduledStartAt"),
+        scheduledEndAt: text(formData, "scheduledEndAt"),
+      },
+    };
+  }
+  revalidateDispatch(scope.ventureId, workOrderId);
+  return {};
+}
+
+export async function clearWorkOrderScheduleFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const result = await clearWorkOrderScheduleAction({
+    ...scope,
+    id: workOrderId,
+  });
+  if (result.error) {
+    return { error: result.error };
+  }
+  revalidateDispatch(scope.ventureId, workOrderId);
+  return {};
+}
+
+export async function acceptWorkOrderAssignmentFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const result = await acceptWorkOrderAssignmentAction({
+    ...scope,
+    id: workOrderId,
+  });
+  if (result.error) {
+    return { error: result.error };
+  }
+  revalidateDispatch(scope.ventureId, workOrderId);
+  return {};
+}
+
+export async function declineWorkOrderAssignmentFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const reason = text(formData, "reason");
+  const result = await declineWorkOrderAssignmentAction({
+    ...scope,
+    id: workOrderId,
+    reason,
+  });
+  if (result.error) {
+    return { error: result.error, values: { reason } };
+  }
+  revalidateDispatch(scope.ventureId, workOrderId);
   return {};
 }

@@ -30,11 +30,14 @@ import {
   listVisitEvidenceByWorkOrderQuery,
   listVisitOutcomesByWorkOrderQuery,
   listVisitsByWorkOrderQuery,
+  listScheduledWorkOrdersQuery,
   listWorkOrdersByAssigneeQuery,
   listWorkOrdersQuery,
 } from "@/modules/frigora/queries";
 import {
   ATTENTION_SIGNAL_LABELS,
+  deriveDispatchBoardBucket,
+  deriveDispatchResponseState,
   computeOperationsCounts,
   deriveAttentionSignals,
   hasActiveVisit,
@@ -43,6 +46,8 @@ import {
   type OperationalActivityEvent,
   type OperationalAttentionSignal,
   type OperationsOverviewCounts,
+  type DispatchBoardBucket,
+  type DispatchResponseState,
 } from "@/modules/frigora/app/operational-derivations";
 import type {
   FrigoraAsset,
@@ -96,10 +101,24 @@ export type OperationalAttentionItem = {
   signals: OperationalAttentionSignal[];
 };
 
+export type DispatchBoardItem = {
+  workOrder: FrigoraWorkOrder;
+  customer: FrigoraCustomer | null;
+  site: FrigoraSite | null;
+  assignee: UserDisplay | null;
+  visits: FrigoraVisit[];
+  responseState: DispatchResponseState;
+  bucket: DispatchBoardBucket;
+  signals: OperationalAttentionSignal[];
+};
+
 export type OperationsOverviewView = {
   counts: OperationsOverviewCounts;
   attention: OperationalAttentionItem[];
   recentActivity: OperationalActivityEvent[];
+  range: { date: string; start: string; end: string };
+  members: UserDisplay[];
+  board: Record<DispatchBoardBucket, DispatchBoardItem[]>;
 };
 
 export type VisitFactsView = {
@@ -132,6 +151,7 @@ export type WorkOrderDetailView = {
   currentOperationalCondition: FrigoraAssetOperationalCondition | null;
   attentionSignals: OperationalAttentionSignal[];
   latestVisitId: string | null;
+  members: UserDisplay[];
 };
 
 export type MyWorkRow = {
@@ -749,14 +769,43 @@ async function buildRecentActivity(scope: Scope): Promise<OperationalActivityEve
   return takeRecentActivity(events);
 }
 
-export async function loadOperationsOverview(scope: Scope): Promise<{
+function emptyDispatchBoard(): OperationsOverviewView["board"] {
+  return {
+    unscheduled: [],
+    scheduled_unassigned: [],
+    awaiting_response: [],
+    accepted: [],
+    declined: [],
+    active: [],
+    completed: [],
+  };
+}
+
+export async function loadOperationsOverview(
+  scope: Scope,
+  range: { date: string; start: string; end: string } = (() => {
+    const date = new Date().toISOString().slice(0, 10);
+    return {
+      date,
+      start: `${date}T00:00:00.000Z`,
+      end: new Date(Date.parse(`${date}T00:00:00.000Z`) + 86_400_000).toISOString(),
+    };
+  })(),
+): Promise<{
   error?: string;
   view: OperationsOverviewView;
 }> {
-  const openResult = await listWorkOrdersQuery({ ...scope, status: "open" });
-  if (openResult.error) {
+  const [openResult, scheduledResult] = await Promise.all([
+    listWorkOrdersQuery({ ...scope, status: "open" }),
+    listScheduledWorkOrdersQuery({
+      ...scope,
+      rangeStart: range.start,
+      rangeEnd: range.end,
+    }),
+  ]);
+  if (openResult.error || scheduledResult.error) {
     return {
-      error: openResult.error,
+      error: openResult.error ?? scheduledResult.error,
       view: {
         counts: {
           openWork: 0,
@@ -767,6 +816,9 @@ export async function loadOperationsOverview(scope: Scope): Promise<{
         },
         attention: [],
         recentActivity: [],
+        range,
+        members: [],
+        board: emptyDispatchBoard(),
       },
     };
   }
@@ -774,11 +826,22 @@ export async function loadOperationsOverview(scope: Scope): Promise<{
   const openWorkOrders = openResult.record ?? [];
   const visitsByWorkOrderId = await loadVisitsForWorkOrders(scope, openWorkOrders);
   const counts = computeOperationsCounts(openWorkOrders, visitsByWorkOrderId);
+  const membershipRows = await getPersistence().memberships.listByWorkspace(
+    scope.workspaceId as FrigoraWorkOrder["workspaceId"],
+  );
+  const eligibleAssigneeIds = new Set(membershipRows.map((row) => row.userId));
+  const members = (
+    await Promise.all(membershipRows.map((row) => resolveUserDisplay(row.userId)))
+  ).filter((row): row is UserDisplay => row !== null);
 
   const attentionCandidates = openWorkOrders
     .map((workOrder) => {
       const visits = visitsByWorkOrderId.get(workOrder.id) ?? [];
-      const signals = deriveAttentionSignals(workOrder, visits);
+      const signals = deriveAttentionSignals(
+        workOrder,
+        visits,
+        eligibleAssigneeIds,
+      );
       if (signals.length === 0) {
         return null;
       }
@@ -808,6 +871,52 @@ export async function loadOperationsOverview(scope: Scope): Promise<{
     });
   }
 
+  const scheduled = scheduledResult.record ?? [];
+  const boardWorkOrders = new Map<string, FrigoraWorkOrder>();
+  for (const workOrder of scheduled) {
+    if (workOrder.status !== "cancelled") {
+      boardWorkOrders.set(workOrder.id, workOrder);
+    }
+  }
+  for (const workOrder of openWorkOrders) {
+    const visits = visitsByWorkOrderId.get(workOrder.id) ?? [];
+    if (workOrder.scheduledStartAt === null || hasActiveVisit(visits)) {
+      boardWorkOrders.set(workOrder.id, workOrder);
+    }
+  }
+
+  const board = emptyDispatchBoard();
+  for (const workOrder of boardWorkOrders.values()) {
+    let visits = visitsByWorkOrderId.get(workOrder.id);
+    if (!visits) {
+      const visitResult = await listVisitsByWorkOrderQuery({
+        ...scope,
+        workOrderId: workOrder.id,
+      });
+      visits = visitResult.record ?? [];
+    }
+    const [customer, site, assignee] = await Promise.all([
+      getCustomerQuery({ ...scope, id: workOrder.customerId }),
+      getSiteQuery({ ...scope, id: workOrder.siteId }),
+      resolveUserDisplay(workOrder.assignedUserId),
+    ]);
+    const bucket = deriveDispatchBoardBucket(workOrder, visits);
+    board[bucket].push({
+      workOrder,
+      customer: customer.record ?? null,
+      site: site.record ?? null,
+      assignee,
+      visits,
+      responseState: deriveDispatchResponseState(workOrder),
+      bucket,
+      signals: deriveAttentionSignals(
+        workOrder,
+        visits,
+        eligibleAssigneeIds,
+      ),
+    });
+  }
+
   const recentActivity = await buildRecentActivity(scope);
 
   return {
@@ -815,6 +924,9 @@ export async function loadOperationsOverview(scope: Scope): Promise<{
       counts,
       attention,
       recentActivity,
+      range,
+      members,
+      board,
     },
   };
 }
@@ -853,7 +965,18 @@ export async function loadWorkOrderDetail(
 
   const visits = visitsResult.record ?? [];
   const latestVisit = selectLatestVisit(visits);
-  const attentionSignals = deriveAttentionSignals(workOrder, visits);
+  const membershipRows = await getPersistence().memberships.listByWorkspace(
+    workOrder.workspaceId,
+  );
+  const eligibleAssigneeIds = new Set(membershipRows.map((row) => row.userId));
+  const members = (
+    await Promise.all(membershipRows.map((row) => resolveUserDisplay(row.userId)))
+  ).filter((row): row is UserDisplay => row !== null);
+  const attentionSignals = deriveAttentionSignals(
+    workOrder,
+    visits,
+    eligibleAssigneeIds,
+  );
 
   let currentOperationalCondition: FrigoraAssetOperationalCondition | null = null;
   if (workOrder.primaryAssetId) {
@@ -901,6 +1024,7 @@ export async function loadWorkOrderDetail(
       currentOperationalCondition,
       attentionSignals,
       latestVisitId: latestVisit?.id ?? null,
+      members,
     },
   };
 }

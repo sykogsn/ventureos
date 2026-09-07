@@ -2,10 +2,25 @@ import Link from "next/link";
 import { PageFrame } from "@/core";
 import { Fit, Stack } from "@/core/layout";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import { DispatchControls } from "@/modules/frigora/app/forms/dispatch-controls";
+import {
+  DISPATCH_BUCKET_LABELS,
+  type DispatchBoardBucket,
+} from "@/modules/frigora/app/operational-derivations";
 import {
   ATTENTION_SIGNAL_LABELS,
   type OperationsOverviewView,
 } from "@/modules/frigora/app/views";
+
+const BOARD_ORDER: DispatchBoardBucket[] = [
+  "unscheduled",
+  "scheduled_unassigned",
+  "awaiting_response",
+  "accepted",
+  "declined",
+  "active",
+  "completed",
+];
 
 function MetricCard({
   label,
@@ -47,14 +62,14 @@ export function OperationsScreen({
   error?: string;
 }) {
   const workBase = `/ventures/${ctx.ventureId}/work`;
-  const { counts, attention, recentActivity } = view;
+  const { counts, attention, recentActivity, range, members, board } = view;
 
   return (
     <PageFrame
-      page="Operations"
+      page="Service Desk"
       kicker="Frigora operations"
-      title="Operations"
-      description="Current operational state from certified work and visit records."
+      title="Service Desk"
+      description="Plan, assign and coordinate existing work without changing its execution lifecycle."
       ventureId={ctx.ventureId}
       actions={
         <Fit>
@@ -72,7 +87,30 @@ export function OperationsScreen({
         ) : null}
 
         <Stack gap="compact">
-          <h2 className="ids-label text-foreground">Operational summary</h2>
+          <h2 className="ids-label text-foreground">Day board</h2>
+          <form method="get" className="flex flex-wrap items-end gap-3">
+            <label className="ids-caption text-muted" htmlFor="service-date">
+              Service date (UTC)
+            </label>
+            <input
+              id="service-date"
+              name="date"
+              type="date"
+              defaultValue={range.date}
+              className="vos-field"
+            />
+            <button type="submit" className="vos-btn-secondary">
+              View date
+            </button>
+          </form>
+          <p className="ids-caption text-muted">
+            Scheduled range: {range.start} to {range.end}. Active visits and unscheduled
+            open work remain visible.
+          </p>
+        </Stack>
+
+        <Stack gap="compact">
+          <h2 className="ids-label text-foreground">Dispatch summary</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <MetricCard
               label="Open work"
@@ -105,8 +143,86 @@ export function OperationsScreen({
           ) : null}
         </Stack>
 
+        <Stack gap="section">
+          {BOARD_ORDER.map((bucket) => (
+            <section key={bucket}>
+              <Stack gap="compact">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="ids-label text-foreground">
+                    {DISPATCH_BUCKET_LABELS[bucket]}
+                  </h2>
+                  <span className="ids-caption text-muted">{board[bucket].length}</span>
+                </div>
+                {board[bucket].length === 0 ? (
+                  <p className="ids-caption text-muted">No work in this category.</p>
+                ) : (
+                  <ul className="grid gap-3 lg:grid-cols-2">
+                    {board[bucket].map((item) => (
+                      <li
+                        key={item.workOrder.id}
+                        className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4"
+                      >
+                        <Stack gap="tight">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <Link
+                              href={`${workBase}/${item.workOrder.id}`}
+                              className="ids-body underline-offset-2 hover:underline"
+                            >
+                              {item.workOrder.workReference}
+                            </Link>
+                            <span className="ids-caption text-muted">
+                              {item.assignee?.name ?? "Unassigned"}
+                            </span>
+                          </div>
+                          <p className="ids-caption text-muted">
+                            {item.customer?.displayName ?? "—"} / {item.site?.name ?? "—"}
+                          </p>
+                          <p className="ids-caption text-muted">
+                            {item.workOrder.scheduledStartAt && item.workOrder.scheduledEndAt
+                              ? `${item.workOrder.scheduledStartAt} → ${item.workOrder.scheduledEndAt}`
+                              : "No service window"}
+                          </p>
+                          <p className="ids-caption text-muted">
+                            Response: {item.responseState.replaceAll("_", " ")}
+                          </p>
+                          {item.workOrder.assignmentDeclineReason ? (
+                            <p className="ids-caption text-danger">
+                              Decline reason: {item.workOrder.assignmentDeclineReason}
+                            </p>
+                          ) : null}
+                          <details>
+                            <summary className="ids-caption cursor-pointer text-muted">
+                              Dispatch controls
+                            </summary>
+                            <div className="mt-3">
+                              <DispatchControls
+                                workspaceId={ctx.workspaceId}
+                                ventureId={ctx.ventureId}
+                                workOrderId={item.workOrder.id}
+                                assignedUserId={item.workOrder.assignedUserId}
+                                scheduledStartAt={item.workOrder.scheduledStartAt}
+                                scheduledEndAt={item.workOrder.scheduledEndAt}
+                                members={members}
+                                canWrite={ctx.canWrite}
+                                isOpen={item.workOrder.status === "open"}
+                                hasActiveVisit={item.visits.some(
+                                  (visit) => visit.status === "open",
+                                )}
+                              />
+                            </div>
+                          </details>
+                        </Stack>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Stack>
+            </section>
+          ))}
+        </Stack>
+
         <Stack gap="compact">
-          <h2 className="ids-label text-foreground">Operational attention</h2>
+          <h2 className="ids-label text-foreground">Service Desk attention</h2>
           {attention.length === 0 ? (
             <p className="ids-caption text-muted">No operational attention signals.</p>
           ) : (

@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 23; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 24; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -650,7 +650,12 @@ export async function ensureSchema() {
           status TEXT NOT NULL DEFAULT 'open',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          assigned_user_id TEXT
+          assigned_user_id TEXT,
+          scheduled_start_at TEXT,
+          scheduled_end_at TEXT,
+          assignment_accepted_at TEXT,
+          assignment_declined_at TEXT,
+          assignment_decline_reason TEXT
         )
       `);
       await exec(
@@ -672,8 +677,16 @@ export async function ensureSchema() {
         `CREATE INDEX IF NOT EXISTS frigora_work_orders_primary_asset_idx ON frigora_work_orders (primary_asset_id)`,
       );
       await addColumn("frigora_work_orders", "assigned_user_id", "TEXT");
+      await addColumn("frigora_work_orders", "scheduled_start_at", "TEXT");
+      await addColumn("frigora_work_orders", "scheduled_end_at", "TEXT");
+      await addColumn("frigora_work_orders", "assignment_accepted_at", "TEXT");
+      await addColumn("frigora_work_orders", "assignment_declined_at", "TEXT");
+      await addColumn("frigora_work_orders", "assignment_decline_reason", "TEXT");
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_work_orders_venture_assignee_idx ON frigora_work_orders (venture_id, assigned_user_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_work_orders_venture_scheduled_start_idx ON frigora_work_orders (venture_id, scheduled_start_at)`,
       );
       await addColumn("frigora_work_orders", "cancellation_reason", "TEXT");
       await addColumn("frigora_work_orders", "source_recommended_action_id", "TEXT");

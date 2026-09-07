@@ -10,6 +10,7 @@ import type {
   CreateCustomerInput,
   CreateSiteInput,
   CreateWorkOrderInput,
+  DeclineWorkOrderAssignmentInput,
   FrigoraAsset,
   FrigoraAssetId,
   FrigoraCustomer,
@@ -40,6 +41,7 @@ import type {
   RecordVisitCustomerAcknowledgementInput,
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
+  ScheduleWorkOrderInput,
   FrigoraRecommendedActionId,
   FrigoraVisitEvidence,
   FrigoraVisitEvidenceId,
@@ -220,6 +222,45 @@ export async function clearWorkOrderAssignmentAction(
 ): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
   return mutate(input, (scope) =>
     getFrigoraService().clearWorkOrderAssignment(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function scheduleWorkOrderAction(
+  input: ScopedInput & { id: string } & ScheduleWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().scheduleWorkOrder(scope, input.id as FrigoraWorkOrderId, input),
+  );
+}
+
+export async function clearWorkOrderScheduleAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().clearWorkOrderSchedule(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function acceptWorkOrderAssignmentAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().acceptWorkOrderAssignment(
+      scope,
+      input.id as FrigoraWorkOrderId,
+    ),
+  );
+}
+
+export async function declineWorkOrderAssignmentAction(
+  input: ScopedInput & { id: string } & DeclineWorkOrderAssignmentInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().declineWorkOrderAssignment(
+      scope,
+      input.id as FrigoraWorkOrderId,
+      input,
+    ),
   );
 }
 

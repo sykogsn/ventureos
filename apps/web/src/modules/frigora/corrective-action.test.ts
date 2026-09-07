@@ -234,8 +234,12 @@ describe("Frigora Visit corrective action", () => {
     await addMember(owner.workspaceId, attendeeId);
     await addMember(owner.workspaceId, assigneeId);
     await addMember(owner.workspaceId, recorderId);
-    const { workOrder, visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+    const { workOrder } = await seedHierarchy(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: attendeeId,
+      arrivedAt: ARRIVED,
+    });
     const same = await owner.service.recordCorrectiveAction(owner.scope, visit.id, {
       description: "Reset controller",
       performedAt: PERFORMED,
@@ -575,8 +579,12 @@ describe("Frigora Visit corrective action", () => {
     await addMember(owner.workspaceId, assigneeId);
     await addMember(owner.workspaceId, performerId);
     await addMember(owner.workspaceId, recorderId);
-    const { workOrder, visit } = await seedOpenVisit(owner.service, owner.scope, performerId);
+    const { workOrder } = await seedHierarchy(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: performerId,
+      arrivedAt: ARRIVED,
+    });
     const capture = await owner.service.recordFieldCapture(owner.scope, visit.id, {
       captureKind: "measurement",
       captureCode: "temperature",

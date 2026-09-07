@@ -136,6 +136,23 @@ function parseIsoTimestamp(value: string, ctx: z.RefinementCtx) {
 
 const isoTimestamp = z.string().trim().transform((value, ctx) => parseIsoTimestamp(value, ctx));
 
+const canonicalIsoInstant = z.string().trim().transform((value, ctx) => {
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(
+      value,
+    )
+  ) {
+    ctx.addIssue({ code: "custom", message: "Timestamp must be a valid ISO instant." });
+    return z.NEVER;
+  }
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    ctx.addIssue({ code: "custom", message: "Timestamp must be a valid ISO instant." });
+    return z.NEVER;
+  }
+  return new Date(parsed).toISOString();
+});
+
 const optionalIsoDate = z
   .string()
   .trim()
@@ -239,6 +256,40 @@ export const updateWorkOrderSchema = z.object({
 export const assignWorkOrderSchema = z.object({
   userId: requiredText,
 });
+
+export const scheduleWorkOrderSchema = z
+  .object({
+    scheduledStartAt: canonicalIsoInstant,
+    scheduledEndAt: canonicalIsoInstant,
+  })
+  .superRefine((value, ctx) => {
+    if (Date.parse(value.scheduledEndAt) <= Date.parse(value.scheduledStartAt)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Scheduled end must be after scheduled start.",
+        path: ["scheduledEndAt"],
+      });
+    }
+  });
+
+export const declineWorkOrderAssignmentSchema = z.object({
+  reason: requiredText,
+});
+
+export const listScheduledWorkOrdersSchema = z
+  .object({
+    rangeStart: canonicalIsoInstant,
+    rangeEnd: canonicalIsoInstant,
+  })
+  .superRefine((value, ctx) => {
+    if (Date.parse(value.rangeEnd) <= Date.parse(value.rangeStart)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Range end must be after range start.",
+        path: ["rangeEnd"],
+      });
+    }
+  });
 
 export const cancelWorkOrderSchema = z.object({
   reason: requiredText,

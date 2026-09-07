@@ -133,6 +133,7 @@ export type OrganisationRepository = {
 export type MembershipRepository = {
   insert(row: MembershipRow): Promise<void>;
   getRole(userId: UserId, workspaceId: WorkspaceId): Promise<string | null>;
+  listByWorkspace(workspaceId: WorkspaceId): Promise<MembershipRow[]>;
   setRole(row: MembershipRow): Promise<void>;
 };
 

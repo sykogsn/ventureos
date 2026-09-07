@@ -545,6 +545,11 @@ export const frigoraWorkOrders = sqliteTable(
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     assignedUserId: text("assigned_user_id"),
+    scheduledStartAt: text("scheduled_start_at"),
+    scheduledEndAt: text("scheduled_end_at"),
+    assignmentAcceptedAt: text("assignment_accepted_at"),
+    assignmentDeclinedAt: text("assignment_declined_at"),
+    assignmentDeclineReason: text("assignment_decline_reason"),
     cancellationReason: text("cancellation_reason"),
     sourceRecommendedActionId: text("source_recommended_action_id"),
   },
@@ -561,6 +566,10 @@ export const frigoraWorkOrders = sqliteTable(
     index("frigora_work_orders_venture_assignee_idx").on(
       table.ventureId,
       table.assignedUserId,
+    ),
+    index("frigora_work_orders_venture_scheduled_start_idx").on(
+      table.ventureId,
+      table.scheduledStartAt,
     ),
     uniqueIndex("frigora_work_orders_source_recommended_action_idx").on(
       table.sourceRecommendedActionId,

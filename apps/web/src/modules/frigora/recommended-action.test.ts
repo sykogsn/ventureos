@@ -617,8 +617,12 @@ describe("Frigora Recommended action", () => {
     await addMember(owner.workspaceId, assigneeId);
     await addMember(owner.workspaceId, attendeeId);
     await addMember(owner.workspaceId, recorderId);
-    const { workOrder, visit } = await seedOpenVisit(owner.service, owner.scope, attendeeId);
+    const { workOrder } = await seedHierarchy(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
+      userId: attendeeId,
+      arrivedAt: ARRIVED,
+    });
     const capture = await owner.service.recordFieldCapture(owner.scope, visit.id, {
       captureKind: "measurement",
       captureCode: "temperature",

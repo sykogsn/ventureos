@@ -317,4 +317,39 @@ describe("persistence repositories", () => {
     await memberships.setRole(userId, workspaceId, "admin");
     assert.equal(await store.memberships.getRole(userId, workspaceId), "admin");
   });
+
+  it("lists only workspace membership rows in deterministic order", async () => {
+    const store = getPersistence();
+    const laterUser = "user-later" as UserId;
+    const otherWorkspace = "ws-other" as WorkspaceId;
+    await store.memberships.insert({
+      workspaceId,
+      userId: laterUser,
+      role: "member",
+      createdAt: "2026-08-20T00:00:00.000Z",
+    });
+    await store.memberships.insert({
+      workspaceId,
+      userId,
+      role: "owner",
+      createdAt: NOW,
+    });
+    await store.memberships.insert({
+      workspaceId: otherWorkspace,
+      userId: "user-other" as UserId,
+      role: "owner",
+      createdAt: "2026-08-18T00:00:00.000Z",
+    });
+    const listed = await store.memberships.listByWorkspace(workspaceId);
+    assert.deepEqual(listed, [
+      { workspaceId, userId, role: "owner", createdAt: NOW },
+      {
+        workspaceId,
+        userId: laterUser,
+        role: "member",
+        createdAt: "2026-08-20T00:00:00.000Z",
+      },
+    ]);
+    assert.equal(Object.keys(listed[0] ?? {}).some((key) => /password|secret|hash/i.test(key)), false);
+  });
 });

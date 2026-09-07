@@ -9,13 +9,49 @@ export type OperationalAttentionSignal =
   | "UNASSIGNED_OPEN_WORK"
   | "NO_VISIT_RECORDED"
   | "VISIT_IN_PROGRESS"
-  | "VISIT_COMPLETED_WORK_OPEN";
+  | "VISIT_COMPLETED_WORK_OPEN"
+  | "SCHEDULED_UNASSIGNED"
+  | "AWAITING_ASSIGNMENT_RESPONSE"
+  | "ASSIGNMENT_DECLINED"
+  | "EXPIRED_SERVICE_WINDOW"
+  | "STALE_ASSIGNEE";
 
 export const ATTENTION_SIGNAL_LABELS: Record<OperationalAttentionSignal, string> = {
   UNASSIGNED_OPEN_WORK: "Unassigned open work",
   NO_VISIT_RECORDED: "No visit recorded yet",
   VISIT_IN_PROGRESS: "Visit in progress",
   VISIT_COMPLETED_WORK_OPEN: "Visit completed; work order still open",
+  SCHEDULED_UNASSIGNED: "Scheduled but unassigned",
+  AWAITING_ASSIGNMENT_RESPONSE: "Awaiting engineer response",
+  ASSIGNMENT_DECLINED: "Assignment declined",
+  EXPIRED_SERVICE_WINDOW: "Service window expired",
+  STALE_ASSIGNEE: "Assignee is no longer a workspace member",
+};
+
+export type DispatchResponseState =
+  | "unscheduled"
+  | "unassigned"
+  | "awaiting_response"
+  | "accepted"
+  | "declined";
+
+export type DispatchBoardBucket =
+  | "unscheduled"
+  | "scheduled_unassigned"
+  | "awaiting_response"
+  | "accepted"
+  | "declined"
+  | "active"
+  | "completed";
+
+export const DISPATCH_BUCKET_LABELS: Record<DispatchBoardBucket, string> = {
+  unscheduled: "Unscheduled",
+  scheduled_unassigned: "Scheduled / unassigned",
+  awaiting_response: "Awaiting response",
+  accepted: "Accepted",
+  declined: "Declined",
+  active: "Active visits",
+  completed: "Completed",
 };
 
 export type OperationsOverviewCounts = {
@@ -55,6 +91,8 @@ export type OperationalActivityEvent = {
 export function deriveAttentionSignals(
   workOrder: FrigoraWorkOrder,
   visits: FrigoraVisit[],
+  eligibleAssigneeIds?: ReadonlySet<string>,
+  now = new Date().toISOString(),
 ): OperationalAttentionSignal[] {
   if (workOrder.status !== "open") {
     return [];
@@ -74,8 +112,76 @@ export function deriveAttentionSignals(
   if (visits.some((visit) => visit.status === "departed")) {
     signals.push("VISIT_COMPLETED_WORK_OPEN");
   }
+  if (workOrder.scheduledStartAt !== null && workOrder.assignedUserId === null) {
+    signals.push("SCHEDULED_UNASSIGNED");
+  }
+  if (
+    workOrder.scheduledStartAt !== null &&
+    workOrder.assignedUserId !== null &&
+    workOrder.assignmentAcceptedAt === null &&
+    workOrder.assignmentDeclinedAt === null
+  ) {
+    signals.push("AWAITING_ASSIGNMENT_RESPONSE");
+  }
+  if (workOrder.assignmentDeclinedAt !== null) {
+    signals.push("ASSIGNMENT_DECLINED");
+  }
+  if (
+    workOrder.scheduledEndAt !== null &&
+    Date.parse(workOrder.scheduledEndAt) < Date.parse(now) &&
+    !visits.some(
+      (visit) =>
+        visit.status === "open" ||
+        (visit.status === "departed" &&
+          visit.departedAt !== null &&
+          workOrder.scheduledStartAt !== null &&
+          Date.parse(visit.arrivedAt) < Date.parse(workOrder.scheduledEndAt!) &&
+          Date.parse(visit.departedAt) >= Date.parse(workOrder.scheduledStartAt)),
+    )
+  ) {
+    signals.push("EXPIRED_SERVICE_WINDOW");
+  }
+  if (
+    eligibleAssigneeIds &&
+    workOrder.assignedUserId !== null &&
+    !eligibleAssigneeIds.has(workOrder.assignedUserId)
+  ) {
+    signals.push("STALE_ASSIGNEE");
+  }
 
   return signals;
+}
+
+export function deriveDispatchResponseState(
+  workOrder: FrigoraWorkOrder,
+): DispatchResponseState {
+  if (workOrder.scheduledStartAt === null || workOrder.scheduledEndAt === null) {
+    return "unscheduled";
+  }
+  if (workOrder.assignedUserId === null) {
+    return "unassigned";
+  }
+  if (workOrder.assignmentDeclinedAt !== null) {
+    return "declined";
+  }
+  if (workOrder.assignmentAcceptedAt !== null) {
+    return "accepted";
+  }
+  return "awaiting_response";
+}
+
+export function deriveDispatchBoardBucket(
+  workOrder: FrigoraWorkOrder,
+  visits: FrigoraVisit[],
+): DispatchBoardBucket {
+  if (workOrder.status === "closed") {
+    return "completed";
+  }
+  if (visits.some((visit) => visit.status === "open")) {
+    return "active";
+  }
+  const response = deriveDispatchResponseState(workOrder);
+  return response === "unassigned" ? "scheduled_unassigned" : response;
 }
 
 export function selectLatestVisit(visits: FrigoraVisit[]): FrigoraVisit | null {
