@@ -75,7 +75,7 @@ describe("Venture definition registry", () => {
     );
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
-      /F2\.3 Engineer Job Workflow/,
+      /F2\.3 Engineer Job Workflow are part of this definition version/,
     );
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
