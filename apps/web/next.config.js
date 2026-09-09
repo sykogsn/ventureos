@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@repo/ui", "@repo/ids"],
-  serverExternalPackages: ["@libsql/client"],
+  // @repo/storage-authority-kernel must remain a Node-cached singleton (not
+  // inlined into duplicated server chunks) so issuance WeakSet identity is one.
+  serverExternalPackages: ["@libsql/client", "@repo/storage-authority-kernel"],
   allowedDevOrigins: ["127.0.0.1"],
   async headers() {
     return [

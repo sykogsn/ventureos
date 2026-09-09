@@ -170,4 +170,39 @@ describe("Frigora F2.2 Service Desk projections", () => {
     assert.match(mutations, /acceptWorkOrderAssignmentFormAction/);
     assert.doesNotMatch(operations, /priority/i);
   });
+
+  it("OBS-003 remounts assignee select from authoritative assignedUserId (keyed defaultValue)", () => {
+    const dispatchControls = readFileSync(
+      join(WEB_ROOT, "modules/frigora/app/forms/dispatch-controls.tsx"),
+      "utf8",
+    );
+    const selectBlock = dispatchControls.match(
+      /<select[\s\S]*?name="userId"[\s\S]*?>/,
+    );
+    assert.ok(selectBlock, "assignee select with name=userId must exist");
+    assert.match(
+      selectBlock[0],
+      /key=\{props\.assignedUserId \?\? "unassigned"\}/,
+    );
+    assert.match(
+      selectBlock[0],
+      /defaultValue=\{props\.assignedUserId \?\? ""\}/,
+    );
+
+    // Remount contract (no jsdom): when authoritative assignment changes A→B,
+    // the select key changes so a remount applies defaultValue=B. Immediate
+    // unchanged re-submit therefore posts B, not stale A.
+    const selectedAfterPropChange = (assignedUserId: string | null) =>
+      assignedUserId ?? "";
+    const keyFor = (assignedUserId: string | null) =>
+      assignedUserId ?? "unassigned";
+
+    const engineerA = "user-engineer-a";
+    const engineerB = "user-engineer-b";
+    assert.equal(keyFor(engineerA), engineerA);
+    assert.equal(selectedAfterPropChange(engineerA), engineerA);
+    assert.notEqual(keyFor(engineerA), keyFor(engineerB));
+    assert.equal(selectedAfterPropChange(engineerB), engineerB);
+    assert.equal(selectedAfterPropChange(engineerB), engineerB);
+  });
 });

@@ -1,6 +1,7 @@
 import type { Permission, PermissionService, StoredObjectId, UserId, VentureId, WorkspaceId } from "@/contracts";
 import { createId, nowIso } from "@/platform/ids";
 import { getPlatform } from "@/platform/kernel";
+import { issueDomainAuthorizedMutation } from "@/platform/storage/domain-authority";
 import { StoredObjectError } from "@/platform/storage/errors";
 import { findStoredObjectById } from "@/platform/storage/metadata";
 import { getPersistence } from "@/platform/persistence/repositories";
@@ -1041,6 +1042,15 @@ export function createFrigoraService(options: {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
+      const permissions = await permissionService();
+      const hasHigherAuthority = await permissions.can({
+        userId: scope.userId,
+        permission: "venture.update",
+        resource: { type: "workspace", id: scope.workspaceId },
+      });
+      if (!hasHigherAuthority && scope.userId !== userId) {
+        return [];
+      }
       const member = await getPersistence().memberships.getRole(userId, scope.workspaceId);
       if (!member) {
         return [];
@@ -1139,10 +1149,16 @@ export function createFrigoraService(options: {
       );
     },
     async recordVisitArrival(scope, workOrderId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const workOrder = await requireOpenWorkOrder(store, scope, workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordVisitArrivalSchema, input);
       const attendingUserId = parsed.userId as UserId;
+      assertAssignedEngineerActorIdentity(authority, scope, attendingUserId);
       await requireWorkspaceMember(scope.workspaceId, attendingUserId);
       const now = nowIso();
       const row: FrigoraVisit = {
@@ -1161,8 +1177,10 @@ export function createFrigoraService(options: {
       return row;
     },
     async recordVisitDeparture(scope, id, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const existing = await requireOpenVisit(store, scope, id);
+      const workOrder = await requireWorkOrder(store, scope, existing.workOrderId);
+      await assertWorkOrderOperationalAccess(await permissionService(), scope, workOrder);
       const parsed = parseWithFrigora(recordVisitDepartureSchema, input);
       assertDepartedAfterArrived(existing.arrivedAt, parsed.departedAt);
       const next: FrigoraVisit = {
@@ -1216,13 +1234,19 @@ export function createFrigoraService(options: {
       return store.listVisitsByAttendingUser(scope.workspaceId, scope.ventureId, userId);
     },
     async recordFieldCapture(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsFieldCapture(visit);
       const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordFieldCaptureSchema, input);
       assertObservedAtWithinVisit(visit, parsed.observedAt);
       const capturedByUserId = parsed.userId as UserId;
+      assertAssignedEngineerActorIdentity(authority, scope, capturedByUserId);
       await requireWorkspaceMember(scope.workspaceId, capturedByUserId);
       const assetId = await resolveFieldCaptureAsset(
         store,
@@ -1303,13 +1327,19 @@ export function createFrigoraService(options: {
       return store.listFieldCapturesByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async recordTechnicalFinding(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsTechnicalFinding(visit);
       const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordTechnicalFindingSchema, input);
       assertAssertedAtWithinVisit(visit, parsed.assertedAt);
       const recordedByUserId = parsed.userId as UserId;
+      assertAssignedEngineerActorIdentity(authority, scope, recordedByUserId);
       await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const assetId = await resolveFieldCaptureAsset(
         store,
@@ -1387,14 +1417,25 @@ export function createFrigoraService(options: {
       return store.listTechnicalFindingsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async recordCorrectiveAction(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsCorrectiveAction(visit);
       const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordCorrectiveActionSchema, input);
       assertPerformedAtWithinVisit(visit, parsed.performedAt);
       const performedByUserId = parsed.performedByUserId as UserId;
       const recordedByUserId = parsed.recordedByUserId as UserId;
+      assertAssignedEngineerActorIdentity(
+        authority,
+        scope,
+        performedByUserId,
+        recordedByUserId,
+      );
       await requireWorkspaceMember(scope.workspaceId, performedByUserId);
       await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const assetId = await resolveFieldCaptureAsset(
@@ -1473,10 +1514,15 @@ export function createFrigoraService(options: {
       return store.listCorrectiveActionsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async recordVisitOutcome(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsVisitOutcome(visit);
       const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const existing = await store.findVisitOutcomeByVisit(
         scope.workspaceId,
         scope.ventureId,
@@ -1491,6 +1537,7 @@ export function createFrigoraService(options: {
       const parsed = parseWithFrigora(recordVisitOutcomeSchema, input);
       assertOutcomeAtWithinVisit(visit, parsed.outcomeAt);
       const recordedByUserId = parsed.recordedByUserId as UserId;
+      assertAssignedEngineerActorIdentity(authority, scope, recordedByUserId);
       await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const assetId = await resolveFieldCaptureAsset(
         store,
@@ -1560,14 +1607,25 @@ export function createFrigoraService(options: {
       return store.listVisitOutcomesByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async recordRecommendedAction(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsRecommendedAction(visit);
       const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordRecommendedActionSchema, input);
       assertRecommendedAtWithinVisit(visit, parsed.recommendedAt);
       const recommendedByUserId = parsed.recommendedByUserId as UserId;
       const recordedByUserId = parsed.recordedByUserId as UserId;
+      assertAssignedEngineerActorIdentity(
+        authority,
+        scope,
+        recommendedByUserId,
+        recordedByUserId,
+      );
       await requireWorkspaceMember(scope.workspaceId, recommendedByUserId);
       await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const assetId = await resolveFieldCaptureAsset(
@@ -1639,14 +1697,25 @@ export function createFrigoraService(options: {
       return store.listRecommendedActionsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async recordRefrigerantEvent(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsRefrigerantEvent(visit);
       const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordRefrigerantEventSchema, input);
       assertOccurredAtWithinVisit(visit, parsed.occurredAt);
       const handledByUserId = parsed.handledByUserId as UserId;
       const recordedByUserId = parsed.recordedByUserId as UserId;
+      assertAssignedEngineerActorIdentity(
+        authority,
+        scope,
+        handledByUserId,
+        recordedByUserId,
+      );
       await requireWorkspaceMember(scope.workspaceId, handledByUserId);
       await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const assetId = await resolveFieldCaptureAsset(
@@ -1722,14 +1791,25 @@ export function createFrigoraService(options: {
       return store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async recordPartUsage(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsPartUsage(visit);
       const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordPartUsageSchema, input);
       assertUsedAtWithinVisit(visit, parsed.usedAt);
       const usedByUserId = parsed.usedByUserId as UserId;
       const recordedByUserId = parsed.recordedByUserId as UserId;
+      assertAssignedEngineerActorIdentity(
+        authority,
+        scope,
+        usedByUserId,
+        recordedByUserId,
+      );
       await requireWorkspaceMember(scope.workspaceId, usedByUserId);
       await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const assetId = await resolveFieldCaptureAsset(
@@ -1804,13 +1884,11 @@ export function createFrigoraService(options: {
       return store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async recordAssetOperationalCondition(scope, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const parsed = parseWithFrigora(recordAssetOperationalConditionSchema, input);
       const asset = await requireAsset(store, scope, parsed.assetId as FrigoraAssetId);
       const assertedByUserId = parsed.assertedByUserId as UserId;
       const recordedByUserId = parsed.recordedByUserId as UserId;
-      await requireWorkspaceMember(scope.workspaceId, assertedByUserId);
-      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const { visitId, workOrderId } = await resolveOperationalConditionContext(
         store,
         scope,
@@ -1818,6 +1896,23 @@ export function createFrigoraService(options: {
         parsed.visitId === undefined ? null : parsed.visitId,
         parsed.workOrderId === undefined ? null : parsed.workOrderId,
       );
+      const permissions = await permissionService();
+      let authority: WorkOrderOperationalAuthority;
+      if (workOrderId) {
+        const workOrder = await requireWorkOrder(store, scope, workOrderId);
+        authority = await assertWorkOrderOperationalAccess(permissions, scope, workOrder);
+      } else {
+        await assertFrigoraAccess(permissions, scope, "venture.update");
+        authority = "venture_update";
+      }
+      assertAssignedEngineerActorIdentity(
+        authority,
+        scope,
+        assertedByUserId,
+        recordedByUserId,
+      );
+      await requireWorkspaceMember(scope.workspaceId, assertedByUserId);
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const now = nowIso();
       const row: FrigoraAssetOperationalCondition = {
         id: createId<FrigoraAssetOperationalConditionId>(),
@@ -1873,13 +1968,19 @@ export function createFrigoraService(options: {
       return selectCurrentAssetOperationalCondition(rows);
     },
     async recordVisitCustomerAcknowledgement(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsVisitCustomerAcknowledgement(visit);
-      await requireWorkOrder(store, scope, visit.workOrderId);
+      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordVisitCustomerAcknowledgementSchema, input);
       assertAcknowledgedAtNotBeforeArrival(visit, parsed.acknowledgedAt);
       const recordedByUserId = parsed.recordedByUserId as UserId;
+      assertAssignedEngineerActorIdentity(authority, scope, recordedByUserId);
       await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const now = nowIso();
       const row: FrigoraVisitCustomerAcknowledgement = {
@@ -1937,13 +2038,19 @@ export function createFrigoraService(options: {
       );
     },
     async recordVisitEvidenceWithFile(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const visit = await requireVisit(store, scope, visitId);
       assertVisitAcceptsVisitEvidence(visit);
       requireOpenVisitForEvidence(visit);
       const workOrder = await requireOpenWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const parsed = parseWithFrigora(recordVisitEvidenceWithFileSchema, input);
       const recordedByUserId = parsed.userId as UserId;
+      assertAssignedEngineerActorIdentity(authority, scope, recordedByUserId);
       await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
       const assetId = await resolveVisitEvidenceAsset(
         store,
@@ -1951,14 +2058,24 @@ export function createFrigoraService(options: {
         workOrder,
         parsed.assetId === undefined ? null : parsed.assetId,
       );
-      const storedMetadata = await getPlatform().storedObjects.store({
+      const storedObjectInput = {
         scope: { workspaceId: scope.workspaceId, ventureId: scope.ventureId },
         actorUserId: scope.userId,
         activeWorkspaceId: scope.workspaceId,
         body: parsed.body,
         originalFilename: parsed.originalFilename,
         mimeType: parsed.mimeType,
-      });
+      };
+      const assignedAuthority =
+        authority === "assigned_engineer"
+          ? assignedWorkOrderStorageAuthority(workOrder.id)
+          : null;
+      const storedMetadata = assignedAuthority
+        ? await getPlatform().storedObjects.storeForDomain({
+            ...storedObjectInput,
+            authority: assignedAuthority,
+          })
+        : await getPlatform().storedObjects.store(storedObjectInput);
       try {
         return await insertVisitEvidenceRow(
           store,
@@ -1973,13 +2090,25 @@ export function createFrigoraService(options: {
         );
       } catch (error) {
         try {
-          await getPlatform().storedObjects.delete({
-            actorUserId: scope.userId,
-            activeWorkspaceId: scope.workspaceId,
-            objectId: storedMetadata.id,
-          });
+          if (assignedAuthority) {
+            await getPlatform().storedObjects.deleteForDomain({
+              actorUserId: scope.userId,
+              activeWorkspaceId: scope.workspaceId,
+              objectId: storedMetadata.id,
+              authority: assignedAuthority,
+            });
+          } else {
+            await getPlatform().storedObjects.delete({
+              actorUserId: scope.userId,
+              activeWorkspaceId: scope.workspaceId,
+              objectId: storedMetadata.id,
+            });
+          }
         } catch {
-          // Best-effort compensation.
+          throw new FrigoraError(
+            "evidence_bytes_delete_failed",
+            "Visit evidence was not recorded and stored object compensation failed.",
+          );
         }
         throw error;
       }
@@ -2055,7 +2184,7 @@ export function createFrigoraService(options: {
       );
     },
     async removeVisitEvidence(scope, id) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
       const existing = await store.findVisitEvidence(scope.workspaceId, scope.ventureId, id);
       if (!existing || existing.removedAt) {
         throw new FrigoraError("not_found", "Visit evidence was not found.");
@@ -2063,17 +2192,31 @@ export function createFrigoraService(options: {
       const visit = await requireVisit(store, scope, existing.visitId);
       requireOpenVisitForEvidence(visit);
       assertVisitAcceptsVisitEvidence(visit);
+      const workOrder = await requireOpenWorkOrder(store, scope, visit.workOrderId);
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
       const tombstoned: FrigoraVisitEvidence = {
         ...existing,
         removedAt: nowIso(),
       };
       await store.updateVisitEvidence(tombstoned);
       try {
-        await getPlatform().storedObjects.delete({
+        const deleteInput = {
           actorUserId: scope.userId,
           activeWorkspaceId: scope.workspaceId,
           objectId: existing.storedObjectId,
-        });
+        };
+        if (authority === "venture_update") {
+          await getPlatform().storedObjects.delete(deleteInput);
+        } else {
+          await getPlatform().storedObjects.deleteForDomain({
+            ...deleteInput,
+            authority: assignedWorkOrderStorageAuthority(workOrder.id),
+          });
+        }
       } catch (error) {
         if (error instanceof StoredObjectError) {
           throw new FrigoraError(
@@ -2525,6 +2668,57 @@ async function assertFrigoraAccess(
       "Frigora operational records can only belong to a Frigora venture.",
     );
   }
+}
+
+type WorkOrderOperationalAuthority = "venture_update" | "assigned_engineer";
+
+async function assertWorkOrderOperationalAccess(
+  permissions: PermissionService,
+  scope: FrigoraScope,
+  workOrder: FrigoraWorkOrder,
+): Promise<WorkOrderOperationalAuthority> {
+  const hasHigherAuthority = await permissions.can({
+    userId: scope.userId,
+    permission: "venture.update",
+    resource: { type: "workspace", id: scope.workspaceId },
+  });
+  if (hasHigherAuthority) {
+    await assertFrigoraAccess(permissions, scope, "venture.update");
+    return "venture_update";
+  }
+
+  await assertFrigoraAccess(permissions, scope, "venture.read");
+  if (workOrder.assignedUserId !== scope.userId) {
+    throw new FrigoraError(
+      "forbidden",
+      "Engineer operational access requires the current WorkOrder assignment.",
+    );
+  }
+  return "assigned_engineer";
+}
+
+function assertAssignedEngineerActorIdentity(
+  authority: WorkOrderOperationalAuthority,
+  scope: FrigoraScope,
+  ...actorUserIds: UserId[]
+) {
+  if (
+    authority === "assigned_engineer" &&
+    actorUserIds.some((userId) => userId !== scope.userId)
+  ) {
+    throw new FrigoraError(
+      "forbidden",
+      "Assigned engineers may record operational facts only as themselves.",
+    );
+  }
+}
+
+function assignedWorkOrderStorageAuthority(workOrderId: FrigoraWorkOrderId) {
+  return issueDomainAuthorizedMutation({
+    domain: "frigora",
+    relation: "assigned_work_order",
+    resourceId: workOrderId,
+  });
 }
 
 async function requireCustomer(

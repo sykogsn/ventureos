@@ -14,6 +14,18 @@ export function VisitEntryScreen({
 }) {
   const { workOrder, customer, site, asset } = view;
   const workBase = `/ventures/${ctx.ventureId}/work/${workOrder.id}`;
+  const siteAddress = site
+    ? [
+        site.addressLine1,
+        site.addressLine2,
+        site.city,
+        site.region,
+        site.postalCode,
+        site.country,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
 
   return (
     <PageFrame
@@ -32,6 +44,18 @@ export function VisitEntryScreen({
     >
       <Stack gap="section">
         <dl className="grid gap-3">
+          <div>
+            <dt className="ids-caption text-muted">Site address</dt>
+            <dd className="ids-body">{siteAddress || "—"}</dd>
+          </div>
+          <div>
+            <dt className="ids-caption text-muted">Service window</dt>
+            <dd className="ids-body">
+              {workOrder.scheduledStartAt && workOrder.scheduledEndAt
+                ? `${workOrder.scheduledStartAt} → ${workOrder.scheduledEndAt}`
+                : "Not scheduled"}
+            </dd>
+          </div>
           {asset ? (
             <div>
               <dt className="ids-caption text-muted">Asset</dt>
@@ -49,8 +73,8 @@ export function VisitEntryScreen({
           </div>
         </dl>
         <p className="ids-caption text-muted">
-          Starting a visit records your arrival on this work order. None of the
-          truth sections are required before finishing.
+          Starting a visit records your arrival as the authenticated engineer assigned
+          to this work order. None of the truth sections are required before finishing.
         </p>
         <StartVisitForm
           workspaceId={ctx.workspaceId}

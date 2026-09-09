@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { frigoraScope, requireFrigoraOpsContext } from "@/modules/frigora/app/context";
 import { OperationsScreen } from "@/modules/frigora/app/screens/operations-screen";
 import { loadOperationsOverview } from "@/modules/frigora/app/views";
@@ -25,6 +26,9 @@ export default async function FrigoraOperationsPage({
   const start = `${date}T00:00:00.000Z`;
   const end = new Date(Date.parse(start) + 86_400_000).toISOString();
   const ctx = await requireFrigoraOpsContext(ventureId);
+  if (!ctx.canWrite) {
+    redirect(`/ventures/${ctx.ventureId}/work/assigned`);
+  }
   const { view, error } = await loadOperationsOverview(frigoraScope(ctx), {
     date,
     start,

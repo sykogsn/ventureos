@@ -12,6 +12,20 @@ function previewText(text: string | null, max = 120): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
+function formatSiteAddress(site: MyWorkRow["site"]): string {
+  if (!site) return "—";
+  return [
+    site.addressLine1,
+    site.addressLine2,
+    site.city,
+    site.region,
+    site.postalCode,
+    site.country,
+  ]
+    .filter(Boolean)
+    .join(", ") || "—";
+}
+
 export function MyWorkScreen({
   ctx,
   rows,
@@ -31,11 +45,13 @@ export function MyWorkScreen({
       description="Open work orders assigned to you."
       ventureId={ctx.ventureId}
       actions={
-        <Fit>
-          <Link href={base} className="vos-btn-secondary">
-            All work
-          </Link>
-        </Fit>
+        ctx.canWrite ? (
+          <Fit>
+            <Link href={base} className="vos-btn-secondary">
+              All work
+            </Link>
+          </Fit>
+        ) : undefined
       }
     >
       <Stack gap="section">
@@ -51,7 +67,16 @@ export function MyWorkScreen({
           </EmptyCopy>
         ) : (
           <Stack gap="compact">
-            {rows.map(({ workOrder, customer, site, asset }) => (
+            {rows.map(
+              ({
+                workOrder,
+                customer,
+                site,
+                asset,
+                activeVisit,
+                latestVisit,
+                responseState,
+              }) => (
               <article
                 key={workOrder.id}
                 className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4"
@@ -75,7 +100,29 @@ export function MyWorkScreen({
                     </div>
                     <div>
                       <dt className="ids-caption text-muted">Status</dt>
-                      <dd className="ids-body">{workOrder.status}</dd>
+                      <dd className="ids-body">
+                        {activeVisit
+                          ? "Visit in progress"
+                          : latestVisit?.status === "departed"
+                            ? "Visit finished · work order open"
+                            : "Ready for visit"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="ids-caption text-muted">Service window</dt>
+                      <dd className="ids-body">
+                        {workOrder.scheduledStartAt && workOrder.scheduledEndAt
+                          ? `${workOrder.scheduledStartAt} → ${workOrder.scheduledEndAt}`
+                          : "Not scheduled"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="ids-caption text-muted">Assignment response</dt>
+                      <dd className="ids-body">{responseState.replaceAll("_", " ")}</dd>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <dt className="ids-caption text-muted">Site address</dt>
+                      <dd className="ids-body">{formatSiteAddress(site)}</dd>
                     </div>
                     {asset ? (
                       <div className="sm:col-span-2">
@@ -94,13 +141,21 @@ export function MyWorkScreen({
                     </div>
                   </dl>
                   <Fit>
-                    <Link href={`${base}/${workOrder.id}`} className="vos-btn-secondary w-full sm:w-auto">
-                      Open work order
+                    <Link
+                      href={
+                        activeVisit
+                          ? `${base}/${workOrder.id}/visit/${activeVisit.id}`
+                          : `${base}/${workOrder.id}`
+                      }
+                      className="vos-btn-primary w-full sm:w-auto"
+                    >
+                      {activeVisit ? "Continue visit" : "Open assigned job"}
                     </Link>
                   </Fit>
                 </Stack>
               </article>
-            ))}
+              ),
+            )}
           </Stack>
         )}
       </Stack>

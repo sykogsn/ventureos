@@ -159,6 +159,9 @@ export type MyWorkRow = {
   customer: FrigoraCustomer | null;
   site: FrigoraSite | null;
   asset: FrigoraAsset | null;
+  activeVisit: FrigoraVisit | null;
+  latestVisit: FrigoraVisit | null;
+  responseState: DispatchResponseState;
 };
 
 export type VisitEntryView = {
@@ -286,21 +289,40 @@ export async function loadMyWork(
   );
   const rows: MyWorkRow[] = [];
   for (const workOrder of openWorkOrders) {
-    const [customer, site, asset] = await Promise.all([
+    const [customer, site, asset, visitsResult] = await Promise.all([
       getCustomerQuery({ ...scope, id: workOrder.customerId }),
       getSiteQuery({ ...scope, id: workOrder.siteId }),
       workOrder.primaryAssetId
         ? getAssetQuery({ ...scope, id: workOrder.primaryAssetId })
         : Promise.resolve({ record: null as FrigoraAsset | null }),
+      listVisitsByWorkOrderQuery({ ...scope, workOrderId: workOrder.id }),
     ]);
+    if (visitsResult.error) {
+      return { error: visitsResult.error, rows: [] };
+    }
+    const visits = visitsResult.record ?? [];
     rows.push({
       workOrder,
       customer: customer.record ?? null,
       site: site.record ?? null,
       asset: asset.record ?? null,
+      activeVisit: selectLatestVisit(
+        visits.filter((visit) => visit.status === "open"),
+      ),
+      latestVisit: selectLatestVisit(visits),
+      responseState: deriveDispatchResponseState(workOrder),
     });
   }
-  return { rows };
+  return {
+    rows: rows.sort((left, right) => {
+      const leftStart = left.workOrder.scheduledStartAt;
+      const rightStart = right.workOrder.scheduledStartAt;
+      if (leftStart === null && rightStart !== null) return 1;
+      if (leftStart !== null && rightStart === null) return -1;
+      if (leftStart !== rightStart) return (leftStart ?? "").localeCompare(rightStart ?? "");
+      return left.workOrder.workReference.localeCompare(right.workOrder.workReference);
+    }),
+  };
 }
 
 export async function resolveVisitEntry(
@@ -332,10 +354,16 @@ export async function resolveVisitEntry(
 
   const openVisits = (visitsResult.record ?? []).filter((visit) => visit.status === "open");
   const assignedToMe = workOrder.assignedUserId === sessionUserId;
-  const mayExecute = canWrite && workOrder.status === "open" && assignedToMe;
+  const mayExecute = workOrder.status === "open" && assignedToMe;
+
+  if (!assignedToMe && !canWrite) {
+    return {
+      redirectPath: `/ventures/${scope.ventureId}/work/${workOrderId}`,
+    };
+  }
 
   if (openVisits.length > 0) {
-    const latestOpen = openVisits[openVisits.length - 1]!;
+    const latestOpen = selectLatestVisit(openVisits)!;
     return {
       redirectPath: `/ventures/${scope.ventureId}/work/${workOrderId}/visit/${latestOpen.id}`,
     };
@@ -387,6 +415,9 @@ export async function loadVisitRecorder(
   }
   const workOrder = workResult.record;
   if (!workOrder) {
+    return { view: null };
+  }
+  if (!canWrite && workOrder.assignedUserId !== sessionUserId) {
     return { view: null };
   }
 
@@ -453,8 +484,7 @@ export async function loadVisitRecorder(
   }
 
   const assignedToMe = workOrder.assignedUserId === sessionUserId;
-  const canRecord =
-    canWrite && visit.status === "open" && assignedToMe;
+  const canRecord = visit.status === "open" && assignedToMe;
 
   return {
     view: {

@@ -49,6 +49,7 @@ export type {
 export type { DocumentPort, DocumentRef } from "./documents";
 export type {
   DeleteStoredObjectInput,
+  DomainAuthorizedMutation,
   OpenStoredObjectInput,
   StoredObjectMetadata,
   StoredObjectPort,

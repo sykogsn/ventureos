@@ -417,7 +417,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     );
   });
 
-  it("allows owner write and member read but denies member write", async () => {
+  it("allows owner write and member read but denies unassigned member write", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     const memberId = "user-member" as UserId;
@@ -425,7 +425,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     await addMember(owner.workspaceId, memberId);
     const { workOrder } = await seedHierarchy(owner.service, owner.scope);
     await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
-      userId: memberId,
+      userId: attendeeId,
     });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
       userId: attendeeId,
@@ -445,14 +445,6 @@ describe("Frigora visit evidence (F2.0)", () => {
       () =>
         owner.service.recordVisitEvidenceWithFile(memberScope, visit.id, {
           ...fileInput({ userId: memberId, originalFilename: "member.jpg" }),
-        }),
-      "forbidden",
-    );
-
-    await expectCode(
-      () =>
-        owner.service.recordVisitEvidenceWithFile(memberScope, visit.id, {
-          ...fileInput({ userId: memberId, originalFilename: "assigned-member.jpg" }),
         }),
       "forbidden",
     );

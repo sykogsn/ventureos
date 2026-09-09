@@ -140,6 +140,7 @@ export function DispatchControls(props: DispatchControlsProps) {
           Assigned workspace member
         </label>
         <select
+          key={props.assignedUserId ?? "unassigned"}
           id={`assignee-${props.workOrderId}`}
           name="userId"
           defaultValue={props.assignedUserId ?? ""}

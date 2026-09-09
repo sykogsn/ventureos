@@ -90,6 +90,18 @@ export function VisitRecorderScreen({
 
   const workBase = `/ventures/${ctx.ventureId}/work/${workOrder.id}`;
   const primaryAssetId = workOrder.primaryAssetId;
+  const siteAddress = site
+    ? [
+        site.addressLine1,
+        site.addressLine2,
+        site.city,
+        site.region,
+        site.postalCode,
+        site.country,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
 
   const formProps = {
     workspaceId: ctx.workspaceId,
@@ -156,6 +168,10 @@ export function VisitRecorderScreen({
             <dt className="ids-caption text-muted">Departed</dt>
             <dd className="ids-body">{visit.departedAt ?? "—"}</dd>
           </div>
+          <div className="sm:col-span-2">
+            <dt className="ids-caption text-muted">Site address</dt>
+            <dd className="ids-body">{siteAddress || "—"}</dd>
+          </div>
           {asset ? (
             <div className="sm:col-span-2">
               <dt className="ids-caption text-muted">Asset</dt>
@@ -179,7 +195,9 @@ export function VisitRecorderScreen({
           </p>
         ) : (
           <p className="ids-caption text-muted">
-            Independent truth sections — none are required before finishing the visit.
+            You can record this visit because the work order is assigned to you.
+            Independent truth sections remain separate; none are required before
+            finishing the visit.
           </p>
         )}
 

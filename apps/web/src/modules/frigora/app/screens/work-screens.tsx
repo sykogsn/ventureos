@@ -458,7 +458,19 @@ export function WorkDetailScreen({
   const isOpen = workOrder.status === "open";
   const openVisits = visits.filter((visit) => visit.status === "open");
   const latestOpen = openVisits.length > 0 ? openVisits[openVisits.length - 1] : null;
-  const mayExecute = ctx.canWrite && isOpen && assignedToMe;
+  const mayExecute = isOpen && assignedToMe;
+  const siteAddress = site
+    ? [
+        site.addressLine1,
+        site.addressLine2,
+        site.city,
+        site.region,
+        site.postalCode,
+        site.country,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "";
 
   const latestFacts = latestVisitId
     ? visitFacts.find((facts) => facts.visit.id === latestVisitId)
@@ -475,8 +487,15 @@ export function WorkDetailScreen({
       ventureId={ctx.ventureId}
       actions={
         <Fit>
-          <Link href={`/ventures/${ctx.ventureId}/work`} className="vos-btn-secondary">
-            All work
+          <Link
+            href={
+              ctx.canWrite
+                ? `/ventures/${ctx.ventureId}/work`
+                : `/ventures/${ctx.ventureId}/work/assigned`
+            }
+            className="vos-btn-secondary"
+          >
+            {ctx.canWrite ? "All work" : "My Work"}
           </Link>
         </Fit>
       }
@@ -511,7 +530,10 @@ export function WorkDetailScreen({
           </div>
           <div>
             <dt className="ids-caption text-muted">Site</dt>
-            <dd className="ids-body">{site?.name ?? "—"}</dd>
+            <dd className="ids-body">
+              {site?.name ?? "—"}
+              {siteAddress ? ` · ${siteAddress}` : ""}
+            </dd>
           </div>
           <div>
             <dt className="ids-caption text-muted">Primary asset</dt>
@@ -686,7 +708,13 @@ export function WorkDetailScreen({
         </Stack>
 
         <Stack gap="compact">
-          <h2 className="ids-label text-foreground">Field execution</h2>
+          <h2 className="ids-label text-foreground">Engineer job workflow</h2>
+          {assignedToMe ? (
+            <p className="ids-caption text-muted">
+              This operational job is assigned to you. Starting a visit records your
+              attendance; finishing it does not automatically complete the work order.
+            </p>
+          ) : null}
           {mayExecute && !latestOpen ? (
             <Fit>
               <Link href={`${workBase}/visit`} className="vos-btn-primary w-full sm:w-auto">

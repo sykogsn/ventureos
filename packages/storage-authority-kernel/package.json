@@ -1,0 +1,19 @@
+{
+  "name": "@repo/storage-authority-kernel",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Process-singleton issuance registry for domain-authorized storage. Closure-private; not for public app import.",
+  "main": "./index.cjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./index.cjs",
+      "default": "./index.cjs"
+    }
+  },
+  "files": [
+    "index.cjs",
+    "index.d.ts"
+  ]
+}

@@ -334,7 +334,7 @@ describe("F1.2 Field Visit Recorder", () => {
     assert.equal(loadedOutcome?.id, outcome.id);
   });
 
-  it("rejects member writes and allows reads", async () => {
+  it("rejects unassigned member writes and allows reads", async () => {
     const owner = await seed();
     const { workOrder } = await seedWorkHierarchy(owner);
 

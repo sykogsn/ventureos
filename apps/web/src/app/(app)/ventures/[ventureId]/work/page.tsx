@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { frigoraScope, requireFrigoraOpsContext } from "@/modules/frigora/app/context";
 import { WorkListScreen } from "@/modules/frigora/app/screens/work-screens";
 import { loadWorkOrderList, type WorkListFilters } from "@/modules/frigora/app/views";
@@ -33,6 +34,9 @@ export default async function FrigoraWorkPage({
   const { ventureId } = await params;
   const query = await searchParams;
   const ctx = await requireFrigoraOpsContext(ventureId);
+  if (!ctx.canWrite) {
+    redirect(`/ventures/${ctx.ventureId}/work/assigned`);
+  }
   const filters = parseWorkListFilters(query);
   const { rows, error } = await loadWorkOrderList(frigoraScope(ctx), filters);
 

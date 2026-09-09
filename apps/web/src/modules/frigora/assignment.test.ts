@@ -211,6 +211,43 @@ describe("Frigora WorkOrder assignment", () => {
     assert.equal(reassigned.assignedUserId, secondId);
   });
 
+  it("OBS-003 immediate re-submit of remounted selected assignee preserves B", async () => {
+    const owner = await seed();
+    const firstId = "user-first" as UserId;
+    const secondId = "user-second" as UserId;
+    await getPersistence().memberships.setRole({
+      userId: firstId,
+      workspaceId: owner.workspaceId,
+      role: "member",
+      createdAt: NOW,
+    });
+    await getPersistence().memberships.setRole({
+      userId: secondId,
+      workspaceId: owner.workspaceId,
+      role: "member",
+      createdAt: NOW,
+    });
+    const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: firstId });
+    const reassigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+      userId: secondId,
+    });
+    assert.equal(reassigned.assignedUserId, secondId);
+
+    // After keyed remount, defaultValue tracks authoritative assignedUserId.
+    // Immediate unchanged form submit posts that selected value (B), not stale A.
+    const selectedAfterRemount = reassigned.assignedUserId ?? "";
+    assert.equal(selectedAfterRemount, secondId);
+    assert.notEqual(selectedAfterRemount, firstId);
+
+    const submittedAgain = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+      userId: selectedAfterRemount as UserId,
+    });
+    assert.equal(submittedAgain.assignedUserId, secondId);
+    const loaded = await owner.service.getWorkOrder(owner.scope, workOrder.id);
+    assert.equal(loaded?.assignedUserId, secondId);
+  });
+
   it("clears assignment from an open WorkOrder", async () => {
     const owner = await seed();
     const assigneeId = "user-assignee" as UserId;

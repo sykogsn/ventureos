@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
 import { afterEach, describe, it } from "node:test";
-import type { UserId, VentureId, WorkspaceId } from "@/contracts";
+import type { DomainAuthorizedMutation, UserId, VentureId, WorkspaceId } from "@/contracts";
 import { platformVentureRegistry } from "@/core/venture-definition/catalog";
 import { createDocumentPort } from "@/platform/documents/port";
 import { createAuditLog } from "@/platform/audit/log";
@@ -14,6 +14,7 @@ import { resetPersistenceLifecycle } from "@/platform/persistence/repositories/s
 import { storedObjects } from "@/platform/persistence/schema";
 import { createPermissionService } from "@/platform/permissions/service";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
+import { issueDomainAuthorizedMutation } from "./domain-authority";
 import { StoredObjectError } from "./errors";
 import { createLocalBlobStorageAdapter } from "./local-adapter";
 import { findStoredObjectById } from "./metadata";
@@ -205,6 +206,196 @@ describe("Stored object platform", () => {
     });
     assert.ok(opened);
     assert.equal(opened!.metadata.id, metadata.id);
+  });
+
+  it("accepts issued domain authority without broadening normal uploads or deletes", async () => {
+    await prepareObjectRoot();
+    const { workspaceId, ventureId, ownerId, memberId } = await seedWorkspace("member");
+    const service = createService(createLocalBlobStorageAdapter());
+    const authority = issueDomainAuthorizedMutation({
+      domain: "frigora",
+      relation: "assigned_work_order",
+      resourceId: "work-order-1",
+    });
+    const ownerObject = await service.store({
+      scope: { workspaceId, ventureId },
+      actorUserId: ownerId,
+      activeWorkspaceId: workspaceId,
+      body: jpegBytes(),
+      originalFilename: "owner.jpg",
+      mimeType: "image/jpeg",
+    });
+
+    await assert.rejects(
+      () =>
+        service.store({
+          scope: { workspaceId, ventureId },
+          actorUserId: memberId,
+          activeWorkspaceId: workspaceId,
+          body: jpegBytes(),
+          originalFilename: "blocked.jpg",
+          mimeType: "image/jpeg",
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+    await assert.rejects(
+      () =>
+        service.delete({
+          actorUserId: memberId,
+          activeWorkspaceId: workspaceId,
+          objectId: ownerObject.id,
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+    await assert.rejects(
+      () =>
+        service.storeForDomain({
+          scope: { workspaceId, ventureId },
+          actorUserId: memberId,
+          activeWorkspaceId: workspaceId,
+          body: jpegBytes(),
+          originalFilename: "shaped.jpg",
+          mimeType: "image/jpeg",
+          authority: {
+            domain: "frigora",
+            relation: "assigned_work_order",
+            resourceId: "work-order-1",
+          },
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+    const reconstructedSeal = Symbol.for(
+      "ventureos.storage.issuedDomainAuthorizedMutation",
+    );
+    await assert.rejects(
+      () =>
+        service.storeForDomain({
+          scope: { workspaceId, ventureId },
+          actorUserId: memberId,
+          activeWorkspaceId: workspaceId,
+          body: jpegBytes(),
+          originalFilename: "reconstructed.jpg",
+          mimeType: "image/jpeg",
+          authority: {
+            domain: "frigora",
+            relation: "assigned_work_order",
+            resourceId: "work-order-1",
+            [reconstructedSeal]: true,
+          } as DomainAuthorizedMutation,
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+    assert.throws(
+      () =>
+        issueDomainAuthorizedMutation({
+          domain: "unknown-domain",
+          relation: "assigned_work_order",
+          resourceId: "work-order-1",
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+    assert.throws(
+      () =>
+        issueDomainAuthorizedMutation({
+          domain: "qualora",
+          relation: "assigned_work_order",
+          resourceId: "work-order-1",
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+
+    const metadata = await service.storeForDomain({
+      scope: { workspaceId, ventureId },
+      actorUserId: memberId,
+      activeWorkspaceId: workspaceId,
+      body: jpegBytes(),
+      originalFilename: "assigned-work.jpg",
+      mimeType: "image/jpeg",
+      authority,
+    });
+    assert.equal(await service.exists(metadata.id), true);
+    assert.equal(metadata.createdByUserId, memberId);
+
+    await assert.rejects(
+      () =>
+        service.deleteForDomain({
+          actorUserId: memberId,
+          activeWorkspaceId: workspaceId,
+          objectId: metadata.id,
+          authority: issueDomainAuthorizedMutation({
+            domain: "frigora",
+            relation: "assigned_work_order",
+            resourceId: "work-order-2",
+          }),
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+    await assert.rejects(
+      () =>
+        service.deleteForDomain({
+          actorUserId: memberId,
+          activeWorkspaceId: workspaceId,
+          objectId: ownerObject.id,
+          authority,
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+
+    await service.deleteForDomain({
+      actorUserId: memberId,
+      activeWorkspaceId: workspaceId,
+      objectId: metadata.id,
+      authority,
+    });
+    assert.equal(await service.exists(metadata.id), false);
+
+    await assert.rejects(
+      () =>
+        service.storeForDomain({
+          scope: { workspaceId: "ws-other" as WorkspaceId, ventureId },
+          actorUserId: memberId,
+          activeWorkspaceId: workspaceId,
+          body: jpegBytes(),
+          originalFilename: "cross-workspace.jpg",
+          mimeType: "image/jpeg",
+          authority,
+        }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+    );
+  });
+
+  it("rejects globalThis WeakSet injection through storeForDomain", async () => {
+    await prepareObjectRoot();
+    const { workspaceId, ventureId, memberId } = await seedWorkspace("member");
+    const service = createService(createLocalBlobStorageAdapter());
+    const forged = {
+      domain: "frigora",
+      relation: "assigned_work_order",
+      resourceId: "work-order-global-inject",
+    } as DomainAuthorizedMutation;
+    const key = Symbol.for("ventureos.storage.issuedDomainAuthorizedMutation.registry");
+    const globalScope = globalThis as typeof globalThis & {
+      [key: symbol]: { issued: WeakSet<object> } | undefined;
+    };
+    globalScope[key] = { issued: new WeakSet<object>() };
+    globalScope[key]!.issued.add(forged);
+    try {
+      await assert.rejects(
+        () =>
+          service.storeForDomain({
+            scope: { workspaceId, ventureId },
+            actorUserId: memberId,
+            activeWorkspaceId: workspaceId,
+            body: jpegBytes(),
+            originalFilename: "global-inject.jpg",
+            mimeType: "image/jpeg",
+            authority: forged,
+          }),
+        (error: unknown) => error instanceof StoredObjectError && error.code === "FORBIDDEN",
+      );
+    } finally {
+      delete globalScope[key];
+    }
   });
 
   it("allows workspace-only objects with workspace read permission", async () => {

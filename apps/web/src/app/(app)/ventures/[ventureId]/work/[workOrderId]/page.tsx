@@ -22,6 +22,9 @@ export default async function FrigoraWorkDetailPage({
   if (!view) {
     notFound();
   }
+  if (!ctx.canWrite && view.workOrder.assignedUserId !== ctx.sessionUserId) {
+    notFound();
+  }
 
   return <WorkDetailScreen ctx={ctx} view={view} />;
 }

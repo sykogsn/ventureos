@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import type {
+  DeleteStoredObjectInput,
+  DomainAuthorizedMutation,
   PermissionService,
+  StoreStoredObjectInput,
   StoredObjectMetadata,
   StoredObjectPort,
   StoredObjectRef,
@@ -10,6 +13,12 @@ import type {
 import type { StoredObjectId, UserId } from "@/contracts/ids";
 import type { AuditLog } from "@/platform/audit/log";
 import { createId, nowIso } from "@/platform/ids";
+import {
+  authoritiesBindSameResource,
+  findStoredObjectIssuedAuthority,
+  requireIssuedDomainAuthority,
+} from "./domain-authority";
+import { evaluateFrigoraVisitEvidenceByteRead } from "./frigora-evidence-protected-read";
 import { StoredObjectError } from "./errors";
 import {
   findStoredObjectById,
@@ -114,6 +123,149 @@ async function assertReadPermission(
   }
 }
 
+function validateDomainAuthority(
+  ventureId: VentureId | null | undefined,
+  authority: DomainAuthorizedMutation,
+) {
+  if (!ventureId) {
+    throw new StoredObjectError(
+      "FORBIDDEN",
+      "Domain-authorized storage requires a venture and relationship provenance.",
+    );
+  }
+  requireIssuedDomainAuthority(authority);
+}
+
+async function persistStoredObject(
+  deps: StoredObjectServiceDeps,
+  input: StoreStoredObjectInput,
+  authority?: DomainAuthorizedMutation,
+) {
+  const validated = validateStoredObjectUpload({
+    body: input.body,
+    originalFilename: input.originalFilename,
+    mimeType: input.mimeType,
+  });
+
+  const id = createId<StoredObjectId>();
+  const storageKey = buildStorageKey(input.scope.workspaceId, id);
+  const sha256 = createHash("sha256").update(input.body).digest("hex");
+  const createdAt = nowIso();
+
+  try {
+    await deps.adapter.put(storageKey, input.body);
+  } catch (error) {
+    if (error instanceof StoredObjectError) {
+      throw error;
+    }
+    throw new StoredObjectError("STORAGE", "Could not store object bytes.");
+  }
+
+  const row: StoredObjectRow = {
+    id,
+    workspaceId: input.scope.workspaceId,
+    ventureId: input.scope.ventureId ?? null,
+    storageKey,
+    originalFilename: validated.originalFilename,
+    mimeType: validated.mimeType,
+    sizeBytes: input.body.byteLength,
+    sha256,
+    createdByUserId: input.actorUserId,
+    createdAt,
+    deletedAt: null,
+  };
+
+  try {
+    const insertMetadata = deps.insertMetadata ?? insertStoredObject;
+    await insertMetadata(row);
+  } catch (error) {
+    try {
+      await deps.adapter.delete(storageKey);
+    } catch {
+      // Best-effort compensation.
+    }
+    const detail = error instanceof Error ? error.message : "unknown error";
+    throw new StoredObjectError("STORAGE", `Could not persist object metadata: ${detail}`);
+  }
+
+  const metadata = toMetadata(row);
+  await deps.audit.record({
+    action: "stored_object.created",
+    actor: { userId: input.actorUserId },
+    metadata: {
+      storedObjectId: metadata.id,
+      workspaceId: metadata.workspaceId,
+      ventureId: metadata.ventureId ?? "",
+      mimeType: metadata.mimeType,
+      sizeBytes: String(metadata.sizeBytes),
+      sha256: metadata.sha256,
+      ...(authority
+        ? {
+            authorityDomain: authority.domain,
+            authorityRelation: authority.relation,
+            authorityResourceId: authority.resourceId,
+          }
+        : {}),
+    },
+  });
+
+  return metadata;
+}
+
+async function deleteStoredObject(
+  deps: StoredObjectServiceDeps,
+  row: StoredObjectRow,
+  input: DeleteStoredObjectInput,
+  authority?: DomainAuthorizedMutation,
+) {
+  const deletedAt = nowIso();
+  await tombstoneStoredObject(row.id, deletedAt);
+
+  try {
+    await deps.adapter.delete(row.storageKey);
+  } catch (error) {
+    await deps.audit.record({
+      action: "stored_object.deleted",
+      actor: { userId: input.actorUserId },
+      metadata: {
+        storedObjectId: row.id,
+        workspaceId: row.workspaceId,
+        ventureId: row.ventureId ?? "",
+        byteDeleteFailed: "true",
+        ...(authority
+          ? {
+              authorityDomain: authority.domain,
+              authorityRelation: authority.relation,
+              authorityResourceId: authority.resourceId,
+            }
+          : {}),
+      },
+    });
+    const detail = error instanceof Error ? error.message : "unknown error";
+    throw new StoredObjectError(
+      "DELETE_BYTES_FAILED",
+      `Object metadata was tombstoned but bytes could not be deleted: ${detail}`,
+    );
+  }
+
+  await deps.audit.record({
+    action: "stored_object.deleted",
+    actor: { userId: input.actorUserId },
+    metadata: {
+      storedObjectId: row.id,
+      workspaceId: row.workspaceId,
+      ventureId: row.ventureId ?? "",
+      ...(authority
+        ? {
+            authorityDomain: authority.domain,
+            authorityRelation: authority.relation,
+            authorityResourceId: authority.resourceId,
+          }
+        : {}),
+    },
+  });
+}
+
 export function createStoredObjectService(deps: StoredObjectServiceDeps): StoredObjectPort {
   return {
     async store(input) {
@@ -126,68 +278,14 @@ export function createStoredObjectService(deps: StoredObjectServiceDeps): Stored
         deps.permissions,
       );
 
-      const validated = validateStoredObjectUpload({
-        body: input.body,
-        originalFilename: input.originalFilename,
-        mimeType: input.mimeType,
-      });
+      return persistStoredObject(deps, input);
+    },
 
-      const id = createId<StoredObjectId>();
-      const storageKey = buildStorageKey(input.scope.workspaceId, id);
-      const sha256 = createHash("sha256").update(input.body).digest("hex");
-      const createdAt = nowIso();
-
-      try {
-        await deps.adapter.put(storageKey, input.body);
-      } catch (error) {
-        if (error instanceof StoredObjectError) {
-          throw error;
-        }
-        throw new StoredObjectError("STORAGE", "Could not store object bytes.");
-      }
-
-      const row: StoredObjectRow = {
-        id,
-        workspaceId: input.scope.workspaceId,
-        ventureId: input.scope.ventureId ?? null,
-        storageKey,
-        originalFilename: validated.originalFilename,
-        mimeType: validated.mimeType,
-        sizeBytes: input.body.byteLength,
-        sha256,
-        createdByUserId: input.actorUserId,
-        createdAt,
-        deletedAt: null,
-      };
-
-      try {
-        const insertMetadata = deps.insertMetadata ?? insertStoredObject;
-        await insertMetadata(row);
-      } catch (error) {
-        try {
-          await deps.adapter.delete(storageKey);
-        } catch {
-          // Best-effort compensation.
-        }
-        const detail = error instanceof Error ? error.message : "unknown error";
-        throw new StoredObjectError("STORAGE", `Could not persist object metadata: ${detail}`);
-      }
-
-      const metadata = toMetadata(row);
-      await deps.audit.record({
-        action: "stored_object.created",
-        actor: { userId: input.actorUserId },
-        metadata: {
-          storedObjectId: metadata.id,
-          workspaceId: metadata.workspaceId,
-          ventureId: metadata.ventureId ?? "",
-          mimeType: metadata.mimeType,
-          sizeBytes: String(metadata.sizeBytes),
-          sha256: metadata.sha256,
-        },
-      });
-
-      return metadata;
+    async storeForDomain(input) {
+      await assertActiveWorkspace(input.activeWorkspaceId, input.scope.workspaceId);
+      await assertWorkspaceMembership(input.actorUserId, input.scope.workspaceId, deps.permissions);
+      validateDomainAuthority(input.scope.ventureId, input.authority);
+      return persistStoredObject(deps, input, input.authority);
     },
 
     async open(input) {
@@ -202,12 +300,27 @@ export function createStoredObjectService(deps: StoredObjectServiceDeps): Stored
 
       try {
         await assertWorkspaceMembership(input.actorUserId, row.workspaceId, deps.permissions);
-        await assertReadPermission(
-          input.actorUserId,
-          row.workspaceId,
-          row.ventureId,
-          deps.permissions,
-        );
+
+        const protectedVerdict = await evaluateFrigoraVisitEvidenceByteRead({
+          actorUserId: input.actorUserId,
+          workspaceId: row.workspaceId,
+          ventureId: row.ventureId,
+          objectId: row.id,
+          permissions: deps.permissions,
+          audit: deps.audit,
+        });
+        if (protectedVerdict === "deny") {
+          return null;
+        }
+        if (protectedVerdict === "not_protected") {
+          await assertReadPermission(
+            input.actorUserId,
+            row.workspaceId,
+            row.ventureId,
+            deps.permissions,
+          );
+        }
+        // protectedVerdict === "allow": Frigora Visit Evidence / domain-protected read granted.
       } catch (error) {
         if (error instanceof StoredObjectError && error.code === "FORBIDDEN") {
           return null;
@@ -261,38 +374,31 @@ export function createStoredObjectService(deps: StoredObjectServiceDeps): Stored
         deps.permissions,
       );
 
-      const deletedAt = nowIso();
-      await tombstoneStoredObject(row.id, deletedAt);
+      await deleteStoredObject(deps, row, input);
+    },
 
-      try {
-        await deps.adapter.delete(row.storageKey);
-      } catch (error) {
-        await deps.audit.record({
-          action: "stored_object.deleted",
-          actor: { userId: input.actorUserId },
-          metadata: {
-            storedObjectId: row.id,
-            workspaceId: row.workspaceId,
-            ventureId: row.ventureId ?? "",
-            byteDeleteFailed: "true",
-          },
-        });
-        const detail = error instanceof Error ? error.message : "unknown error";
-        throw new StoredObjectError(
-          "DELETE_BYTES_FAILED",
-          `Object metadata was tombstoned but bytes could not be deleted: ${detail}`,
-        );
+    async deleteForDomain(input) {
+      const row = await findStoredObjectById(input.objectId);
+      if (!row || row.deletedAt) {
+        throw new StoredObjectError("NOT_FOUND", "Stored object was not found.");
+      }
+      if (
+        row.workspaceId !== input.activeWorkspaceId ||
+        !row.ventureId
+      ) {
+        throw new StoredObjectError("NOT_FOUND", "Stored object was not found.");
       }
 
-      await deps.audit.record({
-        action: "stored_object.deleted",
-        actor: { userId: input.actorUserId },
-        metadata: {
-          storedObjectId: row.id,
-          workspaceId: row.workspaceId,
-          ventureId: row.ventureId ?? "",
-        },
-      });
+      await assertWorkspaceMembership(input.actorUserId, row.workspaceId, deps.permissions);
+      validateDomainAuthority(row.ventureId, input.authority);
+      const boundAuthority = await findStoredObjectIssuedAuthority(deps.audit, row.id);
+      if (!boundAuthority || !authoritiesBindSameResource(boundAuthority, input.authority)) {
+        throw new StoredObjectError(
+          "FORBIDDEN",
+          "Domain-authorized deletion must bind to the stored object's issued resource.",
+        );
+      }
+      await deleteStoredObject(deps, row, input, input.authority);
     },
 
     async exists(objectId) {

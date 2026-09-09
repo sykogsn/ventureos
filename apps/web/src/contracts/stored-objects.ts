@@ -44,9 +44,21 @@ export type DeleteStoredObjectInput = {
   objectId: StoredObjectId;
 };
 
+export type DomainAuthorizedMutation = {
+  domain: string;
+  relation: string;
+  resourceId: string;
+};
+
 export type StoredObjectPort = {
   store(input: StoreStoredObjectInput): Promise<StoredObjectMetadata>;
+  storeForDomain(
+    input: StoreStoredObjectInput & { authority: DomainAuthorizedMutation },
+  ): Promise<StoredObjectMetadata>;
   open(input: OpenStoredObjectInput): Promise<{ metadata: StoredObjectMetadata; body: Uint8Array } | null>;
   delete(input: DeleteStoredObjectInput): Promise<void>;
+  deleteForDomain(
+    input: DeleteStoredObjectInput & { authority: DomainAuthorizedMutation },
+  ): Promise<void>;
   exists(objectId: StoredObjectId): Promise<boolean>;
 };
