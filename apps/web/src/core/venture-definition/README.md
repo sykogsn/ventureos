@@ -10,6 +10,10 @@ See `VENTURE_DEFINITION_STANDARD`.
 
 A definition describes identity, purpose, version, lifecycle, maturity, runtime requirements, capability profile, governance profile, venture dependencies, and features. It is not a VIC company record.
 
+A Venture Definition is also the authority through which customer-facing product identity must resolve. A definition may carry, or later resolve, the product-identity metadata needed for customer-facing presentation. The implementation shape of that metadata belongs to a later dedicated product-identity programme. Do not invent fields here. Do not create a Product Registry. Do not hard-code a private product stack when definition-driven identity can supply the product.
+
+Law: Project Constitution (Customer-Facing Product Sovereignty) · FD-007 · ADR-010.
+
 ## Instantiation
 
 Founding creates a Venture Instance: a VIC company plus `definition: { id, version }`.

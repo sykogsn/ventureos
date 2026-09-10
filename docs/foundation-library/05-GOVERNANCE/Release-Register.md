@@ -12,11 +12,11 @@
 
 **Status.** Living
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Foundation
 
-**Last Updated.** 2026-08-22
+**Last Updated.** 2026-09-10
 
 ---
 
@@ -30,3 +30,5 @@
 Later application sprints that do not amend Foundation do not increment this register. They increment product or application versions elsewhere.
 
 DOC-001 created the Foundation Library as the reading system for v1.1. It did not amend Runtime, IDS tokens, or Executive Environments implementation.
+
+2026-09-10 — Customer-facing product identity law recorded as a constitutional amendment (Project Constitution v1.1.0, Platform Constitution v1.1.0, FD-007, ADR-010). Foundation version unchanged. No Runtime, schema, catalog, or product-version change.

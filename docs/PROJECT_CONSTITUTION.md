@@ -1,10 +1,11 @@
 # VentureOS Project Constitution
 
 **Status.** Supreme governing document of the VentureOS repository  
-**Version.** 1.0.0  
-**Date.** 2026-08-22  
+**Version.** 1.1.0  
+**Date.** 2026-09-10  
 **Owner.** Founder  
-**Applies to.** Every developer, AI agent, contributor, and future employee
+**Applies to.** Every developer, AI agent, contributor, and future employee  
+**Amended.** 2026-09-10 — Customer-Facing Product Sovereignty (FD-007, ADR-010)
 
 This document is the highest authority within the repository.
 
@@ -32,7 +33,7 @@ It binds mission, creed, principles, authority, change control, and the long-ter
 
 VentureOS exists to become the Executive Operating System for building, operating, and scaling ventures through evidence-based intelligence, structured execution, and trustworthy AI.
 
-The founder founds, operates, and decides from one desk. Situation Room, Company HQ, and the Executive Office are three rooms of the same headquarters. Qualora, Calviora, Farmora, and every future Venture run on that OS. They do not become a second operating system.
+The founder founds, operates, and decides from one desk. Situation Room, Company HQ, and the Executive Office are three rooms of the same headquarters. Qualora, Calviora, Farmora, and every future Venture run on that OS. They do not become a second operating system. Marketed Ventures are distinct customer-facing products on that shared platform.
 
 ---
 
@@ -64,11 +65,11 @@ VentureOS is not a plugin host. The Executive Intelligence Runtime is the only o
 
 VentureOS is not a marketing kit. IntelligenceOS (IDS) clothes the OS. It does not become the OS.
 
-VentureOS is not four applications. Qualora, Calviora, and Farmora run on the OS. They do not fork the shell, the Runtime, or the navigation model.
+VentureOS is not four operating systems. Qualora, Calviora, Farmora, and every marketed Venture run on the OS. They are distinct customer-facing products. They do not fork the shell, the Runtime, or the navigation model.
 
 ## Recognition
 
-The founder must recognise judgement, constraint, and cadence. The partner and the investor must recognise composure. The operator of a product on this OS must recognise the same desk, with a product identity that does not rewrite the architecture.
+The founder must recognise judgement, constraint, and cadence. The partner and the investor must recognise composure. The operator of a product on this OS must recognise the same desk, with a product identity that does not rewrite the architecture. An external customer of a marketed Venture must recognise that Venture’s own product, not a generic VentureOS interface.
 
 Calm before spectacle. Hierarchy before density. Guidance before vacancy. Identity after architecture.
 
@@ -90,7 +91,8 @@ These principles are permanent. A change to any of them is a constitutional amen
 
 - **The Executive Intelligence Runtime is the sole orchestrator.** `runExecutiveIntelligenceRuntime` is the only intelligence orchestrator. Pages and the shell are presentational.
 - **VentureOS is platform-first.** Architecture is shared. Identity arrives after architecture. One OS, many products.
-- **Products inherit from Venture Definitions.** The Definition Registry is the only product-definition system. There is no Product Registry. A definition is metadata. It does not execute.
+- **Customer-facing product sovereignty.** Marketed Ventures are distinct customer-facing software products. External customers experience the Venture’s own branded sign-in and application identity. VentureOS remains the shared platform and is customer-invisible by default. Distinct products are not separate platform stacks.
+- **Products inherit from Venture Definitions.** The Definition Registry is the only product-definition system. There is no Product Registry. A definition is metadata. It does not execute. Customer-facing product identity resolves through that definition.
 - **Capabilities are metadata.** The Shared Capability Registry catalogues and validates. Capabilities govern; they do not dispatch, execute engines, or load modules.
 - **Runtime behaviour is deterministic.** The same Venture Intelligence Core and the same evidence produce the same orchestration. Runtime is not a chat. It is not improvisation.
 - **AI augments judgement.** Intelligence recommends. The founder decides. Automation does not replace evidence or authority.
@@ -129,7 +131,7 @@ Implementation
 | 1 | This Project Constitution | Mission, creed, principles, authority, change control |
 | 2 | [VentureOS Platform Constitution](./architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) | What may exist: Runtime, Capability Framework, Venture Definitions, persistence, IDS as presentation |
 | 3 | [Engineering Constitution](./engineering/ENGINEERING_CONSTITUTION.md) and [Master Engineering Prompt](./engineering/MASTER_ENGINEERING_PROMPT.md) | How work proceeds: lifecycle, pre-flight, validation, completion |
-| 4 | Product standards — [Product Philosophy](./foundation-library/01-FOUNDATION/Product-Philosophy.md), [Products](./foundation-library/06-PRODUCTS/README.md) | How Qualora, Calviora, Farmora, and future Ventures inherit the OS |
+| 4 | Product standards — [Product Philosophy](./foundation-library/01-FOUNDATION/Product-Philosophy.md), [Products](./foundation-library/06-PRODUCTS/README.md) | How marketed Ventures are distinct customer-facing products while inheriting the OS |
 | 5 | [Foundation Library](./foundation-library/00-START-HERE.md) | How Foundation is read, taught, and remembered |
 | 6 | Sprint documentation — [Sprint Standard](./foundation-library/04-ENGINEERING/Sprint-Standard.md), [Engineering History](./engineering/ENGINEERING_HISTORY.md) | How a named programme is written and closed |
 | 7 | Implementation | Code, tokens, and running application |
@@ -173,14 +175,24 @@ Engineering may not bypass validation. Engineering may not tell the founder a ta
 
 # Product Authority
 
-Products inherit platform capabilities. They do not create parallel implementations.
+Marketed Ventures are distinct customer-facing software products. They remain architecturally dependent on the shared VentureOS platform. They do not create parallel implementations.
 
 - Qualora
 - Calviora
 - Farmora
-- Every future Venture on this OS
+- Every future marketed Venture on this OS
 
-A product is a Venture Definition. It receives identity after architecture. It may exclude features. It may not fork the shell, the Runtime, the Capability Registry, the Definition Registry, persistence, or the navigation model. Brand overlay does not restore an excluded feature.
+A product is a Venture Definition. Customer-facing identity — name, brand, sign-in presentation, application chrome, and hostname strategy — resolves through that definition after architecture. A product may exclude features. It may not fork Platform Identity, the Runtime, the Capability Registry, the Definition Registry, persistence, the Workspace Engine, or the navigation model.
+
+A marketed Venture must have its own branded customer sign-in and its own customer-facing software identity. VentureOS is invisible by default to external product customers. “Powered by VentureOS” may exist later only as a subtle optional or legal mark if explicitly approved. It must not dominate the product identity.
+
+VentureOS branding remains legitimate for founder and portfolio operating environments, VentureOS Company, internal platform administration, engineering, development, disposable verification, and platform diagnostic tooling. A VentureOS-branded verification login is not a retroactive defect.
+
+Unintended cross-product identity leakage in a customer deployment is a product identity defect.
+
+Brand overlay does not restore an excluded feature. Product branding must never weaken authentication security, session handling, workspace isolation, membership, permissions, role authority, or auditability. There is no Product Registry and no private product authentication system.
+
+Law: [FD-007](./foundation-library/05-GOVERNANCE/Founder-Decisions.md) · [ADR-010](./foundation-library/05-GOVERNANCE/Architecture-Decision-Register.md#adr-010--product-branded-customer-surfaces).
 
 ---
 
@@ -220,7 +232,7 @@ Supersession is explicit. Deleting a locked rule without a dated replacement is 
 
 VentureOS is the permanent foundation upon which all future ventures are built.
 
-The OS outlives a sprint, a product costume, and a single author. Qualora, Calviora, Farmora, and ventures not yet named inherit one desk, one Runtime, one capability catalogue, one definition system, and one design constitution.
+The OS outlives a sprint, a product costume, and a single author. Qualora, Calviora, Farmora, and ventures not yet named inherit one desk, one Runtime, one capability catalogue, one definition system, and one design constitution. Their external customers inherit the Venture’s own product, not a generic VentureOS interface.
 
 The Foundation Library and Engineering Records exist so that knowledge belongs to the company, not to conversations.
 

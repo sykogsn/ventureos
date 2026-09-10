@@ -1,8 +1,8 @@
 # VentureOS Master Engineering Prompt
 
 **Status.** Permanent engineering constitution of VentureOS  
-**Version.** 1.0.0  
-**Date.** 2026-08-22  
+**Version.** 1.1.0  
+**Date.** 2026-09-10  
 **Owner.** Engineering  
 **Applies to.** Every sprint, implementation, review, refactor, and bug fix on VentureOS, Qualora, Calviora, Farmora, and every future Venture on this OS  
 **Index.** [Engineering Index](./README.md)
@@ -73,6 +73,7 @@ Further standing rules:
 
 - Do not modify Runtime, IDS constitution or token hex, Capability Registry behaviour, Definition Registry behaviour, persistence ownership, or Executive Environments unless that is the named programme.
 - Do not create a second orchestrator, Product Registry, type system, or engineering-memory store.
+- Do not assume a marketed customer product should display generic VentureOS branding. Real customer deployments must present the correct Venture-branded login and application identity. Internal, development, and verification surfaces may keep a generic VentureOS shell. See the [Project Constitution](../PROJECT_CONSTITUTION.md) (Customer-Facing Product Sovereignty), FD-007, and ADR-010.
 - Do not mix a Foundation amendment with an unrelated feature.
 - Do not leave knowledge only in a conversation. Record facts in this folder.
 

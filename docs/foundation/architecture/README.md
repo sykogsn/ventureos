@@ -14,7 +14,7 @@ This folder is reserved for architecture notes that span Runtime, persistence, p
 |---|---|
 | [`apps/web/src/FOUNDATION.md`](../../../apps/web/src/FOUNDATION.md) | Ownership and boundaries in code |
 | [Architecture Overview](../../foundation-library/02-ARCHITECTURE/Architecture-Overview.md) | Layer map |
-| [Architecture Decision Register](../../foundation-library/05-GOVERNANCE/Architecture-Decision-Register.md) | ADR-001–009 |
+| [Architecture Decision Register](../../foundation-library/05-GOVERNANCE/Architecture-Decision-Register.md) | ADR-001–010 |
 | [Foundation v1.0](../certification/FOUNDATION-V1.0.md) | Frozen product-development gate. Tag `v1.0.0` |
 | [ADR-009 — VentureOS Brain](./ADR-009-VentureOS-Brain.md) | Brain is the intelligence substrate. Runtime remains the sole orchestrator. Brain Rule 001 |
 | [BRAIN-001](./BRAIN-001-VentureOS-Brain-Architecture.md) | Approved Brain architecture (VC-001) |

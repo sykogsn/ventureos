@@ -12,11 +12,11 @@
 
 **Status.** Approved (locked)
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Definition Registry
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-09-10
 
 ---
 
@@ -24,7 +24,7 @@ A Venture Definition is the authoritative metadata for a product running on Vent
 
 A founded company is a Venture Instance: VIC plus `definition: { id, version }`.
 
-The founder selects a Product. Products resolve to definitions through the Definition Registry. There is no Product Registry.
+The founder selects a Product. Products resolve to definitions through the Definition Registry. There is no Product Registry. Customer-facing product identity must also resolve through that definition. The implementation shape of identity metadata is a later programme; do not invent fields in this page. See [FD-007](../05-GOVERNANCE/Founder-Decisions.md) and [ADR-010](../05-GOVERNANCE/Architecture-Decision-Register.md#adr-010--product-branded-customer-surfaces).
 
 ## Rules
 

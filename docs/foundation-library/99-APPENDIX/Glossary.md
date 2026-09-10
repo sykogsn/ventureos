@@ -12,11 +12,11 @@
 
 **Status.** Approved
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Foundation
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-09-10
 
 ---
 
@@ -38,7 +38,7 @@
 
 **IDS** — IntelligenceOS Design System. Presentation constitution and tokens.
 
-**Product** — What the founder selects at launch. Resolves to a Venture Definition. There is no Product Registry.
+**Product** — Commercially and experientially, a distinct customer-facing software product on VentureOS. Architecturally, a Venture Definition. The founder also selects a Product at launch. There is no Product Registry.
 
 **Runtime** — Executive Intelligence Runtime. The only intelligence orchestrator.
 

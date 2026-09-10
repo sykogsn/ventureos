@@ -12,11 +12,11 @@
 
 **Status.** Approved
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Foundation
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-09-10
 
 ---
 
@@ -30,7 +30,7 @@
 
 5. **Persistence does not orchestrate.** SQLite repositories store snapshots, auth, workspaces, and membership. The intelligence service is the only adapter that persists Runtime mutation snapshots. Repositories do CRUD and mapping only.
 
-6. **Platform owns identity.** Identity, sessions, workspace cookies, membership, and permissions live in platform services. They do not import Runtime.
+6. **Platform owns identity.** Identity, sessions, workspace cookies, membership, and permissions live in platform services. They do not import Runtime. Product-branded customer login is presentation over that shared implementation. It is not a second authentication architecture.
 
 7. **One desk.** Situation Room, Company HQ, and the Executive Office share spacing, type, chrome, and empty-state tone. Navigation is wayfinding. It does not instantiate ventures or call the Runtime.
 
@@ -38,7 +38,7 @@
 
 9. **Judgement over dashboard.** Surfaces present briefing, health, decisions, and story. They are not scoreboards. One primary action. One primary heading.
 
-10. **Products run on the OS.** Qualora, Calviora, and Farmora share the shell. They do not fork architecture. Identity comes after architecture.
+10. **Products run on the OS.** Qualora, Calviora, Farmora, and every marketed Venture share the platform architecture. They do not fork architecture. They are distinct customer-facing products. Shared shell architecture does not require VentureOS branding on customer deployments. Identity comes after architecture.
 
 11. **Fail visibly.** Missing intelligence is explained. Generic “Loading…” and “No items” are unconstitutional. Broken layout is not a brand moment.
 
