@@ -12,17 +12,17 @@
 
 **Status.** Approved
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Foundation
 
-**Last Updated.** 2026-08-22
+**Last Updated.** 2026-09-10
 
 ---
 
 If you are about to change the tree, read the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) first. It is the supreme governing document of the repository. Then read the [Master Engineering Prompt](../engineering/MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows that engineering standard by default. The [Engineering Index](../engineering/README.md) maps the Foundation Runbook and process standards.
 
-VentureOS is the operating system for companies. Situation Room, Company HQ, and the Executive Office share one desk. Qualora, Calviora, and Farmora are products that run on that OS. They are not separate applications.
+VentureOS is the operating system for companies. Situation Room, Company HQ, and the Executive Office share one desk. Qualora, Calviora, Farmora, and every marketed Venture are distinct customer-facing products that run on that OS. They are not separate platform stacks. See [Customer-Facing Product Sovereignty](../PROJECT_CONSTITUTION.md) · [FD-007](./05-GOVERNANCE/Founder-Decisions.md).
 
 Foundation v1.1 is locked. This library is how that lock is remembered.
 

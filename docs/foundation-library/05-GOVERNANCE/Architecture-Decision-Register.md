@@ -8,15 +8,15 @@
 
 **Dependencies.** [Foundation Governance](../01-FOUNDATION/Foundation-Governance.md) · [Architecture Overview](../02-ARCHITECTURE/Architecture-Overview.md)
 
-**Related Documents.** [Founder Decisions](./Founder-Decisions.md) · [Runtime](../02-ARCHITECTURE/Runtime.md) · [Capability Framework](../02-ARCHITECTURE/Capability-Framework.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md) · [ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md)
+**Related Documents.** [Founder Decisions](./Founder-Decisions.md) · [Runtime](../02-ARCHITECTURE/Runtime.md) · [Capability Framework](../02-ARCHITECTURE/Capability-Framework.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md) · [ADR-009](../../foundation/architecture/ADR-009-VentureOS-Brain.md) · [Product Philosophy](../01-FOUNDATION/Product-Philosophy.md)
 
 **Status.** Living
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Architecture
 
-**Last Updated.** 2026-08-22
+**Last Updated.** 2026-09-10
 
 ---
 
@@ -31,6 +31,7 @@
 | ADR-007 | Two climates only; brand is overlay; atmosphere specified separately (EAS-001) | Accepted |
 | ADR-008 | Unknown atmosphere/brand ids fail closed to VentureOS | Accepted |
 | ADR-009 | VentureOS Brain is the intelligence substrate; Runtime remains the sole orchestrator | Accepted |
+| ADR-010 | Product-branded customer surfaces over shared Platform Identity | Accepted |
 
 ### ADR-001 — One orchestrator
 
@@ -71,3 +72,20 @@ The VentureOS Brain provides knowledge, relationships, memory, reasoning, and ex
 **Brain Rule 001.** Every Brain output must be traceable to deterministic evidence. No recommendation may exist without named supporting Knowledge Objects. Language models may explain reasoning but never determine evidence, confidence, or recommendations.
 
 Full text: [ADR-009 — VentureOS Brain](../../foundation/architecture/ADR-009-VentureOS-Brain.md). Architecture: [BRAIN-001](../../foundation/architecture/BRAIN-001-VentureOS-Brain-Architecture.md). Roadmap: [BRAIN-002](../../foundation/architecture/BRAIN-002-VentureOS-Brain-Implementation-Roadmap.md).
+
+### ADR-010 — Product-branded customer surfaces
+
+Product branding and login presentation are definition-driven product identity. Authentication, session handling, and tenancy remain VentureOS platform services.
+
+Required architectural statement:
+
+- Branding and login presentation resolve through the Venture Definition or approved product-identity configuration. There is no Product Registry.
+- Authentication, sessions, workspace isolation, membership, permissions, and role authority remain Platform Identity and the Workspace Engine.
+- There is no product-specific authentication fork.
+- There is no second Runtime.
+- There is no second Workspace Engine.
+- There is no second Product Registry.
+
+A Frigora, Farmora, Qualora, Calviora, or future marketed-Venture customer login may look product-specific while Platform Identity performs authentication underneath. Shared desk architecture does not require VentureOS branding on those customer surfaces.
+
+Law: [FD-007](./Founder-Decisions.md) · [Project Constitution](../../PROJECT_CONSTITUTION.md) · [Platform Constitution](../../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md).
