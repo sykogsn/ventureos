@@ -59,6 +59,13 @@ import type {
   UpdateCustomerInput,
   UpdateSiteInput,
   UpdateWorkOrderInput,
+  SetVentureLabourHourlyChargeInput,
+  SetPartUsageUnitChargeInput,
+  SetRefrigerantEventChargePerKgInput,
+  SetVisitLabourHourlyChargeInput,
+  FrigoraVentureCommercialSettings,
+  FrigoraPartUsageId,
+  FrigoraRefrigerantEventId,
 } from "./types";
 import { parseWithFrigora, scopeSchema } from "./validation";
 
@@ -407,6 +414,50 @@ export async function retireRefrigerantReferenceAction(
     getFrigoraService().retireRefrigerantReference(
       scope,
       input.id as FrigoraRefrigerantReferenceId,
+    ),
+  );
+}
+
+export async function setVentureLabourHourlyChargeAction(
+  input: ScopedInput & SetVentureLabourHourlyChargeInput,
+): Promise<FrigoraMutationResult<FrigoraVentureCommercialSettings>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setVentureLabourHourlyCharge(scope, input),
+  );
+}
+
+export async function setPartUsageUnitChargeAction(
+  input: ScopedInput & { partUsageId: string } & SetPartUsageUnitChargeInput,
+): Promise<FrigoraMutationResult<FrigoraPartUsage>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setPartUsageUnitCharge(
+      scope,
+      input.partUsageId as FrigoraPartUsageId,
+      input,
+    ),
+  );
+}
+
+export async function setRefrigerantEventChargePerKgAction(
+  input: ScopedInput & { eventId: string } & SetRefrigerantEventChargePerKgInput,
+): Promise<FrigoraMutationResult<FrigoraRefrigerantEvent>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setRefrigerantEventChargePerKg(
+      scope,
+      input.eventId as FrigoraRefrigerantEventId,
+      input,
+    ),
+  );
+}
+
+export async function setVisitLabourHourlyChargeAction(
+  input: ScopedInput & { visitId: string } & SetVisitLabourHourlyChargeInput,
+): Promise<FrigoraMutationResult<FrigoraVisit>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setVisitLabourHourlyCharge(
+      scope,
+      input.visitId as FrigoraVisitId,
+      input,
     ),
   );
 }

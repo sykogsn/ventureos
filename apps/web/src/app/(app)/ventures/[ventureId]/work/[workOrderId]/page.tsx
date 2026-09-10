@@ -10,7 +10,9 @@ export default async function FrigoraWorkDetailPage({
 }) {
   const { ventureId, workOrderId } = await params;
   const ctx = await requireFrigoraOpsContext(ventureId);
-  const { view, error } = await loadWorkOrderDetail(frigoraScope(ctx), workOrderId);
+  const { view, error } = await loadWorkOrderDetail(frigoraScope(ctx), workOrderId, {
+    includeTimeMaterials: ctx.canWrite,
+  });
 
   if (error) {
     return (

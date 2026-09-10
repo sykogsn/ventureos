@@ -15,6 +15,7 @@ import {
   frigoraPartUsages,
   frigoraPartReferences,
   frigoraRefrigerantReferences,
+  frigoraVentureCommercialSettings,
   frigoraAssetOperationalConditions,
   frigoraVisitCustomerAcknowledgements,
   frigoraVisitEvidence,
@@ -63,6 +64,7 @@ import type {
   FrigoraPartReferenceId,
   FrigoraRefrigerantReference,
   FrigoraRefrigerantReferenceId,
+  FrigoraVentureCommercialSettings,
   FrigoraCatalogueReferenceStatus,
   FrigoraAssetOperationalCondition,
   FrigoraAssetOperationalConditionId,
@@ -303,6 +305,7 @@ export type FrigoraStore = {
     assetId: FrigoraAssetId,
   ): Promise<FrigoraRecommendedAction[]>;
   insertRefrigerantEvent(row: FrigoraRefrigerantEvent): Promise<void>;
+  updateRefrigerantEvent(row: FrigoraRefrigerantEvent): Promise<void>;
   findRefrigerantEvent(
     workspaceId: WorkspaceId,
     ventureId: VentureId,
@@ -324,6 +327,7 @@ export type FrigoraStore = {
     assetId: FrigoraAssetId,
   ): Promise<FrigoraRefrigerantEvent[]>;
   insertPartUsage(row: FrigoraPartUsage): Promise<void>;
+  updatePartUsage(row: FrigoraPartUsage): Promise<void>;
   findPartUsage(
     workspaceId: WorkspaceId,
     ventureId: VentureId,
@@ -379,6 +383,11 @@ export type FrigoraStore = {
     workspaceId: WorkspaceId,
     ventureId: VentureId,
   ): Promise<FrigoraRefrigerantReference[]>;
+  getVentureCommercialSettings(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+  ): Promise<FrigoraVentureCommercialSettings | null>;
+  upsertVentureCommercialSettings(row: FrigoraVentureCommercialSettings): Promise<void>;
   insertAssetOperationalCondition(row: FrigoraAssetOperationalCondition): Promise<void>;
   findAssetOperationalCondition(
     workspaceId: WorkspaceId,
@@ -1221,6 +1230,19 @@ export function createFrigoraStore(): FrigoraStore {
       await ensureSchema();
       await getDb().insert(frigoraRefrigerantEvents).values(toRefrigerantEventValues(row));
     },
+    async updateRefrigerantEvent(row) {
+      await ensureSchema();
+      await getDb()
+        .update(frigoraRefrigerantEvents)
+        .set(toRefrigerantEventValues(row))
+        .where(
+          and(
+            eq(frigoraRefrigerantEvents.id, row.id),
+            eq(frigoraRefrigerantEvents.workspaceId, row.workspaceId),
+            eq(frigoraRefrigerantEvents.ventureId, row.ventureId),
+          ),
+        );
+    },
     async findRefrigerantEvent(workspaceId, ventureId, id) {
       await ensureSchema();
       const rows = await getDb()
@@ -1284,6 +1306,19 @@ export function createFrigoraStore(): FrigoraStore {
     async insertPartUsage(row) {
       await ensureSchema();
       await getDb().insert(frigoraPartUsages).values(toPartUsageValues(row));
+    },
+    async updatePartUsage(row) {
+      await ensureSchema();
+      await getDb()
+        .update(frigoraPartUsages)
+        .set(toPartUsageValues(row))
+        .where(
+          and(
+            eq(frigoraPartUsages.id, row.id),
+            eq(frigoraPartUsages.workspaceId, row.workspaceId),
+            eq(frigoraPartUsages.ventureId, row.ventureId),
+          ),
+        );
     },
     async findPartUsage(workspaceId, ventureId, id) {
       await ensureSchema();
@@ -1487,6 +1522,59 @@ export function createFrigoraStore(): FrigoraStore {
           asc(frigoraRefrigerantReferences.id),
         );
       return rows.map(mapRefrigerantReference);
+    },
+    async getVentureCommercialSettings(workspaceId, ventureId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraVentureCommercialSettings)
+        .where(
+          and(
+            eq(frigoraVentureCommercialSettings.workspaceId, workspaceId),
+            eq(frigoraVentureCommercialSettings.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0]
+        ? {
+            workspaceId: rows[0].workspaceId as WorkspaceId,
+            ventureId: rows[0].ventureId as VentureId,
+            labourHourlyChargeCents: rows[0].labourHourlyChargeCents ?? null,
+            updatedAt: rows[0].updatedAt,
+          }
+        : null;
+    },
+    async upsertVentureCommercialSettings(row) {
+      await ensureSchema();
+      const existing = await getDb()
+        .select()
+        .from(frigoraVentureCommercialSettings)
+        .where(
+          and(
+            eq(frigoraVentureCommercialSettings.workspaceId, row.workspaceId),
+            eq(frigoraVentureCommercialSettings.ventureId, row.ventureId),
+          ),
+        )
+        .limit(1);
+      const values = {
+        workspaceId: row.workspaceId,
+        ventureId: row.ventureId,
+        labourHourlyChargeCents: row.labourHourlyChargeCents,
+        updatedAt: row.updatedAt,
+      };
+      if (existing[0]) {
+        await getDb()
+          .update(frigoraVentureCommercialSettings)
+          .set(values)
+          .where(
+            and(
+              eq(frigoraVentureCommercialSettings.workspaceId, row.workspaceId),
+              eq(frigoraVentureCommercialSettings.ventureId, row.ventureId),
+            ),
+          );
+      } else {
+        await getDb().insert(frigoraVentureCommercialSettings).values(values);
+      }
     },
     async insertAssetOperationalCondition(row) {
       await ensureSchema();
@@ -1764,6 +1852,7 @@ function toVisitValues(row: FrigoraVisit) {
     attendingUserId: row.attendingUserId,
     arrivedAt: row.arrivedAt,
     departedAt: row.departedAt,
+    labourHourlyChargeCents: row.labourHourlyChargeCents,
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -1921,6 +2010,7 @@ function toRefrigerantEventValues(row: FrigoraRefrigerantEvent) {
     refrigerantReferenceId: row.refrigerantReferenceId,
     eventKind: row.eventKind,
     quantityKg: row.quantityKg,
+    chargePerKgCents: row.chargePerKgCents,
     reason: row.reason,
     cylinderReference: row.cylinderReference,
     occurredAt: row.occurredAt,
@@ -1943,6 +2033,7 @@ function toPartUsageValues(row: FrigoraPartUsage) {
     partReferenceId: row.partReferenceId,
     quantity: row.quantity,
     quantityUnit: row.quantityUnit,
+    unitChargeCents: row.unitChargeCents,
     notes: row.notes,
     usedAt: row.usedAt,
     usedByUserId: row.usedByUserId,
@@ -1959,6 +2050,7 @@ function toPartReferenceValues(row: FrigoraPartReference) {
     ventureId: row.ventureId,
     displayName: row.displayName,
     defaultQuantityUnit: row.defaultQuantityUnit,
+    defaultUnitChargeCents: row.defaultUnitChargeCents,
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -1972,6 +2064,7 @@ function toRefrigerantReferenceValues(row: FrigoraRefrigerantReference) {
     ventureId: row.ventureId,
     canonicalCode: row.canonicalCode,
     displayName: row.displayName,
+    defaultChargePerKgCents: row.defaultChargePerKgCents,
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -2107,6 +2200,7 @@ function mapVisit(row: typeof frigoraVisits.$inferSelect): FrigoraVisit {
     attendingUserId: row.attendingUserId as UserId,
     arrivedAt: row.arrivedAt,
     departedAt: row.departedAt ?? null,
+    labourHourlyChargeCents: row.labourHourlyChargeCents ?? null,
     status: row.status as FrigoraVisitStatus,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -2225,6 +2319,7 @@ function mapRefrigerantEvent(
       (row.refrigerantReferenceId as FrigoraRefrigerantReferenceId | null) ?? null,
     eventKind: row.eventKind as FrigoraRefrigerantEventKind,
     quantityKg: row.quantityKg,
+    chargePerKgCents: row.chargePerKgCents ?? null,
     reason: row.reason ?? null,
     cylinderReference: row.cylinderReference ?? null,
     occurredAt: row.occurredAt,
@@ -2247,6 +2342,7 @@ function mapPartUsage(row: typeof frigoraPartUsages.$inferSelect): FrigoraPartUs
     partReferenceId: (row.partReferenceId as FrigoraPartReferenceId | null) ?? null,
     quantity: row.quantity,
     quantityUnit: row.quantityUnit as FrigoraPartUsageUnit,
+    unitChargeCents: row.unitChargeCents ?? null,
     notes: row.notes ?? null,
     usedAt: row.usedAt,
     usedByUserId: row.usedByUserId as UserId,
@@ -2263,6 +2359,7 @@ function mapPartReference(row: typeof frigoraPartReferences.$inferSelect): Frigo
     ventureId: row.ventureId as VentureId,
     displayName: row.displayName,
     defaultQuantityUnit: row.defaultQuantityUnit as FrigoraPartUsageUnit,
+    defaultUnitChargeCents: row.defaultUnitChargeCents ?? null,
     status: row.status as FrigoraCatalogueReferenceStatus,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -2278,6 +2375,7 @@ function mapRefrigerantReference(
     ventureId: row.ventureId as VentureId,
     canonicalCode: row.canonicalCode,
     displayName: row.displayName,
+    defaultChargePerKgCents: row.defaultChargePerKgCents ?? null,
     status: row.status as FrigoraCatalogueReferenceStatus,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

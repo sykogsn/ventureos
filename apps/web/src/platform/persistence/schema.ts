@@ -587,6 +587,7 @@ export const frigoraVisits = sqliteTable(
     attendingUserId: text("attending_user_id").notNull(),
     arrivedAt: text("arrived_at").notNull(),
     departedAt: text("departed_at"),
+    labourHourlyChargeCents: integer("labour_hourly_charge_cents"),
     status: text("status").notNull().default("open"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
@@ -751,6 +752,7 @@ export const frigoraRefrigerantEvents = sqliteTable(
     refrigerantReferenceId: text("refrigerant_reference_id"),
     eventKind: text("event_kind").notNull(),
     quantityKg: real("quantity_kg").notNull(),
+    chargePerKgCents: integer("charge_per_kg_cents"),
     reason: text("reason"),
     cylinderReference: text("cylinder_reference"),
     occurredAt: text("occurred_at").notNull(),
@@ -782,6 +784,7 @@ export const frigoraPartUsages = sqliteTable(
     partReferenceId: text("part_reference_id"),
     quantity: real("quantity").notNull(),
     quantityUnit: text("quantity_unit").notNull(),
+    unitChargeCents: integer("unit_charge_cents"),
     notes: text("notes"),
     usedAt: text("used_at").notNull(),
     usedByUserId: text("used_by_user_id").notNull(),
@@ -804,6 +807,7 @@ export const frigoraPartReferences = sqliteTable(
     ventureId: text("venture_id").notNull(),
     displayName: text("display_name").notNull(),
     defaultQuantityUnit: text("default_quantity_unit").notNull(),
+    defaultUnitChargeCents: integer("default_unit_charge_cents"),
     status: text("status").notNull(),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
@@ -821,6 +825,7 @@ export const frigoraRefrigerantReferences = sqliteTable(
     ventureId: text("venture_id").notNull(),
     canonicalCode: text("canonical_code").notNull(),
     displayName: text("display_name").notNull(),
+    defaultChargePerKgCents: integer("default_charge_per_kg_cents"),
     status: text("status").notNull(),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
@@ -832,6 +837,19 @@ export const frigoraRefrigerantReferences = sqliteTable(
       table.canonicalCode,
     ),
     index("frigora_refrigerant_references_venture_status_idx").on(table.ventureId, table.status),
+  ],
+);
+
+export const frigoraVentureCommercialSettings = sqliteTable(
+  "frigora_venture_commercial_settings",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    labourHourlyChargeCents: integer("labour_hourly_charge_cents"),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.ventureId] }),
   ],
 );
 
@@ -971,6 +989,7 @@ export const schema = {
   frigoraPartUsages,
   frigoraPartReferences,
   frigoraRefrigerantReferences,
+  frigoraVentureCommercialSettings,
   frigoraAssetOperationalConditions,
   frigoraVisitCustomerAcknowledgements,
   frigoraVisitEvidence,

@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 25; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 26; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -913,6 +913,9 @@ export async function ensureSchema() {
 
       await addColumn("frigora_refrigerant_events", "refrigerant_reference_id", "TEXT");
       await addColumn("frigora_part_usages", "part_reference_id", "TEXT");
+      await addColumn("frigora_visits", "labour_hourly_charge_cents", "INTEGER");
+      await addColumn("frigora_part_usages", "unit_charge_cents", "INTEGER");
+      await addColumn("frigora_refrigerant_events", "charge_per_kg_cents", "INTEGER");
 
       await exec(`
         CREATE TABLE IF NOT EXISTS frigora_part_references (
@@ -948,6 +951,19 @@ export async function ensureSchema() {
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_refrigerant_references_venture_status_idx ON frigora_refrigerant_references (venture_id, status)`,
       );
+
+      await addColumn("frigora_part_references", "default_unit_charge_cents", "INTEGER");
+      await addColumn("frigora_refrigerant_references", "default_charge_per_kg_cents", "INTEGER");
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_venture_commercial_settings (
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          labour_hourly_charge_cents INTEGER,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (workspace_id, venture_id)
+        )
+      `);
 
       await exec(`
         CREATE TABLE IF NOT EXISTS frigora_asset_operational_conditions (

@@ -75,7 +75,7 @@ function ventureRow(input: {
     createdAt: NOW,
     updatedAt: NOW,
     definitionId: input.definitionId ?? "frigora",
-    definitionVersion: input.definitionVersion ?? "0.19.0",
+    definitionVersion: input.definitionVersion ?? "0.20.0",
     lifecycle: "operating",
   };
 }
@@ -407,21 +407,29 @@ describe("F3.0 structured catalogues", () => {
     assert.equal(otherParts.length, 0);
   });
 
-  it("admits F3.0 catalogues at frigora@0.19.0 and SCHEMA_GENERATION 25", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.19.0");
+  it("admits F3.1 T&M at frigora@0.20.0 and SCHEMA_GENERATION 26", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.20.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /F3\.0 structured parts and refrigerant catalogues/,
     );
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
+      /F3\.1 Time & Materials customer charge/,
+    );
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
       /without inventory/,
+    );
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /invoice|quote|VAT|payroll/,
     );
     const dbSource = readFileSync(
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 25/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 26/);
   });
 
   it("preserves added ≠ leaked and rejects leaked kind", async () => {

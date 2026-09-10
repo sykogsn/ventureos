@@ -52,6 +52,7 @@ function visit(status: FrigoraVisit["status"]): FrigoraVisit {
     attendingUserId: "user-1" as FrigoraVisit["attendingUserId"],
     arrivedAt: "2026-09-07T09:00:00.000Z",
     departedAt: status === "departed" ? "2026-09-07T10:00:00.000Z" : null,
+    labourHourlyChargeCents: null,
     status,
     createdAt: NOW,
     updatedAt: NOW,

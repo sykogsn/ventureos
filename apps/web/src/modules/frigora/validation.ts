@@ -414,24 +414,59 @@ export const recordRecommendedActionSchema = z.object({
   assetId: patchAssetIdNullable,
 });
 
+/** Integer ZAR minor units (cents); non-negative. */
+export const zarCentsSchema = z.number().superRefine((value, ctx) => {
+  if (!Number.isInteger(value) || value < 0) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Amount must be a non-negative integer in ZAR cents.",
+    });
+  }
+});
+
+/** Optional nullable ZAR cents for catalogue / venture defaults. */
+export const optionalNullableZarCentsSchema = z
+  .union([zarCentsSchema, z.null()])
+  .optional();
+
+export const setVentureLabourHourlyChargeSchema = z.object({
+  labourHourlyChargeCents: z.union([zarCentsSchema, z.null()]),
+});
+
+export const setPartUsageUnitChargeSchema = z.object({
+  unitChargeCents: zarCentsSchema,
+});
+
+export const setRefrigerantEventChargePerKgSchema = z.object({
+  chargePerKgCents: zarCentsSchema,
+});
+
+export const setVisitLabourHourlyChargeSchema = z.object({
+  labourHourlyChargeCents: zarCentsSchema,
+});
+
 export const createPartReferenceSchema = z.object({
   displayName: requiredText,
   defaultQuantityUnit: z.enum(FRIGORA_PART_USAGE_UNITS),
+  defaultUnitChargeCents: optionalNullableZarCentsSchema,
 });
 
 export const updatePartReferenceSchema = z.object({
   displayName: requiredText.optional(),
   defaultQuantityUnit: z.enum(FRIGORA_PART_USAGE_UNITS).optional(),
+  defaultUnitChargeCents: optionalNullableZarCentsSchema,
 });
 
 export const createRefrigerantReferenceSchema = z.object({
   canonicalCode: requiredText.transform(canonicalizeRefrigerantCode),
   displayName: requiredText,
+  defaultChargePerKgCents: optionalNullableZarCentsSchema,
 });
 
 export const updateRefrigerantReferenceSchema = z.object({
   canonicalCode: requiredText.transform(canonicalizeRefrigerantCode).optional(),
   displayName: requiredText.optional(),
+  defaultChargePerKgCents: optionalNullableZarCentsSchema,
 });
 
 // Refrigerant added ≠ refrigerant leaked. quantityKg records handling only, not leak inference.

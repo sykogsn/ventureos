@@ -609,7 +609,7 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     );
   });
 
-  it("persists through restart and keeps SCHEMA_GENERATION at 25", async () => {
+  it("persists through restart and keeps SCHEMA_GENERATION at 26", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -628,14 +628,14 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     const schemaPath = fileURLToPath(
       new URL("../../platform/persistence/schema.ts", import.meta.url),
     );
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 25/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 26/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_visit_customer_acknowledgements/);
     assert.equal(readFileSync(schemaPath, "utf8").includes("frigora_asset_history"), false);
   });
 
-  it("admits frigora@0.19.0 and remains compatible with persisted 0.14.0", async () => {
+  it("admits frigora@0.20.0 and remains compatible with persisted 0.14.0", async () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.19.0");
+    assert.equal(frigora.version, "0.20.0");
     assert.match(frigora.description, /Visit customer acknowledgement/i);
     assert.match(frigora.description, /evidence/);
     assert.match(frigora.description, /employee agents/);

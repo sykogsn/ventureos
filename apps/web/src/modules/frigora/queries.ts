@@ -38,8 +38,10 @@ import type {
   FrigoraVisitEvidence,
   FrigoraVisitEvidenceId,
   FrigoraAssetHistoryEntry,
+  FrigoraVentureCommercialSettings,
   ListScheduledWorkOrdersInput,
 } from "./types";
+import type { FrigoraTimeMaterialsSummary } from "./time-materials";
 import type { UserId } from "@/contracts";
 import { parseWithFrigora, scopeSchema } from "./validation";
 
@@ -597,4 +599,21 @@ export async function listActiveRefrigerantReferencesQuery(
   input: ScopedInput,
 ): Promise<FrigoraQueryResult<FrigoraRefrigerantReference[]>> {
   return query(input, (scope) => getFrigoraService().listActiveRefrigerantReferences(scope));
+}
+
+export async function getVentureCommercialSettingsQuery(
+  input: ScopedInput,
+): Promise<FrigoraQueryResult<FrigoraVentureCommercialSettings | null>> {
+  return query(input, (scope) => getFrigoraService().getVentureCommercialSettings(scope));
+}
+
+export async function getWorkOrderTimeMaterialsQuery(
+  input: ScopedInput & { workOrderId: string },
+): Promise<FrigoraQueryResult<FrigoraTimeMaterialsSummary>> {
+  return query(input, (scope) =>
+    getFrigoraService().getWorkOrderTimeMaterials(
+      scope,
+      input.workOrderId as FrigoraWorkOrderId,
+    ),
+  );
 }

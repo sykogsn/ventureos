@@ -9,6 +9,7 @@ import {
   updatePartReferenceAction,
   updateRefrigerantReferenceAction,
 } from "@/modules/frigora/actions";
+import { parseZarInputToCents } from "@/modules/frigora/time-materials";
 import { FRIGORA_PART_USAGE_UNITS, type FrigoraPartUsageUnit } from "@/modules/frigora/types";
 
 export type CatalogueFormState = {
@@ -32,6 +33,23 @@ function revalidateCatalogue(ventureId: string) {
   revalidatePath(`/ventures/${ventureId}/catalogue`);
 }
 
+function parseOptionalDefaultCharge(
+  raw: string,
+): { cents: number | null; error?: string } {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    return { cents: null };
+  }
+  try {
+    return { cents: parseZarInputToCents(trimmed) };
+  } catch (error) {
+    return {
+      cents: null,
+      error: error instanceof Error ? error.message : "Invalid amount.",
+    };
+  }
+}
+
 export async function createPartReferenceFormAction(
   _prev: CatalogueFormState,
   formData: FormData,
@@ -40,15 +58,21 @@ export async function createPartReferenceFormAction(
   const values = {
     displayName: text(formData, "displayName"),
     defaultQuantityUnit: text(formData, "defaultQuantityUnit"),
+    defaultUnitCharge: text(formData, "defaultUnitCharge"),
   };
   const unit = values.defaultQuantityUnit.trim();
   if (!(FRIGORA_PART_USAGE_UNITS as readonly string[]).includes(unit)) {
     return { error: "Select a valid default unit.", values };
   }
+  const charge = parseOptionalDefaultCharge(values.defaultUnitCharge);
+  if (charge.error) {
+    return { error: charge.error, values };
+  }
   const result = await createPartReferenceAction({
     ...scope,
     displayName: values.displayName.trim(),
     defaultQuantityUnit: unit as FrigoraPartUsageUnit,
+    defaultUnitChargeCents: charge.cents,
   });
   if (result.error) {
     return { error: result.error, values };
@@ -66,16 +90,22 @@ export async function updatePartReferenceFormAction(
   const values = {
     displayName: text(formData, "displayName"),
     defaultQuantityUnit: text(formData, "defaultQuantityUnit"),
+    defaultUnitCharge: text(formData, "defaultUnitCharge"),
   };
   const unit = values.defaultQuantityUnit.trim();
   if (!(FRIGORA_PART_USAGE_UNITS as readonly string[]).includes(unit)) {
     return { error: "Select a valid default unit.", values };
+  }
+  const charge = parseOptionalDefaultCharge(values.defaultUnitCharge);
+  if (charge.error) {
+    return { error: charge.error, values };
   }
   const result = await updatePartReferenceAction({
     ...scope,
     id,
     displayName: values.displayName.trim(),
     defaultQuantityUnit: unit as FrigoraPartUsageUnit,
+    defaultUnitChargeCents: charge.cents,
   });
   if (result.error) {
     return { error: result.error, values };
@@ -108,11 +138,17 @@ export async function createRefrigerantReferenceFormAction(
   const values = {
     canonicalCode: text(formData, "canonicalCode"),
     displayName: text(formData, "displayName"),
+    defaultChargePerKg: text(formData, "defaultChargePerKg"),
   };
+  const charge = parseOptionalDefaultCharge(values.defaultChargePerKg);
+  if (charge.error) {
+    return { error: charge.error, values };
+  }
   const result = await createRefrigerantReferenceAction({
     ...scope,
     canonicalCode: values.canonicalCode.trim(),
     displayName: values.displayName.trim(),
+    defaultChargePerKgCents: charge.cents,
   });
   if (result.error) {
     return { error: result.error, values };
@@ -129,12 +165,18 @@ export async function updateRefrigerantReferenceFormAction(
   const values = {
     canonicalCode: text(formData, "canonicalCode"),
     displayName: text(formData, "displayName"),
+    defaultChargePerKg: text(formData, "defaultChargePerKg"),
   };
+  const charge = parseOptionalDefaultCharge(values.defaultChargePerKg);
+  if (charge.error) {
+    return { error: charge.error, values };
+  }
   const result = await updateRefrigerantReferenceAction({
     ...scope,
     id: text(formData, "id"),
     canonicalCode: values.canonicalCode.trim(),
     displayName: values.displayName.trim(),
+    defaultChargePerKgCents: charge.cents,
   });
   if (result.error) {
     return { error: result.error, values };

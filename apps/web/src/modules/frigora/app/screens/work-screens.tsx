@@ -12,6 +12,7 @@ import {
   formatWorkOrderStatusLabel,
 } from "@/modules/frigora/app/operational-derivations";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import { TimeMaterialsSection } from "@/modules/frigora/app/screens/time-materials-section";
 import {
   ATTENTION_SIGNAL_LABELS,
   type UserDisplay,
@@ -451,6 +452,7 @@ export function WorkDetailScreen({
     attentionSignals,
     latestVisitId,
     members,
+    timeMaterials,
   } = view;
 
   const workBase = `/ventures/${ctx.ventureId}/work/${workOrder.id}`;
@@ -556,6 +558,15 @@ export function WorkDetailScreen({
             </dd>
           </div>
         </dl>
+
+        {ctx.canWrite && timeMaterials ? (
+          <TimeMaterialsSection
+            workspaceId={ctx.workspaceId}
+            ventureId={ctx.ventureId}
+            workOrderId={workOrder.id}
+            summary={timeMaterials}
+          />
+        ) : null}
 
         <Stack gap="compact">
           <h2 className="ids-label text-foreground">Service window and assignment</h2>

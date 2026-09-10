@@ -8,6 +8,7 @@ import {
   getVisitOutcomeByVisitQuery,
   getVisitQuery,
   getWorkOrderQuery,
+  getWorkOrderTimeMaterialsQuery,
   listAssetOperationalConditionsByAssetQuery,
   listAssetsBySiteQuery,
   listCorrectiveActionsByVisitQuery,
@@ -71,6 +72,7 @@ import type {
   FrigoraWorkOrder,
   FrigoraWorkOrderStatus,
 } from "@/modules/frigora/types";
+import type { FrigoraTimeMaterialsSummary } from "@/modules/frigora/time-materials";
 import type { UserId } from "@/contracts";
 
 type Scope = { workspaceId: string; ventureId: string };
@@ -156,6 +158,8 @@ export type WorkOrderDetailView = {
   attentionSignals: OperationalAttentionSignal[];
   latestVisitId: string | null;
   members: UserDisplay[];
+  /** Present only for venture.update (commercial authority). Never for ordinary engineers. */
+  timeMaterials: FrigoraTimeMaterialsSummary | null;
 };
 
 export type MyWorkRow = {
@@ -978,6 +982,7 @@ export { ATTENTION_SIGNAL_LABELS };
 export async function loadWorkOrderDetail(
   scope: Scope,
   workOrderId: string,
+  options?: { includeTimeMaterials?: boolean },
 ): Promise<{ error?: string; view: WorkOrderDetailView | null }> {
   const workResult = await getWorkOrderQuery({ ...scope, id: workOrderId });
   if (workResult.error) {
@@ -1050,6 +1055,18 @@ export async function loadWorkOrderDetail(
     }),
   );
 
+  let timeMaterials: FrigoraTimeMaterialsSummary | null = null;
+  if (options?.includeTimeMaterials) {
+    const tmResult = await getWorkOrderTimeMaterialsQuery({
+      ...scope,
+      workOrderId: workOrder.id,
+    });
+    if (tmResult.error) {
+      return { error: tmResult.error, view: null };
+    }
+    timeMaterials = tmResult.record ?? null;
+  }
+
   return {
     view: {
       workOrder,
@@ -1067,6 +1084,7 @@ export async function loadWorkOrderDetail(
       attentionSignals,
       latestVisitId: latestVisit?.id ?? null,
       members,
+      timeMaterials,
     },
   };
 }

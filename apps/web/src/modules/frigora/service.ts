@@ -77,8 +77,17 @@ import type {
   UpdateCustomerInput,
   UpdateSiteInput,
   UpdateWorkOrderInput,
+  FrigoraVentureCommercialSettings,
+  SetVentureLabourHourlyChargeInput,
+  SetPartUsageUnitChargeInput,
+  SetRefrigerantEventChargePerKgInput,
+  SetVisitLabourHourlyChargeInput,
 } from "./types";
 import { FRIGORA_ASSET_HISTORY_EVENT_KINDS } from "./types";
+import {
+  computeWorkOrderTimeMaterials,
+  type FrigoraTimeMaterialsSummary,
+} from "./time-materials";
 import {
   assignWorkOrderSchema,
   cancelWorkOrderSchema,
@@ -103,6 +112,10 @@ import {
   updatePartReferenceSchema,
   createRefrigerantReferenceSchema,
   updateRefrigerantReferenceSchema,
+  setVentureLabourHourlyChargeSchema,
+  setPartUsageUnitChargeSchema,
+  setRefrigerantEventChargePerKgSchema,
+  setVisitLabourHourlyChargeSchema,
   canonicalizeRefrigerantCode,
   recordAssetOperationalConditionSchema,
   recordVisitCustomerAcknowledgementSchema,
@@ -421,6 +434,32 @@ export type FrigoraService = {
   ): Promise<FrigoraRefrigerantReference | null>;
   listRefrigerantReferences(scope: FrigoraScope): Promise<FrigoraRefrigerantReference[]>;
   listActiveRefrigerantReferences(scope: FrigoraScope): Promise<FrigoraRefrigerantReference[]>;
+  getVentureCommercialSettings(
+    scope: FrigoraScope,
+  ): Promise<FrigoraVentureCommercialSettings | null>;
+  setVentureLabourHourlyCharge(
+    scope: FrigoraScope,
+    input: SetVentureLabourHourlyChargeInput,
+  ): Promise<FrigoraVentureCommercialSettings>;
+  setPartUsageUnitCharge(
+    scope: FrigoraScope,
+    partUsageId: FrigoraPartUsageId,
+    input: SetPartUsageUnitChargeInput,
+  ): Promise<FrigoraPartUsage>;
+  setRefrigerantEventChargePerKg(
+    scope: FrigoraScope,
+    eventId: FrigoraRefrigerantEventId,
+    input: SetRefrigerantEventChargePerKgInput,
+  ): Promise<FrigoraRefrigerantEvent>;
+  setVisitLabourHourlyCharge(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: SetVisitLabourHourlyChargeInput,
+  ): Promise<FrigoraVisit>;
+  getWorkOrderTimeMaterials(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraTimeMaterialsSummary>;
   recordAssetOperationalCondition(
     scope: FrigoraScope,
     input: RecordAssetOperationalConditionInput,
@@ -1221,6 +1260,7 @@ export function createFrigoraService(options: {
         attendingUserId,
         arrivedAt: parsed.arrivedAt,
         departedAt: null,
+        labourHourlyChargeCents: null,
         status: "open",
         createdAt: now,
         updatedAt: now,
@@ -1235,9 +1275,18 @@ export function createFrigoraService(options: {
       await assertWorkOrderOperationalAccess(await permissionService(), scope, workOrder);
       const parsed = parseWithFrigora(recordVisitDepartureSchema, input);
       assertDepartedAfterArrived(existing.arrivedAt, parsed.departedAt);
+      const commercial = await store.getVentureCommercialSettings(
+        scope.workspaceId,
+        scope.ventureId,
+      );
+      const labourHourlyChargeCents =
+        commercial?.labourHourlyChargeCents != null
+          ? commercial.labourHourlyChargeCents
+          : null;
       const next: FrigoraVisit = {
         ...existing,
         departedAt: parsed.departedAt,
+        labourHourlyChargeCents,
         status: "departed",
         updatedAt: nowIso(),
       };
@@ -1778,6 +1827,7 @@ export function createFrigoraService(options: {
       );
       let refrigerantReferenceId: FrigoraRefrigerantReferenceId | null = null;
       let refrigerantType: string;
+      let chargePerKgCents: number | null = null;
       if (parsed.refrigerantReferenceId) {
         const reference = await store.findRefrigerantReference(
           scope.workspaceId,
@@ -1795,6 +1845,9 @@ export function createFrigoraService(options: {
         }
         refrigerantReferenceId = reference.id;
         refrigerantType = reference.canonicalCode;
+        if (parsed.eventKind === "added") {
+          chargePerKgCents = reference.defaultChargePerKgCents;
+        }
       } else {
         refrigerantType = parsed.refrigerantType as string;
       }
@@ -1810,6 +1863,7 @@ export function createFrigoraService(options: {
         refrigerantReferenceId,
         eventKind: parsed.eventKind,
         quantityKg: parsed.quantityKg,
+        chargePerKgCents,
         reason: parsed.reason ?? null,
         cylinderReference: parsed.cylinderReference ?? null,
         occurredAt: parsed.occurredAt,
@@ -1896,6 +1950,7 @@ export function createFrigoraService(options: {
       let partReferenceId: FrigoraPartReferenceId | null = null;
       let partDescription: string;
       let quantityUnit: FrigoraPartUsageUnit;
+      let unitChargeCents: number | null = null;
       if (parsed.partReferenceId) {
         const reference = await store.findPartReference(
           scope.workspaceId,
@@ -1914,6 +1969,7 @@ export function createFrigoraService(options: {
         partReferenceId = reference.id;
         partDescription = reference.displayName;
         quantityUnit = parsed.quantityUnit ?? reference.defaultQuantityUnit;
+        unitChargeCents = reference.defaultUnitChargeCents;
       } else {
         partDescription = parsed.partDescription as string;
         quantityUnit = parsed.quantityUnit as FrigoraPartUsageUnit;
@@ -1930,6 +1986,7 @@ export function createFrigoraService(options: {
         partReferenceId,
         quantity: parsed.quantity,
         quantityUnit,
+        unitChargeCents,
         notes: parsed.notes ?? null,
         usedAt: parsed.usedAt,
         usedByUserId,
@@ -1994,6 +2051,7 @@ export function createFrigoraService(options: {
         ventureId: scope.ventureId,
         displayName: parsed.displayName,
         defaultQuantityUnit: parsed.defaultQuantityUnit,
+        defaultUnitChargeCents: parsed.defaultUnitChargeCents ?? null,
         status: "active",
         createdAt: now,
         updatedAt: now,
@@ -2012,6 +2070,10 @@ export function createFrigoraService(options: {
         ...existing,
         displayName: parsed.displayName ?? existing.displayName,
         defaultQuantityUnit: parsed.defaultQuantityUnit ?? existing.defaultQuantityUnit,
+        defaultUnitChargeCents:
+          parsed.defaultUnitChargeCents !== undefined
+            ? parsed.defaultUnitChargeCents
+            : existing.defaultUnitChargeCents,
         updatedAt: nowIso(),
       };
       await store.updatePartReference(next);
@@ -2074,6 +2136,7 @@ export function createFrigoraService(options: {
         ventureId: scope.ventureId,
         canonicalCode: code,
         displayName: parsed.displayName,
+        defaultChargePerKgCents: parsed.defaultChargePerKgCents ?? null,
         status: "active",
         createdAt: now,
         updatedAt: now,
@@ -2113,6 +2176,10 @@ export function createFrigoraService(options: {
         ...existing,
         canonicalCode: nextCode,
         displayName: parsed.displayName ?? existing.displayName,
+        defaultChargePerKgCents:
+          parsed.defaultChargePerKgCents !== undefined
+            ? parsed.defaultChargePerKgCents
+            : existing.defaultChargePerKgCents,
         updatedAt: nowIso(),
       };
       await store.updateRefrigerantReference(next);
@@ -2156,6 +2223,106 @@ export function createFrigoraService(options: {
         return [];
       }
       return store.listActiveRefrigerantReferences(scope.workspaceId, scope.ventureId);
+    },
+    async getVentureCommercialSettings(scope) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return store.getVentureCommercialSettings(scope.workspaceId, scope.ventureId);
+    },
+    async setVentureLabourHourlyCharge(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const parsed = parseWithFrigora(setVentureLabourHourlyChargeSchema, input);
+      const now = nowIso();
+      const row: FrigoraVentureCommercialSettings = {
+        workspaceId: scope.workspaceId,
+        ventureId: scope.ventureId,
+        labourHourlyChargeCents: parsed.labourHourlyChargeCents,
+        updatedAt: now,
+      };
+      await store.upsertVentureCommercialSettings(row);
+      return row;
+    },
+    async setPartUsageUnitCharge(scope, partUsageId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await store.findPartUsage(
+        scope.workspaceId,
+        scope.ventureId,
+        partUsageId,
+      );
+      if (!existing) {
+        throw new FrigoraError("not_found", "Part usage was not found.");
+      }
+      const parsed = parseWithFrigora(setPartUsageUnitChargeSchema, input);
+      const next: FrigoraPartUsage = {
+        ...existing,
+        unitChargeCents: parsed.unitChargeCents,
+        updatedAt: nowIso(),
+      };
+      await store.updatePartUsage(next);
+      return next;
+    },
+    async setRefrigerantEventChargePerKg(scope, eventId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await store.findRefrigerantEvent(
+        scope.workspaceId,
+        scope.ventureId,
+        eventId,
+      );
+      if (!existing) {
+        throw new FrigoraError("not_found", "Refrigerant event was not found.");
+      }
+      if (existing.eventKind !== "added") {
+        throw new FrigoraError(
+          "invalid_input",
+          "Charge per kg applies only to added refrigerant events.",
+        );
+      }
+      const parsed = parseWithFrigora(setRefrigerantEventChargePerKgSchema, input);
+      const next: FrigoraRefrigerantEvent = {
+        ...existing,
+        chargePerKgCents: parsed.chargePerKgCents,
+        updatedAt: nowIso(),
+      };
+      await store.updateRefrigerantEvent(next);
+      return next;
+    },
+    async setVisitLabourHourlyCharge(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireVisit(store, scope, visitId);
+      if (existing.status !== "departed") {
+        throw new FrigoraError(
+          "invalid_status",
+          "Labour hourly charge can only be set on departed visits.",
+        );
+      }
+      const parsed = parseWithFrigora(setVisitLabourHourlyChargeSchema, input);
+      const next: FrigoraVisit = {
+        ...existing,
+        labourHourlyChargeCents: parsed.labourHourlyChargeCents,
+        updatedAt: nowIso(),
+      };
+      await store.updateVisit(next);
+      return next;
+    },
+    async getWorkOrderTimeMaterials(scope, workOrderId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+      if (!workOrder) {
+        throw new FrigoraError("not_found", "Work order was not found.");
+      }
+      const [visits, partUsages, refrigerantEvents] = await Promise.all([
+        store.listVisitsByWorkOrder(scope.workspaceId, scope.ventureId, workOrderId),
+        store.listPartUsagesByWorkOrder(scope.workspaceId, scope.ventureId, workOrderId),
+        store.listRefrigerantEventsByWorkOrder(
+          scope.workspaceId,
+          scope.ventureId,
+          workOrderId,
+        ),
+      ]);
+      return computeWorkOrderTimeMaterials({ visits, partUsages, refrigerantEvents });
     },
     async recordAssetOperationalCondition(scope, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");

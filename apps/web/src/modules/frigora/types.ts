@@ -299,6 +299,8 @@ export type FrigoraVisit = {
   attendingUserId: UserId;
   arrivedAt: string;
   departedAt: string | null;
+  /** F3.1 customer labour hourly charge snapshot in ZAR cents; set at departure when configured. */
+  labourHourlyChargeCents: number | null;
   status: FrigoraVisitStatus;
   createdAt: string;
   updatedAt: string;
@@ -442,6 +444,8 @@ export type FrigoraPartReference = {
   ventureId: VentureId;
   displayName: string;
   defaultQuantityUnit: FrigoraPartUsageUnit;
+  /** Optional F3.1 default customer unit charge in ZAR cents. */
+  defaultUnitChargeCents: number | null;
   status: FrigoraCatalogueReferenceStatus;
   createdAt: string;
   updatedAt: string;
@@ -450,11 +454,13 @@ export type FrigoraPartReference = {
 export type CreatePartReferenceInput = {
   displayName: string;
   defaultQuantityUnit: FrigoraPartUsageUnit;
+  defaultUnitChargeCents?: number | null;
 };
 
 export type UpdatePartReferenceInput = {
   displayName?: string;
   defaultQuantityUnit?: FrigoraPartUsageUnit;
+  defaultUnitChargeCents?: number | null;
 };
 
 export type FrigoraRefrigerantReference = {
@@ -463,6 +469,8 @@ export type FrigoraRefrigerantReference = {
   ventureId: VentureId;
   canonicalCode: string;
   displayName: string;
+  /** Optional F3.1 default customer charge per kg in ZAR cents. */
+  defaultChargePerKgCents: number | null;
   status: FrigoraCatalogueReferenceStatus;
   createdAt: string;
   updatedAt: string;
@@ -471,11 +479,37 @@ export type FrigoraRefrigerantReference = {
 export type CreateRefrigerantReferenceInput = {
   canonicalCode: string;
   displayName: string;
+  defaultChargePerKgCents?: number | null;
 };
 
 export type UpdateRefrigerantReferenceInput = {
   canonicalCode?: string;
   displayName?: string;
+  defaultChargePerKgCents?: number | null;
+};
+
+/** Venture-scoped F3.1 customer charge defaults. */
+export type FrigoraVentureCommercialSettings = {
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  labourHourlyChargeCents: number | null;
+  updatedAt: string;
+};
+
+export type SetVentureLabourHourlyChargeInput = {
+  labourHourlyChargeCents: number | null;
+};
+
+export type SetPartUsageUnitChargeInput = {
+  unitChargeCents: number;
+};
+
+export type SetRefrigerantEventChargePerKgInput = {
+  chargePerKgCents: number;
+};
+
+export type SetVisitLabourHourlyChargeInput = {
+  labourHourlyChargeCents: number;
 };
 
 export type FrigoraRefrigerantEvent = {
@@ -489,6 +523,8 @@ export type FrigoraRefrigerantEvent = {
   refrigerantReferenceId: FrigoraRefrigerantReferenceId | null;
   eventKind: FrigoraRefrigerantEventKind;
   quantityKg: number;
+  /** F3.1 customer charge-per-kg snapshot in ZAR cents; required for added events to complete T&M. */
+  chargePerKgCents: number | null;
   reason: string | null;
   cylinderReference: string | null;
   occurredAt: string;
@@ -522,6 +558,8 @@ export type FrigoraPartUsage = {
   partReferenceId: FrigoraPartReferenceId | null;
   quantity: number;
   quantityUnit: FrigoraPartUsageUnit;
+  /** F3.1 customer unit-charge snapshot in ZAR cents. */
+  unitChargeCents: number | null;
   notes: string | null;
   usedAt: string;
   usedByUserId: UserId;
