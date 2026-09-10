@@ -771,18 +771,18 @@ describe("Frigora asset history projection (F0.13)", () => {
     assert.equal(typeof listAssetHistoryQuery, "function");
   });
 
-  it("keeps SCHEMA_GENERATION at 24 with no asset history table", async () => {
+  it("keeps SCHEMA_GENERATION at 25 with no asset history table", async () => {
     const dbPath = fileURLToPath(new URL("../../platform/persistence/db.ts", import.meta.url));
     const schemaPath = fileURLToPath(new URL("../../platform/persistence/schema.ts", import.meta.url));
     const dbSource = readFileSync(dbPath, "utf8");
     const schemaSource = readFileSync(schemaPath, "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 24/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 25/);
     assert.equal(schemaSource.includes("frigora_asset_history"), false);
   });
 
-  it("admits frigora@0.18.0 with asset history projection in catalog", () => {
+  it("admits frigora@0.19.0 with asset history projection in catalog", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.18.0");
+    assert.equal(frigora.version, "0.19.0");
     assert.match(frigora.description, /Asset history projection/);
     assert.deepEqual([...FRIGORA_ASSET_HISTORY_EVENT_KINDS], [
       "reported_intake",

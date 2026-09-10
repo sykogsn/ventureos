@@ -17,6 +17,8 @@ import {
   listFieldCapturesByWorkOrderQuery,
   listPartUsagesByVisitQuery,
   listPartUsagesByWorkOrderQuery,
+  listActivePartReferencesQuery,
+  listActiveRefrigerantReferencesQuery,
   listRecommendedActionsByVisitQuery,
   listRecommendedActionsByWorkOrderQuery,
   listRefrigerantEventsByVisitQuery,
@@ -56,8 +58,10 @@ import type {
   FrigoraCustomer,
   FrigoraFieldCapture,
   FrigoraPartUsage,
+  FrigoraPartReference,
   FrigoraRecommendedAction,
   FrigoraRefrigerantEvent,
+  FrigoraRefrigerantReference,
   FrigoraSite,
   FrigoraTechnicalFinding,
   FrigoraVisit,
@@ -191,6 +195,8 @@ export type VisitRecorderView = {
   evidence: FrigoraVisitEvidence[];
   currentOperationalCondition: FrigoraAssetOperationalCondition | null;
   visitOperationalConditions: FrigoraAssetOperationalCondition[];
+  activePartReferences: FrigoraPartReference[];
+  activeRefrigerantReferences: FrigoraRefrigerantReference[];
   canRecord: boolean;
 };
 
@@ -445,6 +451,8 @@ export async function loadVisitRecorder(
     recommendedResult,
     acknowledgementsResult,
     evidenceResult,
+    activePartsResult,
+    activeRefrigerantsResult,
   ] = await Promise.all([
     getCustomerQuery({ ...scope, id: workOrder.customerId }),
     getSiteQuery({ ...scope, id: workOrder.siteId }),
@@ -462,6 +470,8 @@ export async function loadVisitRecorder(
     listRecommendedActionsByVisitQuery({ ...scope, visitId: visit.id }),
     listVisitCustomerAcknowledgementsByVisitQuery({ ...scope, visitId: visit.id }),
     listVisitEvidenceByVisitQuery({ ...scope, visitId: visit.id }),
+    listActivePartReferencesQuery(scope),
+    listActiveRefrigerantReferencesQuery(scope),
   ]);
 
   let currentOperationalCondition: FrigoraAssetOperationalCondition | null = null;
@@ -507,6 +517,8 @@ export async function loadVisitRecorder(
       evidence: evidenceResult.record ?? [],
       currentOperationalCondition,
       visitOperationalConditions,
+      activePartReferences: activePartsResult.record ?? [],
+      activeRefrigerantReferences: activeRefrigerantsResult.record ?? [],
       canRecord,
     },
   };

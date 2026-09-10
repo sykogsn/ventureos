@@ -29,6 +29,8 @@ import type {
   FrigoraRefrigerantEventId,
   FrigoraPartUsage,
   FrigoraPartUsageId,
+  FrigoraPartReference,
+  FrigoraRefrigerantReference,
   FrigoraAssetOperationalCondition,
   FrigoraAssetOperationalConditionId,
   FrigoraVisitCustomerAcknowledgement,
@@ -571,4 +573,28 @@ export async function listAssetHistoryQuery(
   return query(input, (scope) =>
     getFrigoraService().listAssetHistory(scope, input.assetId as FrigoraAssetId),
   );
+}
+
+export async function listPartReferencesQuery(
+  input: ScopedInput,
+): Promise<FrigoraQueryResult<FrigoraPartReference[]>> {
+  return query(input, (scope) => getFrigoraService().listPartReferences(scope));
+}
+
+export async function listActivePartReferencesQuery(
+  input: ScopedInput,
+): Promise<FrigoraQueryResult<FrigoraPartReference[]>> {
+  return query(input, (scope) => getFrigoraService().listActivePartReferences(scope));
+}
+
+export async function listRefrigerantReferencesQuery(
+  input: ScopedInput,
+): Promise<FrigoraQueryResult<FrigoraRefrigerantReference[]>> {
+  return query(input, (scope) => getFrigoraService().listRefrigerantReferences(scope));
+}
+
+export async function listActiveRefrigerantReferencesQuery(
+  input: ScopedInput,
+): Promise<FrigoraQueryResult<FrigoraRefrigerantReference[]>> {
+  return query(input, (scope) => getFrigoraService().listActiveRefrigerantReferences(scope));
 }

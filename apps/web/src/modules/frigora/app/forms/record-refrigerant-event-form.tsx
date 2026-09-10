@@ -1,13 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@repo/ui/button";
 import { Field, Form, Stack } from "@/core/layout";
 import {
   recordRefrigerantEventFormAction,
   type FieldFormState,
 } from "@/modules/frigora/app/field-mutation-actions";
-import { FRIGORA_REFRIGERANT_EVENT_KINDS } from "@/modules/frigora/types";
+import {
+  FRIGORA_REFRIGERANT_EVENT_KINDS,
+  type FrigoraRefrigerantReference,
+} from "@/modules/frigora/types";
 
 const EVENT_LABELS: Record<string, string> = {
   added: "Added",
@@ -15,23 +18,32 @@ const EVENT_LABELS: Record<string, string> = {
   removed: "Removed",
 };
 
+const UNLISTED = "__unlisted__";
+
 export function RecordRefrigerantEventForm({
   workspaceId,
   ventureId,
   workOrderId,
   visitId,
   primaryAssetId,
+  activeRefrigerantReferences = [],
 }: {
   workspaceId: string;
   ventureId: string;
   workOrderId: string;
   visitId: string;
   primaryAssetId?: string | null;
+  activeRefrigerantReferences?: FrigoraRefrigerantReference[];
 }) {
   const [state, formAction, pending] = useActionState(
     recordRefrigerantEventFormAction,
     {} as FieldFormState,
   );
+  const initialSelection = state.values?.refrigerantReferenceId?.trim()
+    ? state.values.refrigerantReferenceId
+    : UNLISTED;
+  const [selection, setSelection] = useState(initialSelection);
+  const unlisted = selection === UNLISTED || !selection;
 
   return (
     <Form action={formAction} gap="tight">
@@ -47,14 +59,34 @@ export function RecordRefrigerantEventForm({
           Quantity records refrigerant handling only. Added does not mean leaked.
         </p>
         <Field>
-          Refrigerant type
-          <input
-            name="refrigerantType"
-            required
+          Refrigerant reference
+          <select
+            name="refrigerantReferenceId"
             className="vos-field"
-            defaultValue={state.values?.refrigerantType ?? ""}
-          />
+            value={selection}
+            onChange={(event) => setSelection(event.target.value)}
+          >
+            <option value={UNLISTED}>Other / Unlisted refrigerant</option>
+            {activeRefrigerantReferences.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.canonicalCode} — {row.displayName}
+              </option>
+            ))}
+          </select>
         </Field>
+        {unlisted ? (
+          <Field>
+            Refrigerant type
+            <input
+              name="refrigerantType"
+              required
+              className="vos-field"
+              defaultValue={state.values?.refrigerantType ?? ""}
+            />
+          </Field>
+        ) : (
+          <input type="hidden" name="refrigerantType" value="" />
+        )}
         <Field>
           Event kind
           <select

@@ -217,7 +217,6 @@ function recordInput(
 
 function assertNoForbiddenSemantics(record: FrigoraPartUsage) {
   assert.equal("sku" in record, false);
-  assert.equal("catalogueId" in record, false);
   assert.equal("inventoryItemId" in record, false);
   assert.equal("stockTransactionId" in record, false);
   assert.equal("unitCost" in record, false);
@@ -232,6 +231,8 @@ function assertNoForbiddenSemantics(record: FrigoraPartUsage) {
   assert.equal("warehouseId" in record, false);
   assert.equal("stockLocationId" in record, false);
   assert.equal("invoiceLineId" in record, false);
+  assert.equal("vanId" in record, false);
+  assert.equal("stockQuantity" in record, false);
 }
 
 describe("Frigora Part usage", () => {
@@ -865,12 +866,13 @@ describe("Frigora Part usage", () => {
     assert.equal(event.eventKind, "added");
   });
 
-  it("resolves frigora@0.18.0 from catalog with part usage admission and retained exclusions", () => {
+  it("resolves frigora@0.19.0 from catalog with part usage admission and retained exclusions", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.18.0");
+    assert.equal(frigora.version, "0.19.0");
     assert.match(frigora.description, /part usages/);
     assert.match(frigora.description, /refrigerant events/);
-    assert.match(frigora.description, /parts catalogue/);
+    assert.match(frigora.description, /F3\.0 structured parts and refrigerant catalogues/);
+    assert.match(frigora.description, /without inventory/);
     assert.match(frigora.description, /inventory/);
     assert.match(frigora.description, /cylinder inventory/);
     assert.match(frigora.description, /evidence/);

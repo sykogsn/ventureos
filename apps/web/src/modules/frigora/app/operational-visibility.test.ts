@@ -185,10 +185,10 @@ describe("F1.3 Operational Visibility", () => {
     assert.deepEqual(
       links
         .filter((link) =>
-          ["Operations", "My Work", "Work", "Customers"].includes(link.label),
+          ["Operations", "My Work", "Work", "Customers", "Catalogue"].includes(link.label),
         )
         .map((link) => link.label),
-      ["Operations", "My Work", "Work", "Customers"],
+      ["Operations", "My Work", "Work", "Customers", "Catalogue"],
     );
   });
 
@@ -583,10 +583,10 @@ describe("F1.3 Operational Visibility", () => {
   });
 
   it("ships F1.3 routes and mutation wrappers without F0 edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.18.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.19.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 24/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 25/);
 
     const operationsPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/operations/page.tsx"),

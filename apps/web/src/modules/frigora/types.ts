@@ -12,6 +12,10 @@ export type FrigoraVisitOutcomeId = string & { readonly __brand: "FrigoraVisitOu
 export type FrigoraRecommendedActionId = string & { readonly __brand: "FrigoraRecommendedActionId" };
 export type FrigoraRefrigerantEventId = string & { readonly __brand: "FrigoraRefrigerantEventId" };
 export type FrigoraPartUsageId = string & { readonly __brand: "FrigoraPartUsageId" };
+export type FrigoraPartReferenceId = string & { readonly __brand: "FrigoraPartReferenceId" };
+export type FrigoraRefrigerantReferenceId = string & {
+  readonly __brand: "FrigoraRefrigerantReferenceId";
+};
 export type FrigoraAssetOperationalConditionId = string & {
   readonly __brand: "FrigoraAssetOperationalConditionId";
 };
@@ -46,6 +50,10 @@ export type FrigoraRefrigerantEventKind = (typeof FRIGORA_REFRIGERANT_EVENT_KIND
 
 export const FRIGORA_PART_USAGE_UNITS = ["each", "metre", "litre", "kilogram", "other"] as const;
 export type FrigoraPartUsageUnit = (typeof FRIGORA_PART_USAGE_UNITS)[number];
+
+export const FRIGORA_CATALOGUE_REFERENCE_STATUSES = ["active", "retired"] as const;
+export type FrigoraCatalogueReferenceStatus =
+  (typeof FRIGORA_CATALOGUE_REFERENCE_STATUSES)[number];
 
 export const FRIGORA_ASSET_OPERATIONAL_CONDITION_KINDS = [
   "operational",
@@ -428,6 +436,48 @@ export type RecordRecommendedActionInput = {
   assetId?: string | null;
 };
 
+export type FrigoraPartReference = {
+  id: FrigoraPartReferenceId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  displayName: string;
+  defaultQuantityUnit: FrigoraPartUsageUnit;
+  status: FrigoraCatalogueReferenceStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreatePartReferenceInput = {
+  displayName: string;
+  defaultQuantityUnit: FrigoraPartUsageUnit;
+};
+
+export type UpdatePartReferenceInput = {
+  displayName?: string;
+  defaultQuantityUnit?: FrigoraPartUsageUnit;
+};
+
+export type FrigoraRefrigerantReference = {
+  id: FrigoraRefrigerantReferenceId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  canonicalCode: string;
+  displayName: string;
+  status: FrigoraCatalogueReferenceStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateRefrigerantReferenceInput = {
+  canonicalCode: string;
+  displayName: string;
+};
+
+export type UpdateRefrigerantReferenceInput = {
+  canonicalCode?: string;
+  displayName?: string;
+};
+
 export type FrigoraRefrigerantEvent = {
   id: FrigoraRefrigerantEventId;
   workspaceId: WorkspaceId;
@@ -436,6 +486,7 @@ export type FrigoraRefrigerantEvent = {
   workOrderId: FrigoraWorkOrderId;
   assetId: FrigoraAssetId | null;
   refrigerantType: string;
+  refrigerantReferenceId: FrigoraRefrigerantReferenceId | null;
   eventKind: FrigoraRefrigerantEventKind;
   quantityKg: number;
   reason: string | null;
@@ -448,7 +499,8 @@ export type FrigoraRefrigerantEvent = {
 };
 
 export type RecordRefrigerantEventInput = {
-  refrigerantType: string;
+  refrigerantType?: string;
+  refrigerantReferenceId?: string | null;
   eventKind: FrigoraRefrigerantEventKind;
   quantityKg: number;
   reason?: string | null;
@@ -467,6 +519,7 @@ export type FrigoraPartUsage = {
   workOrderId: FrigoraWorkOrderId;
   assetId: FrigoraAssetId | null;
   partDescription: string;
+  partReferenceId: FrigoraPartReferenceId | null;
   quantity: number;
   quantityUnit: FrigoraPartUsageUnit;
   notes: string | null;
@@ -478,9 +531,10 @@ export type FrigoraPartUsage = {
 };
 
 export type RecordPartUsageInput = {
-  partDescription: string;
+  partDescription?: string;
+  partReferenceId?: string | null;
   quantity: number;
-  quantityUnit: FrigoraPartUsageUnit;
+  quantityUnit?: FrigoraPartUsageUnit;
   notes?: string | null;
   usedAt: string;
   usedByUserId: string;

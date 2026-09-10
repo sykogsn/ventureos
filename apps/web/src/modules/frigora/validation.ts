@@ -11,6 +11,11 @@ import {
 } from "./types";
 import { FrigoraError } from "./errors";
 
+/** Minimal refrigerant identity canonicalisation (R404a → R404A). */
+export function canonicalizeRefrigerantCode(raw: string): string {
+  return raw.trim().toUpperCase();
+}
+
 const requiredText = z.string().trim().min(1, "Required text is empty.");
 
 const nullableText = z
@@ -409,6 +414,26 @@ export const recordRecommendedActionSchema = z.object({
   assetId: patchAssetIdNullable,
 });
 
+export const createPartReferenceSchema = z.object({
+  displayName: requiredText,
+  defaultQuantityUnit: z.enum(FRIGORA_PART_USAGE_UNITS),
+});
+
+export const updatePartReferenceSchema = z.object({
+  displayName: requiredText.optional(),
+  defaultQuantityUnit: z.enum(FRIGORA_PART_USAGE_UNITS).optional(),
+});
+
+export const createRefrigerantReferenceSchema = z.object({
+  canonicalCode: requiredText.transform(canonicalizeRefrigerantCode),
+  displayName: requiredText,
+});
+
+export const updateRefrigerantReferenceSchema = z.object({
+  canonicalCode: requiredText.transform(canonicalizeRefrigerantCode).optional(),
+  displayName: requiredText.optional(),
+});
+
 // Refrigerant added ≠ refrigerant leaked. quantityKg records handling only, not leak inference.
 const positiveQuantityKg = z.number().superRefine((value, ctx) => {
   if (!Number.isFinite(value)) {
@@ -425,17 +450,44 @@ const positiveQuantityKg = z.number().superRefine((value, ctx) => {
   }
 });
 
-export const recordRefrigerantEventSchema = z.object({
-  refrigerantType: requiredText,
-  eventKind: z.enum(FRIGORA_REFRIGERANT_EVENT_KINDS),
-  quantityKg: positiveQuantityKg,
-  reason: patchText.optional(),
-  cylinderReference: patchText.optional(),
-  occurredAt: isoTimestamp,
-  handledByUserId: requiredText,
-  recordedByUserId: requiredText,
-  assetId: patchAssetIdNullable,
-});
+const optionalReferenceId = z
+  .union([z.string(), z.null()])
+  .optional()
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value === null) {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? null : trimmed;
+  });
+
+export const recordRefrigerantEventSchema = z
+  .object({
+    refrigerantType: z.string().trim().optional(),
+    refrigerantReferenceId: optionalReferenceId,
+    eventKind: z.enum(FRIGORA_REFRIGERANT_EVENT_KINDS),
+    quantityKg: positiveQuantityKg,
+    reason: patchText.optional(),
+    cylinderReference: patchText.optional(),
+    occurredAt: isoTimestamp,
+    handledByUserId: requiredText,
+    recordedByUserId: requiredText,
+    assetId: patchAssetIdNullable,
+  })
+  .superRefine((data, ctx) => {
+    const hasReference = Boolean(data.refrigerantReferenceId);
+    const hasType = Boolean(data.refrigerantType && data.refrigerantType.length > 0);
+    if (!hasReference && !hasType) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["refrigerantType"],
+        message: "Required text is empty.",
+      });
+    }
+  });
 
 const positiveQuantity = z.number().superRefine((value, ctx) => {
   if (!Number.isFinite(value)) {
@@ -452,16 +504,36 @@ const positiveQuantity = z.number().superRefine((value, ctx) => {
   }
 });
 
-export const recordPartUsageSchema = z.object({
-  partDescription: requiredText,
-  quantity: positiveQuantity,
-  quantityUnit: z.enum(FRIGORA_PART_USAGE_UNITS),
-  notes: patchText.optional(),
-  usedAt: isoTimestamp,
-  usedByUserId: requiredText,
-  recordedByUserId: requiredText,
-  assetId: patchAssetIdNullable,
-});
+export const recordPartUsageSchema = z
+  .object({
+    partDescription: z.string().trim().optional(),
+    partReferenceId: optionalReferenceId,
+    quantity: positiveQuantity,
+    quantityUnit: z.enum(FRIGORA_PART_USAGE_UNITS).optional(),
+    notes: patchText.optional(),
+    usedAt: isoTimestamp,
+    usedByUserId: requiredText,
+    recordedByUserId: requiredText,
+    assetId: patchAssetIdNullable,
+  })
+  .superRefine((data, ctx) => {
+    const hasReference = Boolean(data.partReferenceId);
+    const hasDescription = Boolean(data.partDescription && data.partDescription.length > 0);
+    if (!hasReference && !hasDescription) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["partDescription"],
+        message: "Required text is empty.",
+      });
+    }
+    if (!hasReference && !data.quantityUnit) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["quantityUnit"],
+        message: "Part usage unit is not allowed.",
+      });
+    }
+  });
 
 export const recordAssetOperationalConditionSchema = z.object({
   assetId: requiredText,

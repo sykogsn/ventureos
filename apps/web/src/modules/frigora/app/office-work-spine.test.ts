@@ -175,6 +175,7 @@ describe("F1.1 Office Work Spine", () => {
         "My Work",
         "Work",
         "Customers",
+        "Catalogue",
         "Documents",
         "CRM",
         "Finance",
@@ -353,10 +354,10 @@ describe("F1.1 Office Work Spine", () => {
   });
 
   it("keeps the schema lock and ships F1.1 routes without runtime edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.18.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.19.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 24/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 25/);
 
     const customersPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/customers/page.tsx"),

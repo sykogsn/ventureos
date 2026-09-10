@@ -50,6 +50,15 @@ import type {
   FrigoraPartUsage,
   FrigoraPartUsageId,
   RecordPartUsageInput,
+  FrigoraPartReference,
+  FrigoraPartReferenceId,
+  CreatePartReferenceInput,
+  UpdatePartReferenceInput,
+  FrigoraRefrigerantReference,
+  FrigoraRefrigerantReferenceId,
+  CreateRefrigerantReferenceInput,
+  UpdateRefrigerantReferenceInput,
+  FrigoraPartUsageUnit,
   FrigoraAssetOperationalCondition,
   FrigoraAssetOperationalConditionId,
   RecordAssetOperationalConditionInput,
@@ -90,6 +99,11 @@ import {
   recordRecommendedActionSchema,
   recordRefrigerantEventSchema,
   recordPartUsageSchema,
+  createPartReferenceSchema,
+  updatePartReferenceSchema,
+  createRefrigerantReferenceSchema,
+  updateRefrigerantReferenceSchema,
+  canonicalizeRefrigerantCode,
   recordAssetOperationalConditionSchema,
   recordVisitCustomerAcknowledgementSchema,
   recordVisitEvidenceWithFileSchema,
@@ -369,6 +383,44 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraPartUsage[]>;
+  createPartReference(
+    scope: FrigoraScope,
+    input: CreatePartReferenceInput,
+  ): Promise<FrigoraPartReference>;
+  updatePartReference(
+    scope: FrigoraScope,
+    id: FrigoraPartReferenceId,
+    input: UpdatePartReferenceInput,
+  ): Promise<FrigoraPartReference>;
+  retirePartReference(
+    scope: FrigoraScope,
+    id: FrigoraPartReferenceId,
+  ): Promise<FrigoraPartReference>;
+  getPartReference(
+    scope: FrigoraScope,
+    id: FrigoraPartReferenceId,
+  ): Promise<FrigoraPartReference | null>;
+  listPartReferences(scope: FrigoraScope): Promise<FrigoraPartReference[]>;
+  listActivePartReferences(scope: FrigoraScope): Promise<FrigoraPartReference[]>;
+  createRefrigerantReference(
+    scope: FrigoraScope,
+    input: CreateRefrigerantReferenceInput,
+  ): Promise<FrigoraRefrigerantReference>;
+  updateRefrigerantReference(
+    scope: FrigoraScope,
+    id: FrigoraRefrigerantReferenceId,
+    input: UpdateRefrigerantReferenceInput,
+  ): Promise<FrigoraRefrigerantReference>;
+  retireRefrigerantReference(
+    scope: FrigoraScope,
+    id: FrigoraRefrigerantReferenceId,
+  ): Promise<FrigoraRefrigerantReference>;
+  getRefrigerantReference(
+    scope: FrigoraScope,
+    id: FrigoraRefrigerantReferenceId,
+  ): Promise<FrigoraRefrigerantReference | null>;
+  listRefrigerantReferences(scope: FrigoraScope): Promise<FrigoraRefrigerantReference[]>;
+  listActiveRefrigerantReferences(scope: FrigoraScope): Promise<FrigoraRefrigerantReference[]>;
   recordAssetOperationalCondition(
     scope: FrigoraScope,
     input: RecordAssetOperationalConditionInput,
@@ -1724,6 +1776,28 @@ export function createFrigoraService(options: {
         workOrder,
         parsed.assetId === undefined ? null : parsed.assetId,
       );
+      let refrigerantReferenceId: FrigoraRefrigerantReferenceId | null = null;
+      let refrigerantType: string;
+      if (parsed.refrigerantReferenceId) {
+        const reference = await store.findRefrigerantReference(
+          scope.workspaceId,
+          scope.ventureId,
+          parsed.refrigerantReferenceId as FrigoraRefrigerantReferenceId,
+        );
+        if (!reference) {
+          throw new FrigoraError("not_found", "Refrigerant reference was not found.");
+        }
+        if (reference.status !== "active") {
+          throw new FrigoraError(
+            "invalid_input",
+            "Retired refrigerant references cannot be selected for new recording.",
+          );
+        }
+        refrigerantReferenceId = reference.id;
+        refrigerantType = reference.canonicalCode;
+      } else {
+        refrigerantType = parsed.refrigerantType as string;
+      }
       const now = nowIso();
       const row: FrigoraRefrigerantEvent = {
         id: createId<FrigoraRefrigerantEventId>(),
@@ -1732,7 +1806,8 @@ export function createFrigoraService(options: {
         visitId: visit.id,
         workOrderId: visit.workOrderId,
         assetId,
-        refrigerantType: parsed.refrigerantType,
+        refrigerantType,
+        refrigerantReferenceId,
         eventKind: parsed.eventKind,
         quantityKg: parsed.quantityKg,
         reason: parsed.reason ?? null,
@@ -1818,6 +1893,31 @@ export function createFrigoraService(options: {
         workOrder,
         parsed.assetId === undefined ? null : parsed.assetId,
       );
+      let partReferenceId: FrigoraPartReferenceId | null = null;
+      let partDescription: string;
+      let quantityUnit: FrigoraPartUsageUnit;
+      if (parsed.partReferenceId) {
+        const reference = await store.findPartReference(
+          scope.workspaceId,
+          scope.ventureId,
+          parsed.partReferenceId as FrigoraPartReferenceId,
+        );
+        if (!reference) {
+          throw new FrigoraError("not_found", "Part reference was not found.");
+        }
+        if (reference.status !== "active") {
+          throw new FrigoraError(
+            "invalid_input",
+            "Retired part references cannot be selected for new recording.",
+          );
+        }
+        partReferenceId = reference.id;
+        partDescription = reference.displayName;
+        quantityUnit = parsed.quantityUnit ?? reference.defaultQuantityUnit;
+      } else {
+        partDescription = parsed.partDescription as string;
+        quantityUnit = parsed.quantityUnit as FrigoraPartUsageUnit;
+      }
       const now = nowIso();
       const row: FrigoraPartUsage = {
         id: createId<FrigoraPartUsageId>(),
@@ -1826,9 +1926,10 @@ export function createFrigoraService(options: {
         visitId: visit.id,
         workOrderId: visit.workOrderId,
         assetId,
-        partDescription: parsed.partDescription,
+        partDescription,
+        partReferenceId,
         quantity: parsed.quantity,
-        quantityUnit: parsed.quantityUnit,
+        quantityUnit,
         notes: parsed.notes ?? null,
         usedAt: parsed.usedAt,
         usedByUserId,
@@ -1882,6 +1983,179 @@ export function createFrigoraService(options: {
         return [];
       }
       return store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
+    async createPartReference(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const parsed = parseWithFrigora(createPartReferenceSchema, input);
+      const now = nowIso();
+      const row: FrigoraPartReference = {
+        id: createId<FrigoraPartReferenceId>(),
+        workspaceId: scope.workspaceId,
+        ventureId: scope.ventureId,
+        displayName: parsed.displayName,
+        defaultQuantityUnit: parsed.defaultQuantityUnit,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertPartReference(row);
+      return row;
+    },
+    async updatePartReference(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await store.findPartReference(scope.workspaceId, scope.ventureId, id);
+      if (!existing) {
+        throw new FrigoraError("not_found", "Part reference was not found.");
+      }
+      const parsed = parseWithFrigora(updatePartReferenceSchema, input);
+      const next: FrigoraPartReference = {
+        ...existing,
+        displayName: parsed.displayName ?? existing.displayName,
+        defaultQuantityUnit: parsed.defaultQuantityUnit ?? existing.defaultQuantityUnit,
+        updatedAt: nowIso(),
+      };
+      await store.updatePartReference(next);
+      return next;
+    },
+    async retirePartReference(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await store.findPartReference(scope.workspaceId, scope.ventureId, id);
+      if (!existing) {
+        throw new FrigoraError("not_found", "Part reference was not found.");
+      }
+      if (existing.status === "retired") {
+        return existing;
+      }
+      const next: FrigoraPartReference = {
+        ...existing,
+        status: "retired",
+        updatedAt: nowIso(),
+      };
+      await store.updatePartReference(next);
+      return next;
+    },
+    async getPartReference(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findPartReference(scope.workspaceId, scope.ventureId, id);
+    },
+    async listPartReferences(scope) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return store.listPartReferences(scope.workspaceId, scope.ventureId);
+    },
+    async listActivePartReferences(scope) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return store.listActivePartReferences(scope.workspaceId, scope.ventureId);
+    },
+    async createRefrigerantReference(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const parsed = parseWithFrigora(createRefrigerantReferenceSchema, input);
+      const code = canonicalizeRefrigerantCode(parsed.canonicalCode);
+      const clash = await store.findRefrigerantReferenceByCanonicalCode(
+        scope.workspaceId,
+        scope.ventureId,
+        code,
+      );
+      if (clash) {
+        throw new FrigoraError(
+          "duplicate",
+          "A refrigerant reference with this canonical code already exists.",
+        );
+      }
+      const now = nowIso();
+      const row: FrigoraRefrigerantReference = {
+        id: createId<FrigoraRefrigerantReferenceId>(),
+        workspaceId: scope.workspaceId,
+        ventureId: scope.ventureId,
+        canonicalCode: code,
+        displayName: parsed.displayName,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      };
+      await store.insertRefrigerantReference(row);
+      return row;
+    },
+    async updateRefrigerantReference(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await store.findRefrigerantReference(
+        scope.workspaceId,
+        scope.ventureId,
+        id,
+      );
+      if (!existing) {
+        throw new FrigoraError("not_found", "Refrigerant reference was not found.");
+      }
+      const parsed = parseWithFrigora(updateRefrigerantReferenceSchema, input);
+      const nextCode =
+        parsed.canonicalCode !== undefined
+          ? canonicalizeRefrigerantCode(parsed.canonicalCode)
+          : existing.canonicalCode;
+      if (nextCode !== existing.canonicalCode) {
+        const clash = await store.findRefrigerantReferenceByCanonicalCode(
+          scope.workspaceId,
+          scope.ventureId,
+          nextCode,
+        );
+        if (clash && clash.id !== existing.id) {
+          throw new FrigoraError(
+            "duplicate",
+            "A refrigerant reference with this canonical code already exists.",
+          );
+        }
+      }
+      const next: FrigoraRefrigerantReference = {
+        ...existing,
+        canonicalCode: nextCode,
+        displayName: parsed.displayName ?? existing.displayName,
+        updatedAt: nowIso(),
+      };
+      await store.updateRefrigerantReference(next);
+      return next;
+    },
+    async retireRefrigerantReference(scope, id) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await store.findRefrigerantReference(
+        scope.workspaceId,
+        scope.ventureId,
+        id,
+      );
+      if (!existing) {
+        throw new FrigoraError("not_found", "Refrigerant reference was not found.");
+      }
+      if (existing.status === "retired") {
+        return existing;
+      }
+      const next: FrigoraRefrigerantReference = {
+        ...existing,
+        status: "retired",
+        updatedAt: nowIso(),
+      };
+      await store.updateRefrigerantReference(next);
+      return next;
+    },
+    async getRefrigerantReference(scope, id) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findRefrigerantReference(scope.workspaceId, scope.ventureId, id);
+    },
+    async listRefrigerantReferences(scope) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return store.listRefrigerantReferences(scope.workspaceId, scope.ventureId);
+    },
+    async listActiveRefrigerantReferences(scope) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return store.listActiveRefrigerantReferences(scope.workspaceId, scope.ventureId);
     },
     async recordAssetOperationalCondition(scope, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");

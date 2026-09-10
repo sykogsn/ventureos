@@ -340,7 +340,10 @@ export async function recordPartUsageFormAction(
   const scope = scopeFromForm(formData);
   const workOrderId = text(formData, "workOrderId");
   const visitId = text(formData, "visitId");
+  const partReferenceRaw = text(formData, "partReferenceId").trim();
+  const unlisted = !partReferenceRaw || partReferenceRaw === "__unlisted__";
   const values = {
+    partReferenceId: unlisted ? "" : partReferenceRaw,
     partDescription: text(formData, "partDescription"),
     quantity: text(formData, "quantity"),
     quantityUnit: text(formData, "quantityUnit"),
@@ -353,20 +356,29 @@ export async function recordPartUsageFormAction(
   }
 
   const unitRaw = values.quantityUnit.trim();
-  if (!(FRIGORA_PART_USAGE_UNITS as readonly string[]).includes(unitRaw)) {
+  if (unitRaw && !(FRIGORA_PART_USAGE_UNITS as readonly string[]).includes(unitRaw)) {
+    return { error: "Select a valid quantity unit.", values };
+  }
+  if (unlisted && !unitRaw) {
     return { error: "Select a valid quantity unit.", values };
   }
   const quantity = parseFiniteNumber(values.quantity);
   if (quantity === null || quantity <= 0) {
     return { error: "Quantity must be greater than zero.", values };
   }
+  if (unlisted && !values.partDescription.trim()) {
+    return { error: "Part description is required for unlisted parts.", values };
+  }
 
   const result = await recordPartUsageAction({
     ...scope,
     visitId,
-    partDescription: values.partDescription.trim(),
+    partReferenceId: unlisted ? null : partReferenceRaw,
+    partDescription: unlisted ? values.partDescription.trim() : undefined,
     quantity,
-    quantityUnit: unitRaw as FrigoraPartUsageUnit,
+    quantityUnit: unitRaw
+      ? (unitRaw as FrigoraPartUsageUnit)
+      : undefined,
     notes: optionalText(formData, "notes"),
     usedAt: nowIso(),
     usedByUserId: gate.session.id,
@@ -389,7 +401,10 @@ export async function recordRefrigerantEventFormAction(
   const scope = scopeFromForm(formData);
   const workOrderId = text(formData, "workOrderId");
   const visitId = text(formData, "visitId");
+  const refrigerantReferenceRaw = text(formData, "refrigerantReferenceId").trim();
+  const unlisted = !refrigerantReferenceRaw || refrigerantReferenceRaw === "__unlisted__";
   const values = {
+    refrigerantReferenceId: unlisted ? "" : refrigerantReferenceRaw,
     refrigerantType: text(formData, "refrigerantType"),
     eventKind: text(formData, "eventKind"),
     quantityKg: text(formData, "quantityKg"),
@@ -410,11 +425,15 @@ export async function recordRefrigerantEventFormAction(
   if (quantityKg === null || quantityKg <= 0) {
     return { error: "Quantity must be greater than zero.", values };
   }
+  if (unlisted && !values.refrigerantType.trim()) {
+    return { error: "Refrigerant type is required for unlisted refrigerants.", values };
+  }
 
   const result = await recordRefrigerantEventAction({
     ...scope,
     visitId,
-    refrigerantType: values.refrigerantType.trim(),
+    refrigerantReferenceId: unlisted ? null : refrigerantReferenceRaw,
+    refrigerantType: unlisted ? values.refrigerantType.trim() : undefined,
     eventKind: eventKindRaw as FrigoraRefrigerantEventKind,
     quantityKg,
     reason: optionalText(formData, "reason"),

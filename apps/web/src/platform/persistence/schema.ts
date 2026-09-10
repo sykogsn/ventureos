@@ -748,6 +748,7 @@ export const frigoraRefrigerantEvents = sqliteTable(
     workOrderId: text("work_order_id").notNull(),
     assetId: text("asset_id"),
     refrigerantType: text("refrigerant_type").notNull(),
+    refrigerantReferenceId: text("refrigerant_reference_id"),
     eventKind: text("event_kind").notNull(),
     quantityKg: real("quantity_kg").notNull(),
     reason: text("reason"),
@@ -778,6 +779,7 @@ export const frigoraPartUsages = sqliteTable(
     workOrderId: text("work_order_id").notNull(),
     assetId: text("asset_id"),
     partDescription: text("part_description").notNull(),
+    partReferenceId: text("part_reference_id"),
     quantity: real("quantity").notNull(),
     quantityUnit: text("quantity_unit").notNull(),
     notes: text("notes"),
@@ -791,6 +793,45 @@ export const frigoraPartUsages = sqliteTable(
     index("frigora_part_usages_venture_visit_idx").on(table.ventureId, table.visitId),
     index("frigora_part_usages_venture_work_order_idx").on(table.ventureId, table.workOrderId),
     index("frigora_part_usages_venture_asset_idx").on(table.ventureId, table.assetId),
+  ],
+);
+
+export const frigoraPartReferences = sqliteTable(
+  "frigora_part_references",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    displayName: text("display_name").notNull(),
+    defaultQuantityUnit: text("default_quantity_unit").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("frigora_part_references_venture_status_idx").on(table.ventureId, table.status),
+  ],
+);
+
+export const frigoraRefrigerantReferences = sqliteTable(
+  "frigora_refrigerant_references",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    canonicalCode: text("canonical_code").notNull(),
+    displayName: text("display_name").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_refrigerant_references_venture_code_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.canonicalCode,
+    ),
+    index("frigora_refrigerant_references_venture_status_idx").on(table.ventureId, table.status),
   ],
 );
 
@@ -928,6 +969,8 @@ export const schema = {
   frigoraRecommendedActions,
   frigoraRefrigerantEvents,
   frigoraPartUsages,
+  frigoraPartReferences,
+  frigoraRefrigerantReferences,
   frigoraAssetOperationalConditions,
   frigoraVisitCustomerAcknowledgements,
   frigoraVisitEvidence,

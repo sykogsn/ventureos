@@ -85,6 +85,8 @@ export function VisitRecorderScreen({
     evidence,
     currentOperationalCondition,
     visitOperationalConditions,
+    activePartReferences,
+    activeRefrigerantReferences,
     canRecord,
   } = view;
 
@@ -241,7 +243,12 @@ export function VisitRecorderScreen({
                 `${row.partDescription} — ${row.quantity} ${row.quantityUnit} (${row.usedAt})`,
             )}
           />
-          {canRecord ? <RecordPartUsageForm {...formProps} /> : null}
+          {canRecord ? (
+            <RecordPartUsageForm
+              {...formProps}
+              activePartReferences={activePartReferences}
+            />
+          ) : null}
         </Section>
 
         <Section
@@ -254,7 +261,12 @@ export function VisitRecorderScreen({
                 `${row.eventKind}: ${row.quantityKg} kg ${row.refrigerantType} (${row.occurredAt})`,
             )}
           />
-          {canRecord ? <RecordRefrigerantEventForm {...formProps} /> : null}
+          {canRecord ? (
+            <RecordRefrigerantEventForm
+              {...formProps}
+              activeRefrigerantReferences={activeRefrigerantReferences}
+            />
+          ) : null}
         </Section>
 
         <Section

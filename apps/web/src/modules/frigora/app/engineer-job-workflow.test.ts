@@ -91,7 +91,7 @@ function ventureRow(workspaceId: WorkspaceId, ventureId: VentureId): PersistedVe
     documents: { documents: [] },
     risk: { headline: "", signals: [] },
     definitionId: "frigora",
-    definitionVersion: "0.18.0",
+    definitionVersion: "0.19.0",
     lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,

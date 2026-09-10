@@ -35,6 +35,14 @@ import type {
   RecordRefrigerantEventInput,
   FrigoraPartUsage,
   RecordPartUsageInput,
+  FrigoraPartReference,
+  FrigoraPartReferenceId,
+  CreatePartReferenceInput,
+  UpdatePartReferenceInput,
+  FrigoraRefrigerantReference,
+  FrigoraRefrigerantReferenceId,
+  CreateRefrigerantReferenceInput,
+  UpdateRefrigerantReferenceInput,
   FrigoraAssetOperationalCondition,
   RecordAssetOperationalConditionInput,
   FrigoraVisitCustomerAcknowledgement,
@@ -345,6 +353,61 @@ export async function recordPartUsageAction(
 ): Promise<FrigoraMutationResult<FrigoraPartUsage>> {
   return mutate(input, (scope) =>
     getFrigoraService().recordPartUsage(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function createPartReferenceAction(
+  input: ScopedInput & CreatePartReferenceInput,
+): Promise<FrigoraMutationResult<FrigoraPartReference>> {
+  return mutate(input, (scope) => getFrigoraService().createPartReference(scope, input));
+}
+
+export async function updatePartReferenceAction(
+  input: ScopedInput & { id: string } & UpdatePartReferenceInput,
+): Promise<FrigoraMutationResult<FrigoraPartReference>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updatePartReference(
+      scope,
+      input.id as FrigoraPartReferenceId,
+      input,
+    ),
+  );
+}
+
+export async function retirePartReferenceAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraPartReference>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().retirePartReference(scope, input.id as FrigoraPartReferenceId),
+  );
+}
+
+export async function createRefrigerantReferenceAction(
+  input: ScopedInput & CreateRefrigerantReferenceInput,
+): Promise<FrigoraMutationResult<FrigoraRefrigerantReference>> {
+  return mutate(input, (scope) => getFrigoraService().createRefrigerantReference(scope, input));
+}
+
+export async function updateRefrigerantReferenceAction(
+  input: ScopedInput & { id: string } & UpdateRefrigerantReferenceInput,
+): Promise<FrigoraMutationResult<FrigoraRefrigerantReference>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updateRefrigerantReference(
+      scope,
+      input.id as FrigoraRefrigerantReferenceId,
+      input,
+    ),
+  );
+}
+
+export async function retireRefrigerantReferenceAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraRefrigerantReference>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().retireRefrigerantReference(
+      scope,
+      input.id as FrigoraRefrigerantReferenceId,
+    ),
   );
 }
 

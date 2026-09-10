@@ -13,6 +13,8 @@ import {
   frigoraRecommendedActions,
   frigoraRefrigerantEvents,
   frigoraPartUsages,
+  frigoraPartReferences,
+  frigoraRefrigerantReferences,
   frigoraAssetOperationalConditions,
   frigoraVisitCustomerAcknowledgements,
   frigoraVisitEvidence,
@@ -57,6 +59,11 @@ import type {
   FrigoraPartUsage,
   FrigoraPartUsageId,
   FrigoraPartUsageUnit,
+  FrigoraPartReference,
+  FrigoraPartReferenceId,
+  FrigoraRefrigerantReference,
+  FrigoraRefrigerantReferenceId,
+  FrigoraCatalogueReferenceStatus,
   FrigoraAssetOperationalCondition,
   FrigoraAssetOperationalConditionId,
   FrigoraAssetOperationalConditionKind,
@@ -337,6 +344,41 @@ export type FrigoraStore = {
     ventureId: VentureId,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraPartUsage[]>;
+  insertPartReference(row: FrigoraPartReference): Promise<void>;
+  updatePartReference(row: FrigoraPartReference): Promise<void>;
+  findPartReference(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraPartReferenceId,
+  ): Promise<FrigoraPartReference | null>;
+  listPartReferences(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+  ): Promise<FrigoraPartReference[]>;
+  listActivePartReferences(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+  ): Promise<FrigoraPartReference[]>;
+  insertRefrigerantReference(row: FrigoraRefrigerantReference): Promise<void>;
+  updateRefrigerantReference(row: FrigoraRefrigerantReference): Promise<void>;
+  findRefrigerantReference(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    id: FrigoraRefrigerantReferenceId,
+  ): Promise<FrigoraRefrigerantReference | null>;
+  findRefrigerantReferenceByCanonicalCode(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    canonicalCode: string,
+  ): Promise<FrigoraRefrigerantReference | null>;
+  listRefrigerantReferences(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+  ): Promise<FrigoraRefrigerantReference[]>;
+  listActiveRefrigerantReferences(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+  ): Promise<FrigoraRefrigerantReference[]>;
   insertAssetOperationalCondition(row: FrigoraAssetOperationalCondition): Promise<void>;
   findAssetOperationalCondition(
     workspaceId: WorkspaceId,
@@ -1303,6 +1345,149 @@ export function createFrigoraStore(): FrigoraStore {
         .orderBy(asc(frigoraPartUsages.usedAt), asc(frigoraPartUsages.id));
       return rows.map(mapPartUsage);
     },
+    async insertPartReference(row) {
+      await ensureSchema();
+      await getDb().insert(frigoraPartReferences).values(toPartReferenceValues(row));
+    },
+    async updatePartReference(row) {
+      await ensureSchema();
+      await getDb()
+        .update(frigoraPartReferences)
+        .set(toPartReferenceValues(row))
+        .where(
+          and(
+            eq(frigoraPartReferences.id, row.id),
+            eq(frigoraPartReferences.workspaceId, row.workspaceId),
+            eq(frigoraPartReferences.ventureId, row.ventureId),
+          ),
+        );
+    },
+    async findPartReference(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraPartReferences)
+        .where(
+          and(
+            eq(frigoraPartReferences.id, id),
+            eq(frigoraPartReferences.workspaceId, workspaceId),
+            eq(frigoraPartReferences.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapPartReference(rows[0]) : null;
+    },
+    async listPartReferences(workspaceId, ventureId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraPartReferences)
+        .where(
+          and(
+            eq(frigoraPartReferences.workspaceId, workspaceId),
+            eq(frigoraPartReferences.ventureId, ventureId),
+          ),
+        )
+        .orderBy(asc(frigoraPartReferences.displayName), asc(frigoraPartReferences.id));
+      return rows.map(mapPartReference);
+    },
+    async listActivePartReferences(workspaceId, ventureId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraPartReferences)
+        .where(
+          and(
+            eq(frigoraPartReferences.workspaceId, workspaceId),
+            eq(frigoraPartReferences.ventureId, ventureId),
+            eq(frigoraPartReferences.status, "active"),
+          ),
+        )
+        .orderBy(asc(frigoraPartReferences.displayName), asc(frigoraPartReferences.id));
+      return rows.map(mapPartReference);
+    },
+    async insertRefrigerantReference(row) {
+      await ensureSchema();
+      await getDb().insert(frigoraRefrigerantReferences).values(toRefrigerantReferenceValues(row));
+    },
+    async updateRefrigerantReference(row) {
+      await ensureSchema();
+      await getDb()
+        .update(frigoraRefrigerantReferences)
+        .set(toRefrigerantReferenceValues(row))
+        .where(
+          and(
+            eq(frigoraRefrigerantReferences.id, row.id),
+            eq(frigoraRefrigerantReferences.workspaceId, row.workspaceId),
+            eq(frigoraRefrigerantReferences.ventureId, row.ventureId),
+          ),
+        );
+    },
+    async findRefrigerantReference(workspaceId, ventureId, id) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRefrigerantReferences)
+        .where(
+          and(
+            eq(frigoraRefrigerantReferences.id, id),
+            eq(frigoraRefrigerantReferences.workspaceId, workspaceId),
+            eq(frigoraRefrigerantReferences.ventureId, ventureId),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapRefrigerantReference(rows[0]) : null;
+    },
+    async findRefrigerantReferenceByCanonicalCode(workspaceId, ventureId, canonicalCode) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRefrigerantReferences)
+        .where(
+          and(
+            eq(frigoraRefrigerantReferences.workspaceId, workspaceId),
+            eq(frigoraRefrigerantReferences.ventureId, ventureId),
+            eq(frigoraRefrigerantReferences.canonicalCode, canonicalCode),
+          ),
+        )
+        .limit(1);
+      return rows[0] ? mapRefrigerantReference(rows[0]) : null;
+    },
+    async listRefrigerantReferences(workspaceId, ventureId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRefrigerantReferences)
+        .where(
+          and(
+            eq(frigoraRefrigerantReferences.workspaceId, workspaceId),
+            eq(frigoraRefrigerantReferences.ventureId, ventureId),
+          ),
+        )
+        .orderBy(
+          asc(frigoraRefrigerantReferences.canonicalCode),
+          asc(frigoraRefrigerantReferences.id),
+        );
+      return rows.map(mapRefrigerantReference);
+    },
+    async listActiveRefrigerantReferences(workspaceId, ventureId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraRefrigerantReferences)
+        .where(
+          and(
+            eq(frigoraRefrigerantReferences.workspaceId, workspaceId),
+            eq(frigoraRefrigerantReferences.ventureId, ventureId),
+            eq(frigoraRefrigerantReferences.status, "active"),
+          ),
+        )
+        .orderBy(
+          asc(frigoraRefrigerantReferences.canonicalCode),
+          asc(frigoraRefrigerantReferences.id),
+        );
+      return rows.map(mapRefrigerantReference);
+    },
     async insertAssetOperationalCondition(row) {
       await ensureSchema();
       await getDb()
@@ -1733,6 +1918,7 @@ function toRefrigerantEventValues(row: FrigoraRefrigerantEvent) {
     workOrderId: row.workOrderId,
     assetId: row.assetId,
     refrigerantType: row.refrigerantType,
+    refrigerantReferenceId: row.refrigerantReferenceId,
     eventKind: row.eventKind,
     quantityKg: row.quantityKg,
     reason: row.reason,
@@ -1754,12 +1940,39 @@ function toPartUsageValues(row: FrigoraPartUsage) {
     workOrderId: row.workOrderId,
     assetId: row.assetId,
     partDescription: row.partDescription,
+    partReferenceId: row.partReferenceId,
     quantity: row.quantity,
     quantityUnit: row.quantityUnit,
     notes: row.notes,
     usedAt: row.usedAt,
     usedByUserId: row.usedByUserId,
     recordedByUserId: row.recordedByUserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function toPartReferenceValues(row: FrigoraPartReference) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    displayName: row.displayName,
+    defaultQuantityUnit: row.defaultQuantityUnit,
+    status: row.status,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function toRefrigerantReferenceValues(row: FrigoraRefrigerantReference) {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    ventureId: row.ventureId,
+    canonicalCode: row.canonicalCode,
+    displayName: row.displayName,
+    status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -2008,6 +2221,8 @@ function mapRefrigerantEvent(
     workOrderId: row.workOrderId as FrigoraWorkOrderId,
     assetId: (row.assetId as FrigoraAssetId | null) ?? null,
     refrigerantType: row.refrigerantType,
+    refrigerantReferenceId:
+      (row.refrigerantReferenceId as FrigoraRefrigerantReferenceId | null) ?? null,
     eventKind: row.eventKind as FrigoraRefrigerantEventKind,
     quantityKg: row.quantityKg,
     reason: row.reason ?? null,
@@ -2029,12 +2244,41 @@ function mapPartUsage(row: typeof frigoraPartUsages.$inferSelect): FrigoraPartUs
     workOrderId: row.workOrderId as FrigoraWorkOrderId,
     assetId: (row.assetId as FrigoraAssetId | null) ?? null,
     partDescription: row.partDescription,
+    partReferenceId: (row.partReferenceId as FrigoraPartReferenceId | null) ?? null,
     quantity: row.quantity,
     quantityUnit: row.quantityUnit as FrigoraPartUsageUnit,
     notes: row.notes ?? null,
     usedAt: row.usedAt,
     usedByUserId: row.usedByUserId as UserId,
     recordedByUserId: row.recordedByUserId as UserId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapPartReference(row: typeof frigoraPartReferences.$inferSelect): FrigoraPartReference {
+  return {
+    id: row.id as FrigoraPartReferenceId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    displayName: row.displayName,
+    defaultQuantityUnit: row.defaultQuantityUnit as FrigoraPartUsageUnit,
+    status: row.status as FrigoraCatalogueReferenceStatus,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapRefrigerantReference(
+  row: typeof frigoraRefrigerantReferences.$inferSelect,
+): FrigoraRefrigerantReference {
+  return {
+    id: row.id as FrigoraRefrigerantReferenceId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    canonicalCode: row.canonicalCode,
+    displayName: row.displayName,
+    status: row.status as FrigoraCatalogueReferenceStatus,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

@@ -63,7 +63,7 @@ describe("Venture definition registry", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").name, "Frigora");
     assert.equal(platformVentureRegistry.resolve("frigora").lifecycle, "concept");
     assert.equal(platformVentureRegistry.resolve("frigora").maturity, "experimental");
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.18.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.19.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /Customer, Site, Asset, WorkOrder/,
@@ -75,7 +75,7 @@ describe("Venture definition registry", () => {
     );
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
-      /F2\.3 Engineer Job Workflow are part of this definition version/,
+      /F3\.0 structured parts and refrigerant catalogues are part of this definition version/,
     );
     assert.match(
       platformVentureRegistry.resolve("frigora").description,

@@ -8,7 +8,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 24; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 25; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -909,6 +909,44 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_part_usages_venture_asset_idx ON frigora_part_usages (venture_id, asset_id)`,
+      );
+
+      await addColumn("frigora_refrigerant_events", "refrigerant_reference_id", "TEXT");
+      await addColumn("frigora_part_usages", "part_reference_id", "TEXT");
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_part_references (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          display_name TEXT NOT NULL,
+          default_quantity_unit TEXT NOT NULL,
+          status TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_part_references_venture_status_idx ON frigora_part_references (venture_id, status)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_refrigerant_references (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          canonical_code TEXT NOT NULL,
+          display_name TEXT NOT NULL,
+          status TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS frigora_refrigerant_references_venture_code_idx ON frigora_refrigerant_references (workspace_id, venture_id, canonical_code)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_refrigerant_references_venture_status_idx ON frigora_refrigerant_references (venture_id, status)`,
       );
 
       await exec(`
