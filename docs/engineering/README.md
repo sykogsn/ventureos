@@ -55,6 +55,8 @@ If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wi
 | [ENGINEERING_HISTORY.md](./ENGINEERING_HISTORY.md) | Master sprint timeline (VS-001–VS-008C ledger) |
 | [BRAIN_PROGRAMME.md](./BRAIN_PROGRAMME.md) | Brain programme close-out (VC-001–VC-003, VC-010–VC-011). Not the VS history parser |
 | [PLATFORM_PROGRAMME.md](./PLATFORM_PROGRAMME.md) | Platform boot close-out (VC-012). Not the VS history parser |
+| [FAT-001.md](./FAT-001.md) | Founder Acceptance Test for VC-012. Open until founder approval |
+| [NAVIGATION_PERFORMANCE.md](./NAVIGATION_PERFORMANCE.md) | Foundation UX and navigation performance (shell persist, fetch dedupe). Not a VC sprint |
 | [FOUNDATION_CERTIFICATION_v1.1.md](./FOUNDATION_CERTIFICATION_v1.1.md) | Permanent Foundation v1.1 certification record |
 | [DECISION_REGISTER.md](./DECISION_REGISTER.md) | Named decisions with problem / outcome (distinct from ADR / FD) |
 | [TECHNICAL_DEBT_REGISTER.md](./TECHNICAL_DEBT_REGISTER.md) | Follow-up items from Foundation Certification v1.1 |

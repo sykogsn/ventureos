@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { OAUTH_COOKIE } from "@/lib/auth/cookies";
+import { canonicalAuthUrl, resolveRequestAuthOrigin } from "@/lib/auth/origin";
 import { sessionCookieOptions } from "@/lib/auth/session-cookie";
 import { safeInternalPath } from "@/lib/auth/next-path";
 import {
@@ -21,7 +22,12 @@ function oauthCookieOptions() {
 
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;
-  const origin = process.env.AUTH_URL?.replace(/\/$/, "") || url.origin;
+  const canonical = canonicalAuthUrl(url);
+  if (canonical) {
+    return NextResponse.redirect(canonical);
+  }
+
+  const origin = resolveRequestAuthOrigin(url);
   const next = safeInternalPath(url.searchParams.get("next"));
   const remember = url.searchParams.get("remember") === "1";
 

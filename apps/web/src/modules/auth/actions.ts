@@ -179,5 +179,5 @@ export async function resetPasswordAction(
 
 export async function logoutAction() {
   await clearSessionCookie();
-  redirect("/login");
+  redirect("/login?signedOut=1");
 }

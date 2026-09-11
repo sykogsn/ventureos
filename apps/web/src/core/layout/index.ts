@@ -53,6 +53,7 @@ export {
   NavigationRail,
   NavigationSection,
   OverlayPanel,
+  OverlayPulse,
   PageRoot,
   Panel,
   Pulse,

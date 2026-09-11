@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { UserId } from "@/contracts";
 import {
   resolveWorkspace,
@@ -47,7 +48,7 @@ export function assembleDeskBoot(input: {
   };
 }
 
-export async function bootDesk(userId: UserId): Promise<DeskBoot | null> {
+export const bootDesk = cache(async (userId: UserId): Promise<DeskBoot | null> => {
   const workspaces = await listWorkspaceCatalogue(userId);
   const requestedWorkspaceId = await getActiveWorkspaceId();
   const workspace = resolveWorkspace(workspaces, requestedWorkspaceId);
@@ -63,4 +64,4 @@ export async function bootDesk(userId: UserId): Promise<DeskBoot | null> {
     requestedWorkspaceId,
     requestedVentureId: await getActiveVentureId(),
   });
-}
+});

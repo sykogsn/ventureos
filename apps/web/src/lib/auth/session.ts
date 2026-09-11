@@ -1,13 +1,12 @@
 import { SignJWT } from "jose";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import {
-  GOOGLE_LINK_COOKIE,
-  OAUTH_COOKIE,
   SESSION_COOKIE,
   VENTURE_COOKIE,
   WORKSPACE_COOKIE,
 } from "@/lib/auth/cookies";
-import { sessionCookieOptions } from "@/lib/auth/session-cookie";
+import { expireAuthCookies, sessionCookieOptions } from "@/lib/auth/session-cookie";
 import { lookupPersistedSession } from "@/lib/auth/session-store";
 import {
   authSecretKey,
@@ -35,7 +34,7 @@ export async function createSessionToken(user: SessionUser, sessionId: string) {
     .sign(authSecretKey());
 }
 
-export async function getSession(): Promise<SessionUser | null> {
+export const getSession = cache(async (): Promise<SessionUser | null> => {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) {
@@ -43,7 +42,7 @@ export async function getSession(): Promise<SessionUser | null> {
   }
 
   return resolveSessionUser(token, lookupPersistedSession, nowIso());
-}
+});
 
 export async function setSessionCookie(
   user: SessionUser,
@@ -85,11 +84,7 @@ export async function clearSessionCookie() {
       await getPersistence().sessions.deleteById(user.sessionId);
     }
   }
-  jar.delete(SESSION_COOKIE);
-  jar.delete(WORKSPACE_COOKIE);
-  jar.delete(VENTURE_COOKIE);
-  jar.delete(OAUTH_COOKIE);
-  jar.delete(GOOGLE_LINK_COOKIE);
+  expireAuthCookies(jar);
 }
 
 export async function getActiveWorkspaceId() {

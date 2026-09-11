@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, WORKSPACE_COOKIE } from "@/lib/auth/cookies";
+import { SESSION_COOKIE } from "@/lib/auth/cookies";
+import { expireAuthCookies } from "@/lib/auth/session-cookie";
 import { lookupPersistedSession } from "@/lib/auth/session-store";
 import { resolveSessionUser } from "@/lib/auth/session-token";
 import { nowIso } from "@/platform";
@@ -12,13 +13,17 @@ const publicPaths = new Set([
   "/reset-password",
 ]);
 
+function withoutStore(response: NextResponse) {
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  return response;
+}
+
 function loginRedirect(request: NextRequest) {
   const login = new URL("/login", request.url);
   login.searchParams.set("next", request.nextUrl.pathname);
   const response = NextResponse.redirect(login);
-  response.cookies.delete(SESSION_COOKIE);
-  response.cookies.delete(WORKSPACE_COOKIE);
-  return response;
+  expireAuthCookies(response.cookies);
+  return withoutStore(response);
 }
 
 export async function proxy(request: NextRequest) {
@@ -29,21 +34,21 @@ export async function proxy(request: NextRequest) {
     : null;
 
   if (pathname.startsWith("/auth/google")) {
-    return NextResponse.next();
+    return withoutStore(NextResponse.next());
   }
 
   if (publicPaths.has(pathname)) {
     if (session) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return withoutStore(NextResponse.redirect(new URL("/dashboard", request.url)));
     }
-    return NextResponse.next();
+    return withoutStore(NextResponse.next());
   }
 
   if (!session) {
     return loginRedirect(request);
   }
 
-  return NextResponse.next();
+  return withoutStore(NextResponse.next());
 }
 
 export const config = {

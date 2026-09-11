@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { ShellProvider, useShell } from "@/core/context/shell-context";
 import { CommandPalette } from "@/core/shell/command-palette";
+import { NavigationProgress } from "@/core/shell/navigation-progress";
 import { Sidebar } from "@/core/shell/sidebar";
 import { TopNav } from "@/core/shell/top-nav";
 import { resolveRouteVentureId } from "@/core/shell/venture-route";
@@ -45,6 +46,7 @@ function ShellFrame({ children }: { children: ReactNode }) {
       <SplitView>
         <Sidebar />
         <Stage>
+          <NavigationProgress />
           <TopNav />
           <WorkspaceMain>{children}</WorkspaceMain>
         </Stage>

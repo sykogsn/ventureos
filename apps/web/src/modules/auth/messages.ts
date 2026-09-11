@@ -7,4 +7,5 @@ export const loginMessages: Record<string, string> = {
     "An account already exists for this email. Sign in with your password to connect Google.",
   google_in_use: "That email is already on a desk.",
   reset: "Your password has been updated. Sign in with the new password.",
+  signed_out: "You have signed out. This desk did not keep your email or password.",
 };

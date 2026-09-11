@@ -715,6 +715,19 @@ export function Pulse({
   return <div className={`${heights[height]} ${widths[width]} ids-skeleton`} />;
 }
 
+export function OverlayPulse() {
+  return (
+    <div
+      role="progressbar"
+      aria-label="Opening page"
+      aria-busy="true"
+      className="pointer-events-none fixed inset-x-0 top-0 z-topbar"
+    >
+      <Pulse height="3" width="full" />
+    </div>
+  );
+}
+
 export function SurfaceBody({ children }: { children: ReactNode }) {
   return <div className="p-[var(--ids-foundation-space-6)]">{children}</div>;
 }

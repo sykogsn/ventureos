@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useShell } from "@/core/context/shell-context";
 import { useCommandExecutor } from "@/core/commands/use-command-executor";
 import { EmptyCopy } from "@/core/shell/empty-copy";
@@ -28,7 +28,7 @@ function matches(command: CommandContribution, query: string) {
   return haystack.includes(query.toLowerCase());
 }
 
-export function CommandPalette() {
+export const CommandPalette = memo(function CommandPalette() {
   const { isPaletteOpen, paletteMode, closePalette, openPalette } = useShell();
   const execute = useCommandExecutor();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -193,4 +193,4 @@ export function CommandPalette() {
       </CommandList>
     </CommandRegion>
   );
-}
+});

@@ -1,5 +1,5 @@
-import { ExecutiveLoading } from "@/core/shell/executive-loading";
+import { ContentLoading } from "@/core/shell/content-loading";
 
 export default function AuthLoading() {
-  return <ExecutiveLoading message="Opening the desk..." />;
+  return <ContentLoading label="Opening the desk..." />;
 }

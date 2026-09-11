@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bot, Brain, Building2, DraftingCompass, LayoutDashboard, Settings } from "lucide-react";
@@ -60,7 +60,7 @@ function NavLink({
   );
 }
 
-export function Sidebar() {
+export const Sidebar = memo(function Sidebar() {
   const pathname = usePathname();
   const { isNavOpen, closeNav } = useShell();
   const items = listNavContributions();
@@ -104,4 +104,4 @@ export function Sidebar() {
       </NavigationMenu>
     </NavigationRail>
   );
-}
+});

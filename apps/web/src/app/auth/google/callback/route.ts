@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { GOOGLE_LINK_COOKIE, OAUTH_COOKIE } from "@/lib/auth/cookies";
+import { canonicalAuthUrl, resolveRequestAuthOrigin } from "@/lib/auth/origin";
 import { sessionCookieOptions } from "@/lib/auth/session-cookie";
 import { safeInternalPath } from "@/lib/auth/next-path";
 import {
@@ -22,7 +23,12 @@ function loginRedirect(origin: string, code: string) {
 
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;
-  const origin = process.env.AUTH_URL?.replace(/\/$/, "") || url.origin;
+  const canonical = canonicalAuthUrl(url);
+  if (canonical) {
+    return NextResponse.redirect(canonical);
+  }
+
+  const origin = resolveRequestAuthOrigin(url);
   const code = url.searchParams.get("code");
   const returnedState = url.searchParams.get("state");
   const oauthError = url.searchParams.get("error");

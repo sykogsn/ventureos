@@ -80,7 +80,8 @@ const platformChrome = [
   "src/core/shell/icon-button.tsx",
   "src/core/shell/theme-toggle.tsx",
   "src/core/shell/deferred-operating-screen.tsx",
-  "src/app/loading.tsx",
+  "src/core/shell/content-loading.tsx",
+  "src/core/shell/navigation-progress.tsx",
   "src/app/not-found.tsx",
 ];
 

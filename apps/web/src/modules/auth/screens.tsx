@@ -3,6 +3,7 @@
 import { useActionState, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
+import { credentialAutocomplete } from "@/modules/auth/login-fields";
 import {
   ExecutiveCluster,
   ExecutiveDocument,
@@ -35,6 +36,7 @@ function AuthForm({
   afterPassword,
   afterSubmit,
   footer,
+  signedOut = false,
 }: {
   kicker: string;
   title: string;
@@ -47,13 +49,20 @@ function AuthForm({
   afterPassword?: ReactNode;
   afterSubmit?: ReactNode;
   footer: ReactNode;
+  signedOut?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
+  const [emailLocked, setEmailLocked] = useState(signedOut);
+  const [passwordLocked, setPasswordLocked] = useState(signedOut);
 
   return (
     <ExecutiveStack gap="section">
       <ExecutiveDocument kicker={kicker} title={title} description={description} />
-      <ExecutiveForm action={formAction}>
+      <ExecutiveForm
+        key={signedOut ? "signed-out" : "sign-in"}
+        action={formAction}
+        autoComplete={signedOut ? "off" : undefined}
+      >
         {extra}
         <ExecutiveField>
           Email
@@ -61,9 +70,11 @@ function AuthForm({
             className={inputClass}
             type="email"
             name="email"
-            autoComplete="email"
+            autoComplete={credentialAutocomplete(signedOut, "email")}
             required
             defaultValue=""
+            readOnly={emailLocked}
+            onFocus={() => setEmailLocked(false)}
           />
         </ExecutiveField>
         <ExecutiveField>
@@ -72,10 +83,18 @@ function AuthForm({
             className={inputClass}
             type="password"
             name="password"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            autoComplete={
+              signedOut
+                ? "off"
+                : mode === "login"
+                  ? "current-password"
+                  : "new-password"
+            }
             minLength={8}
             required
             defaultValue=""
+            readOnly={passwordLocked}
+            onFocus={() => setPasswordLocked(false)}
           />
         </ExecutiveField>
         {afterPassword}
@@ -117,9 +136,11 @@ function GoogleContinue({ next, remember }: { next: string; remember: boolean })
 export function LoginScreen({
   next = "",
   message,
+  signedOut = false,
 }: {
   next?: string;
   message?: string;
+  signedOut?: boolean;
 }) {
   const [remember, setRemember] = useState(false);
 
@@ -132,6 +153,7 @@ export function LoginScreen({
       action={loginAction}
       submitLabel="Open desk"
       pendingLabel="Opening desk…"
+      signedOut={signedOut}
       extra={
         <>
           <input type="hidden" name="next" value={next} />

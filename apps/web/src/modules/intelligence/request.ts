@@ -1,5 +1,5 @@
 import type { VentureId, WorkspaceId } from "@/contracts";
-import { executeIntelligenceRuntime } from "@/modules/intelligence/service";
+import { loadVentureIntelligence } from "@/modules/intelligence/service";
 import { bootDesk } from "@/modules/intelligence/boot";
 import { getVenture } from "@/modules/ventures/service";
 import { getActiveWorkspaceId, getSession } from "@/lib/auth/session";
@@ -26,12 +26,8 @@ export async function loadActiveIntelligence(): Promise<{
     return null;
   }
 
-  const snapshot = await executeIntelligenceRuntime({
-    userId: session.id,
-    workspaceId: boot.workspace.id,
-  });
-
-  if (!snapshot) {
+  const core = await loadVentureIntelligence(session.id, boot.workspace.id);
+  if (!core) {
     return null;
   }
 
@@ -42,7 +38,7 @@ export async function loadActiveIntelligence(): Promise<{
       name: boot.workspace.name,
       slug: boot.workspace.slug,
     },
-    core: snapshot.core,
+    core,
     activeVenture: boot.activeVenture,
   };
 }
@@ -74,12 +70,11 @@ export async function loadVentureScopedIntelligence(ventureId: VentureId): Promi
     return null;
   }
 
-  const snapshot = await executeIntelligenceRuntime({
-    userId: session.id,
-    workspaceId: workspaceId as WorkspaceId,
-  });
-
-  if (!snapshot) {
+  const core = await loadVentureIntelligence(
+    session.id,
+    workspaceId as WorkspaceId,
+  );
+  if (!core) {
     return null;
   }
 
@@ -90,7 +85,7 @@ export async function loadVentureScopedIntelligence(ventureId: VentureId): Promi
       name: workspace.name,
       slug: workspace.slug,
     },
-    core: snapshot.core,
+    core,
     activeVenture: {
       id: venture.id,
       workspaceId: venture.workspaceId,

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import { createCompanyStory } from "@/core/company-story";
 import { createDecisionEngine } from "@/core/decision-engine";
@@ -309,13 +310,15 @@ export async function executeIntelligenceRuntime(input: {
   return snapshot;
 }
 
-export async function loadVentureIntelligence(
-  userId: UserId,
-  workspaceId: WorkspaceId,
-): Promise<VentureIntelligenceCore | null> {
-  const snapshot = await executeIntelligenceRuntime({ userId, workspaceId });
-  return snapshot?.core ?? null;
-}
+export const loadVentureIntelligence = cache(
+  async (
+    userId: UserId,
+    workspaceId: WorkspaceId,
+  ): Promise<VentureIntelligenceCore | null> => {
+    const snapshot = await executeIntelligenceRuntime({ userId, workspaceId });
+    return snapshot?.core ?? null;
+  },
+);
 
 export async function recordFounderDecision(input: {
   userId: UserId;

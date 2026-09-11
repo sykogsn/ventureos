@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Menu, Search, Sparkles, X } from "lucide-react";
 import { useShell } from "@/core/context/shell-context";
 import { getAiRuntime } from "@/ai/runtime";
@@ -12,7 +13,7 @@ import { VentureSwitcher } from "@/core/shell/venture-switcher";
 import { WorkspaceSwitcher } from "@/core/shell/workspace-switcher";
 import { Cluster, Fill, Grow, Reveal, Toolbar, Trailing } from "@/core/layout";
 
-export function TopNav() {
+export const TopNav = memo(function TopNav() {
   const { openPalette, isNavOpen, toggleNav } = useShell();
   const runtime = getAiRuntime();
   const runtimeLabel = aiRuntimeStatusLabel(runtime.status);
@@ -85,4 +86,4 @@ export function TopNav() {
       </Trailing>
     </Toolbar>
   );
-}
+});

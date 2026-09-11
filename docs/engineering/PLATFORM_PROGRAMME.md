@@ -62,6 +62,10 @@ Recorded 2026-08-22 on `feat/vc-012-company-workspace-boot` after recovering the
 | Build, lint, types, tests | `pnpm lint` pass. `pnpm check-types` pass. `pnpm test` pass (web 215 before this close-out file, plus `platform-boot.test.ts`). `pnpm --filter web build` pass. `pnpm --filter web run doctor` pass. |
 | No stale Runtime after switch | Cross-workspace company cookie falls back to a company in the selected workspace. Rooms project from the boot company, not leftover chrome state. |
 
-Interactive multi-company HQ clicking in the Cursor browser was not completed in this session: credential entry into the signup password field was skipped. The running desk is up on localhost:3000 for founder walk-through of AC 15.
+Interactive multi-company HQ clicking in the Cursor browser was not completed in Platform Validation: credential entry into the signup password field was skipped.
 
-Do not begin VC-013 from this record.
+## FAT-001
+
+Opened 2026-08-22. Script: [FAT-001.md](./FAT-001.md). Status: **Failed**. Google OAuth and logout did not pass. Certification report not produced. VC-013 is not opened.
+
+The final VC-012 Certification Report is not produced until FAT-001 is completed and approved. VC-013 is not opened.

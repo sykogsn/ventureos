@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -42,6 +43,48 @@ type ShellContextValue = {
 
 const ShellContext = createContext<ShellContextValue | null>(null);
 
+function sameUser(left: ShellUser, right: ShellUser) {
+  return left.name === right.name && left.email === right.email;
+}
+
+function sameWorkspaces(
+  left: WorkspaceRecord[],
+  right: WorkspaceRecord[],
+) {
+  return (
+    left.length === right.length &&
+    left.every(
+      (workspace, index) =>
+        workspace.id === right[index]?.id &&
+        workspace.name === right[index]?.name &&
+        workspace.slug === right[index]?.slug,
+    )
+  );
+}
+
+function sameVentures(left: VentureRecord[], right: VentureRecord[]) {
+  return (
+    left.length === right.length &&
+    left.every(
+      (venture, index) =>
+        venture.id === right[index]?.id &&
+        venture.workspaceId === right[index]?.workspaceId &&
+        venture.name === right[index]?.name &&
+        venture.slug === right[index]?.slug &&
+        venture.definitionId === right[index]?.definitionId &&
+        venture.definitionVersion === right[index]?.definitionVersion,
+    )
+  );
+}
+
+function useStableValue<T>(value: T, equal: (left: T, right: T) => boolean) {
+  const ref = useRef(value);
+  if (!equal(ref.current, value)) {
+    ref.current = value;
+  }
+  return ref.current;
+}
+
 export function ShellProvider({
   children,
   user,
@@ -57,6 +100,9 @@ export function ShellProvider({
   initialWorkspaceId: string | null;
   initialVentureId: string | null;
 }) {
+  const stableUser = useStableValue(user, sameUser);
+  const stableWorkspaces = useStableValue(workspaces, sameWorkspaces);
+  const stableVentures = useStableValue(ventures, sameVentures);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(
     initialWorkspaceId,
   );
@@ -129,11 +175,11 @@ export function ShellProvider({
 
   const value = useMemo(
     () => ({
-      user,
-      workspaces,
+      user: stableUser,
+      workspaces: stableWorkspaces,
       activeWorkspaceId,
       setActiveWorkspaceId,
-      ventures,
+      ventures: stableVentures,
       activeVentureId,
       setActiveVentureId,
       isPaletteOpen,
@@ -150,9 +196,9 @@ export function ShellProvider({
       toggleNav,
     }),
     [
-      user,
-      workspaces,
-      ventures,
+      stableUser,
+      stableWorkspaces,
+      stableVentures,
       activeWorkspaceId,
       activeVentureId,
       isPaletteOpen,
