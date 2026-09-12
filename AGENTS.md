@@ -8,6 +8,24 @@ Before any sprint, implementation, review, refactor, or bug fix, read that const
 
 That document is the authoritative engineering standard. Follow it by default.
 
+Then read the permanent delivery law:
+
+[`docs/engineering/CONTROLLED_DELIVERY_PROTOCOL.md`](docs/engineering/CONTROLLED_DELIVERY_PROTOCOL.md)
+
+The default VentureOS delivery pipeline is:
+
+`CONTROL → CURSOR BUILD → INDEPENDENT VERIFY → CURSOR FIX (only if needed) → NARROW INDEPENDENT RE-VERIFY → CONTROL CERTIFY`
+
+An implementation agent may work continuously inside its currently authorised packet, including routine repository inspection, scoped implementation, debugging, tests, typecheck, lint, build, and narrow local runtime checks needed by that packet. Do not create needless approval loops for routine safe work.
+
+A named packet grants authority only for that packet. Do not invent or self-authorise a successor revision, recovery phase, verification environment, independent verification phase, certification phase, commit, push, PR, release, deployment, schema change, dependency change, or production mutation unless Control explicitly authorised it.
+
+At a phase boundary, STOP and report COMPLETE, PARTIAL, or BLOCKED with evidence. Control decides the next phase. An implementation agent must not become its own independent verifier. Independent Verification Work must not implement fixes or certify the milestone.
+
+If independent verification finds a defect, correct only the named observation and necessary siblings, then return it for narrow independent re-verification. Do not restart the whole milestone unless evidence proves the candidate is fundamentally unsafe or incoherent.
+
+Do not repeatedly restart, reseed, rebuild, or rediscover a valid baseline merely because an agent lost context or attempted an unauthorised transition. Agent confusion is not repository corruption.
+
 Then open the [Engineering Index](docs/engineering/README.md) for the Foundation Runbook, architecture, coding standards, branch strategy, release process, and sprint process.
 
 Do not continue on an unhealthy foundation. Do not tell the founder a task is complete until it has been verified in the running application.
