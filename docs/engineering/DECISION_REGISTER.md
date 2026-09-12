@@ -3,7 +3,7 @@
 **Purpose.** Engineering method and recovery decisions that Engineering HQ should remember.  
 **Authority.** Engineering Records. Does not replace Architecture Decision Register (ADR) or Founder Decisions (FD).  
 **Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
-**Last Updated.** 2026-08-21
+**Last Updated.** 2026-09-12
 
 Cross-links:
 
@@ -95,3 +95,15 @@ Cross-links:
 | Reason | VS-007 stop-work. FD-003 products run on the OS. RM-002. |
 | Outcome | Certification recorded 2026-08-21. Qualora visual programme is not opened by VS-008A. |
 | Status | Accepted |
+
+## ERD-008 — Split builder, independent verifier, and Control
+
+| Field | Record |
+|---|---|
+| Decision ID | ERD-008 |
+| Title | Split builder, independent verifier, and Control |
+| Problem | A builder agent can become trapped in self-directed phase changes: inventing successor revisions, rebuilding verification environments, repeating settled pre-flight checks, or treating its own checks as independent verification. That wastes time and weakens assurance. |
+| Decision | Adopt the permanent pipeline `CONTROL → CURSOR BUILD → INDEPENDENT VERIFY → CURSOR FIX (only if needed) → NARROW INDEPENDENT RE-VERIFY → CONTROL CERTIFY`. A named packet grants authority only for that packet. Cursor may execute routine safe implementation/test/build work continuously inside scope, but may not self-promote to another phase. Independent Verification Work verifies the running product and does not implement fixes. Control alone authorises transitions and certification. |
+| Reason | Preserve the fast Frigora development rhythm while restoring separation of duties, independent product evidence, and bounded phase authority. Avoid approval-by-screenshot loops for routine safe commands while keeping high-risk and permanence operations gated. |
+| Outcome | Permanent protocol recorded in `CONTROLLED_DELIVERY_PROTOCOL.md` and inherited by VentureOS, Frigora, Farmora, Qualora, Calviora, and future Ventures. Narrow verification observations generate narrow correction/re-verification rather than full milestone restarts unless evidence proves the candidate unsafe. |
+| Status | Accepted — Founder approval 2026-09-12 |
