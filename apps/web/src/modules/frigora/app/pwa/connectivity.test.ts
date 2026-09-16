@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { shouldBlockFrigoraFieldMutation } from "./connectivity";
+import {
+  resolveConnectivityStatusLabel,
+  shouldBlockFrigoraFieldMutation,
+} from "./connectivity";
 
 describe("Frigora F3.2 connectivity", () => {
   it("blocks field mutations only while disconnected on field surfaces", () => {
@@ -20,5 +23,39 @@ describe("Frigora F3.2 connectivity", () => {
     );
     assert.equal(shouldBlockFrigoraFieldMutation(false, "/dashboard"), false);
     assert.equal(shouldBlockFrigoraFieldMutation(false, "/login"), false);
+  });
+
+  it("does not claim saved-on-device without durable pending operations", () => {
+    assert.equal(resolveConnectivityStatusLabel({ online: false }), "offline");
+    assert.equal(
+      resolveConnectivityStatusLabel({
+        online: false,
+        queue: {
+          pendingCount: 0,
+          syncingCount: 0,
+          blockedCount: 0,
+          conflictCount: 0,
+          retryableFailureCount: 0,
+          syncedCount: 0,
+          label: "offline",
+        },
+      }),
+      "offline",
+    );
+    assert.equal(
+      resolveConnectivityStatusLabel({
+        online: false,
+        queue: {
+          pendingCount: 2,
+          syncingCount: 0,
+          blockedCount: 0,
+          conflictCount: 0,
+          retryableFailureCount: 0,
+          syncedCount: 0,
+          label: "saved_on_device",
+        },
+      }),
+      "saved_on_device",
+    );
   });
 });

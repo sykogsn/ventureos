@@ -37,3 +37,14 @@ export const FRIGORA_OFFLINE_PAGE_BODY =
 
 export const FRIGORA_EVIDENCE_ONLINE_NOTE =
   "Photos and files upload while you are connected. A disconnected attempt is not kept for later sync.";
+
+/** Queue-aware status copy for later packets — unused by F33-01 field forms. */
+export const FRIGORA_OFFLINE_STATUS_COPY = {
+  offline: "No connection",
+  saved_on_device: "Saved on this device",
+  waiting_to_sync: "changes waiting to sync",
+  syncing: "Syncing",
+  all_synced: "All changes synced",
+  sync_failed: "Sync failed",
+  sync_blocked: "Sync blocked — review required",
+} as const;
