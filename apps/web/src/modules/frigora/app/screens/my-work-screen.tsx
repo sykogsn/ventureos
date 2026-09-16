@@ -122,7 +122,7 @@ export function MyWorkScreen({
                     </div>
                     <div className="sm:col-span-2">
                       <dt className="ids-caption text-muted">Site address</dt>
-                      <dd className="ids-body">{formatSiteAddress(site)}</dd>
+                      <dd className="ids-body break-words">{formatSiteAddress(site)}</dd>
                     </div>
                     {asset ? (
                       <div className="sm:col-span-2">
@@ -135,13 +135,12 @@ export function MyWorkScreen({
                     ) : null}
                     <div className="sm:col-span-2">
                       <dt className="ids-caption text-muted">Reported condition</dt>
-                      <dd className="ids-body">
+                      <dd className="ids-body break-words">
                         {previewText(workOrder.reportedCondition)}
                       </dd>
                     </div>
                   </dl>
-                  <Fit>
-                    <Link
+                  <Link
                       href={
                         activeVisit
                           ? `${base}/${workOrder.id}/visit/${activeVisit.id}`
@@ -151,7 +150,6 @@ export function MyWorkScreen({
                     >
                       {activeVisit ? "Continue visit" : "Open assigned job"}
                     </Link>
-                  </Fit>
                 </Stack>
               </article>
               ),

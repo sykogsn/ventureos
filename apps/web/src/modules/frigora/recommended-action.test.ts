@@ -779,8 +779,8 @@ describe("Frigora Recommended action", () => {
     assert.equal(recommendation.description, "Return with lifting equipment");
   });
 
-  it("resolves frigora@0.20.0 from catalog with recommended action admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.20.0");
+  it("resolves frigora@0.21.0 from catalog with recommended action admission", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /recommended actions/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /refrigerant events/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /part usages/);

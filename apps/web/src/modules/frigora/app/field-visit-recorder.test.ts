@@ -516,7 +516,7 @@ describe("F1.2 Field Visit Recorder", () => {
   });
 
   it("ships F1.2 routes and field mutation module without F0 edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.20.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
     assert.match(dbSource, /SCHEMA_GENERATION = 26/);
@@ -548,6 +548,7 @@ describe("F1.2 Field Visit Recorder", () => {
       "utf8",
     );
     assert.match(recorderScreen, /Asset identity status is not operational condition/);
+    assert.match(recorderScreen, /FieldWorkflowNav/);
     assert.equal(recorderScreen.includes("closeWorkOrder"), false);
     assert.equal(recorderScreen.includes("cancelWorkOrder"), false);
     assert.equal(recorderScreen.includes("Complete Work Order"), false);

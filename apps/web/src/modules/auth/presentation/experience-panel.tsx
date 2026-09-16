@@ -1,5 +1,12 @@
 import { AUTH_EXPERIENCE, AUTH_MARK } from "./copy";
 
+export type AuthExperienceCopy = {
+  eyebrow: string;
+  title: string;
+  cadence: readonly string[];
+  message: string;
+};
+
 function ExperienceMotif() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -33,62 +40,101 @@ function ExperienceMotif() {
   );
 }
 
-export function AuthExperiencePanel({ mark = AUTH_MARK }: { mark?: string }) {
+export function AuthExperiencePanel({
+  mark = AUTH_MARK,
+  experience = AUTH_EXPERIENCE,
+  ariaLabel = "About VentureOS",
+}: {
+  mark?: string;
+  experience?: AuthExperienceCopy;
+  ariaLabel?: string;
+}) {
+  const hasBrand = Boolean(mark || experience.eyebrow);
+  const hasCopy = Boolean(
+    experience.title || experience.message || experience.cadence.length > 0,
+  );
+
   return (
     <section
-      aria-label="About VentureOS"
+      aria-label={ariaLabel}
       className="relative isolate hidden overflow-hidden lg:flex lg:flex-col lg:px-12 lg:py-12 xl:px-16"
     >
       <ExperienceMotif />
 
-      <div className="relative flex items-center gap-2.5">
-        <span className="inline-flex size-7 items-center justify-center rounded-md bg-text-primary text-[0.75rem] font-medium text-text-inverse">
-          {mark}
-        </span>
-        <span className="text-[0.6875rem] font-medium tracking-[0.16em] text-text-secondary uppercase">
-          {AUTH_EXPERIENCE.eyebrow}
-        </span>
-      </div>
+      {hasBrand ? (
+        <div className="relative flex items-center gap-2.5">
+          {mark ? (
+            <span className="inline-flex size-7 items-center justify-center rounded-md bg-text-primary text-[0.75rem] font-medium text-text-inverse">
+              {mark}
+            </span>
+          ) : null}
+          {experience.eyebrow ? (
+            <span className="text-[0.6875rem] font-medium tracking-[0.16em] text-text-secondary uppercase">
+              {experience.eyebrow}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="relative my-auto flex max-w-[34rem] flex-col justify-center py-12">
-        <div className="space-y-8">
-          <div className="space-y-5">
-            <h2 className="text-[clamp(2rem,2.8vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.035em] text-text-primary">
-              {AUTH_EXPERIENCE.title}
-            </h2>
+        {hasCopy ? (
+          <div className="space-y-8">
+            <div className="space-y-5">
+              {experience.title ? (
+                <h2 className="text-[clamp(2rem,2.8vw,2.75rem)] leading-[1.05] font-medium tracking-[-0.035em] text-text-primary">
+                  {experience.title}
+                </h2>
+              ) : null}
 
-            <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[1rem] font-medium tracking-[-0.012em] text-text-secondary">
-              {AUTH_EXPERIENCE.cadence.map((word, index) => (
-                <span key={word} className="flex items-baseline gap-4">
-                  {index > 0 ? (
-                    <span aria-hidden="true" className="h-3 w-px bg-border-strong" />
-                  ) : null}
-                  {word}
-                </span>
-              ))}
-            </p>
+              {experience.cadence.length > 0 ? (
+                <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[1rem] font-medium tracking-[-0.012em] text-text-secondary">
+                  {experience.cadence.map((word, index) => (
+                    <span key={word} className="flex items-baseline gap-4">
+                      {index > 0 ? (
+                        <span aria-hidden="true" className="h-3 w-px bg-border-strong" />
+                      ) : null}
+                      {word}
+                    </span>
+                  ))}
+                </p>
+              ) : null}
+            </div>
+
+            <span className="block h-px w-20 bg-border-strong" aria-hidden="true" />
+
+            {experience.message ? (
+              <p className="max-w-[28rem] text-[0.9375rem] leading-[1.7] font-medium tracking-[-0.01em] text-text-secondary">
+                {experience.message}
+              </p>
+            ) : null}
           </div>
-
-          <span className="block h-px w-20 bg-border-strong" aria-hidden="true" />
-
-          <p className="max-w-[28rem] text-[0.9375rem] leading-[1.7] font-medium tracking-[-0.01em] text-text-secondary">
-            {AUTH_EXPERIENCE.message}
-          </p>
-        </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
-export function AuthExperienceBand() {
+export function AuthExperienceBand({
+  experience = AUTH_EXPERIENCE,
+}: {
+  experience?: AuthExperienceCopy;
+}) {
+  if (!experience.title && !experience.message && experience.cadence.length === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-2 lg:hidden">
-      <p className="text-[1.0625rem] font-medium tracking-[-0.02em] text-text-primary">
-        {AUTH_EXPERIENCE.title}
-      </p>
-      <p className="text-[0.8125rem] leading-relaxed text-text-muted">
-        {AUTH_EXPERIENCE.cadence.join(" ")} {AUTH_EXPERIENCE.message}
-      </p>
+      {experience.title ? (
+        <p className="text-[1.0625rem] font-medium tracking-[-0.02em] text-text-primary">
+          {experience.title}
+        </p>
+      ) : null}
+      {experience.cadence.length > 0 || experience.message ? (
+        <p className="text-[0.8125rem] leading-relaxed text-text-muted">
+          {[...experience.cadence, experience.message].filter(Boolean).join(" ")}
+        </p>
+      ) : null}
     </div>
   );
 }

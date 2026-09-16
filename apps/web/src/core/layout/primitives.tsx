@@ -52,7 +52,7 @@ export type ExecutiveStackGap = LayoutStackGap;
 
 export function Workspace({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-full bg-[var(--workspace)] text-foreground">{children}</div>
+    <div className="flex min-h-full min-w-0 bg-[var(--workspace)] text-foreground">{children}</div>
   );
 }
 
@@ -176,7 +176,7 @@ export function WorkspaceMain({ children }: { children: ReactNode }) {
     <main
       id="main-content"
       tabIndex={-1}
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto"
     >
       {children}
     </main>
@@ -185,7 +185,7 @@ export function WorkspaceMain({ children }: { children: ReactNode }) {
 
 export function WorkspaceCanvas({ children }: { children: ReactNode }) {
   return (
-    <div className="ids-surface-section vos-screen mx-auto flex w-full max-w-[var(--ids-foundation-layout-measure-xl)] flex-1 flex-col gap-[var(--ids-foundation-space-8)]">
+    <div className="ids-surface-section vos-screen mx-auto flex w-full min-w-0 max-w-[var(--ids-foundation-layout-measure-xl)] flex-1 flex-col gap-[var(--ids-foundation-space-8)]">
       {children}
     </div>
   );
@@ -259,8 +259,8 @@ export const OverlayPanel = forwardRef<
       role="dialog"
       className={
         align === "end"
-          ? `absolute right-0 top-[calc(100%+var(--ids-foundation-space-2))] z-popover ${panelWidth[size]} ids-surface-modal p-[var(--ids-foundation-space-2)]`
-          : `absolute left-0 top-[calc(100%+var(--ids-foundation-space-2))] z-popover ${panelWidth[size]} ids-surface-modal p-[var(--ids-foundation-space-2)]`
+          ? `absolute right-0 top-[calc(100%+var(--ids-foundation-space-2))] z-popover ${panelWidth[size]} max-w-[calc(100vw-var(--ids-foundation-space-8))] ids-surface-modal p-[var(--ids-foundation-space-2)]`
+          : `absolute left-0 top-[calc(100%+var(--ids-foundation-space-2))] z-popover ${panelWidth[size]} max-w-[calc(100vw-var(--ids-foundation-space-8))] ids-surface-modal p-[var(--ids-foundation-space-2)]`
       }
     >
       {children}
@@ -271,7 +271,7 @@ export const OverlayPanel = forwardRef<
 export function Toolbar({ children }: { children: ReactNode }) {
   return (
     <header
-      className="ids-surface-toolbar z-topbar flex h-[var(--ids-foundation-layout-toolbar)] shrink-0 items-center gap-[var(--ids-foundation-space-2)] px-[var(--ids-foundation-space-3)] sm:gap-[var(--ids-foundation-space-3)] sm:px-[var(--ids-foundation-space-4)]"
+      className="ids-surface-toolbar z-topbar flex h-[var(--ids-foundation-layout-toolbar)] min-w-0 shrink-0 items-center gap-[var(--ids-foundation-space-2)] px-[var(--ids-foundation-space-3)] sm:gap-[var(--ids-foundation-space-3)] sm:px-[var(--ids-foundation-space-4)]"
       role="banner"
     >
       {children}
@@ -499,8 +499,8 @@ export function SwitcherBound({
     <div
       className={
         size === "sm"
-          ? "max-w-[var(--ids-foundation-layout-switcher-sm)]"
-          : "max-w-[var(--ids-foundation-layout-switcher-md)]"
+          ? "min-w-0 max-w-[min(30vw,var(--ids-foundation-layout-switcher-sm))] sm:max-w-[var(--ids-foundation-layout-switcher-sm)]"
+          : "min-w-0 max-w-[var(--ids-foundation-layout-switcher-md)]"
       }
     >
       {children}
@@ -518,7 +518,7 @@ export function PageRoot({
   return (
     <section
       data-venture-id={ventureId}
-      className="flex min-h-full flex-1 flex-col"
+      className="flex min-h-full min-w-0 flex-1 flex-col"
     >
       {children}
     </section>

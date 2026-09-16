@@ -63,7 +63,7 @@ describe("Venture definition registry", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").name, "Frigora");
     assert.equal(platformVentureRegistry.resolve("frigora").lifecycle, "concept");
     assert.equal(platformVentureRegistry.resolve("frigora").maturity, "experimental");
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.20.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /Customer, Site, Asset, WorkOrder/,
@@ -80,6 +80,10 @@ describe("Venture definition registry", () => {
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /F3\.1 Time & Materials customer charge/,
+    );
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /F3\.2 Mobile \/ PWA Delivery/,
     );
     assert.match(
       platformVentureRegistry.resolve("frigora").description,

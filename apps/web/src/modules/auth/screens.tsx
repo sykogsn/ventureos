@@ -34,6 +34,12 @@ import {
   signupAction,
   type AuthActionState,
 } from "@/modules/auth/actions";
+import {
+  FRIGORA_AUTH_ORIENTATION_RETURNING,
+  FRIGORA_AUTH_SIGN_IN_TITLE,
+  FRIGORA_AUTH_TRUST_NOTES,
+} from "@/modules/frigora/app/pwa/copy";
+import { isFrigoraAuthContinuation } from "@/modules/frigora/app/pwa/paths";
 
 function googleHref(next: string, remember: boolean) {
   const params = new URLSearchParams();
@@ -109,6 +115,7 @@ export function LoginScreen({
   const [remember, setRemember] = useState(false);
   const [state, formAction, pending] = useActionState(loginAction, {});
   const query = queryNotice(errorCode, error, next);
+  const frigora = isFrigoraAuthContinuation(next);
 
   useEffect(() => {
     const onPageShow = (event: PageTransitionEvent) => {
@@ -129,8 +136,14 @@ export function LoginScreen({
     <AuthSignInSection labelledBy="sign-in-title">
       <AuthHeading
         id="sign-in-title"
-        title="Sign in to VentureOS"
-        description={next ? AUTH_ORIENTATION_RETURNING : AUTH_ORIENTATION}
+        title={frigora ? FRIGORA_AUTH_SIGN_IN_TITLE : "Sign in to VentureOS"}
+        description={
+          frigora
+            ? FRIGORA_AUTH_ORIENTATION_RETURNING
+            : next
+              ? AUTH_ORIENTATION_RETURNING
+              : AUTH_ORIENTATION
+        }
       />
 
       {notice ? <AuthNotice tone="informative" title={notice} /> : null}
@@ -192,12 +205,14 @@ export function LoginScreen({
             {pending ? "Signing in…" : "Sign in"}
           </QuietButton>
         </AuthNativeForm>
-        <AuthMutedLine>
-          New to VentureOS? <TextLink href="/signup">Create account</TextLink>
-        </AuthMutedLine>
+        {frigora ? null : (
+          <AuthMutedLine>
+            New to VentureOS? <TextLink href="/signup">Create account</TextLink>
+          </AuthMutedLine>
+        )}
       </AuthMethodStack>
 
-      <AuthTrust />
+      <AuthTrust notes={frigora ? FRIGORA_AUTH_TRUST_NOTES : undefined} />
     </AuthSignInSection>
   );
 }

@@ -46,7 +46,7 @@ export function VisitEntryScreen({
         <dl className="grid gap-3">
           <div>
             <dt className="ids-caption text-muted">Site address</dt>
-            <dd className="ids-body">{siteAddress || "—"}</dd>
+            <dd className="ids-body break-words">{siteAddress || "—"}</dd>
           </div>
           <div>
             <dt className="ids-caption text-muted">Service window</dt>
@@ -67,7 +67,7 @@ export function VisitEntryScreen({
           ) : null}
           <div>
             <dt className="ids-caption text-muted">Reported condition</dt>
-            <dd className="ids-body whitespace-pre-wrap">
+            <dd className="ids-body whitespace-pre-wrap break-words">
               {workOrder.reportedCondition ?? "—"}
             </dd>
           </div>

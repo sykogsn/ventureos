@@ -855,7 +855,7 @@ describe("Frigora WorkOrder foundation", () => {
   });
 
   it("resolves frigora@0.10.0 from catalog", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.20.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /WorkOrder/,

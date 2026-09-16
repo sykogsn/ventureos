@@ -8,15 +8,24 @@ import {
   WorkspaceCanvas,
 } from "@/core/layout";
 
-export function ExecutiveLoading({ message }: { message: string }) {
+export function ExecutiveLoading({
+  message,
+  productName = "VentureOS",
+}: {
+  message: string;
+  /** Customer-facing product mark. Empty string = neutral (no product name). */
+  productName?: string;
+}) {
+  const announcement = productName ? `${productName}. ${message}` : message;
+
   return (
     <WorkspaceCanvas>
-      <div role="status" aria-live="polite" aria-busy="true">
+      <div role="status" aria-live="polite" aria-busy="true" aria-label={announcement}>
         <Stack gap="section">
           <HeaderRule>
             <Stack gap="compact">
               <Pulse height="3" width="majority" />
-              <p className="ids-kicker">VentureOS</p>
+              {productName ? <p className="ids-kicker">{productName}</p> : null}
               <p className="ids-label">{message}</p>
               <ReadingRegion size="sm">
                 <Pulse height="8" width="majority" />
@@ -59,7 +68,7 @@ export function ExecutiveLoading({ message }: { message: string }) {
               </SurfaceBody>
             </div>
           </Grid>
-          <span className="sr-only">{message}</span>
+          <span className="sr-only">{announcement}</span>
         </Stack>
       </div>
     </WorkspaceCanvas>

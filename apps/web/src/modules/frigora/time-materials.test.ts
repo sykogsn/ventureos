@@ -80,7 +80,7 @@ function ventureRow(input: {
     createdAt: NOW,
     updatedAt: NOW,
     definitionId: input.definitionId ?? "frigora",
-    definitionVersion: input.definitionVersion ?? "0.20.0",
+    definitionVersion: input.definitionVersion ?? "0.21.0",
     lifecycle: "operating",
   };
 }
@@ -685,9 +685,9 @@ describe("F3.1 time & materials customer charge", () => {
     assert.equal("quote" in summary, false);
   });
 
-  it("admits F3.1 T&M at frigora@0.20.0 and SCHEMA_GENERATION 26", () => {
+  it("admits F3.1 T&M at frigora@0.21.0 and SCHEMA_GENERATION 26", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.20.0");
+    assert.equal(frigora.version, "0.21.0");
     assert.match(frigora.description, /F3\.1/);
     assert.match(frigora.description, /ZAR cents|customer charge|Time & Materials/i);
     assert.match(frigora.description, /without inventory|inventory/);

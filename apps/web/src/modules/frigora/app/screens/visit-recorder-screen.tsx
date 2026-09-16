@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { PageFrame } from "@/core";
 import { Stack } from "@/core/layout";
+import { FieldWorkflowNav } from "@/modules/frigora/app/screens/field-workflow-nav";
 import { FinishVisitForm } from "@/modules/frigora/app/forms/finish-visit-form";
 import { RecordCorrectiveActionForm } from "@/modules/frigora/app/forms/record-corrective-action-form";
 import { RecordCustomerAcknowledgementForm } from "@/modules/frigora/app/forms/record-customer-acknowledgement-form";
@@ -18,17 +19,20 @@ import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
 import type { VisitRecorderView } from "@/modules/frigora/app/views";
 
 function Section({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: string;
   description: string;
   children: ReactNode;
 }) {
   return (
     <section
-      className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4"
+      id={id}
+      className="scroll-mt-[var(--ids-foundation-layout-toolbar)] rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4"
     >
       <Stack gap="compact">
         <div>
@@ -122,7 +126,7 @@ export function VisitRecorderScreen({
       meta={visit.status}
       ventureId={ctx.ventureId}
       actions={
-        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+        <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:items-end">
           <Link href={`/ventures/${ctx.ventureId}/work/assigned`} className="vos-btn-secondary">
             My Work
           </Link>
@@ -133,6 +137,7 @@ export function VisitRecorderScreen({
       }
     >
       <Stack gap="section">
+        <FieldWorkflowNav />
         {otherOpenVisits.length > 0 ? (
           <div className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4">
             <p className="ids-caption text-muted">
@@ -153,7 +158,10 @@ export function VisitRecorderScreen({
           </div>
         ) : null}
 
-        <dl className="grid gap-3 sm:grid-cols-2">
+        <dl
+          id="field-job"
+          className="grid scroll-mt-[var(--ids-foundation-layout-toolbar)] gap-3 sm:grid-cols-2"
+        >
           <div>
             <dt className="ids-caption text-muted">Visit status</dt>
             <dd className="ids-body">{visit.status}</dd>
@@ -172,7 +180,7 @@ export function VisitRecorderScreen({
           </div>
           <div className="sm:col-span-2">
             <dt className="ids-caption text-muted">Site address</dt>
-            <dd className="ids-body">{siteAddress || "—"}</dd>
+            <dd className="ids-body break-words">{siteAddress || "—"}</dd>
           </div>
           {asset ? (
             <div className="sm:col-span-2">
@@ -185,7 +193,7 @@ export function VisitRecorderScreen({
           ) : null}
           <div className="sm:col-span-2">
             <dt className="ids-caption text-muted">Reported condition</dt>
-            <dd className="ids-body whitespace-pre-wrap">
+            <dd className="ids-body whitespace-pre-wrap break-words">
               {workOrder.reportedCondition ?? "—"}
             </dd>
           </div>
@@ -204,6 +212,7 @@ export function VisitRecorderScreen({
         )}
 
         <Section
+          id="field-check"
           title="Observations & measurements"
           description="What was observed or measured."
         >
@@ -218,7 +227,11 @@ export function VisitRecorderScreen({
           {canRecord ? <RecordFieldCaptureForm {...formProps} /> : null}
         </Section>
 
-        <Section title="Technical findings" description="What the technician concluded.">
+        <Section
+          id="field-diagnose"
+          title="Technical findings"
+          description="What the technician concluded."
+        >
           <RecordList
             items={technicalFindings.map(
               (row) => `${row.findingKind}: ${row.description} (${row.assertedAt})`,
@@ -227,7 +240,11 @@ export function VisitRecorderScreen({
           {canRecord ? <RecordTechnicalFindingForm {...formProps} /> : null}
         </Section>
 
-        <Section title="Corrective actions" description="What was actually done.">
+        <Section
+          id="field-repair"
+          title="Corrective actions"
+          description="What was actually done."
+        >
           <RecordList
             items={correctiveActions.map(
               (row) => `${row.description} (${row.performedAt})`,
@@ -270,6 +287,7 @@ export function VisitRecorderScreen({
         </Section>
 
         <Section
+          id="field-prove"
           title="Visit outcome"
           description="What resulting operational state was true."
         >
@@ -412,7 +430,11 @@ export function VisitRecorderScreen({
           ) : null}
         </Section>
 
-        <Section title="Finish visit" description="Ends the visit attendance episode.">
+        <Section
+          id="field-finish"
+          title="Finish visit"
+          description="Ends the visit attendance episode."
+        >
           {canRecord ? (
             <FinishVisitForm
               workspaceId={ctx.workspaceId}

@@ -532,7 +532,7 @@ export function WorkDetailScreen({
           </div>
           <div>
             <dt className="ids-caption text-muted">Site</dt>
-            <dd className="ids-body">
+            <dd className="ids-body break-words">
               {site?.name ?? "—"}
               {siteAddress ? ` · ${siteAddress}` : ""}
             </dd>
@@ -553,7 +553,7 @@ export function WorkDetailScreen({
           </div>
           <div className="sm:col-span-2">
             <dt className="ids-caption text-muted">Reported condition</dt>
-            <dd className="ids-body whitespace-pre-wrap">
+            <dd className="ids-body whitespace-pre-wrap break-words">
               {workOrder.reportedCondition ?? "—"}
             </dd>
           </div>
@@ -727,20 +727,16 @@ export function WorkDetailScreen({
             </p>
           ) : null}
           {mayExecute && !latestOpen ? (
-            <Fit>
-              <Link href={`${workBase}/visit`} className="vos-btn-primary w-full sm:w-auto">
-                Start visit
-              </Link>
-            </Fit>
+            <Link href={`${workBase}/visit`} className="vos-btn-primary w-full sm:w-auto">
+              Start visit
+            </Link>
           ) : mayExecute && latestOpen ? (
-            <Fit>
-              <Link
-                href={`${workBase}/visit/${latestOpen.id}`}
-                className="vos-btn-primary w-full sm:w-auto"
-              >
-                Continue visit
-              </Link>
-            </Fit>
+            <Link
+              href={`${workBase}/visit/${latestOpen.id}`}
+              className="vos-btn-primary w-full sm:w-auto"
+            >
+              Continue visit
+            </Link>
           ) : isOpen && !workOrder.assignedUserId ? (
             <p className="ids-caption text-muted">
               Assign this work order before field execution.

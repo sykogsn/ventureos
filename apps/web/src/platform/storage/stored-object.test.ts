@@ -624,7 +624,7 @@ describe("Stored object platform", () => {
     const documents = createDocumentPort();
     assert.equal(await documents.get("doc-1" as never), null);
     assert.deepEqual(await documents.list({ workspaceId: "ws-1" as WorkspaceId }), []);
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.20.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
     const dbSource = await readFile(
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",

@@ -169,17 +169,20 @@ describe("F1.1 Office Work Spine", () => {
     assert.deepEqual(
       frigora.map((link) => link.label),
       [
-        "Company HQ",
-        "Executive Office",
         "Operations",
         "My Work",
         "Work",
         "Customers",
         "Catalogue",
-        "Documents",
-        "CRM",
-        "Finance",
       ],
+    );
+    assert.equal(
+      frigora.some((link) =>
+        ["Company HQ", "Executive Office", "Documents", "CRM", "Finance"].includes(
+          link.label,
+        ),
+      ),
+      false,
     );
 
     const company = buildVentureSurfaceLinks({
@@ -354,7 +357,7 @@ describe("F1.1 Office Work Spine", () => {
   });
 
   it("keeps the schema lock and ships F1.1 routes without runtime edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.20.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
     assert.match(dbSource, /SCHEMA_GENERATION = 26/);

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Button } from "@repo/ui/button";
 import { Field, Form, Stack } from "@/core/layout";
+import { FRIGORA_EVIDENCE_ONLINE_NOTE } from "@/modules/frigora/app/pwa/copy";
 import { FRIGORA_VISIT_EVIDENCE_CATEGORIES } from "@/modules/frigora/types";
 import {
   recordVisitEvidenceFormAction,
@@ -41,6 +42,7 @@ export function RecordVisitEvidenceForm({
       <Stack gap="tight">
         <p className="ids-caption text-muted">
           Evidence recorded here supports provenance and traceability only.
+          {` ${FRIGORA_EVIDENCE_ONLINE_NOTE}`}
         </p>
         <Field>
           Category
@@ -74,7 +76,7 @@ export function RecordVisitEvidenceForm({
             required
             accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
             capture="environment"
-            className="vos-field"
+            className="vos-field vos-file-field"
           />
         </Field>
         {state.error ? (

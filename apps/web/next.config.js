@@ -8,7 +8,38 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Service-Worker-Allowed",
+            value: "/",
+          },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/offline.html",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/frigora-manifest.webmanifest",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/((?!sw\\.js$|offline\\.html$|frigora-manifest\\.webmanifest$).*)",
         headers: [
           {
             key: "Cache-Control",

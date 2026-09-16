@@ -65,7 +65,7 @@ export function PageHeader({
               {kicker ? <p className="ids-kicker">{kicker}</p> : <span />}
               {meta ? <p className="ids-caption">{meta}</p> : null}
             </Cluster>
-            <h1 className="ids-display">{title}</h1>
+            <h1 className="ids-display break-words">{title}</h1>
             {lede ? <p className="ids-label text-foreground">{lede}</p> : null}
             {description ? (
               <p className="ids-body text-muted">{description}</p>

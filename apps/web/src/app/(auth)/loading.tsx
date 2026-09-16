@@ -1,5 +1,5 @@
-import { ExecutiveLoading } from "@/core/shell/executive-loading";
+import { FrigoraAwareAuthRouteLoading } from "@/modules/frigora/app/pwa/auth-route-loading";
 
 export default function AuthLoading() {
-  return <ExecutiveLoading message="Opening the desk..." />;
+  return <FrigoraAwareAuthRouteLoading />;
 }

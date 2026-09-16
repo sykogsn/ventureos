@@ -15,17 +15,25 @@ export function AuthIdentity({
   name?: string;
   mark?: string;
 }) {
+  if (!name && !mark) {
+    return null;
+  }
+
   return (
     <div className="flex items-center gap-2.5">
-      <span
-        aria-hidden="true"
-        className="inline-flex size-7 items-center justify-center rounded-md bg-text-primary text-[0.75rem] font-medium text-text-inverse"
-      >
-        {mark}
-      </span>
-      <span className="text-[0.9375rem] font-medium tracking-[-0.012em] text-text-primary">
-        {name}
-      </span>
+      {mark ? (
+        <span
+          aria-hidden="true"
+          className="inline-flex size-7 items-center justify-center rounded-md bg-text-primary text-[0.75rem] font-medium text-text-inverse"
+        >
+          {mark}
+        </span>
+      ) : null}
+      {name ? (
+        <span className="text-[0.9375rem] font-medium tracking-[-0.012em] text-text-primary">
+          {name}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -396,11 +404,11 @@ export function AuthMutedLine({ children }: { children: ReactNode }) {
   return <p className="text-[0.75rem] text-text-muted">{children}</p>;
 }
 
-export function AuthTrust() {
+export function AuthTrust({ notes }: { notes?: readonly string[] | string[] }) {
   return (
     <div className="space-y-3 pt-1">
       <span className="block h-px bg-border-subtle" aria-hidden="true" />
-      <TrustFootnote />
+      <TrustFootnote notes={notes ? [...notes] : undefined} />
     </div>
   );
 }

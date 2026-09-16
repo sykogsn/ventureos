@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, Search, Sparkles, X } from "lucide-react";
 import { useShell } from "@/core/context/shell-context";
 import { getAiRuntime } from "@/ai/runtime";
@@ -11,11 +13,40 @@ import { ThemeToggle } from "@/core/shell/theme-toggle";
 import { VentureSwitcher } from "@/core/shell/venture-switcher";
 import { WorkspaceSwitcher } from "@/core/shell/workspace-switcher";
 import { Cluster, Fill, Grow, Reveal, Toolbar, Trailing } from "@/core/layout";
+import { FRIGORA_PWA_NAME } from "@/modules/frigora/app/pwa/copy";
+import {
+  FRIGORA_PWA_START_PATH,
+  isFrigoraCustomerPath,
+} from "@/modules/frigora/app/pwa/paths";
 
 export function TopNav() {
+  const pathname = usePathname() ?? "";
+  const frigoraCustomer = isFrigoraCustomerPath(pathname);
   const { openPalette, isNavOpen, toggleNav } = useShell();
   const runtime = getAiRuntime();
   const runtimeLabel = aiRuntimeStatusLabel(runtime.status);
+
+  if (frigoraCustomer) {
+    return (
+      <Toolbar>
+        <Link
+          href={FRIGORA_PWA_START_PATH}
+          className="ids-kicker ids-transition text-foreground"
+        >
+          {FRIGORA_PWA_NAME}
+        </Link>
+        <Grow>
+          <span className="ids-caption text-muted truncate">
+            Field operations
+          </span>
+        </Grow>
+        <Trailing>
+          <ThemeToggle />
+          <ProfileMenu />
+        </Trailing>
+      </Toolbar>
+    );
+  }
 
   return (
     <Toolbar>
@@ -30,7 +61,9 @@ export function TopNav() {
         </IconButton>
       </Reveal>
       <WorkspaceSwitcher />
-      <VentureSwitcher />
+      <Reveal on="show-sm">
+        <VentureSwitcher />
+      </Reveal>
       <Grow>
         <Fill>
           <button
@@ -79,7 +112,9 @@ export function TopNav() {
             {runtimeLabel}
           </span>
         </Reveal>
-        <NotificationCenter />
+        <Reveal on="show-sm">
+          <NotificationCenter />
+        </Reveal>
         <ThemeToggle />
         <ProfileMenu />
       </Trailing>
