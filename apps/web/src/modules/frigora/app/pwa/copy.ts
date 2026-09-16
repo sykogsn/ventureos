@@ -25,20 +25,33 @@ export const FRIGORA_AUTH_LOADING_MESSAGE = "Opening Frigora...";
 
 export const FRIGORA_CONNECTIVITY_OFFLINE_TITLE = "No connection";
 export const FRIGORA_CONNECTIVITY_OFFLINE_BODY =
-  "Frigora is online-only. Field records are not stored on this device while you are disconnected. Do not continue operational work until you are back online.";
+  "Offline changes are not available in this release. If a workspace was preloaded on this device, you may view that information until the lease expires. Reconnect to refresh.";
 
 export const FRIGORA_CONNECTIVITY_RESTORED_TITLE = "Connection restored";
 export const FRIGORA_CONNECTIVITY_RESTORED_BODY =
-  "Continue in online mode. Earlier disconnected attempts were not queued and were not saved.";
+  "Continue in online mode. Reconnect refreshes live server data. Offline field changes are not available in this release.";
 
 export const FRIGORA_OFFLINE_PAGE_TITLE = "Frigora is offline";
 export const FRIGORA_OFFLINE_PAGE_BODY =
-  "This install cannot complete field work without a connection. Nothing is queued on this device for later sync. Reconnect, then continue the live job.";
+  "This install cannot open a new field session without a connection. Preloaded workspaces are available only from an already-open Frigora field session. Reconnect, then continue.";
 
 export const FRIGORA_EVIDENCE_ONLINE_NOTE =
   "Photos and files upload while you are connected. A disconnected attempt is not kept for later sync.";
 
-/** Queue-aware status copy for later packets — unused by F33-01 field forms. */
+/** F33-02 preload / read-only honesty copy. */
+export const FRIGORA_PRELOAD_STATUS_COPY = {
+  workspaceAvailable: "Workspace available on this device",
+  viewingPreloaded: "Viewing preloaded information",
+  reconnectToRefresh: "Reconnect to refresh",
+  offlineChangesUnavailable: "Offline changes are not available in this release",
+  leaseExpired: "Preloaded workspace lease expired — reconnect to refresh",
+  leaseMissing: "No preloaded workspace on this device",
+  preloadAction: "Preload my field workspace",
+  preloadSuccess: "Field workspace saved on this device for offline viewing",
+  preloadFailed: "Could not preload field workspace",
+} as const;
+
+/** Queue-aware status copy for later packets — unused by F33-02 field forms. */
 export const FRIGORA_OFFLINE_STATUS_COPY = {
   offline: "No connection",
   saved_on_device: "Saved on this device",

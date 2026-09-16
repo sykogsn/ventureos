@@ -12,6 +12,7 @@ import {
   formatWorkOrderStatusLabel,
 } from "@/modules/frigora/app/operational-derivations";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import { OfflineWorkOrderFallback } from "@/modules/frigora/app/offline/offline-fallback-panels";
 import { TimeMaterialsSection } from "@/modules/frigora/app/screens/time-materials-section";
 import {
   ATTENTION_SIGNAL_LABELS,
@@ -503,6 +504,13 @@ export function WorkDetailScreen({
       }
     >
       <Stack gap="section">
+        <OfflineWorkOrderFallback
+          partition={{
+            ventureId: ctx.ventureId,
+            actorUserId: ctx.sessionUserId,
+          }}
+          workOrderId={workOrder.id}
+        />
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="ids-caption text-muted">Status</dt>

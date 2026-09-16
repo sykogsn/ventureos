@@ -74,3 +74,7 @@ Independent running-product verification occurs **once** against the complete F3
 ## F33-01 foundation delivered
 
 Client IndexedDB database `frigora-offline` v1 with stores: `workspaces`, `outbox`, `evidence_blobs`, `receipts`, `leases`. Mutation envelopes, sync-state machine, lease helpers, commercial-field guard, pending-data/logout primitives, and queue-aware status helpers. Field forms remain online-only (`FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED = false`) preserving F3.2 honesty.
+
+## F33-02 preloaded read-only workspace
+
+Authenticated online preload builds field-safe snapshots from existing Frigora read loaders, commits them into IndexedDB, and issues/renews the 12-hour lease. In-session offline field surfaces may read those snapshots while the lease is active. Outbox/mutation capture remains disabled. Cold disconnected navigation still falls back to `/offline.html` without caching authenticated HTML.

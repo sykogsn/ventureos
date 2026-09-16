@@ -52,6 +52,31 @@ export {
 } from "./commercial-guard";
 
 export {
+  mapPartReferenceFieldSafe,
+  mapRefrigerantReferenceFieldSafe,
+  mapToFieldSafeOfflinePayload,
+  stripForbiddenCommercialFields,
+} from "./field-safe-mapper";
+
+export {
+  buildDraftFromMyWorkRow,
+  buildFieldWorkspacePreloadPackage,
+} from "./preload-build";
+export type {
+  FieldSafeWorkspaceDraft,
+  FieldWorkspacePreloadPackage,
+} from "./preload-build";
+
+export {
+  listAvailableOfflineWorkspaces,
+  readOfflineWorkspaceSnapshot,
+} from "./offline-read";
+export type {
+  OfflineWorkspaceReadResult,
+  OfflineWorkspaceReadStatus,
+} from "./offline-read";
+
+export {
   countPendingUnsyncedOperations,
   hasPendingUnsyncedWork,
   summarizeOfflineQueueStatus,

@@ -23,6 +23,7 @@ import {
   assertTransitionOfflineSyncState,
   transitionWithReceiptGuard,
 } from "./sync-state";
+import type { FieldSafeWorkspaceDraft } from "./preload-build";
 import {
   createClientOperationId,
   FRIGORA_LOGOUT_PENDING_POLICY,
@@ -111,6 +112,20 @@ export type FrigoraOfflineStore = {
   pendingUnsyncedCount(partition: FrigoraOfflinePartition): Promise<number>;
   hasPendingUnsynced(partition: FrigoraOfflinePartition): Promise<boolean>;
   logoutPendingPolicy(): LogoutPendingPolicy;
+
+  /**
+   * F33-02: persist field-safe drafts and issue/renew lease only after
+   * the authenticated preload package is ready to commit.
+   * Offline reads must not call this.
+   */
+  commitAuthenticatedPreload(
+    partition: FrigoraOfflinePartition,
+    drafts: FieldSafeWorkspaceDraft[],
+    options?: { nowMs?: number; asOf?: string; generation?: number },
+  ): Promise<{
+    lease: FrigoraOfflineLease;
+    snapshots: FrigoraOfflineWorkspaceSnapshot[];
+  }>;
 };
 
 function leaseKey(partition: FrigoraOfflinePartition): string {
@@ -331,6 +346,62 @@ function createStore(backend: FrigoraOfflineBackend): FrigoraOfflineStore {
 
     logoutPendingPolicy() {
       return FRIGORA_LOGOUT_PENDING_POLICY;
+    },
+
+    async commitAuthenticatedPreload(partition, drafts, options) {
+      const nowMs = options?.nowMs ?? Date.now();
+      const asOf = options?.asOf ?? new Date(nowMs).toISOString();
+      const generation = options?.generation ?? 1;
+      const lease = createOfflineLease(partition, { nowMs });
+      const snapshots: FrigoraOfflineWorkspaceSnapshot[] = drafts.map((draft) => {
+        const snapshot: FrigoraOfflineWorkspaceSnapshot = {
+          snapshotId: createId(),
+          ventureId: partition.ventureId,
+          actorUserId: partition.actorUserId,
+          workOrderId: draft.workOrderId,
+          visitId: draft.visitId,
+          asOf,
+          generation,
+          leaseId: lease.leaseId,
+          payload: draft.payload,
+        };
+        assertFieldSafeWorkspaceSnapshot(snapshot);
+        return snapshot;
+      });
+
+      const writes: Array<{
+        store: "leases" | "workspaces";
+        record: OfflineRecord;
+      }> = [
+        { store: "leases", record: { key: leaseKey(partition), ...lease } },
+        ...snapshots.map((snapshot) => ({
+          store: "workspaces" as const,
+          record: {
+            key: offlineWorkspaceKey(
+              partition,
+              snapshot.workOrderId,
+              // WO-scoped primary key for My Work / WO detail offline reads.
+              undefined,
+            ),
+            ...snapshot,
+          },
+        })),
+      ];
+
+      // Also index by visit when present for Visit Recorder lookup.
+      for (const snapshot of snapshots) {
+        if (!snapshot.visitId) continue;
+        writes.push({
+          store: "workspaces",
+          record: {
+            key: offlineWorkspaceKey(partition, snapshot.workOrderId, snapshot.visitId),
+            ...snapshot,
+          },
+        });
+      }
+
+      await backend.atomicPut(writes);
+      return { lease, snapshots };
     },
   };
 }

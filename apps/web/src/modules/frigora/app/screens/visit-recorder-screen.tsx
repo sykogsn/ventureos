@@ -16,6 +16,7 @@ import { RecordRefrigerantEventForm } from "@/modules/frigora/app/forms/record-r
 import { RecordTechnicalFindingForm } from "@/modules/frigora/app/forms/record-technical-finding-form";
 import { RecordVisitOutcomeForm } from "@/modules/frigora/app/forms/record-visit-outcome-form";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import { OfflineVisitFallback } from "@/modules/frigora/app/offline/offline-fallback-panels";
 import type { VisitRecorderView } from "@/modules/frigora/app/views";
 
 function Section({
@@ -137,6 +138,14 @@ export function VisitRecorderScreen({
       }
     >
       <Stack gap="section">
+        <OfflineVisitFallback
+          partition={{
+            ventureId: ctx.ventureId,
+            actorUserId: ctx.sessionUserId,
+          }}
+          workOrderId={workOrder.id}
+          visitId={visit.id}
+        />
         <FieldWorkflowNav />
         {otherOpenVisits.length > 0 ? (
           <div className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4">

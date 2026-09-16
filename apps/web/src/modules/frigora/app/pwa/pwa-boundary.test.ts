@@ -141,14 +141,14 @@ describe("Frigora F3.2 online PWA boundary", () => {
     }
     const offlineText = offline.replace(/\s+/g, " ");
     assert.match(offline, new RegExp(FRIGORA_OFFLINE_PAGE_TITLE));
-    assert.match(offline, /Nothing is queued/);
-    assert.match(offline, /Reconnect, then continue the live job/);
+    assert.match(offline, /already-open Frigora field session/);
+    assert.match(offline, /Reconnect, then continue/);
     assert.equal(offlineText.includes(FRIGORA_OFFLINE_PAGE_BODY), true);
   });
 
   it("does not imply disconnected mutations were saved and blocks them while offline", () => {
-    assert.match(FRIGORA_CONNECTIVITY_OFFLINE_BODY, /not stored on this device/);
-    assert.match(FRIGORA_CONNECTIVITY_RESTORED_BODY, /were not queued/);
+    assert.match(FRIGORA_CONNECTIVITY_OFFLINE_BODY, /Offline changes are not available/);
+    assert.match(FRIGORA_CONNECTIVITY_RESTORED_BODY, /Offline field changes are not available/);
     assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /not kept for later sync/);
     const banner = read("modules/frigora/app/pwa/connectivity-banner.tsx");
     const register = read("modules/frigora/app/pwa/register-service-worker.tsx");
