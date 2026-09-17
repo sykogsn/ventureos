@@ -12,9 +12,35 @@ Then read the permanent delivery law:
 
 [`docs/engineering/CONTROLLED_DELIVERY_PROTOCOL.md`](docs/engineering/CONTROLLED_DELIVERY_PROTOCOL.md)
 
-The default VentureOS delivery pipeline is:
+## Default AI engineering workflow
 
-`CONTROL → CURSOR BUILD → INDEPENDENT VERIFY → CURSOR FIX (only if needed) → NARROW INDEPENDENT RE-VERIFY → CONTROL CERTIFY`
+The default VentureOS engineering model is:
+
+```text
+CONTROL (GPT-5.6 Sol)
+  ↓
+ASTRA BUILD (GPT-6 Astra / Codex) — primary engineering executor
+  ↓
+CURSOR ADVERSARIAL REVIEW — when warranted by risk, complexity, or Control
+  ↓
+ASTRA CORRECTION — only if Control accepts a review finding
+  ↓
+INDEPENDENT VERIFY — for product-facing / high-risk behaviour
+  ↓
+NARROW RE-VERIFY — only when a proven defect was corrected
+  ↓
+CONTROL CERTIFY
+```
+
+For low-risk, routine work, Control may use the lean path:
+
+`CONTROL → ASTRA BUILD → AUTOMATED EVIDENCE → CONTROL CLOSE`
+
+For frontend/visual work, Lovable remains the preferred implementation owner when Control assigns that scope.
+
+### Permanent one-writer rule
+
+Only one implementation agent may own a candidate at a time. Astra and Cursor must not concurrently edit the same candidate or worktree. The default is that Astra builds and Cursor reviews read-only. Cursor may implement only when Control explicitly hands implementation ownership to Cursor for a named packet or correction. When ownership changes, the previous implementation agent stops.
 
 An implementation agent may work continuously inside its currently authorised packet, including routine repository inspection, scoped implementation, debugging, tests, typecheck, lint, build, and narrow local runtime checks needed by that packet. Do not create needless approval loops for routine safe work.
 
@@ -28,7 +54,7 @@ Do not repeatedly restart, reseed, rebuild, or rediscover a valid baseline merel
 
 Then open the [Engineering Index](docs/engineering/README.md) for the Foundation Runbook, architecture, coding standards, branch strategy, release process, and sprint process.
 
-Do not continue on an unhealthy foundation. Do not tell the founder a task is complete until it has been verified in the running application.
+Do not continue on an unhealthy foundation. Do not tell the founder a task is complete until it has been verified at the level required by the authorised packet.
 
 Customer-facing product identity is constitutional. Real customer deployments must present the Venture’s own branded login and application identity. Internal, development, and verification surfaces may keep a generic VentureOS shell. Do not assume every customer product should display VentureOS branding. Law: [`docs/PROJECT_CONSTITUTION.md`](docs/PROJECT_CONSTITUTION.md) (Customer-Facing Product Sovereignty), FD-007, ADR-010.
 

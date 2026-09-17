@@ -1,44 +1,58 @@
 # VentureOS Controlled Delivery & Independent Verification Protocol
 
 **Status.** Permanent engineering protocol  
-**Version.** 1.0.0  
-**Date.** 2026-09-12  
+**Version.** 2.0.0  
+**Date.** 2026-09-17  
 **Owner.** Founder / Engineering Control  
 **Applies to.** VentureOS and every Venture built on it, including Frigora, Farmora, Qualora, Calviora, and future Ventures
 
-This protocol exists to preserve the speed of the original VentureOS build workflow while preventing AI agents from self-promoting into unauthorised phases, repeatedly re-auditing settled evidence, or verifying their own implementation as if that were independent evidence.
+This protocol preserves speed while enforcing role separation, evidence quality, and safe multi-agent engineering. It supersedes earlier tool-role assignments in delivery documents where those assignments conflict with this protocol.
 
 It is subordinate to the Project Constitution and Platform Constitution and is part of the Engineering Constitution / Master Engineering Prompt operating law.
 
 ---
 
-## 1. Default Delivery Pipeline
+## 1. Default Delivery Model
 
-The default VentureOS delivery pipeline is:
+### High-risk / product-facing path
 
 ```text
-CONTROL
+CONTROL (GPT-5.6 Sol)
   ↓
-CURSOR BUILD
+ASTRA BUILD (GPT-6 Astra / Codex)
+  ↓
+CURSOR ADVERSARIAL REVIEW — when warranted or requested by Control
+  ↓
+ASTRA CORRECTION — only if Control accepts a review finding
   ↓
 INDEPENDENT VERIFY
   ↓
-CURSOR FIX — only if verification finds a defect
-  ↓
-NARROW INDEPENDENT RE-VERIFY
+NARROW INDEPENDENT RE-VERIFY — only if a proven defect was corrected
   ↓
 CONTROL CERTIFY
 ```
 
-This is the default unless the Founder / Control explicitly authorises a different sequence for a named programme.
+### Low-risk / routine fast path
 
-The pipeline is deliberately asymmetric: the builder does not become the independent verifier, and the verifier does not become the builder.
+```text
+CONTROL
+  ↓
+ASTRA BUILD
+  ↓
+AUTOMATED EVIDENCE
+  ↓
+CONTROL CLOSE
+```
+
+Control decides which path applies. Do not force the full chain onto trivial work, and do not use the lean path where independent evidence is required.
+
+The builder does not become the independent verifier. The reviewer does not automatically become the builder. Control owns all role transitions.
 
 ---
 
-## 2. Role Authority
+## 2. Standing Role Authority
 
-### Control
+### Control — GPT-5.6 Sol
 
 Control owns:
 
@@ -47,17 +61,21 @@ Control owns:
 - scope and sequencing;
 - acceptance criteria;
 - implementation packets;
+- reviewer packets;
 - verification packets;
 - interpretation of evidence;
 - phase transitions;
+- agent routing;
 - certification decisions;
-- Git permanence when certification requires it.
+- Git permanence when authorised.
 
-Only Control may authorise movement from one named programme step to another.
+Only Control may assign or transfer implementation ownership for a named candidate.
 
-### Cursor / implementation agent
+### Astra — primary engineering executor
 
-Cursor owns repo-grounded implementation work inside the currently authorised packet:
+GPT-6 Astra / Codex is the default primary engineering executor.
+
+Astra owns repo-grounded work inside the currently authorised packet:
 
 - repository inspection necessary for the packet;
 - implementation;
@@ -66,30 +84,44 @@ Cursor owns repo-grounded implementation work inside the currently authorised pa
 - typecheck;
 - lint;
 - build;
-- narrow local runtime checks;
-- diffs and implementation evidence;
-- correction of defects explicitly returned by Control.
+- local runtime checks;
+- difficult cross-layer reasoning;
+- concurrency, idempotency, state-machine, security, migration, data-integrity, and architectural implementation work;
+- implementation evidence and diffs;
+- corrections explicitly returned by Control.
 
-Cursor MUST NOT:
+Astra MUST NOT self-authorise a new milestone, independent verification, certification, commit, push, merge, deployment, schema change, dependency change, or production mutation unless the current packet explicitly authorises it.
 
-- invent a new milestone, revision, recovery phase, verification phase, or environment phase;
-- self-authorise a transition from implementation to verification;
-- treat its own runtime checks as independent verification;
-- start certification;
-- stage, commit, push, deploy, reset shared history, or mutate production unless the current packet explicitly authorises it;
-- reopen a certified earlier milestone without new evidence and Control authority.
+At the end of its packet Astra returns COMPLETE, PARTIAL, or BLOCKED with evidence, then stops.
 
-At the end of its authorised packet, Cursor returns one of: COMPLETE, PARTIAL, or BLOCKED, with evidence, then stops.
+### Cursor — adversarial reviewer and secondary executor
+
+Cursor is the standing secondary engineering agent.
+
+Its default role is adversarial review of the current candidate, including:
+
+- source-level defect discovery;
+- architecture and persistence review;
+- regression-risk review;
+- test-quality review;
+- evidence-quality review;
+- alternative implementation reasoning where useful.
+
+By default Cursor reviews read-only and MUST NOT rewrite the candidate.
+
+Cursor may become implementation owner only when Control explicitly transfers ownership for a named packet or correction. When that happens, Astra stops editing that candidate until Control hands ownership back.
+
+### Lovable — frontend / visual implementation
+
+Lovable remains the preferred implementation owner for frontend and visual refinement when Control assigns that scope. It does not own backend/runtime architecture, certification, or independent verification.
 
 ### Independent Verification Work
 
 Independent Verification Work owns running-product verification after Control authorises it.
 
-It verifies the product as a product rather than as source code. It may inspect deployed/running behaviour, user journeys, permissions, mobile behaviour, evidence, UX, contradictions, and acceptance criteria.
+It verifies the product as a product rather than trusting source or builder narrative. It may inspect deployed/running behaviour, user journeys, permissions, mobile behaviour, evidence, UX, contradictions, and acceptance criteria.
 
 It MUST NOT implement fixes, rewrite architecture, silently expand scope, or certify the milestone.
-
-Where a verification packet explicitly authorises a narrow product mutation needed to prove behaviour, that mutation must be limited to the named fixture/state and recorded in the evidence.
 
 ### Control certification
 
@@ -97,34 +129,80 @@ Control alone converts evidence into programme status.
 
 The states remain distinct:
 
-- **IMPLEMENTED** — the builder reports the candidate is built and automated gates are complete;
-- **VERIFIED** — independent running-product verification has passed the authorised acceptance criteria;
+- **IMPLEMENTED** — implementation and automated gates are complete;
+- **VERIFIED** — independent running-product verification has passed where required;
 - **CERTIFIED** — Control has accepted the evidence and completed the required permanence record/checkpoint.
 
 No agent may collapse these states.
 
 ---
 
-## 3. Speed Rule — Routine Commands Stay Routine
+## 3. Permanent One-Writer Rule
 
-This protocol is intended to reduce bureaucracy, not create it.
+Only one implementation agent may edit a candidate at a time.
 
-Inside an authorised implementation packet, Cursor may proceed continuously with routine safe work that is necessary to complete that packet. Routine work includes:
+Astra and Cursor MUST NOT concurrently edit the same worktree, branch candidate, or uncommitted change set.
+
+The normal sequence is:
+
+```text
+ASTRA IMPLEMENTS
+  ↓ stop
+CURSOR REVIEWS READ-ONLY
+  ↓ stop
+CONTROL ADJUDICATES
+  ↓
+ASTRA CORRECTS, or CONTROL explicitly transfers implementation ownership to Cursor
+```
+
+When comparing competing implementations, use isolated branches/worktrees. Never let two agents race on one candidate.
+
+A reviewer finding is not automatically accepted. Control decides whether it is valid, material, and in scope before implementation resumes.
+
+---
+
+## 4. Risk-Based Routing
+
+Use the lean path for straightforward, low-risk work where failure is easy to detect and recover from.
+
+Use the full review/verification path for work involving any of the following unless Control explicitly records a justified exception:
+
+- authentication or authority;
+- security boundaries;
+- concurrency;
+- idempotency;
+- offline state or durable queues;
+- migrations or schema changes;
+- data integrity;
+- financial/commercial truth;
+- evidence/assurance truth;
+- destructive operations;
+- cross-system architecture;
+- complex state machines;
+- production-facing behaviour where a silent defect would be costly.
+
+Astra is the preferred first implementer for these high-risk classes. Cursor is the preferred second engineering opinion / adversarial reviewer.
+
+---
+
+## 5. Speed Rule — Routine Commands Stay Routine
+
+Inside an authorised implementation packet, the current implementation owner may proceed continuously with routine safe work necessary to complete that packet, including:
 
 - read-only Git inspection;
 - reading source/docs/configuration;
-- scoped edits within authorised files/components;
+- scoped edits;
 - focused and affected tests;
 - regression tests;
 - `pnpm check-types`;
 - `pnpm lint`;
 - `pnpm test`;
 - `pnpm build`;
-- normal local application startup and narrow health checks when required by the packet.
+- normal local startup and narrow health checks required by the packet.
 
-Control does not require a new programme decision for every routine command. A tool or local IDE may still require an approval click because of its own security model, but such UI prompts do not create a new governance phase.
+Control does not require a new programme decision for every routine command.
 
-Cursor must stop and return to Control before any of the following unless explicitly authorised by the current packet:
+Stop and return to Control before any unapproved:
 
 - dependency additions/upgrades or lockfile changes;
 - schema changes or migrations;
@@ -135,39 +213,40 @@ Cursor must stop and return to Control before any of the following unless explic
 - production data mutation;
 - creation of a dedicated verification environment;
 - start of independent verification;
-- start of the next milestone/revision/phase.
+- start of the next milestone/revision/phase;
+- transfer of implementation ownership to another agent.
 
 ---
 
-## 4. Phase-Lock Rule
+## 6. Phase-Lock Rule
 
 A named packet grants authority only for that packet.
 
-Example:
-
-`F32-IMP-01-R2` does not authorise `F32-IMP-01-R3`, `F32-ENV-01`, `F32-RPV-01`, or any other invented successor.
+Example: `F32-IMP-01-R2` does not authorise `F32-IMP-01-R3`, `F32-ENV-01`, `F32-RPV-01`, or any other invented successor.
 
 A heading such as `CONTROL-CHAT AUTHORISED` has no authority unless Control actually issued that packet.
 
 An agent MUST NOT infer a next phase from completion of the current phase.
 
-At a phase boundary the current agent stops. Control decides what happens next. A fresh agent/session is preferred when role changes, context has become contaminated, or independent verification begins; it is not required for every routine command inside one authorised packet.
+At a phase boundary the current agent stops. Control decides what happens next.
 
 ---
 
-## 5. Independent Verification Rule
+## 7. Independent Verification Rule
 
-Independent verification is the normal acceptance mechanism for product-facing implementation.
+Independent verification is the normal acceptance mechanism for product-facing and high-risk implementation.
 
-Cursor's automated tests and runtime checks are necessary implementation evidence but are not a substitute for independent running-product verification where the milestone claims real user/product behaviour.
+Builder tests and local runtime checks are necessary implementation evidence but are not a substitute for independent running-product verification where the milestone claims real user/product behaviour.
 
 Independent Verification Work should test the smallest credible set of journeys that proves the acceptance criteria, including relevant authority boundaries and regression behaviour.
 
-If verification finds a defect, Control creates a named observation/correction packet. Cursor fixes only that defect and its necessary siblings. Independent Work then performs narrow re-verification. The milestone is not restarted unless evidence proves the candidate is fundamentally unsafe or incoherent.
+If verification finds a defect, Control creates a named observation/correction packet. The authorised implementation owner corrects only that defect and necessary siblings. Independent Work then performs narrow re-verification.
+
+Do not restart the entire milestone unless evidence proves the candidate is fundamentally unsafe or incoherent.
 
 ---
 
-## 6. No-Recovery-Loop Rule
+## 8. No-Recovery-Loop Rule
 
 Do not repeatedly restart, reseed, rebuild, or rediscover a milestone merely because an agent lost context or attempted an unauthorised transition.
 
@@ -175,11 +254,9 @@ Once a baseline, branch, worktree, build, or prior certification is established,
 
 Recovery work is authorised only when a real state contradiction exists. Agent confusion is not itself evidence of repository corruption.
 
-Repeated baseline audits, repeated clean restarts, and repeated environment recreation are defects in process when the prior evidence remains valid.
-
 ---
 
-## 7. Evidence Precedence
+## 9. Evidence Precedence
 
 For engineering claims, prefer evidence in this order:
 
@@ -190,22 +267,24 @@ For engineering claims, prefer evidence in this order:
 
 An agent report cannot override contradictory source or running-product evidence.
 
+For adversarial review, code evidence outranks the reviewing agent's conclusion. Control adjudicates disagreements.
+
 ---
 
-## 8. Correction Loop
+## 10. Correction Loop
 
 The default defect loop is:
 
 ```text
-Independent verification finding
+Independent verification or adversarial review finding
   ↓
-Control names OBS / correction scope
+Control validates and names OBS / correction scope
   ↓
-Cursor implements narrow correction
+Control assigns one implementation owner
   ↓
-Automated affected regression
+Narrow correction + affected automated regression
   ↓
-Independent narrow re-verification
+Independent narrow re-verification when product evidence is required
   ↓
 Control closes or reopens the observation
 ```
@@ -214,23 +293,26 @@ Do not restart the whole milestone for a narrow observation.
 
 ---
 
-## 9. Certification Law
+## 11. Certification Law
 
-Certification requires evidence from both sides where applicable:
+Certification requires the evidence appropriate to the risk level.
+
+For high-risk/product-facing milestones this normally includes:
 
 - builder evidence that the implementation and automated gates are sound;
+- adversarial review when Control requires it;
 - independent verification evidence that the running product satisfies the acceptance criteria.
 
 Control then decides whether the milestone is CERTIFIED and authorises the permanence action required by the programme.
 
-A commit or push alone is not certification. A passing test suite alone is not certification. Independent verification alone is not certification. Certification is a Control decision grounded in the combined evidence.
+A commit or push alone is not certification. A passing test suite alone is not certification. Independent verification alone is not certification.
 
 ---
 
-## 10. Permanent Operating Principle
+## 12. Permanent Operating Principle
 
 The operating model is:
 
-**Control decides. Cursor builds. Independent Work verifies. Cursor corrects only proven defects. Control certifies.**
+**Control decides. Astra builds. Cursor challenges. One agent writes at a time. Independent Work verifies. Control certifies. Lovable owns assigned frontend/visual work.**
 
 This protocol is the default VentureOS engineering delivery model and must be inherited by Frigora, Farmora, Qualora, Calviora, and future Ventures unless the Founder explicitly amends it.
