@@ -1,8 +1,8 @@
 # VentureOS Master Engineering Prompt
 
 **Status.** Permanent engineering constitution of VentureOS  
-**Version.** 1.2.0  
-**Date.** 2026-09-12  
+**Version.** 1.3.0  
+**Date.** 2026-09-17  
 **Owner.** Engineering  
 **Applies to.** Every sprint, implementation, review, refactor, and bug fix on VentureOS, Qualora, Calviora, Farmora, Frigora, and every future Venture on this OS  
 **Index.** [Engineering Index](./README.md)  
@@ -30,7 +30,8 @@ The [Engineering Constitution](./ENGINEERING_CONSTITUTION.md) remains the VES li
 | Scalability first | Prefer the change that still holds when the desk, the Ventures, and the team grow. Do not solve only for the file in front of you. |
 | Security by default | Fail closed at auth, capability, definition, and secret boundaries. Do not commit secrets. Do not swallow redirect or schema errors. |
 | Testability by default | New behaviour is proven at the layer it belongs to. A change that cannot be verified is not done. |
-| Separation of duties | Control decides; Cursor builds; Independent Verification Work verifies; Control certifies. |
+| Separation of duties | Control decides; Astra builds by default; Cursor adversarially reviews or implements only when Control assigns ownership; Independent Verification Work verifies; Control certifies. |
+| One writer at a time | Astra and Cursor must not concurrently edit the same candidate. Control owns implementation handoff. |
 | Speed without bureaucracy | Routine safe work inside an authorised packet proceeds continuously. Only material scope/risk/permanence transitions return to Control. |
 
 These principles are standing law. They are not optional inside a feature crunch.
@@ -67,21 +68,37 @@ If the running process disagrees with source, treat the running process as a fir
 
 ## 3. Controlled Delivery Roles and Phase Lock
 
-The default delivery pipeline is:
+The default high-risk / product-facing delivery pipeline is:
 
-`CONTROL → CURSOR BUILD → INDEPENDENT VERIFY → CURSOR FIX (only if needed) → NARROW INDEPENDENT RE-VERIFY → CONTROL CERTIFY`
+`CONTROL → ASTRA BUILD → CURSOR ADVERSARIAL REVIEW (when warranted) → ASTRA CORRECTION (only if Control accepts a finding) → INDEPENDENT VERIFY → NARROW INDEPENDENT RE-VERIFY (if needed) → CONTROL CERTIFY`
+
+The default low-risk fast path is:
+
+`CONTROL → ASTRA BUILD → AUTOMATED EVIDENCE → CONTROL CLOSE`
+
+Control decides which path applies.
 
 ### Control
 
-Control owns architecture, scope, sequencing, acceptance criteria, implementation packets, verification packets, interpretation of evidence, phase transitions, and certification.
+Control owns architecture, scope, sequencing, acceptance criteria, implementation packets, review packets, verification packets, interpretation of evidence, agent routing, phase transitions, and certification.
 
-### Cursor / implementation agent
+### Astra / primary implementation agent
 
-Cursor owns repo-grounded implementation inside the currently authorised packet. It may inspect, implement, debug, run automated tests, typecheck, lint, build, and perform narrow local runtime checks required by that packet.
+GPT-6 Astra / Codex is the default primary engineering executor. Astra owns repo-grounded implementation inside the currently authorised packet. It may inspect, implement, debug, run automated tests, typecheck, lint, build, and perform narrow local runtime checks required by that packet.
 
-A named packet grants authority only for that packet. Cursor MUST NOT infer or invent the next revision or phase. Completion of `IMP` does not authorise `R3`, `ENV`, `RPV`, certification, commit, push, PR, release, deployment, schema changes, dependency changes, or production mutation.
+A named packet grants authority only for that packet. Astra MUST NOT infer or invent the next revision or phase. Completion of `IMP` does not authorise a successor revision, environment phase, independent verification, certification, commit, push, PR, release, deployment, schema changes, dependency changes, or production mutation unless the current packet explicitly grants that authority.
 
-At the end of its packet Cursor returns COMPLETE, PARTIAL, or BLOCKED with evidence and stops.
+At the end of its packet Astra returns COMPLETE, PARTIAL, or BLOCKED with evidence and stops.
+
+### Cursor / adversarial reviewer and secondary implementation agent
+
+Cursor's default role is read-only adversarial review of the current candidate. It may inspect source, tests, persistence, architecture, diffs, evidence, and regression risk and report concrete findings to Control.
+
+Cursor MUST NOT modify Astra's active candidate during review. Cursor becomes implementation owner only when Control explicitly transfers ownership for a named packet or correction. When ownership changes, the previous implementation agent stops editing that candidate.
+
+### Lovable
+
+Lovable remains the preferred implementation owner for frontend and visual refinement when Control explicitly assigns that scope.
 
 ### Independent Verification Work
 
@@ -97,7 +114,7 @@ Control alone converts the evidence into authoritative state. IMPLEMENTED, VERIF
 
 Do not turn ordinary engineering into an approval-by-screenshot loop.
 
-Inside an authorised implementation packet, routine safe work may proceed continuously, including:
+Inside an authorised implementation packet, the current implementation owner may proceed continuously with routine safe work, including:
 
 - read-only Git inspection;
 - reading source/docs/configuration;
@@ -123,7 +140,8 @@ Stop and return to Control before any unapproved:
 - production data mutation;
 - dedicated verification environment creation;
 - independent verification start;
-- successor milestone/revision/phase.
+- successor milestone/revision/phase;
+- implementation ownership transfer to another agent.
 
 ---
 
@@ -137,6 +155,8 @@ Stop and return to Control before any unapproved:
 - Never bypass validation.
 - Never self-promote from one named packet to another.
 - Never treat agent confusion as repository corruption.
+- Never allow two implementation agents to edit the same candidate concurrently.
+- Use isolated branches/worktrees for comparative or benchmark implementations.
 
 Further standing rules:
 
@@ -179,7 +199,7 @@ Every sprint must pass the gates that apply to its work. An implementation sprin
 | Application startup | Next.js starts cleanly when the product/runtime claim requires it. |
 | Regression checks | Prior certified behaviour still holds. Locked layers were not silently amended. |
 
-For product-facing milestones, automated gates are followed by independent running-product verification unless Control explicitly records a justified exception.
+For product-facing and high-risk milestones, automated gates are followed by independent running-product verification unless Control explicitly records a justified exception.
 
 Do not commit on a failed gate. Do not skip a gate because the change “looks small.” Documentation-only sprints skip application implementation and product verification; they do not skip accuracy, registration, or founder approval to commit.
 
@@ -191,13 +211,14 @@ Independent verification tests the running product rather than trusting the buil
 
 If verification passes, return the evidence to Control.
 
-If verification finds a defect:
+If adversarial review or independent verification finds a defect:
 
-1. Control creates a named OBS / correction scope.
-2. Cursor corrects only the proven defect and necessary siblings.
-3. Cursor runs affected automated regression.
-4. Independent Work performs narrow re-verification.
-5. Control closes or reopens the observation.
+1. Control validates the finding and creates a named OBS / correction scope.
+2. Control assigns exactly one implementation owner.
+3. The implementation owner corrects only the proven defect and necessary siblings.
+4. The implementation owner runs affected automated regression.
+5. Independent Work performs narrow re-verification when product evidence is required.
+6. Control closes or reopens the observation.
 
 Do not restart the entire milestone for a narrow observation unless evidence proves the candidate fundamentally unsafe or incoherent.
 
@@ -211,6 +232,7 @@ Do not restart the entire milestone for a narrow observation unless evidence pro
 - Push frequently once Control/founder has asked to publish, so verified work is not trapped on one machine.
 - Never lose work. Do not rewrite shared history. Do not force-push `main`.
 - Protect `main`. No unverified land. No Foundation amendment hidden inside a feature branch.
+- Comparative implementation work must use isolated branches/worktrees.
 
 Do not commit secrets, local databases, or `.next` artefacts. Tags and GitHub Releases are not automatic with a push. Release only when the Release Process and the founder require it.
 
@@ -260,11 +282,11 @@ Remaining risks, including unverified surfaces, stale processes, and incomplete 
 
 ### Validation Results
 
-Automated gates and independent running-product verification are reported separately. Each is passed, skipped with reason, failed, or not established.
+Automated gates, adversarial review, and independent running-product verification are reported separately where applicable. Each is passed, skipped with reason, failed, or not established.
 
 ### Recommended Next Step
 
-Exactly one recommendation. The builder may recommend; it may not self-authorise the next phase.
+Exactly one recommendation. The builder or reviewer may recommend; it may not self-authorise the next phase.
 
 ---
 
@@ -274,6 +296,6 @@ Never tell the founder a task is complete until the required evidence exists.
 
 A passing test suite is not a substitute for independent running-product verification when the milestone claims real product behaviour. A generated file is not healthy until the application that consumes it starts cleanly where runtime health is part of the claim. A commit is not completion. A push is not completion. A statement in chat is not completion.
 
-No implementation agent may promote itself into the next named programme phase. Only Control authorises phase transitions and certification.
+No implementation or review agent may promote itself into the next named programme phase. Only Control authorises phase transitions, implementation ownership transfers, and certification.
 
 Completion is a verified running system, or — for a documentation-only sprint — a registered document the founder can read in the tree.
