@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { shouldBlockFrigoraFieldMutation } from "@/modules/frigora/app/pwa/connectivity";
+import { isFrigoraOfflineCaptureOperationAllowed } from "@/modules/frigora/app/offline/capture-gate";
 import {
   FRIGORA_CONNECTIVITY_OFFLINE_BODY,
   FRIGORA_CONNECTIVITY_OFFLINE_TITLE,
@@ -56,6 +57,13 @@ export function FrigoraConnectivityBanner() {
     }
     document.documentElement.setAttribute("data-frigora-offline", "true");
     const onSubmit = (event: Event) => {
+      const target = event.target;
+      if (target instanceof HTMLFormElement) {
+        const allowed = target.getAttribute("data-frigora-offline-capture");
+        if (allowed && isFrigoraOfflineCaptureOperationAllowed(allowed)) {
+          return;
+        }
+      }
       event.preventDefault();
       event.stopPropagation();
     };

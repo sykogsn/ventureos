@@ -23,6 +23,18 @@ describe("Frigora F3.2 connectivity", () => {
     );
     assert.equal(shouldBlockFrigoraFieldMutation(false, "/dashboard"), false);
     assert.equal(shouldBlockFrigoraFieldMutation(false, "/login"), false);
+    assert.equal(
+      shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/assigned", {
+        operationType: "recordTechnicalFinding",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/assigned", {
+        operationType: "recordPartUsage",
+      }),
+      true,
+    );
   });
 
   it("does not claim saved-on-device without durable pending operations", () => {

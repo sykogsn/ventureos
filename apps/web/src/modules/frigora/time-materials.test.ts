@@ -696,6 +696,6 @@ describe("F3.1 time & materials customer charge", () => {
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 26/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 27/);
   });
 });

@@ -429,7 +429,7 @@ describe("F3.0 structured catalogues", () => {
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 26/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 27/);
   });
 
   it("preserves added ≠ leaked and rejects leaked kind", async () => {

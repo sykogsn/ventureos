@@ -117,6 +117,10 @@ export function VisitRecorderScreen({
     visitId: visit.id,
     primaryAssetId,
   };
+  const technicalFindingFormProps = {
+    ...formProps,
+    actorUserId: ctx.sessionUserId,
+  };
 
   return (
     <PageFrame
@@ -246,7 +250,7 @@ export function VisitRecorderScreen({
               (row) => `${row.findingKind}: ${row.description} (${row.assertedAt})`,
             )}
           />
-          {canRecord ? <RecordTechnicalFindingForm {...formProps} /> : null}
+          {canRecord ? <RecordTechnicalFindingForm {...technicalFindingFormProps} /> : null}
         </Section>
 
         <Section

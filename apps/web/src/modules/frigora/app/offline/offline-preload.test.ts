@@ -246,6 +246,9 @@ describe("Frigora F33-02 preloaded read-only workspace", () => {
       shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/wo-1/visit/vis-1"),
       true,
     );
-    assert.match(FRIGORA_PRELOAD_STATUS_COPY.offlineChangesUnavailable, /not available/i);
+    assert.match(
+      FRIGORA_PRELOAD_STATUS_COPY.offlineChangesUnavailable,
+      /technical findings may be saved locally/i,
+    );
   });
 });

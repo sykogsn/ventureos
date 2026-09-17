@@ -3,15 +3,16 @@ import {
   FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED,
   type FrigoraOfflineQueueStatus,
 } from "@/modules/frigora/app/offline";
+import { isFrigoraOfflineCaptureOperationAllowed } from "@/modules/frigora/app/offline/capture-gate";
 
 /**
- * F3.2 honesty retained through F33-01:
- * field form mutations remain blocked while offline until later packets
- * actually enqueue durable operations.
+ * Field form mutations remain blocked offline unless an operation-specific
+ * F33-03 allowlist entry applies. Global capture flag stays false.
  */
 export function shouldBlockFrigoraFieldMutation(
   online: boolean,
   pathname: string,
+  options?: { operationType?: string },
 ): boolean {
   if (online) {
     return false;
@@ -19,7 +20,12 @@ export function shouldBlockFrigoraFieldMutation(
   if (!isFrigoraFieldPath(pathname)) {
     return false;
   }
-  // F33-01 foundation only — business forms are not yet offline-capable.
+  if (
+    options?.operationType &&
+    isFrigoraOfflineCaptureOperationAllowed(options.operationType)
+  ) {
+    return false;
+  }
   if (!FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED) {
     return true;
   }

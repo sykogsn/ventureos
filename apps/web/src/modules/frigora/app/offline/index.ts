@@ -24,6 +24,12 @@ export type {
 } from "./types";
 
 export {
+  FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST,
+  isFrigoraOfflineCaptureOperationAllowed,
+} from "./capture-gate";
+export type { FrigoraOfflineCaptureAllowedOperation } from "./capture-gate";
+
+export {
   assertTransitionOfflineSyncState,
   canTransitionOfflineSyncState,
   isPendingSyncAttention,
@@ -96,3 +102,20 @@ export {
   openFrigoraOfflineStore,
 } from "./store";
 export type { FrigoraOfflineStore } from "./store";
+
+export {
+  FRIGORA_TECHNICAL_FINDING_OPERATION,
+  captureTechnicalFindingOffline,
+  createTechnicalFindingClientOperationId,
+  listTechnicalFindingMutations,
+} from "./technical-finding-capture";
+export type {
+  CaptureTechnicalFindingOfflineInput,
+  TechnicalFindingLocalPayload,
+} from "./technical-finding-capture";
+
+export {
+  applyTechnicalFindingLocalSubmitOutcome,
+  prepareTechnicalFindingExplicitRetry,
+} from "./technical-finding-local-outcome";
+export type { TechnicalFindingLocalSubmitOutcome } from "./technical-finding-local-outcome";

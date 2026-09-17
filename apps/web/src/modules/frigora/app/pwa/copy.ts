@@ -25,11 +25,11 @@ export const FRIGORA_AUTH_LOADING_MESSAGE = "Opening Frigora...";
 
 export const FRIGORA_CONNECTIVITY_OFFLINE_TITLE = "No connection";
 export const FRIGORA_CONNECTIVITY_OFFLINE_BODY =
-  "Offline changes are not available in this release. If a workspace was preloaded on this device, you may view that information until the lease expires. Reconnect to refresh.";
+  "Most field changes still require a connection. Technical findings may be saved on this device when a preloaded workspace lease is active. Reconnect enables explicit submission — reconnect alone does not submit.";
 
 export const FRIGORA_CONNECTIVITY_RESTORED_TITLE = "Connection restored";
 export const FRIGORA_CONNECTIVITY_RESTORED_BODY =
-  "Continue in online mode. Reconnect refreshes live server data. Offline field changes are not available in this release.";
+  "Continue in online mode. Pending technical findings on this device stay local until you explicitly submit them. Reconnect alone does not change server records.";
 
 export const FRIGORA_OFFLINE_PAGE_TITLE = "Frigora is offline";
 export const FRIGORA_OFFLINE_PAGE_BODY =
@@ -43,7 +43,8 @@ export const FRIGORA_PRELOAD_STATUS_COPY = {
   workspaceAvailable: "Workspace available on this device",
   viewingPreloaded: "Viewing preloaded information",
   reconnectToRefresh: "Reconnect to refresh",
-  offlineChangesUnavailable: "Offline changes are not available in this release",
+  offlineChangesUnavailable:
+    "Most offline field changes remain unavailable; technical findings may be saved locally when leased",
   leaseExpired: "Preloaded workspace lease expired — reconnect to refresh",
   leaseMissing: "No preloaded workspace on this device",
   preloadAction: "Preload my field workspace",
@@ -51,7 +52,21 @@ export const FRIGORA_PRELOAD_STATUS_COPY = {
   preloadFailed: "Could not preload field workspace",
 } as const;
 
-/** Queue-aware status copy for later packets — unused by F33-02 field forms. */
+/** F33-03 technical-finding local/server honesty. */
+export const FRIGORA_TECHNICAL_FINDING_STATUS_COPY = {
+  offlineCaptureHint:
+    "Saved findings stay on this device until you reconnect and explicitly submit them.",
+  savedOnDevice: "Saved on this device",
+  notYetSubmitted: "Not yet submitted",
+  readyToSubmit: "Ready to submit",
+  submitting: "Submitting",
+  acceptedByServer: "Accepted by server",
+  blocked: "Submission blocked — sign in again, then retry",
+  conflict: "Server did not accept this finding",
+  retryable: "Submission failed — you can retry",
+} as const;
+
+/** Queue-aware status copy. */
 export const FRIGORA_OFFLINE_STATUS_COPY = {
   offline: "No connection",
   saved_on_device: "Saved on this device",

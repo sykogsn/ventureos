@@ -369,6 +369,37 @@ export type RecordTechnicalFindingInput = {
   sourceFieldCaptureIds?: string[];
 };
 
+/** F33-03 server receipt for an accepted client operation. */
+export type FrigoraClientOperationReceiptId = string & {
+  readonly __brand: "FrigoraClientOperationReceiptId";
+};
+
+export type FrigoraClientOperationReceipt = {
+  id: FrigoraClientOperationReceiptId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  actorUserId: UserId;
+  clientOperationId: string;
+  operationType: "recordTechnicalFinding";
+  workOrderId: FrigoraWorkOrderId;
+  visitId: FrigoraVisitId | null;
+  requestFingerprint: string;
+  acceptedEntityId: string;
+  acceptedAt: string;
+  createdAt: string;
+};
+
+export type SubmitClientTechnicalFindingInput = RecordTechnicalFindingInput & {
+  clientOperationId: string;
+  workOrderId: string;
+};
+
+export type SubmitClientTechnicalFindingResult = {
+  finding: FrigoraTechnicalFinding;
+  receipt: FrigoraClientOperationReceipt;
+  duplicate: boolean;
+};
+
 export type FrigoraCorrectiveAction = {
   id: FrigoraCorrectiveActionId;
   workspaceId: WorkspaceId;

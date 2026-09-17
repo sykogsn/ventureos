@@ -658,6 +658,35 @@ export const frigoraTechnicalFindings = sqliteTable(
   ],
 );
 
+/** F33-03 authoritative server receipt for idempotent client operations. */
+export const frigoraClientOperationReceipts = sqliteTable(
+  "frigora_client_operation_receipts",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    clientOperationId: text("client_operation_id").notNull(),
+    operationType: text("operation_type").notNull(),
+    workOrderId: text("work_order_id").notNull(),
+    visitId: text("visit_id"),
+    requestFingerprint: text("request_fingerprint").notNull(),
+    acceptedEntityId: text("accepted_entity_id").notNull(),
+    acceptedAt: text("accepted_at").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_client_operation_receipts_venture_client_op_idx").on(
+      table.ventureId,
+      table.clientOperationId,
+    ),
+    index("frigora_client_operation_receipts_workspace_venture_idx").on(
+      table.workspaceId,
+      table.ventureId,
+    ),
+  ],
+);
+
 export const frigoraCorrectiveActions = sqliteTable(
   "frigora_corrective_actions",
   {
@@ -982,6 +1011,7 @@ export const schema = {
   frigoraVisits,
   frigoraFieldCaptures,
   frigoraTechnicalFindings,
+  frigoraClientOperationReceipts,
   frigoraCorrectiveActions,
   frigoraVisitOutcomes,
   frigoraRecommendedActions,

@@ -5,7 +5,8 @@ import { issueDomainAuthorizedMutation } from "@/platform/storage/domain-authori
 import { StoredObjectError } from "@/platform/storage/errors";
 import { findStoredObjectById } from "@/platform/storage/metadata";
 import { getPersistence } from "@/platform/persistence/repositories";
-import { FrigoraError } from "./errors";
+import { FrigoraError, isFrigoraError } from "./errors";
+import { fingerprintTechnicalFindingRequest } from "./client-operation-fingerprint";
 import { createFrigoraStore, type FrigoraStore } from "./store";
 import type {
   AssignWorkOrderInput,
@@ -35,6 +36,10 @@ import type {
   FrigoraTechnicalFinding,
   FrigoraTechnicalFindingId,
   RecordTechnicalFindingInput,
+  FrigoraClientOperationReceipt,
+  FrigoraClientOperationReceiptId,
+  SubmitClientTechnicalFindingInput,
+  SubmitClientTechnicalFindingResult,
   FrigoraCorrectiveAction,
   FrigoraCorrectiveActionId,
   RecordCorrectiveActionInput,
@@ -275,6 +280,15 @@ export type FrigoraService = {
     visitId: FrigoraVisitId,
     input: RecordTechnicalFindingInput,
   ): Promise<FrigoraTechnicalFinding>;
+  /**
+   * F33-03: explicit online acceptance of a locally captured technical finding.
+   * Idempotent on (ventureId, clientOperationId) with request fingerprint enforcement.
+   */
+  submitClientTechnicalFinding(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: SubmitClientTechnicalFindingInput,
+  ): Promise<SubmitClientTechnicalFindingResult>;
   getTechnicalFinding(
     scope: FrigoraScope,
     id: FrigoraTechnicalFindingId,
@@ -1428,50 +1442,110 @@ export function createFrigoraService(options: {
       return store.listFieldCapturesByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async recordTechnicalFinding(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
-      const visit = await requireVisit(store, scope, visitId);
-      assertVisitAcceptsTechnicalFinding(visit);
-      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
-      const authority = await assertWorkOrderOperationalAccess(
+      const row = await prepareTechnicalFindingRow(
+        store,
         await permissionService(),
         scope,
-        workOrder,
+        visitId,
+        input,
       );
-      const parsed = parseWithFrigora(recordTechnicalFindingSchema, input);
-      assertAssertedAtWithinVisit(visit, parsed.assertedAt);
-      const recordedByUserId = parsed.userId as UserId;
-      assertAssignedEngineerActorIdentity(authority, scope, recordedByUserId);
-      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
-      const assetId = await resolveFieldCaptureAsset(
-        store,
-        scope,
-        workOrder,
-        parsed.assetId === undefined ? null : parsed.assetId,
-      );
-      const sourceFieldCaptureIds = await resolveSourceFieldCaptureIds(
-        store,
-        scope,
-        visit,
-        parsed.sourceFieldCaptureIds,
-      );
-      const now = nowIso();
-      const row: FrigoraTechnicalFinding = {
-        id: createId<FrigoraTechnicalFindingId>(),
-        workspaceId: visit.workspaceId,
-        ventureId: visit.ventureId,
-        visitId: visit.id,
-        workOrderId: visit.workOrderId,
-        assetId,
-        findingKind: parsed.findingKind,
-        description: parsed.description,
-        sourceFieldCaptureIds,
-        assertedAt: parsed.assertedAt,
-        recordedByUserId,
-        createdAt: now,
-        updatedAt: now,
-      };
       await store.insertTechnicalFinding(row);
       return row;
+    },
+    async submitClientTechnicalFinding(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
+      if (!input.clientOperationId || input.clientOperationId.trim().length === 0) {
+        throw new FrigoraError("invalid_input", "clientOperationId is required.");
+      }
+      const clientOperationId = input.clientOperationId.trim();
+      const workOrderIdInput = input.workOrderId?.trim();
+      if (!workOrderIdInput) {
+        throw new FrigoraError("invalid_input", "workOrderId is required.");
+      }
+
+      const fingerprint = fingerprintTechnicalFindingRequest({
+        ventureId: scope.ventureId,
+        actorUserId: scope.userId,
+        workOrderId: workOrderIdInput,
+        visitId,
+        findingKind: input.findingKind,
+        description: input.description,
+        assertedAt: input.assertedAt,
+        userId: input.userId,
+        assetId: input.assetId,
+        sourceFieldCaptureIds: input.sourceFieldCaptureIds,
+      });
+
+      const existingReceipt = await store.findClientOperationReceipt(
+        scope.ventureId,
+        clientOperationId,
+      );
+      if (existingReceipt) {
+        return resolveExistingClientTechnicalFindingAcceptance({
+          store,
+          scope,
+          visitId,
+          workOrderId: workOrderIdInput,
+          clientOperationId,
+          fingerprint,
+          receipt: existingReceipt,
+        });
+      }
+
+      const row = await prepareTechnicalFindingRow(
+        store,
+        await permissionService(),
+        scope,
+        visitId,
+        input,
+      );
+      if (row.workOrderId !== workOrderIdInput) {
+        throw new FrigoraError(
+          "invalid_input",
+          "workOrderId does not match the visit work order.",
+        );
+      }
+
+      const now = nowIso();
+      const receipt: FrigoraClientOperationReceipt = {
+        id: createId<FrigoraClientOperationReceiptId>(),
+        workspaceId: row.workspaceId,
+        ventureId: row.ventureId,
+        actorUserId: scope.userId,
+        clientOperationId,
+        operationType: "recordTechnicalFinding",
+        workOrderId: row.workOrderId,
+        visitId: row.visitId,
+        requestFingerprint: fingerprint,
+        acceptedEntityId: row.id,
+        acceptedAt: now,
+        createdAt: now,
+      };
+
+      try {
+        await store.insertTechnicalFindingWithClientOperationReceipt(row, receipt);
+        return { finding: row, receipt, duplicate: false };
+      } catch (error) {
+        if (isFrigoraError(error) && error.code === "duplicate") {
+          const raced = await store.findClientOperationReceipt(
+            scope.ventureId,
+            clientOperationId,
+          );
+          if (!raced) {
+            throw error;
+          }
+          return resolveExistingClientTechnicalFindingAcceptance({
+            store,
+            scope,
+            visitId,
+            workOrderId: workOrderIdInput,
+            clientOperationId,
+            fingerprint,
+            receipt: raced,
+          });
+        }
+        throw error;
+      }
     },
     async getTechnicalFinding(scope, id) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -3457,6 +3531,101 @@ function assertVisitAcceptsTechnicalFinding(visit: FrigoraVisit) {
       "Technical findings cannot be recorded against a cancelled visit.",
     );
   }
+}
+
+async function prepareTechnicalFindingRow(
+  store: FrigoraStore,
+  permissions: PermissionService,
+  scope: FrigoraScope,
+  visitId: FrigoraVisitId,
+  input: RecordTechnicalFindingInput,
+): Promise<FrigoraTechnicalFinding> {
+  await assertFrigoraAccess(permissions, scope, "venture.read");
+  const visit = await requireVisit(store, scope, visitId);
+  assertVisitAcceptsTechnicalFinding(visit);
+  const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+  const authority = await assertWorkOrderOperationalAccess(permissions, scope, workOrder);
+  const parsed = parseWithFrigora(recordTechnicalFindingSchema, input);
+  assertAssertedAtWithinVisit(visit, parsed.assertedAt);
+  const recordedByUserId = parsed.userId as UserId;
+  assertAssignedEngineerActorIdentity(authority, scope, recordedByUserId);
+  await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+  const assetId = await resolveFieldCaptureAsset(
+    store,
+    scope,
+    workOrder,
+    parsed.assetId === undefined ? null : parsed.assetId,
+  );
+  const sourceFieldCaptureIds = await resolveSourceFieldCaptureIds(
+    store,
+    scope,
+    visit,
+    parsed.sourceFieldCaptureIds,
+  );
+  const now = nowIso();
+  return {
+    id: createId<FrigoraTechnicalFindingId>(),
+    workspaceId: visit.workspaceId,
+    ventureId: visit.ventureId,
+    visitId: visit.id,
+    workOrderId: visit.workOrderId,
+    assetId,
+    findingKind: parsed.findingKind,
+    description: parsed.description,
+    sourceFieldCaptureIds,
+    assertedAt: parsed.assertedAt,
+    recordedByUserId,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+async function resolveExistingClientTechnicalFindingAcceptance(input: {
+  store: FrigoraStore;
+  scope: FrigoraScope;
+  visitId: FrigoraVisitId;
+  workOrderId: string;
+  clientOperationId: string;
+  fingerprint: string;
+  receipt: FrigoraClientOperationReceipt;
+}): Promise<SubmitClientTechnicalFindingResult> {
+  const { store, scope, visitId, workOrderId, fingerprint, receipt } = input;
+  if (receipt.actorUserId !== scope.userId) {
+    throw new FrigoraError(
+      "forbidden",
+      "Client operation receipt belongs to a different actor partition.",
+    );
+  }
+  if (receipt.operationType !== "recordTechnicalFinding") {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously used for a different operation type.",
+    );
+  }
+  if (receipt.visitId !== visitId || receipt.workOrderId !== workOrderId) {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously accepted for a different visit or work order.",
+    );
+  }
+  if (receipt.requestFingerprint !== fingerprint) {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously accepted with a different request fingerprint.",
+    );
+  }
+  const finding = await store.findTechnicalFinding(
+    scope.workspaceId,
+    scope.ventureId,
+    receipt.acceptedEntityId as FrigoraTechnicalFindingId,
+  );
+  if (!finding) {
+    throw new FrigoraError(
+      "not_found",
+      "Authoritative receipt exists but accepted technical finding was not found.",
+    );
+  }
+  return { finding, receipt, duplicate: true };
 }
 
 function assertVisitAcceptsCorrectiveAction(visit: FrigoraVisit) {

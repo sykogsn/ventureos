@@ -4,6 +4,7 @@ export type FrigoraErrorCode =
   | "not_frigora"
   | "archived_parent"
   | "duplicate"
+  | "idempotency_conflict"
   | "invalid_input"
   | "invalid_status"
   | "invalid_kind"
