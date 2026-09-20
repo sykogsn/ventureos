@@ -6,7 +6,12 @@ import { StoredObjectError } from "@/platform/storage/errors";
 import { findStoredObjectById } from "@/platform/storage/metadata";
 import { getPersistence } from "@/platform/persistence/repositories";
 import { FrigoraError, isFrigoraError } from "./errors";
-import { fingerprintTechnicalFindingRequest } from "./client-operation-fingerprint";
+import {
+  fingerprintFieldCaptureRequest,
+  fingerprintTechnicalFindingRequest,
+  fingerprintVisitEvidenceRequest,
+  sha256HexOfBytes,
+} from "./client-operation-fingerprint";
 import { createFrigoraStore, type FrigoraStore } from "./store";
 import type {
   AssignWorkOrderInput,
@@ -40,6 +45,10 @@ import type {
   FrigoraClientOperationReceiptId,
   SubmitClientTechnicalFindingInput,
   SubmitClientTechnicalFindingResult,
+  SubmitClientFieldCaptureInput,
+  SubmitClientFieldCaptureResult,
+  SubmitClientVisitEvidenceInput,
+  SubmitClientVisitEvidenceResult,
   FrigoraCorrectiveAction,
   FrigoraCorrectiveActionId,
   RecordCorrectiveActionInput,
@@ -289,6 +298,24 @@ export type FrigoraService = {
     visitId: FrigoraVisitId,
     input: SubmitClientTechnicalFindingInput,
   ): Promise<SubmitClientTechnicalFindingResult>;
+  /**
+   * F33-04: explicit online acceptance of a locally captured field capture.
+   * Idempotent on (ventureId, clientOperationId) with request fingerprint enforcement.
+   */
+  submitClientFieldCapture(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: SubmitClientFieldCaptureInput,
+  ): Promise<SubmitClientFieldCaptureResult>;
+  /**
+   * F33-04: explicit online acceptance of locally captured visit evidence bytes.
+   * Idempotent on (ventureId, clientOperationId); identical replay must not create a second StoredObject.
+   */
+  submitClientVisitEvidence(
+    scope: FrigoraScope,
+    visitId: FrigoraVisitId,
+    input: SubmitClientVisitEvidenceInput,
+  ): Promise<SubmitClientVisitEvidenceResult>;
   getTechnicalFinding(
     scope: FrigoraScope,
     id: FrigoraTechnicalFindingId,
@@ -1349,53 +1376,112 @@ export function createFrigoraService(options: {
       return store.listVisitsByAttendingUser(scope.workspaceId, scope.ventureId, userId);
     },
     async recordFieldCapture(scope, visitId, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
-      const visit = await requireVisit(store, scope, visitId);
-      assertVisitAcceptsFieldCapture(visit);
-      const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
-      const authority = await assertWorkOrderOperationalAccess(
+      const row = await prepareFieldCaptureRow(
+        store,
         await permissionService(),
         scope,
-        workOrder,
+        visitId,
+        input,
       );
-      const parsed = parseWithFrigora(recordFieldCaptureSchema, input);
-      assertObservedAtWithinVisit(visit, parsed.observedAt);
-      const capturedByUserId = parsed.userId as UserId;
-      assertAssignedEngineerActorIdentity(authority, scope, capturedByUserId);
-      await requireWorkspaceMember(scope.workspaceId, capturedByUserId);
-      const assetId = await resolveFieldCaptureAsset(
-        store,
-        scope,
-        workOrder,
-        parsed.assetId === undefined ? null : parsed.assetId,
-      );
-      const now = nowIso();
-      const row: FrigoraFieldCapture = {
-        id: createId<FrigoraFieldCaptureId>(),
-        workspaceId: visit.workspaceId,
-        ventureId: visit.ventureId,
-        visitId: visit.id,
-        workOrderId: visit.workOrderId,
-        assetId,
-        captureKind: parsed.captureKind,
-        captureCode: parsed.captureCode,
-        valueNumeric:
-          parsed.captureKind === "measurement" ? (parsed.valueNumeric as number) : null,
-        valueUnit:
-          parsed.captureKind === "measurement"
-            ? (parsed.valueUnit as FrigoraFieldCapture["valueUnit"])
-            : null,
-        description:
-          parsed.captureKind === "condition"
-            ? (parsed.description as string)
-            : (parsed.description ?? null),
-        observedAt: parsed.observedAt,
-        capturedByUserId,
-        createdAt: now,
-        updatedAt: now,
-      };
       await store.insertFieldCapture(row);
       return row;
+    },
+    async submitClientFieldCapture(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
+      if (!input.clientOperationId || input.clientOperationId.trim().length === 0) {
+        throw new FrigoraError("invalid_input", "clientOperationId is required.");
+      }
+      const clientOperationId = input.clientOperationId.trim();
+      const workOrderIdInput = input.workOrderId?.trim();
+      if (!workOrderIdInput) {
+        throw new FrigoraError("invalid_input", "workOrderId is required.");
+      }
+
+      const fingerprint = fingerprintFieldCaptureRequest({
+        ventureId: scope.ventureId,
+        actorUserId: scope.userId,
+        workOrderId: workOrderIdInput,
+        visitId,
+        captureKind: input.captureKind,
+        captureCode: input.captureCode,
+        valueNumeric: input.valueNumeric,
+        valueUnit: input.valueUnit,
+        description: input.description,
+        observedAt: input.observedAt,
+        userId: input.userId,
+        assetId: input.assetId,
+      });
+
+      const existingReceipt = await store.findClientOperationReceipt(
+        scope.ventureId,
+        clientOperationId,
+      );
+      if (existingReceipt) {
+        return resolveExistingClientFieldCaptureAcceptance({
+          store,
+          scope,
+          visitId,
+          workOrderId: workOrderIdInput,
+          clientOperationId,
+          fingerprint,
+          receipt: existingReceipt,
+        });
+      }
+
+      const row = await prepareFieldCaptureRow(
+        store,
+        await permissionService(),
+        scope,
+        visitId,
+        input,
+      );
+      if (row.workOrderId !== workOrderIdInput) {
+        throw new FrigoraError(
+          "invalid_input",
+          "workOrderId does not match the visit work order.",
+        );
+      }
+
+      const now = nowIso();
+      const receipt: FrigoraClientOperationReceipt = {
+        id: createId<FrigoraClientOperationReceiptId>(),
+        workspaceId: row.workspaceId,
+        ventureId: row.ventureId,
+        actorUserId: scope.userId,
+        clientOperationId,
+        operationType: "recordFieldCapture",
+        workOrderId: row.workOrderId,
+        visitId: row.visitId,
+        requestFingerprint: fingerprint,
+        acceptedEntityId: row.id,
+        acceptedAt: now,
+        createdAt: now,
+      };
+
+      try {
+        await store.insertFieldCaptureWithClientOperationReceipt(row, receipt);
+        return { capture: row, receipt, duplicate: false };
+      } catch (error) {
+        if (isFrigoraError(error) && error.code === "duplicate") {
+          const raced = await store.findClientOperationReceipt(
+            scope.ventureId,
+            clientOperationId,
+          );
+          if (!raced) {
+            throw error;
+          }
+          return resolveExistingClientFieldCaptureAcceptance({
+            store,
+            scope,
+            visitId,
+            workOrderId: workOrderIdInput,
+            clientOperationId,
+            fingerprint,
+            receipt: raced,
+          });
+        }
+        throw error;
+      }
     },
     async getFieldCapture(scope, id) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -2628,6 +2714,164 @@ export function createFrigoraService(options: {
         throw error;
       }
     },
+    async submitClientVisitEvidence(scope, visitId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
+      if (!input.clientOperationId || input.clientOperationId.trim().length === 0) {
+        throw new FrigoraError("invalid_input", "clientOperationId is required.");
+      }
+      const clientOperationId = input.clientOperationId.trim();
+      const workOrderIdInput = input.workOrderId?.trim();
+      if (!workOrderIdInput) {
+        throw new FrigoraError("invalid_input", "workOrderId is required.");
+      }
+      if (!(input.body instanceof Uint8Array) || input.body.byteLength === 0) {
+        throw new FrigoraError("invalid_input", "Evidence body bytes are required.");
+      }
+
+      const contentSha256 = sha256HexOfBytes(input.body);
+      const fingerprint = fingerprintVisitEvidenceRequest({
+        ventureId: scope.ventureId,
+        actorUserId: scope.userId,
+        workOrderId: workOrderIdInput,
+        visitId,
+        category: input.category,
+        description: input.description,
+        originalFilename: input.originalFilename,
+        mimeType: input.mimeType,
+        byteLength: input.body.byteLength,
+        contentSha256,
+        userId: input.userId,
+        assetId: input.assetId,
+      });
+
+      const existingReceipt = await store.findClientOperationReceipt(
+        scope.ventureId,
+        clientOperationId,
+      );
+      if (existingReceipt) {
+        return resolveExistingClientVisitEvidenceAcceptance({
+          store,
+          scope,
+          visitId,
+          workOrderId: workOrderIdInput,
+          fingerprint,
+          receipt: existingReceipt,
+        });
+      }
+
+      const visit = await requireVisit(store, scope, visitId);
+      assertVisitAcceptsVisitEvidence(visit);
+      requireOpenVisitForEvidence(visit);
+      const workOrder = await requireOpenWorkOrder(store, scope, visit.workOrderId);
+      if (workOrder.id !== workOrderIdInput) {
+        throw new FrigoraError(
+          "invalid_input",
+          "workOrderId does not match the visit work order.",
+        );
+      }
+      const authority = await assertWorkOrderOperationalAccess(
+        await permissionService(),
+        scope,
+        workOrder,
+      );
+      const parsed = parseWithFrigora(recordVisitEvidenceWithFileSchema, {
+        category: input.category,
+        description: input.description,
+        userId: input.userId,
+        assetId: input.assetId,
+        body: input.body,
+        originalFilename: input.originalFilename,
+        mimeType: input.mimeType,
+      });
+      const recordedByUserId = parsed.userId as UserId;
+      assertAssignedEngineerActorIdentity(authority, scope, recordedByUserId);
+      await requireWorkspaceMember(scope.workspaceId, recordedByUserId);
+      const assetId = await resolveVisitEvidenceAsset(
+        store,
+        scope,
+        workOrder,
+        parsed.assetId === undefined ? null : parsed.assetId,
+      );
+
+      const storedObjectInput = {
+        idempotency: { key: `frigora:recordVisitEvidence:${clientOperationId}`, requestFingerprint: fingerprint },
+        scope: { workspaceId: scope.workspaceId, ventureId: scope.ventureId },
+        actorUserId: scope.userId,
+        activeWorkspaceId: scope.workspaceId,
+        body: parsed.body,
+        originalFilename: parsed.originalFilename,
+        mimeType: parsed.mimeType,
+      };
+      const assignedAuthority =
+        authority === "assigned_engineer"
+          ? assignedWorkOrderStorageAuthority(workOrder.id)
+          : null;
+      const storedMetadata = assignedAuthority
+        ? await getPlatform().storedObjects.storeForDomain({
+            ...storedObjectInput,
+            authority: assignedAuthority,
+          })
+        : await getPlatform().storedObjects.store(storedObjectInput);
+
+      try {
+        const now = nowIso();
+        const evidence: FrigoraVisitEvidence = {
+          id: createId<FrigoraVisitEvidenceId>(),
+          workspaceId: visit.workspaceId,
+          ventureId: visit.ventureId,
+          visitId: visit.id,
+          workOrderId: workOrder.id,
+          assetId,
+          storedObjectId: storedMetadata.id,
+          category: parsed.category,
+          description: parsed.description ?? null,
+          capturedAt: now,
+          recordedByUserId,
+          createdAt: now,
+          removedAt: null,
+          originalFilename: storedMetadata.originalFilename,
+          mimeType: storedMetadata.mimeType,
+          sizeBytes: storedMetadata.sizeBytes,
+        };
+        const receipt: FrigoraClientOperationReceipt = {
+          id: createId<FrigoraClientOperationReceiptId>(),
+          workspaceId: evidence.workspaceId,
+          ventureId: evidence.ventureId,
+          actorUserId: scope.userId,
+          clientOperationId,
+          operationType: "recordVisitEvidence",
+          workOrderId: evidence.workOrderId,
+          visitId: evidence.visitId,
+          requestFingerprint: fingerprint,
+          acceptedEntityId: evidence.id,
+          acceptedAt: now,
+          createdAt: now,
+        };
+        await store.insertVisitEvidenceWithClientOperationReceipt(evidence, receipt);
+        return { evidence, receipt, duplicate: false };
+      } catch (error) {
+        // Keep the durable reserved object for same-operation retry. It may already
+        // belong to a concurrent accepted receipt; deleting it would corrupt that evidence.
+        if (isFrigoraError(error) && error.code === "duplicate") {
+          const raced = await store.findClientOperationReceipt(
+            scope.ventureId,
+            clientOperationId,
+          );
+          if (!raced) {
+            throw error;
+          }
+          return resolveExistingClientVisitEvidenceAcceptance({
+            store,
+            scope,
+            visitId,
+            workOrderId: workOrderIdInput,
+            fingerprint,
+            receipt: raced,
+          });
+        }
+        throw error;
+      }
+    },
     async linkVisitEvidence(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
       const visit = await requireVisit(store, scope, visitId);
@@ -3626,6 +3870,151 @@ async function resolveExistingClientTechnicalFindingAcceptance(input: {
     );
   }
   return { finding, receipt, duplicate: true };
+}
+
+async function prepareFieldCaptureRow(
+  store: FrigoraStore,
+  permissions: PermissionService,
+  scope: FrigoraScope,
+  visitId: FrigoraVisitId,
+  input: RecordFieldCaptureInput,
+): Promise<FrigoraFieldCapture> {
+  await assertFrigoraAccess(permissions, scope, "venture.read");
+  const visit = await requireVisit(store, scope, visitId);
+  assertVisitAcceptsFieldCapture(visit);
+  const workOrder = await requireWorkOrder(store, scope, visit.workOrderId);
+  const authority = await assertWorkOrderOperationalAccess(permissions, scope, workOrder);
+  const parsed = parseWithFrigora(recordFieldCaptureSchema, input);
+  assertObservedAtWithinVisit(visit, parsed.observedAt);
+  const capturedByUserId = parsed.userId as UserId;
+  assertAssignedEngineerActorIdentity(authority, scope, capturedByUserId);
+  await requireWorkspaceMember(scope.workspaceId, capturedByUserId);
+  const assetId = await resolveFieldCaptureAsset(
+    store,
+    scope,
+    workOrder,
+    parsed.assetId === undefined ? null : parsed.assetId,
+  );
+  const now = nowIso();
+  return {
+    id: createId<FrigoraFieldCaptureId>(),
+    workspaceId: visit.workspaceId,
+    ventureId: visit.ventureId,
+    visitId: visit.id,
+    workOrderId: visit.workOrderId,
+    assetId,
+    captureKind: parsed.captureKind,
+    captureCode: parsed.captureCode,
+    valueNumeric:
+      parsed.captureKind === "measurement" ? (parsed.valueNumeric as number) : null,
+    valueUnit:
+      parsed.captureKind === "measurement"
+        ? (parsed.valueUnit as FrigoraFieldCapture["valueUnit"])
+        : null,
+    description:
+      parsed.captureKind === "condition"
+        ? (parsed.description as string)
+        : (parsed.description ?? null),
+    observedAt: parsed.observedAt,
+    capturedByUserId,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+async function resolveExistingClientFieldCaptureAcceptance(input: {
+  store: FrigoraStore;
+  scope: FrigoraScope;
+  visitId: FrigoraVisitId;
+  workOrderId: string;
+  clientOperationId: string;
+  fingerprint: string;
+  receipt: FrigoraClientOperationReceipt;
+}): Promise<SubmitClientFieldCaptureResult> {
+  const { store, scope, visitId, workOrderId, fingerprint, receipt } = input;
+  if (receipt.actorUserId !== scope.userId) {
+    throw new FrigoraError(
+      "forbidden",
+      "Client operation receipt belongs to a different actor partition.",
+    );
+  }
+  if (receipt.operationType !== "recordFieldCapture") {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously used for a different operation type.",
+    );
+  }
+  if (receipt.visitId !== visitId || receipt.workOrderId !== workOrderId) {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously accepted for a different visit or work order.",
+    );
+  }
+  if (receipt.requestFingerprint !== fingerprint) {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously accepted with a different request fingerprint.",
+    );
+  }
+  const capture = await store.findFieldCapture(
+    scope.workspaceId,
+    scope.ventureId,
+    receipt.acceptedEntityId as FrigoraFieldCaptureId,
+  );
+  if (!capture) {
+    throw new FrigoraError(
+      "not_found",
+      "Authoritative receipt exists but accepted field capture was not found.",
+    );
+  }
+  return { capture, receipt, duplicate: true };
+}
+
+async function resolveExistingClientVisitEvidenceAcceptance(input: {
+  store: FrigoraStore;
+  scope: FrigoraScope;
+  visitId: FrigoraVisitId;
+  workOrderId: string;
+  fingerprint: string;
+  receipt: FrigoraClientOperationReceipt;
+}): Promise<SubmitClientVisitEvidenceResult> {
+  const { store, scope, visitId, workOrderId, fingerprint, receipt } = input;
+  if (receipt.actorUserId !== scope.userId) {
+    throw new FrigoraError(
+      "forbidden",
+      "Client operation receipt belongs to a different actor partition.",
+    );
+  }
+  if (receipt.operationType !== "recordVisitEvidence") {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously used for a different operation type.",
+    );
+  }
+  if (receipt.visitId !== visitId || receipt.workOrderId !== workOrderId) {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously accepted for a different visit or work order.",
+    );
+  }
+  if (receipt.requestFingerprint !== fingerprint) {
+    throw new FrigoraError(
+      "idempotency_conflict",
+      "Client operation id was previously accepted with a different request fingerprint.",
+    );
+  }
+  const evidence = await store.findVisitEvidence(
+    scope.workspaceId,
+    scope.ventureId,
+    receipt.acceptedEntityId as FrigoraVisitEvidenceId,
+  );
+  if (!evidence) {
+    throw new FrigoraError(
+      "not_found",
+      "Authoritative receipt exists but accepted visit evidence was not found.",
+    );
+  }
+  return { evidence, receipt, duplicate: true };
 }
 
 function assertVisitAcceptsCorrectiveAction(visit: FrigoraVisit) {

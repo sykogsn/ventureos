@@ -248,7 +248,7 @@ describe("Frigora F33-02 preloaded read-only workspace", () => {
     );
     assert.match(
       FRIGORA_PRELOAD_STATUS_COPY.offlineChangesUnavailable,
-      /technical findings may be saved locally/i,
+      /technical findings, field captures, and evidence may be saved locally/i,
     );
   });
 });

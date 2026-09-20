@@ -1,11 +1,13 @@
 import type { FrigoraOfflineOperationType } from "./types";
 
 /**
- * F33-03: global FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED remains false.
+ * F33-04: global FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED remains false.
  * Only these operation types may perform local offline capture.
  */
 export const FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST = [
   "recordTechnicalFinding",
+  "recordFieldCapture",
+  "recordVisitEvidence",
 ] as const satisfies readonly FrigoraOfflineOperationType[];
 
 export type FrigoraOfflineCaptureAllowedOperation =

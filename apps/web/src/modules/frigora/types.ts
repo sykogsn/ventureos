@@ -380,7 +380,7 @@ export type FrigoraClientOperationReceipt = {
   ventureId: VentureId;
   actorUserId: UserId;
   clientOperationId: string;
-  operationType: "recordTechnicalFinding";
+  operationType: "recordTechnicalFinding" | "recordFieldCapture" | "recordVisitEvidence";
   workOrderId: FrigoraWorkOrderId;
   visitId: FrigoraVisitId | null;
   requestFingerprint: string;
@@ -396,6 +396,17 @@ export type SubmitClientTechnicalFindingInput = RecordTechnicalFindingInput & {
 
 export type SubmitClientTechnicalFindingResult = {
   finding: FrigoraTechnicalFinding;
+  receipt: FrigoraClientOperationReceipt;
+  duplicate: boolean;
+};
+
+export type SubmitClientFieldCaptureInput = RecordFieldCaptureInput & {
+  clientOperationId: string;
+  workOrderId: string;
+};
+
+export type SubmitClientFieldCaptureResult = {
+  capture: FrigoraFieldCapture;
   receipt: FrigoraClientOperationReceipt;
   duplicate: boolean;
 };
@@ -689,6 +700,17 @@ export type RecordVisitEvidenceWithFileInput = RecordVisitEvidenceInput & {
   body: Uint8Array;
   originalFilename: string;
   mimeType: string;
+};
+
+export type SubmitClientVisitEvidenceInput = RecordVisitEvidenceWithFileInput & {
+  clientOperationId: string;
+  workOrderId: string;
+};
+
+export type SubmitClientVisitEvidenceResult = {
+  evidence: FrigoraVisitEvidence;
+  receipt: FrigoraClientOperationReceipt;
+  duplicate: boolean;
 };
 
 export type LinkVisitEvidenceInput = RecordVisitEvidenceInput & {

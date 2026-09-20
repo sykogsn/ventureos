@@ -236,6 +236,14 @@ export type FrigoraStore = {
     finding: FrigoraTechnicalFinding,
     receipt: FrigoraClientOperationReceipt,
   ): Promise<void>;
+  insertFieldCaptureWithClientOperationReceipt(
+    capture: FrigoraFieldCapture,
+    receipt: FrigoraClientOperationReceipt,
+  ): Promise<void>;
+  insertVisitEvidenceWithClientOperationReceipt(
+    evidence: FrigoraVisitEvidence,
+    receipt: FrigoraClientOperationReceipt,
+  ): Promise<void>;
   findTechnicalFinding(
     workspaceId: WorkspaceId,
     ventureId: VentureId,
@@ -1026,6 +1034,138 @@ export function createFrigoraStore(): FrigoraStore {
                 findingValues.recordedByUserId,
                 findingValues.createdAt,
                 findingValues.updatedAt,
+              ],
+            },
+            {
+              sql: `INSERT INTO frigora_client_operation_receipts (
+                id, workspace_id, venture_id, actor_user_id, client_operation_id,
+                operation_type, work_order_id, visit_id, request_fingerprint,
+                accepted_entity_id, accepted_at, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              args: [
+                receiptValues.id,
+                receiptValues.workspaceId,
+                receiptValues.ventureId,
+                receiptValues.actorUserId,
+                receiptValues.clientOperationId,
+                receiptValues.operationType,
+                receiptValues.workOrderId,
+                receiptValues.visitId,
+                receiptValues.requestFingerprint,
+                receiptValues.acceptedEntityId,
+                receiptValues.acceptedAt,
+                receiptValues.createdAt,
+              ],
+            },
+          ],
+          "write",
+        );
+      } catch (error) {
+        if (isUniqueConstraintError(error)) {
+          throw new FrigoraError(
+            "duplicate",
+            "Client operation receipt already exists for this venture.",
+          );
+        }
+        throw error;
+      }
+    },
+    async insertFieldCaptureWithClientOperationReceipt(capture, receipt) {
+      await ensureSchema();
+      const captureValues = toFieldCaptureValues(capture);
+      const receiptValues = toClientOperationReceiptValues(receipt);
+      try {
+        await getClient().batch(
+          [
+            {
+              sql: `INSERT INTO frigora_field_captures (
+                id, workspace_id, venture_id, visit_id, work_order_id, asset_id,
+                capture_kind, capture_code, value_numeric, value_unit, description,
+                observed_at, captured_by_user_id, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              args: [
+                captureValues.id,
+                captureValues.workspaceId,
+                captureValues.ventureId,
+                captureValues.visitId,
+                captureValues.workOrderId,
+                captureValues.assetId,
+                captureValues.captureKind,
+                captureValues.captureCode,
+                captureValues.valueNumeric,
+                captureValues.valueUnit,
+                captureValues.description,
+                captureValues.observedAt,
+                captureValues.capturedByUserId,
+                captureValues.createdAt,
+                captureValues.updatedAt,
+              ],
+            },
+            {
+              sql: `INSERT INTO frigora_client_operation_receipts (
+                id, workspace_id, venture_id, actor_user_id, client_operation_id,
+                operation_type, work_order_id, visit_id, request_fingerprint,
+                accepted_entity_id, accepted_at, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              args: [
+                receiptValues.id,
+                receiptValues.workspaceId,
+                receiptValues.ventureId,
+                receiptValues.actorUserId,
+                receiptValues.clientOperationId,
+                receiptValues.operationType,
+                receiptValues.workOrderId,
+                receiptValues.visitId,
+                receiptValues.requestFingerprint,
+                receiptValues.acceptedEntityId,
+                receiptValues.acceptedAt,
+                receiptValues.createdAt,
+              ],
+            },
+          ],
+          "write",
+        );
+      } catch (error) {
+        if (isUniqueConstraintError(error)) {
+          throw new FrigoraError(
+            "duplicate",
+            "Client operation receipt already exists for this venture.",
+          );
+        }
+        throw error;
+      }
+    },
+    async insertVisitEvidenceWithClientOperationReceipt(evidence, receipt) {
+      await ensureSchema();
+      const evidenceValues = toVisitEvidenceValues(evidence);
+      const receiptValues = toClientOperationReceiptValues(receipt);
+      try {
+        await getClient().batch(
+          [
+            {
+              sql: `INSERT INTO frigora_visit_evidence (
+                id, workspace_id, venture_id, visit_id, work_order_id, asset_id,
+                stored_object_id, category, description, captured_at,
+                recorded_by_user_id, created_at, removed_at,
+                original_filename, mime_type, size_bytes
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              args: [
+                evidenceValues.id,
+                evidenceValues.workspaceId,
+                evidenceValues.ventureId,
+                evidenceValues.visitId,
+                evidenceValues.workOrderId,
+                evidenceValues.assetId,
+                evidenceValues.storedObjectId,
+                evidenceValues.category,
+                evidenceValues.description,
+                evidenceValues.capturedAt,
+                evidenceValues.recordedByUserId,
+                evidenceValues.createdAt,
+                evidenceValues.removedAt,
+                evidenceValues.originalFilename,
+                evidenceValues.mimeType,
+                evidenceValues.sizeBytes,
               ],
             },
             {
@@ -2020,7 +2160,11 @@ function mapClientOperationReceipt(row: {
   acceptedAt: string;
   createdAt: string;
 }): FrigoraClientOperationReceipt {
-  if (row.operationType !== "recordTechnicalFinding") {
+  if (
+    row.operationType !== "recordTechnicalFinding" &&
+    row.operationType !== "recordFieldCapture" &&
+    row.operationType !== "recordVisitEvidence"
+  ) {
     throw new FrigoraError(
       "invalid_kind",
       "Unsupported client operation receipt type was persisted.",
@@ -2032,7 +2176,7 @@ function mapClientOperationReceipt(row: {
     ventureId: row.ventureId as VentureId,
     actorUserId: row.actorUserId as UserId,
     clientOperationId: row.clientOperationId,
-    operationType: "recordTechnicalFinding",
+    operationType: row.operationType,
     workOrderId: row.workOrderId as FrigoraWorkOrderId,
     visitId: (row.visitId as FrigoraVisitId | null) ?? null,
     requestFingerprint: row.requestFingerprint,

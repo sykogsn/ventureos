@@ -24,6 +24,8 @@ export type StoredObjectRef = Pick<
 >;
 
 export type StoreStoredObjectInput = {
+  /** Durable replay, scoped to tenant, actor and issued domain authority. */
+  idempotency?: { key: string; requestFingerprint: string };
   scope: StoredObjectScope;
   actorUserId: UserId;
   activeWorkspaceId: WorkspaceId;

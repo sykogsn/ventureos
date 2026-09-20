@@ -117,7 +117,7 @@ export function VisitRecorderScreen({
     visitId: visit.id,
     primaryAssetId,
   };
-  const technicalFindingFormProps = {
+  const offlineCaptureFormProps = {
     ...formProps,
     actorUserId: ctx.sessionUserId,
   };
@@ -237,7 +237,7 @@ export function VisitRecorderScreen({
               return `${row.captureCode}: ${row.description ?? ""} (${row.observedAt})`;
             })}
           />
-          {canRecord ? <RecordFieldCaptureForm {...formProps} /> : null}
+          {canRecord ? <RecordFieldCaptureForm {...offlineCaptureFormProps} /> : null}
         </Section>
 
         <Section
@@ -250,7 +250,7 @@ export function VisitRecorderScreen({
               (row) => `${row.findingKind}: ${row.description} (${row.assertedAt})`,
             )}
           />
-          {canRecord ? <RecordTechnicalFindingForm {...technicalFindingFormProps} /> : null}
+          {canRecord ? <RecordTechnicalFindingForm {...offlineCaptureFormProps} /> : null}
         </Section>
 
         <Section
@@ -415,6 +415,7 @@ export function VisitRecorderScreen({
               workOrderId={workOrder.id}
               visitId={visit.id}
               primaryAssetId={primaryAssetId}
+              actorUserId={ctx.sessionUserId}
             />
           ) : (
             <p className="ids-caption text-muted">

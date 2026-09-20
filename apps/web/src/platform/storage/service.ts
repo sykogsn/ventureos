@@ -21,7 +21,10 @@ import {
 import { evaluateFrigoraVisitEvidenceByteRead } from "./frigora-evidence-protected-read";
 import { StoredObjectError } from "./errors";
 import {
+  reserveStoredObject,
+  insertReservedStoredObject,
   findStoredObjectById,
+  findReservedStoredObjectById,
   insertStoredObject,
   tombstoneStoredObject,
   type StoredObjectRow,
@@ -152,16 +155,7 @@ async function persistStoredObject(
   const sha256 = createHash("sha256").update(input.body).digest("hex");
   const createdAt = nowIso();
 
-  try {
-    await deps.adapter.put(storageKey, input.body);
-  } catch (error) {
-    if (error instanceof StoredObjectError) {
-      throw error;
-    }
-    throw new StoredObjectError("STORAGE", "Could not store object bytes.");
-  }
-
-  const row: StoredObjectRow = {
+  let row: StoredObjectRow = {
     id,
     workspaceId: input.scope.workspaceId,
     ventureId: input.scope.ventureId ?? null,
@@ -175,14 +169,48 @@ async function persistStoredObject(
     deletedAt: null,
   };
 
+  if (input.idempotency) {
+    const { key, requestFingerprint } = input.idempotency;
+    if (!key.trim() || key.length > 512 || !requestFingerprint.trim() || requestFingerprint.length > 1024) {
+      throw new StoredObjectError("VALIDATION", "Invalid storage idempotency key or fingerprint.");
+    }
+    const scopeKey = createHash("sha256").update(JSON.stringify([
+      input.scope.workspaceId, input.scope.ventureId ?? null, input.actorUserId,
+      authority ? [authority.domain, authority.relation, authority.resourceId] : null, key,
+    ])).digest("hex");
+    const fingerprint = createHash("sha256").update(JSON.stringify([
+      requestFingerprint, sha256, input.body.byteLength, validated.originalFilename, validated.mimeType,
+    ])).digest("hex");
+    const reservation = await reserveStoredObject(scopeKey, fingerprint, row);
+    if (reservation.fingerprint !== fingerprint) {
+      throw new StoredObjectError("IDEMPOTENCY_CONFLICT", "Storage idempotency key was reused with a changed request.");
+    }
+    row = reservation.row;
+    const existing = await findReservedStoredObjectById(row.id);
+    if (existing?.deletedAt) {
+      throw new StoredObjectError("IDEMPOTENCY_CONFLICT", "The reserved object has been deleted.");
+    }
+  }
+
   try {
-    const insertMetadata = deps.insertMetadata ?? insertStoredObject;
+    await deps.adapter.put(row.storageKey, input.body);
+  } catch (error) {
+    if (error instanceof StoredObjectError) {
+      throw error;
+    }
+    throw new StoredObjectError("STORAGE", "Could not store object bytes.");
+  }
+
+  try {
+    const insertMetadata = deps.insertMetadata ?? (input.idempotency ? insertReservedStoredObject : insertStoredObject);
     await insertMetadata(row);
   } catch (error) {
+    // Reserved bytes belong to the stable retry identity, never compensate a concurrent winner.
+    if (input.idempotency) throw error;
     try {
       await deps.adapter.delete(storageKey);
     } catch {
-      // Best-effort compensation.
+      throw new StoredObjectError("DELETE_BYTES_FAILED", "Metadata persistence failed and uploaded bytes could not be removed.");
     }
     const detail = error instanceof Error ? error.message : "unknown error";
     throw new StoredObjectError("STORAGE", `Could not persist object metadata: ${detail}`);

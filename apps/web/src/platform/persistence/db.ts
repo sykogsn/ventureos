@@ -1,5 +1,7 @@
 import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import { createClient, type Client } from "@libsql/client";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import * as schema from "./schema";
@@ -8,7 +10,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 27; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 28; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -16,14 +18,39 @@ const globalStore = globalThis as typeof globalThis & {
   __vosSchemaReady?: Promise<void>;
   __vosSchemaGeneration?: number;
   __vosDatabaseUrl?: string;
+  __vosEphemeralDatabaseUrl?: string;
 };
 
-function databaseUrl() {
+/** Native busy_timeout for the process singleton. Not used as a BUSY-retry vehicle. */
+const SQLITE_PLATFORM_BUSY_TIMEOUT_MS = 250;
+
+function configuredDatabaseUrl() {
   return globalStore.__vosDatabaseUrl ?? process.env.DATABASE_URL ?? DEFAULT_URL;
 }
 
-function ensureFileDatabase(url: string) {
-  if (!url.startsWith("file:")) {
+function isConfiguredMemoryUrl(url: string) {
+  return url === ":memory:" || url === "file::memory:";
+}
+
+function isMemoryDatabaseUrl(url: string) {
+  return url === ":memory:" || url.startsWith("file::memory:");
+}
+
+/** Resolved URL shared by the process singleton and short-lived durability clients. */
+export function getDatabaseUrl() {
+  const url = configuredDatabaseUrl();
+  if (isConfiguredMemoryUrl(url)) {
+    if (!globalStore.__vosEphemeralDatabaseUrl) {
+      const path = join(tmpdir(), `vos-ephemeral-${randomUUID()}.db`).replaceAll("\\", "/");
+      globalStore.__vosEphemeralDatabaseUrl = `file:${path}`;
+    }
+    return globalStore.__vosEphemeralDatabaseUrl;
+  }
+  return url;
+}
+
+export function ensureFileDatabase(url: string) {
+  if (!url.startsWith("file:") || isMemoryDatabaseUrl(url)) {
     return;
   }
 
@@ -33,9 +60,9 @@ function ensureFileDatabase(url: string) {
 
 export function getClient() {
   if (!globalStore.__vosClient) {
-    const url = databaseUrl();
+    const url = getDatabaseUrl();
     ensureFileDatabase(url);
-    globalStore.__vosClient = createClient({ url });
+    globalStore.__vosClient = createClient({ url, timeout: SQLITE_PLATFORM_BUSY_TIMEOUT_MS });
   }
 
   return globalStore.__vosClient;
@@ -56,6 +83,7 @@ export async function resetDatabaseLifecycle(databaseUrl?: string) {
   globalStore.__vosDb = undefined;
   globalStore.__vosSchemaReady = undefined;
   globalStore.__vosSchemaGeneration = undefined;
+  globalStore.__vosEphemeralDatabaseUrl = undefined;
   if (databaseUrl) {
     globalStore.__vosDatabaseUrl = databaseUrl;
   }
@@ -338,6 +366,13 @@ export async function ensureSchema() {
         `CREATE INDEX IF NOT EXISTS audit_events_workspace_idx ON audit_events (workspace_id)`,
       );
 
+      await exec(`
+        CREATE TABLE IF NOT EXISTS stored_object_reservations (
+          scope_key TEXT PRIMARY KEY,
+          request_fingerprint TEXT NOT NULL,
+          object_row_json TEXT NOT NULL
+        )
+      `);
       await exec(`
         CREATE TABLE IF NOT EXISTS stored_objects (
           id TEXT PRIMARY KEY,

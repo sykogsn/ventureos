@@ -10,6 +10,7 @@ import { createDocumentPort } from "@/platform/documents/port";
 import { createAuditLog } from "@/platform/audit/log";
 import { ensureSchema } from "@/platform/persistence/db";
 import { getDb } from "@/platform/persistence/db";
+import { storedObjectDurability } from "@/platform/persistence/durability-client";
 import { resetPersistenceLifecycle } from "@/platform/persistence/repositories/sqlite";
 import { storedObjects } from "@/platform/persistence/schema";
 import { createPermissionService } from "@/platform/permissions/service";
@@ -30,14 +31,26 @@ afterEach(async () => {
   delete process.env.STORED_OBJECT_ROOT;
   delete process.env.STORED_OBJECT_MAX_BYTES;
   if (objectRoot) {
-    await rm(objectRoot, { recursive: true, force: true });
+    await removeDir(objectRoot);
     objectRoot = undefined;
   }
   if (tempDir) {
-    await rm(tempDir, { recursive: true, force: true });
+    await removeDir(tempDir);
     tempDir = undefined;
   }
 });
+
+async function removeDir(dir: string) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      await rm(dir, { recursive: true, force: true });
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+  await rm(dir, { recursive: true, force: true });
+}
 
 async function prepareObjectRoot() {
   objectRoot = await mkdtemp(join(tmpdir(), "vos-obj-"));
@@ -79,6 +92,50 @@ function createService(adapter: BlobStorageAdapter) {
     audit: createAuditLog(),
     permissions: createPermissionService(createDbMembershipStore()),
   });
+}
+
+function isLibsqlStatementObject(
+  statement: unknown,
+): statement is { sql: string; args?: unknown } {
+  return (
+    typeof statement === "object" &&
+    statement !== null &&
+    "sql" in statement &&
+    typeof statement.sql === "string"
+  );
+}
+
+function durabilityStatementSql(statement: unknown): string {
+  if (typeof statement === "string") {
+    return statement;
+  }
+  return isLibsqlStatementObject(statement) ? statement.sql : "";
+}
+
+function interceptDurability(
+  handler: (
+    sql: string,
+    statement: unknown,
+    execute: (...args: Parameters<ReturnType<typeof storedObjectDurability.openClient>["execute"]>) => ReturnType<
+      ReturnType<typeof storedObjectDurability.openClient>["execute"]
+    >,
+    args: Parameters<ReturnType<typeof storedObjectDurability.openClient>["execute"]>,
+  ) => ReturnType<ReturnType<typeof storedObjectDurability.openClient>["execute"]>,
+) {
+  const open = storedObjectDurability.openClient.bind(storedObjectDurability);
+  storedObjectDurability.openClient = (timeoutMs) => {
+    const client = open(timeoutMs);
+    const execute = client.execute.bind(client);
+    client.execute = async (...args: Parameters<typeof execute>) => {
+      const statement = args[0];
+      const sql = durabilityStatementSql(statement);
+      return handler(sql, statement, execute, args);
+    };
+    return client;
+  };
+  return () => {
+    storedObjectDurability.openClient = open;
+  };
 }
 
 describe("Stored object platform", () => {
@@ -629,6 +686,314 @@ describe("Stored object platform", () => {
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 27/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+  });
+});
+
+
+describe("F33-04 durable platform idempotency", () => {
+  it("reuses one identity across server processes and a crash after byte publication", async (context) => {
+    await prepareObjectRoot();
+    tempDir = await mkdtemp(join(tmpdir(), "vos-storage-reservation-"));
+    const databaseUrl = `file:${join(tempDir, "reservation.db").replaceAll("\\", "/")}`;
+    // The locked native driver can retain file handles after client.close().
+    // Keep every file-backed connection in a subprocess; OS exit is the release boundary.
+    const { fork } = await import("node:child_process");
+    const { fileURLToPath } = await import("node:url");
+    const workerPath = fileURLToPath(new URL("./fixtures/idempotency-worker.ts", import.meta.url));
+    const children: { child: ReturnType<typeof fork>; finished: Promise<unknown> }[] = [];
+    function worker(mode: string) {
+      const child = fork(workerPath, [databaseUrl, mode], { execArgv: ["--import", "tsx"], silent: true });
+      let id: string | undefined;
+      let acceptedAuditId: string | undefined;
+      let stderr = "";
+      let clientClosed = false;
+      let snapshot: { reservations: { id: string }[]; objects: { id: string; deletedAt: string | null }[]; audits: { id: string; storedObjectId: string }[] } | undefined;
+      let abnormal: Error | undefined;
+      const deadline = setTimeout(() => {
+        abnormal = new Error(`Storage worker ${child.pid} exceeded its lifecycle deadline`);
+        child.kill();
+      }, 20_000);
+      child.stdout!.resume();
+      child.stderr!.on("data", (data) => { stderr += String(data); });
+      const ready = new Promise<void>((resolve, reject) => {
+        child.on("message", (message) => { if (message === "ready") resolve(); });
+        child.once("error", reject);
+        child.once("close", () => reject(abnormal ?? new Error(`Worker closed before readiness: ${stderr}`)));
+      });
+      child.on("message", (message) => {
+        if (typeof message === "object" && message && "auditWrite" in message) {
+          context.diagnostic(`Native audit write: ${JSON.stringify(message.auditWrite)}`);
+        }
+        if (typeof message === "object" && message && "auditFailure" in message) {
+          context.diagnostic(`Native audit failure: ${JSON.stringify(message.auditFailure)}`);
+        }
+        if (typeof message === "object" && message && "acceptedAuditId" in message) {
+          acceptedAuditId = String((message as { acceptedAuditId: string }).acceptedAuditId);
+        }
+        if (typeof message === "object" && message && "id" in message) id = String(message.id);
+        if (typeof message === "object" && message && "clientClosed" in message) clientClosed = message.clientClosed === true;
+        if (typeof message === "object" && message && "reservations" in message) snapshot = message as typeof snapshot;
+      });
+      const finished = new Promise<{ code: number | null; id: string | undefined; acceptedAuditId: string | undefined; clientClosed: boolean; snapshot: typeof snapshot; stderr: string; abnormal: Error | undefined }>((resolve) => {
+        child.once("error", (error) => { abnormal = error; });
+        // close follows exit and closure of IPC/stdout/stderr, unlike exit alone.
+        child.once("close", (code) => {
+          clearTimeout(deadline);
+          resolve({ code, id, acceptedAuditId, clientClosed, snapshot, stderr, abnormal });
+        });
+      });
+      const handle = { child, ready, finished, start: () => child.send("go") };
+      children.push(handle);
+      return handle;
+    }
+    async function run(mode: string) {
+      const current = worker(mode);
+      await current.ready;
+      current.start();
+      const result = await current.finished;
+      assert.equal(result.abnormal, undefined);
+      assert.equal(result.stderr, "");
+      assert.equal(result.code, mode === "crash-after-bytes" ? 73 : 0);
+      if (mode !== "crash-after-bytes") assert.equal(result.clientClosed, true);
+      return result;
+    }
+    try {
+    await run("setup");
+    await run("crash-after-bytes");
+    const before = (await run("inspect")).snapshot!;
+    assert.equal(before.reservations.length, 1);
+    const reservedId = before.reservations[0]!.id;
+    assert.equal(before.objects.length, 0);
+    const workers = Array.from({ length: 4 }, () => worker("accept"));
+    await Promise.all(workers.map((current) => current.ready));
+    workers.forEach((current) => current.start());
+    const results = await Promise.all(workers.map((current) => current.finished));
+    const acceptedAuditIds: string[] = [];
+    for (const result of results) {
+      assert.equal(result.abnormal, undefined);
+      assert.equal(result.stderr, "");
+      assert.equal(result.code, 0);
+      assert.equal(result.clientClosed, true);
+      assert.equal(result.id, reservedId);
+      assert.equal(typeof result.acceptedAuditId, "string");
+      acceptedAuditIds.push(result.acceptedAuditId!);
+    }
+    const after = (await run("inspect")).snapshot!;
+    context.diagnostic(`Persisted audits: ${JSON.stringify(after.audits)}`);
+    assert.equal(after.objects.length, 1);
+    assert.equal(after.objects[0]!.id, reservedId);
+    assert.equal(after.objects[0]!.deletedAt, null);
+    assert.equal(after.audits.length, workers.length);
+    assert.equal(new Set(after.audits.map((row) => row.id)).size, workers.length);
+    assert.ok(after.audits.every((row) => row.storedObjectId === reservedId));
+    for (const auditId of acceptedAuditIds) {
+      assert.ok(after.audits.some((row) => row.id === auditId), `successful worker audit ${auditId} missing from independent inspect`);
+    }
+    context.diagnostic(`All ${after.audits.length} independent-process creation audits persisted for the reserved identity`);
+    context.diagnostic(`crash/restart: ${workers.length} independent callers reused ${reservedId}; one live StoredObject`);
+    } finally {
+      for (const current of children) {
+        if (current.child.exitCode === null && current.child.signalCode === null) current.child.kill();
+      }
+      await Promise.all(children.map((current) => current.finished));
+      context.diagnostic(`All ${children.length} subprocess close events received before file cleanup; parent never opened reservation.db`);
+    }
+  });
+
+  it("retries creation audit BUSY with identical values and persists one event", async () => {
+    await prepareObjectRoot();
+    const { workspaceId, ownerId } = await seedWorkspace();
+    const attempts: string[] = [];
+    const restore = interceptDurability(async (sql, statement, execute, args) => {
+      if (/insert into audit_events/i.test(sql)) {
+        attempts.push(JSON.stringify(statement));
+        if (attempts.length <= 2) throw Object.assign(new Error("database is locked"), { code: "SQLITE_BUSY" });
+      }
+      return execute(...args);
+    });
+    try {
+      const object = await createService(createLocalBlobStorageAdapter()).store({
+        scope: { workspaceId }, actorUserId: ownerId, activeWorkspaceId: workspaceId,
+        body: jpegBytes(), originalFilename: "audit.jpg", mimeType: "image/jpeg",
+        idempotency: { key: "audit-busy", requestFingerprint: "same" },
+      });
+      assert.equal(attempts.length, 3);
+      assert.equal(new Set(attempts).size, 1);
+      const events = (await createAuditLog().list()).filter((row) => row.action === "stored_object.created");
+      assert.equal(events.length, 1);
+      assert.equal(events[0]!.metadata?.storedObjectId, object.id);
+    } finally {
+      restore();
+    }
+  });
+
+  for (const code of ["SQLITE_LOCKED", "SQLITE_CONSTRAINT", "UNKNOWN_DATABASE_ERROR"]) {
+    it(`fails creation closed without retry for ${code}`, async () => {
+      await prepareObjectRoot();
+      const { workspaceId, ownerId } = await seedWorkspace();
+      const failure = Object.assign(new Error("injected audit failure"), { code });
+      let attempts = 0;
+      const restore = interceptDurability(async (sql, _statement, execute, args) => {
+        if (/insert into audit_events/i.test(sql)) { attempts++; throw failure; }
+        return execute(...args);
+      });
+      try {
+        await assert.rejects(createService(createLocalBlobStorageAdapter()).store({
+          scope: { workspaceId }, actorUserId: ownerId, activeWorkspaceId: workspaceId,
+          body: jpegBytes(), originalFilename: "audit.jpg", mimeType: "image/jpeg",
+          idempotency: { key: "audit-permanent", requestFingerprint: "same" },
+        }), (error: unknown) => error === failure);
+        assert.equal(attempts, 1);
+        assert.equal((await createAuditLog().list()).filter((row) => row.action === "stored_object.created").length, 0);
+        assert.equal((await getDb().select().from(storedObjects)).length, 1);
+      } finally {
+        restore();
+      }
+    });
+  }
+
+  it("fails creation audit closed when the BUSY deadline is exhausted", async (context) => {
+    await seedWorkspace();
+    context.mock.timers.enable({ apis: ["Date"] });
+    const failure = Object.assign(new Error("database is locked"), { code: "SQLITE_BUSY" });
+    let attempts = 0;
+    const restore = interceptDurability(async (sql, _statement, execute, args) => {
+      if (/insert into audit_events/i.test(sql)) {
+        attempts++;
+        context.mock.timers.tick(5_001);
+        throw failure;
+      }
+      return execute(...args);
+    });
+    try {
+      await assert.rejects(createAuditLog().record({ action: "stored_object.created" }),
+        (error: unknown) => error === failure);
+      assert.equal(attempts, 1);
+      assert.equal((await createAuditLog().list()).length, 0);
+    } finally {
+      restore();
+      context.mock.timers.reset();
+    }
+  });
+
+  it("recovers native SQLITE_BUSY on a new client and never accepts same-client local success", async (context) => {
+    await prepareObjectRoot();
+    tempDir = await mkdtemp(join(tmpdir(), "vos-storage-native-busy-"));
+    const databaseUrl = `file:${join(tempDir, "busy.db").replaceAll("\\", "/")}`;
+    const { fork } = await import("node:child_process");
+    const { fileURLToPath } = await import("node:url");
+    const workerPath = fileURLToPath(new URL("./fixtures/idempotency-worker.ts", import.meta.url));
+    const child = fork(workerPath, [databaseUrl, "native-busy"], { execArgv: ["--import", "tsx"], silent: true });
+    let stderr = "";
+    let probe: { id?: string; nativeBusy?: number; reusedPoisoned?: number; durableAudits?: number; durableStoredObjectId?: string | null } | undefined;
+    child.stdout!.resume();
+    child.stderr!.on("data", (data) => { stderr += String(data); });
+    const ready = new Promise<void>((resolve, reject) => {
+      child.on("message", (message) => { if (message === "ready") resolve(); });
+      child.once("error", reject);
+      child.once("close", () => reject(new Error(`Native BUSY worker closed before readiness: ${stderr}`)));
+    });
+    child.on("message", (message) => {
+      if (typeof message === "object" && message && "nativeBusy" in message) {
+        probe = message as typeof probe;
+        context.diagnostic(`Native BUSY probe: ${JSON.stringify(message)}`);
+      }
+    });
+    const finished = new Promise<{ code: number | null }>((resolve) => {
+      child.once("close", (code) => resolve({ code }));
+    });
+    await ready;
+    child.send("go");
+    const result = await finished;
+    assert.equal(stderr, "");
+    assert.equal(result.code, 0);
+    assert.ok((probe?.nativeBusy ?? 0) >= 1);
+    assert.equal(probe?.reusedPoisoned, 0);
+    assert.equal(probe?.durableAudits, 1);
+    assert.equal(probe?.durableStoredObjectId, probe?.id);
+  });
+
+  it("recovers reserved-object lookup BUSY on a fresh connection without allocating another identity", async () => {
+    await prepareObjectRoot();
+    const { workspaceId, ownerId } = await seedWorkspace();
+    const lookupClients: object[] = [];
+    let lookupBusy = 0;
+    const restore = interceptDurability(async (sql, _statement, execute, args) => {
+      if (/from stored_objects where id/i.test(sql)) {
+        lookupClients.push(execute);
+        if (lookupBusy === 0) {
+          lookupBusy++;
+          throw Object.assign(new Error("database is locked"), { code: "SQLITE_BUSY" });
+        }
+      }
+      return execute(...args);
+    });
+    try {
+      const first = await createService(createLocalBlobStorageAdapter()).store({
+        scope: { workspaceId }, actorUserId: ownerId, activeWorkspaceId: workspaceId,
+        body: jpegBytes(), originalFilename: "lookup.jpg", mimeType: "image/jpeg",
+        idempotency: { key: "lookup-busy", requestFingerprint: "same" },
+      });
+      assert.equal(lookupBusy, 1);
+      assert.ok(lookupClients.length >= 2);
+      const second = await createService(createLocalBlobStorageAdapter()).store({
+        scope: { workspaceId }, actorUserId: ownerId, activeWorkspaceId: workspaceId,
+        body: jpegBytes(), originalFilename: "lookup.jpg", mimeType: "image/jpeg",
+        idempotency: { key: "lookup-busy", requestFingerprint: "same" },
+      });
+      assert.equal(second.id, first.id);
+      assert.equal((await getDb().select().from(storedObjects)).length, 1);
+    } finally {
+      restore();
+    }
+  });
+
+  it("arbitrates twelve concurrent requests, conflicts on changed bytes and fingerprint, survives service recreation", async () => {
+    await prepareObjectRoot();
+    const { workspaceId, ownerId } = await seedWorkspace();
+    const adapter = createLocalBlobStorageAdapter();
+    const request = { scope: { workspaceId }, actorUserId: ownerId, activeWorkspaceId: workspaceId,
+      body: jpegBytes(), originalFilename: "same.jpg", mimeType: "image/jpeg",
+      idempotency: { key: "multi-request", requestFingerprint: "request-1" } };
+    const results = await Promise.all(Array.from({length: 12}, () => createService(adapter).store(request)));
+    assert.equal(new Set(results.map(row => row.id)).size, 1);
+    assert.equal((await getDb().select().from(storedObjects)).length, 1);
+    for (const change of [{ body: jpegBytes(1) }, { idempotency: { ...request.idempotency, requestFingerprint: "request-2" } }]) {
+      await assert.rejects(createService(adapter).store({ ...request, ...change }),
+        (error: unknown) => error instanceof StoredObjectError && error.code === "IDEMPOTENCY_CONFLICT");
+    }
+    assert.equal((await createService(adapter).store(request)).id, results[0]!.id);
+    assert.equal((await getDb().select().from(storedObjects)).length, 1);
+  });
+
+  it("recovers reserved bytes after metadata persistence failure without another allocation", async () => {
+    await prepareObjectRoot();
+    const { workspaceId, ownerId } = await seedWorkspace();
+    const adapter = createLocalBlobStorageAdapter();
+    const keys: string[] = [];
+    const tracking = { ...adapter, async put(key: string, bytes: Uint8Array) { keys.push(key); await adapter.put(key, bytes); } };
+    const request = { scope: { workspaceId }, actorUserId: ownerId, activeWorkspaceId: workspaceId,
+      body: jpegBytes(), originalFilename: "retry.jpg", mimeType: "image/jpeg",
+      idempotency: { key: "partial", requestFingerprint: "same" } };
+    const failing = createStoredObjectService({ adapter: tracking, audit: createAuditLog(),
+      permissions: createPermissionService(createDbMembershipStore()), insertMetadata: async () => { throw Error("Injected metadata outage"); } });
+    await assert.rejects(failing.store(request), /metadata outage/);
+    assert.equal((await getDb().select().from(storedObjects)).length, 0);
+    await createService(tracking).store(request);
+    assert.equal(new Set(keys).size, 1);
+    assert.equal((await getDb().select().from(storedObjects)).length, 1);
+  });
+
+  it("reports failed byte compensation explicitly", async () => {
+    const { workspaceId, ownerId } = await seedWorkspace();
+    const service = createStoredObjectService({ adapter: {
+      async put() {}, async get() { return null; }, async exists() { return true; },
+      async delete() { throw Error("Injected cleanup outage"); },
+    }, audit: createAuditLog(), permissions: createPermissionService(createDbMembershipStore()),
+      insertMetadata: async () => { throw Error("Injected metadata outage"); } });
+    await assert.rejects(service.store({ scope: { workspaceId }, actorUserId: ownerId, activeWorkspaceId: workspaceId,
+      body: jpegBytes(), originalFilename: "retry.jpg", mimeType: "image/jpeg" }),
+      (error: unknown) => error instanceof StoredObjectError && error.code === "DELETE_BYTES_FAILED");
   });
 });

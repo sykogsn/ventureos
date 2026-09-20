@@ -6,7 +6,7 @@
 
 **Milestone.** F3.3 — Offline Field Capability
 
-**Status.** Locked Control decisions + F33-01 foundation + F33-02 certified + F33-03 local technical-finding acceptance
+**Status.** Locked Control decisions + F33-01 foundation + F33-02 certified + F33-03 local technical-finding acceptance + F33-04 field capture/evidence integration. **F33-04 remains ACTIVE.** The engineering candidate awaits Independent Running-Product Verification and Control certification. This record is not a certification artefact.
 
 **Date.** 2026-09-16
 
@@ -92,3 +92,21 @@ Authenticated online preload builds field-safe snapshots from existing Frigora r
 ## F33-03 local technical-finding acceptance
 
 F33-03 enables **only** `recordTechnicalFinding` for local offline capture under an active lease, with durable partitioned outbox envelopes and **explicit** online submission. Server acceptance is idempotent on `(ventureId, clientOperationId)` with canonical request fingerprint enforcement and SCHEMA 27 receipts. The global offline capture flag remains **false**; other field mutations stay blocked offline. Product remains `frigora@0.21.0`; offline DB version remains **1**.
+
+## F33-04 field capture and visit evidence
+
+F33-04 extends the same local-capture + explicit-submit law to `recordFieldCapture` and `recordVisitEvidence`. The offline capture allowlist is exactly three operations: `recordTechnicalFinding`, `recordFieldCapture`, `recordVisitEvidence`. Evidence persists durable blob bytes + outbox metadata linked by `clientOperationId`; reconnect alone still does not submit; removal/linking remain online-only. Control's F33-04-ASTRA-COR-01 authorises SCHEMA generation **28** for shared StoredObject reservations; product remains `frigora@0.21.0`; offline DB version remains **1**; global `FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED` remains **false**.
+
+### COR-01 durable evidence correction
+
+The optional Platform StoredObjects `idempotency: { key, requestFingerprint }` contract reserves one immutable object identity in SQLite before byte publication. `stored_object_reservations` uses a unique key derived from workspace, venture, actor, issued domain authority and caller key. Its fingerprint binds the caller's canonical request fingerprint, actual SHA-256, actual length, filename and content type. Identical requests reuse the reserved identity; changed requests conflict before byte writes. SQLite uniqueness, not a process-local lock, arbitrates. Frigora receipts still record completed business acceptance and are not provisional reservations or a parallel upload authority.
+
+The local adapter flushes a uniquely named temporary file and atomically links complete bytes to the reserved object path without replacement. Existing bytes must match. A crash before metadata insertion leaves a retryable reservation; failure before Frigora receipt completion reuses the same stored identity. Frigora does not compensate by deleting an object that a concurrent identical request may have accepted. Failures remain visible. Independent processes require the same database and object root. Reservations have no automatic expiry or background drain.
+
+Durability-path SQL uses a **dedicated short-lived client**, not the process singleton, and never retries native `SQLITE_BUSY` on the same poisoned handle. Each BUSY attempt disposes that client and opens a **new clean native client**. Native timeout is **250ms** per dedicated-client attempt. The absolute contention budget is **5 seconds**. SQLite uniqueness remains the StoredObject identity arbitration authority. Reservation uses dedicated reservation `INSERT`/`SELECT`. Reserved metadata uses a dedicated reserved-object `INSERT`. Reserved-object lookup `SQLITE_BUSY` recovers on a fresh dedicated connection and does not allocate another identity. `stored_object.created` keeps the same event ID and values across retry; success requires an independent fresh-client read-back of that row. `SQLITE_LOCKED` remains non-retry / fail-closed. Permanent, unknown, and deadline-exhausted failures remain fail-closed. WAL is not enabled. Dependencies and package versions are unchanged. SCHEMA generation remains **28**. IndexedDB remains **v1**. The upstream libSQL failed-statement lifecycle defect is **isolated, not fixed**. There is no singleton reconnect recovery.
+
+IndexedDB v1 conditionally inserts the evidence blob and outbox envelope in one transaction. Reused operation IDs must match partition, target and canonical content. Submit validates venture, actor, operation, allowed lifecycle, SHA-256, positive safe-integer length matching actual bytes, filename and content type. Evidence acceptance reconciles receipt, outbox state and blob lifecycle atomically.
+
+All three forms await guarded local capture and reconcile each explicit submit in its invocation, not a render effect. Response loss remains visible and explicitly retryable with the same operation ID; interrupted `SYNCING` permits manual retry. Reconnect effects read local state only. No service-worker mutation drain is introduced.
+
+Engineering evidence (authoritative focused result, not product admission): the StoredObject suite passed **24/24 GREEN**, including crash/restart with four independent callers reusing one identity and four independently visible `stored_object.created` audits; the isolated durability matrix passed 26/26. **F33-04 remains ACTIVE** and awaits Independent Running-Product Verification and Control certification. These are engineering results only. They do not certify F33-04, complete F33-04, or complete F3.3.

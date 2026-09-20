@@ -1,4 +1,5 @@
 export type StoredObjectErrorCode =
+  | "IDEMPOTENCY_CONFLICT"
   | "VALIDATION"
   | "FORBIDDEN"
   | "NOT_FOUND"

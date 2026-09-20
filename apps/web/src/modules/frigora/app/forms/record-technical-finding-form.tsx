@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { Button } from "@repo/ui/button";
 import { Field, Form, Stack } from "@/core/layout";
 import {
@@ -20,7 +20,11 @@ import {
   type FrigoraOfflineMutationEnvelope,
 } from "@/modules/frigora/app/offline";
 import { FRIGORA_TECHNICAL_FINDING_STATUS_COPY } from "@/modules/frigora/app/pwa/copy";
-import { applyTechnicalFindingLocalSubmitOutcome } from "@/modules/frigora/app/offline/technical-finding-local-outcome";
+import {
+  canExplicitlySubmitTechnicalFinding,
+  saveTechnicalFindingOnce,
+  submitTechnicalFindingFromClient,
+} from "@/modules/frigora/app/offline/technical-finding-client-actions";
 
 function subscribeOnline(onStoreChange: () => void) {
   window.addEventListener("online", onStoreChange);
@@ -47,7 +51,7 @@ function statusLabel(state: FrigoraOfflineMutationEnvelope["syncState"], online:
         ? FRIGORA_TECHNICAL_FINDING_STATUS_COPY.readyToSubmit
         : FRIGORA_TECHNICAL_FINDING_STATUS_COPY.savedOnDevice;
     case "SYNCING":
-      return FRIGORA_TECHNICAL_FINDING_STATUS_COPY.submitting;
+      return "Submission status needs reconciliation. Retry when online.";
     case "SYNCED":
       return FRIGORA_TECHNICAL_FINDING_STATUS_COPY.acceptedByServer;
     case "BLOCKED":
@@ -81,6 +85,7 @@ export function RecordTechnicalFindingForm({
   );
   const [offlineError, setOfflineError] = useState<string | null>(null);
   const [offlinePending, startOfflineTransition] = useTransition();
+  const offlineSaveInFlight = useRef(false);
   const [pendingOps, setPendingOps] = useState<FrigoraOfflineMutationEnvelope[]>([]);
 
   async function refreshPending() {
@@ -116,8 +121,8 @@ export function RecordTechnicalFindingForm({
       | "confirmed_fault";
     const description = String(data.get("description") ?? "");
     setOfflineError(null);
-    startOfflineTransition(() => {
-      void (async () => {
+    startOfflineTransition(async () => {
+      await saveTechnicalFindingOnce(offlineSaveInFlight, async () => {
         try {
           await captureTechnicalFindingOffline({
             partition: { ventureId, actorUserId },
@@ -138,7 +143,7 @@ export function RecordTechnicalFindingForm({
         } catch (error) {
           setOfflineError(error instanceof Error ? error.message : "Could not save on this device.");
         }
-      })();
+      });
     });
   }
 
@@ -242,15 +247,6 @@ function FindingFields({
   );
 }
 
-async function applyLocalSubmitOutcome(
-  envelope: FrigoraOfflineMutationEnvelope,
-  outcome:
-    | { ok: true; receiptId: string; acceptedEntityId: string }
-    | { ok: false; code: NonNullable<ExplicitTechnicalFindingSubmitState["code"]>; error: string },
-) {
-  await applyTechnicalFindingLocalSubmitOutcome(envelope, outcome);
-}
-
 function PendingTechnicalFindingRow({
   envelope,
   workspaceId,
@@ -263,7 +259,12 @@ function PendingTechnicalFindingRow({
   onChanged: () => Promise<void>;
 }) {
   const [state, action, pending] = useActionState(
-    submitPendingTechnicalFindingFormAction,
+    async (previous: ExplicitTechnicalFindingSubmitState, formData: FormData) =>
+      submitTechnicalFindingFromClient(
+        envelope,
+        () => submitPendingTechnicalFindingFormAction(previous, formData),
+        onChanged,
+      ),
     {} as ExplicitTechnicalFindingSubmitState,
   );
   const payload = envelope.payload;
@@ -272,42 +273,13 @@ function PendingTechnicalFindingRow({
   const assertedAt = String(payload.assertedAt ?? "");
   const assetId = typeof payload.assetId === "string" ? payload.assetId : "";
 
-  useEffect(() => {
-    if (!state.acceptedEntityId && !state.error) return;
-    let cancelled = false;
-    void (async () => {
-      if (state.acceptedEntityId) {
-        await applyLocalSubmitOutcome(envelope, {
-          ok: true,
-          receiptId: state.receiptId ?? `rcpt-${envelope.clientOperationId}`,
-          acceptedEntityId: state.acceptedEntityId,
-        });
-      } else if (state.error && state.code) {
-        await applyLocalSubmitOutcome(envelope, {
-          ok: false,
-          code: state.code,
-          error: state.error,
-        });
-      }
-      if (!cancelled) await onChanged();
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [state.acceptedEntityId, state.receiptId, state.error, state.code, envelope, onChanged]);
-
-  const canSubmit =
-    online &&
-    (envelope.syncState === "PENDING" ||
-      envelope.syncState === "RETRYABLE_FAILURE" ||
-      envelope.syncState === "BLOCKED" ||
-      envelope.syncState === "CONFLICT");
+  const canSubmit = canExplicitlySubmitTechnicalFinding(envelope.syncState, online);
 
   return (
     <article className="rounded-[var(--ids-foundation-radius-sm)] border border-[var(--ids-foundation-stroke-subtle)] p-3">
       <Stack gap="tight">
         <p className="ids-caption text-muted" role="status">
-          {statusLabel(envelope.syncState, online)}
+          {pending ? FRIGORA_TECHNICAL_FINDING_STATUS_COPY.submitting : statusLabel(envelope.syncState, online)}
           {!online && (envelope.syncState === "PENDING" || envelope.syncState === "LOCAL_DRAFT")
             ? ` · ${FRIGORA_TECHNICAL_FINDING_STATUS_COPY.notYetSubmitted}`
             : null}
@@ -340,7 +312,7 @@ function PendingTechnicalFindingRow({
             <Button type="submit" disabled={pending} className="w-full sm:w-auto">
               {pending
                 ? FRIGORA_TECHNICAL_FINDING_STATUS_COPY.submitting
-                : envelope.syncState === "RETRYABLE_FAILURE"
+                : envelope.syncState === "RETRYABLE_FAILURE" || envelope.syncState === "SYNCING"
                   ? "Retry submission"
                   : "Submit to server"}
             </Button>

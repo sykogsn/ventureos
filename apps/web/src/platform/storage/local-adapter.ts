@@ -1,4 +1,5 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, link, rm, open } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import type { BlobStorageAdapter } from "./types";
 import { StoredObjectError } from "./errors";
@@ -29,10 +30,19 @@ export function createLocalBlobStorageAdapter(): BlobStorageAdapter {
     async put(storageKey, body) {
       const path = resolveObjectPath(storageKey);
       await mkdir(dirname(path), { recursive: true });
-      const tempPath = `${path}.tmp`;
+      const tempPath = `${path}.${randomUUID()}.tmp`;
       try {
-        await writeFile(tempPath, body);
-        await rename(tempPath, path);
+        const file = await open(tempPath, "wx");
+        try { await file.writeFile(body); await file.sync(); } finally { await file.close(); }
+        try {
+          // Publish complete immutable bytes atomically, without replacing another writer.
+          await link(tempPath, path);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+          const existing = await readFile(path);
+          if (!existing.equals(Buffer.from(body))) throw new Error("Storage key already contains different bytes");
+        }
+        await rm(tempPath, { force: true });
       } catch (error) {
         await rm(tempPath, { force: true });
         const detail = error instanceof Error ? error.message : "unknown error";

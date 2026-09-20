@@ -1024,3 +1024,10 @@ export const schema = {
   frigoraVisitCustomerAcknowledgements,
   frigoraVisitEvidence,
 };
+
+/** Durable optional upload identity; not a Venture acceptance receipt. */
+export const storedObjectReservations = sqliteTable("stored_object_reservations", {
+  scopeKey: text("scope_key").primaryKey(),
+  requestFingerprint: text("request_fingerprint").notNull(),
+  objectRowJson: text("object_row_json").notNull(),
+});

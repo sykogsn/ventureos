@@ -24,7 +24,8 @@ export type FrigoraOfflineBackend = {
    */
   atomicPut(
     writes: Array<{ store: FrigoraOfflineObjectStoreName; record: OfflineRecord }>,
-  ): Promise<void>;
+    ifAbsent?: { store: FrigoraOfflineObjectStoreName; key: string },
+  ): Promise<OfflineRecord | undefined>;
 };
 
 type MemoryDb = {
@@ -79,7 +80,9 @@ export function createMemoryOfflineBackend(options?: {
     async getAll(store) {
       return [...db!.stores.get(store)!.values()].map((value) => structuredClone(value));
     },
-    async atomicPut(writes) {
+    async atomicPut(writes, ifAbsent) {
+      const existing = ifAbsent && db!.stores.get(ifAbsent.store)!.get(ifAbsent.key);
+      if (existing) return structuredClone(existing);
       const snapshots = new Map<
         FrigoraOfflineObjectStoreName,
         Map<string, OfflineRecord>
@@ -180,13 +183,25 @@ export async function openIndexedDbOfflineBackend(options?: {
       await idbTxDone(tx);
       return result as OfflineRecord[];
     },
-    async atomicPut(writes) {
-      const storeNames = [...new Set(writes.map((write) => write.store))];
+    async atomicPut(writes, ifAbsent) {
+      const storeNames = [...new Set([...writes.map((write) => write.store), ...(ifAbsent ? [ifAbsent.store] : [])])];
       const tx = database.transaction(storeNames, "readwrite");
-      for (const write of writes) {
-        tx.objectStore(write.store).put(write.record);
-      }
-      await idbTxDone(tx);
+      const done = idbTxDone(tx);
+      let existing: OfflineRecord | undefined;
+      const writeAll = () => {
+        try {
+          for (const write of writes) tx.objectStore(write.store).put(write.record);
+        } catch { tx.abort(); }
+      };
+      if (ifAbsent) {
+        const request = tx.objectStore(ifAbsent.store).get(ifAbsent.key);
+        request.onsuccess = () => {
+          existing = request.result as OfflineRecord | undefined;
+          if (!existing) writeAll();
+        };
+      } else writeAll();
+      await done;
+      return existing;
     },
   };
 }

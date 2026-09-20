@@ -628,7 +628,7 @@ describe("Frigora visit customer acknowledgement (F0.15)", () => {
     const schemaPath = fileURLToPath(
       new URL("../../platform/persistence/schema.ts", import.meta.url),
     );
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 27/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 28/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_visit_customer_acknowledgements/);
     assert.equal(readFileSync(schemaPath, "utf8").includes("frigora_asset_history"), false);
   });

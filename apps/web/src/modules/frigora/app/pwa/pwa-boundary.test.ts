@@ -147,11 +147,16 @@ describe("Frigora F3.2 online PWA boundary", () => {
   });
 
   it("does not imply disconnected mutations were saved and blocks them while offline", () => {
-    assert.match(FRIGORA_CONNECTIVITY_OFFLINE_BODY, /Technical findings may be saved/);
+    assert.match(
+      FRIGORA_CONNECTIVITY_OFFLINE_BODY,
+      /Technical findings, field captures, and evidence may be saved/,
+    );
     assert.match(FRIGORA_CONNECTIVITY_OFFLINE_BODY, /reconnect alone does not submit/i);
     assert.match(FRIGORA_CONNECTIVITY_RESTORED_BODY, /explicitly submit/i);
     assert.match(FRIGORA_CONNECTIVITY_RESTORED_BODY, /Reconnect alone does not change server records/i);
-    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /not kept for later sync/);
+    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /upload immediately/i);
+    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /explicit later submit/i);
+    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /Removal and linking still require a connection/i);
     const banner = read("modules/frigora/app/pwa/connectivity-banner.tsx");
     const register = read("modules/frigora/app/pwa/register-service-worker.tsx");
     assert.match(banner, /shouldBlockFrigoraFieldMutation/);
@@ -214,7 +219,7 @@ describe("Frigora F3.2 online PWA boundary", () => {
 
   it("does not change persistence generation or invent F3.3 stores", () => {
     const db = read("platform/persistence/db.ts");
-    assert.match(db, /SCHEMA_GENERATION = 27/);
+    assert.match(db, /SCHEMA_GENERATION = 28/);
     assert.equal(platformVentureRegistry.resolve("frigora").lifecycle, "concept");
     const sw = readPublic("sw.js");
     assert.equal(sw.includes("workbox"), false);

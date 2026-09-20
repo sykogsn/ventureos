@@ -78,6 +78,7 @@ export type FrigoraOfflineStore = {
       syncState?: FrigoraOfflineSyncState;
     },
   ): Promise<FrigoraOfflineMutationEnvelope>;
+  enqueueEvidence(input: Parameters<FrigoraOfflineStore["enqueueMutation"]>[0], blob: FrigoraOfflineEvidenceBlob): Promise<FrigoraOfflineMutationEnvelope>;
   getMutation(
     clientOperationId: FrigoraClientOperationId,
   ): Promise<FrigoraOfflineMutationEnvelope | undefined>;
@@ -106,6 +107,7 @@ export type FrigoraOfflineStore = {
     partition: FrigoraOfflinePartition,
   ): Promise<FrigoraOfflineEvidenceBlob[]>;
 
+  acceptEvidence(envelope: FrigoraOfflineMutationEnvelope, receipt: FrigoraOfflineReceiptRecord): Promise<FrigoraOfflineMutationEnvelope>;
   putReceipt(receipt: FrigoraOfflineReceiptRecord): Promise<void>;
   listReceipts(partition: FrigoraOfflinePartition): Promise<FrigoraOfflineReceiptRecord[]>;
 
@@ -244,6 +246,18 @@ function createStore(backend: FrigoraOfflineBackend): FrigoraOfflineStore {
       return envelope;
     },
 
+    async enqueueEvidence(input, blob) {
+      const envelope: FrigoraOfflineMutationEnvelope = {
+        ...input, clientOperationId: blob.clientOperationId,
+        createdAtLocal: nowIso(), syncState: input.syncState ?? "PENDING", attemptCount: 0,
+      };
+      const existing = await backend.atomicPut([
+        { store: "evidence_blobs", record: { key: blobKey(blob.blobId), ...blob } },
+        { store: "outbox", record: { key: mutationKey(blob.clientOperationId), ...envelope } },
+      ], { store: "outbox", key: mutationKey(blob.clientOperationId) });
+      return existing ? asRecord<FrigoraOfflineMutationEnvelope>(existing) : envelope;
+    },
+
     async getMutation(clientOperationId) {
       const record = await backend.get("outbox", mutationKey(clientOperationId));
       return record ? asRecord<FrigoraOfflineMutationEnvelope>(record) : undefined;
@@ -321,6 +335,19 @@ function createStore(backend: FrigoraOfflineBackend): FrigoraOfflineStore {
       return all
         .map((record) => asRecord<FrigoraOfflineEvidenceBlob>(record))
         .filter((blob) => belongsToPartition(blob, partition));
+    },
+
+    async acceptEvidence(envelope, receipt) {
+      const blob = await this.getEvidenceBlob(String(envelope.payload.blobId));
+      if (!blob || blob.clientOperationId !== envelope.clientOperationId) throw new Error("Evidence blob missing");
+      assertPartitionMatch(blob, envelope);
+      const updated: FrigoraOfflineMutationEnvelope = { ...envelope, syncState: "SYNCED", lastAttemptAt: nowIso() };
+      await backend.atomicPut([
+        { store: "outbox", record: { key: mutationKey(envelope.clientOperationId), ...updated } },
+        { store: "receipts", record: { key: receiptKey(receipt.receiptId), ...receipt } },
+        { store: "evidence_blobs", record: { key: blobKey(blob.blobId), ...blob, lifecycle: "SERVER_ACCEPTED" } },
+      ]);
+      return updated;
     },
 
     async putReceipt(receipt) {
