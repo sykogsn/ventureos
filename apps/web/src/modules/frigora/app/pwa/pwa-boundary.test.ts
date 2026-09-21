@@ -98,6 +98,12 @@ describe("Frigora F3.2 online PWA boundary", () => {
     const globals = read("app/globals.css");
     assert.match(globals, /safe-area-inset-top/);
     assert.match(globals, /data-frigora-offline/);
+    assert.match(
+      globals,
+      /form:not\(\[data-frigora-offline-capture="recordTechnicalFinding"\]\):not\(\[data-frigora-offline-capture="recordFieldCapture"\]\):not\(\[data-frigora-offline-capture="recordVisitEvidence"\]\)/,
+    );
+    assert.match(globals, /pointer-events:\s*none/);
+    assert.equal(globals.includes('data-frigora-offline-capture="removeVisitEvidence"'), false);
   });
   it("keeps install assets public and session-gates Frigora start and field routes", () => {
     const proxy = read("proxy.ts");

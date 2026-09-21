@@ -29,7 +29,7 @@ export function RemoveVisitEvidenceForm({
   );
 
   return (
-    <Form action={formAction} gap="tight">
+    <Form action={formAction} gap="tight" data-frigora-online-only-operation="removeVisitEvidence">
       <input type="hidden" name="workspaceId" value={workspaceId} />
       <input type="hidden" name="ventureId" value={ventureId} />
       <input type="hidden" name="workOrderId" value={workOrderId} />

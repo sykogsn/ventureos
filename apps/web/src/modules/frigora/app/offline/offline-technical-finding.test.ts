@@ -286,7 +286,7 @@ describe("F33-03 technical finding local capture + idempotent explicit acceptanc
     const partition = { ventureId: owner.ventureId, actorUserId: engineerId };
     const backend = createMemoryOfflineBackend({ dbName: "f33-03-capture" });
     const store = await openFrigoraOfflineStore({ backend });
-    const lease = createOfflineLease(partition, { nowMs: Date.parse(NOW) });
+    const lease = createOfflineLease(partition, { nowMs: Date.now() });
     await store.putLease(lease);
     await store.putWorkspaceSnapshot({
       snapshotId: "snap-1",
@@ -525,7 +525,7 @@ describe("F33-03 technical finding local capture + idempotent explicit acceptanc
     const partition = { ventureId: owner.ventureId, actorUserId: engineerId };
     const backend = createMemoryOfflineBackend({ dbName: "f33-03-retry" });
     const store = await openFrigoraOfflineStore({ backend });
-    const lease = createOfflineLease(partition, { nowMs: Date.parse(NOW) });
+    const lease = createOfflineLease(partition, { nowMs: Date.now() });
     await store.putLease(lease);
     await store.putWorkspaceSnapshot({
       snapshotId: "snap-retry",

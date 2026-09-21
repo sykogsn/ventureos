@@ -616,14 +616,17 @@ body {
   padding-left: env(safe-area-inset-left, 0px);
 }
 
-html[data-frigora-offline] form {
+/* F33-04: block pointer interaction on disconnected mutation controls, except
+   the three allowlisted offline capture operations in capture-gate.ts.
+   File inputs are covered by the `input` selector. */
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) {
   opacity: 0.72;
 }
 
-html[data-frigora-offline] form button,
-html[data-frigora-offline] form input,
-html[data-frigora-offline] form select,
-html[data-frigora-offline] form textarea {
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) button,
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) input,
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) select,
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) textarea {
   pointer-events: none;
 }
 

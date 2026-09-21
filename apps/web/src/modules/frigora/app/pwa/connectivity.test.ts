@@ -35,6 +35,30 @@ describe("Frigora F3.2 connectivity", () => {
       }),
       true,
     );
+    assert.equal(
+      shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/wo-1/visit/vis-1", {
+        operationType: "recordFieldCapture",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/wo-1/visit/vis-1", {
+        operationType: "recordVisitEvidence",
+      }),
+      false,
+    );
+    assert.equal(
+      shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/wo-1/visit/vis-1", {
+        operationType: "removeVisitEvidence",
+      }),
+      true,
+    );
+    assert.equal(
+      shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/wo-1/visit/vis-1", {
+        operationType: "linkVisitEvidence",
+      }),
+      true,
+    );
   });
 
   it("does not claim saved-on-device without durable pending operations", () => {

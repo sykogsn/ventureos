@@ -348,7 +348,11 @@ function PendingVisitEvidenceRow({
   }
 
   return (
-    <article className="rounded-[var(--ids-foundation-radius-sm)] border border-[var(--ids-foundation-stroke-subtle)] p-3">
+    <article
+      className="rounded-[var(--ids-foundation-radius-sm)] border border-[var(--ids-foundation-stroke-subtle)] p-3"
+      data-frigora-client-operation-id={envelope.clientOperationId}
+      data-frigora-offline-operation={envelope.operationType}
+    >
       <Stack gap="tight">
         <p className="ids-caption text-muted" role="status">
           {submitting ? FRIGORA_VISIT_EVIDENCE_STATUS_COPY.submitting : statusLabel(envelope.syncState, online)}
