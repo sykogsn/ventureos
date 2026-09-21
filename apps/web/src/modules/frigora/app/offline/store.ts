@@ -34,6 +34,7 @@ import {
   type FrigoraOfflineOperationType,
   type FrigoraOfflinePartition,
   type FrigoraOfflineReceiptRecord,
+  type FrigoraOfflineServerReceipt,
   type FrigoraOfflineSyncState,
   type FrigoraOfflineWorkspaceSnapshot,
   type LogoutPendingPolicy,
@@ -88,7 +89,11 @@ export type FrigoraOfflineStore = {
   updateMutationState(
     clientOperationId: FrigoraClientOperationId,
     to: FrigoraOfflineSyncState,
-    options?: { serverAccepted?: boolean; lastAttemptAt?: string },
+    options?: {
+      serverAccepted?: boolean;
+      lastAttemptAt?: string;
+      serverReceipt?: FrigoraOfflineServerReceipt;
+    },
   ): Promise<FrigoraOfflineMutationEnvelope>;
   /**
    * Retry keeps the same clientOperationId — never duplicates the local operation.
@@ -275,6 +280,26 @@ function createStore(backend: FrigoraOfflineBackend): FrigoraOfflineStore {
       if (!current) {
         throw new Error(`Unknown offline mutation ${clientOperationId}`);
       }
+      if (current.syncState === to) {
+        const canRefreshReason =
+          to === "CONFLICT" ||
+          to === "BLOCKED" ||
+          to === "RETRYABLE_FAILURE" ||
+          to === "SYNCED";
+        if (!canRefreshReason || options?.serverReceipt === undefined) {
+          throw new Error(`Illegal offline sync transition: ${current.syncState} → ${to}`);
+        }
+        const refreshed: FrigoraOfflineMutationEnvelope = {
+          ...current,
+          serverReceipt: options.serverReceipt,
+          lastAttemptAt: options.lastAttemptAt ?? current.lastAttemptAt,
+        };
+        await backend.put("outbox", {
+          key: mutationKey(clientOperationId),
+          ...refreshed,
+        });
+        return refreshed;
+      }
       const nextState = transitionWithReceiptGuard(current.syncState, to, {
         serverAccepted: options?.serverAccepted,
       });
@@ -284,6 +309,9 @@ function createStore(backend: FrigoraOfflineBackend): FrigoraOfflineStore {
         attemptCount:
           to === "SYNCING" ? current.attemptCount + 1 : current.attemptCount,
         lastAttemptAt: options?.lastAttemptAt ?? current.lastAttemptAt,
+        ...(options?.serverReceipt !== undefined
+          ? { serverReceipt: options.serverReceipt }
+          : {}),
       };
       await backend.put("outbox", {
         key: mutationKey(clientOperationId),

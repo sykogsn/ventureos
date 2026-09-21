@@ -6,7 +6,7 @@
 
 **Milestone.** F3.3 — Offline Field Capability
 
-**Status.** Locked Control decisions + F33-01 foundation + F33-02 certified + F33-03 local technical-finding acceptance + F33-04 field capture/evidence integration. **F33-04 remains ACTIVE.** The engineering candidate awaits Independent Running-Product Verification and Control certification. This record is not a certification artefact.
+**Status.** Locked Control decisions + F33-01 foundation + F33-02 certified + F33-03 local technical-finding acceptance + F33-04 field capture/evidence integration. **F33-04 is CERTIFIED WITH DECLARED COVERAGE LIMITATIONS and CLOSED** at `f0d3004e2e236591ec16542c2dc1319557310086`. **F33-05 is ACTIVE.** This record is not an F33-06 certification artefact.
 
 **Date.** 2026-09-16
 
@@ -61,10 +61,11 @@ Client mutation envelopes carry stable `clientOperationId`. F33-03 adds server-s
 Earlier objective wording such as “reconnect and synchronise” does **not** mean automatic submission.
 
 - Reconnect enables explicit submission.
-- Reconnect alone performs **zero** business mutation.
-- There is **no** automatic/general outbox drain in F33-03.
-- There is **no** background business synchronisation.
-- Submission occurs only when the engineer invokes a visible submit/retry action while online and authenticated.
+- Reconnect may perform a **read-only** authoritative receipt reconciliation for the signed-in engineer's own non-synced operations, including a receipt accepted before reassignment.
+- Reconnect alone performs **zero** business mutation. A read that marks local `SYNCED` is not a new business effect.
+- There is **no** automatic/general outbox drain.
+- There is **no** background business synchronisation and no recurring polling.
+- Submission occurs only when the engineer invokes a visible submit/retry action while online and authenticated, and only after a read-only check reports that no authoritative receipt exists.
 
 ## Anti-loop packet sequence
 
@@ -109,4 +110,12 @@ IndexedDB v1 conditionally inserts the evidence blob and outbox envelope in one 
 
 All three forms await guarded local capture and reconcile each explicit submit in its invocation, not a render effect. Response loss remains visible and explicitly retryable with the same operation ID; interrupted `SYNCING` permits manual retry. Reconnect effects read local state only. No service-worker mutation drain is introduced.
 
-Engineering evidence (authoritative focused result, not product admission): the StoredObject suite passed **24/24 GREEN**, including crash/restart with four independent callers reusing one identity and four independently visible `stored_object.created` audits; the isolated durability matrix passed 26/26. **F33-04 remains ACTIVE** and awaits Independent Running-Product Verification and Control certification. These are engineering results only. They do not certify F33-04, complete F33-04, or complete F3.3.
+Engineering evidence (authoritative focused result, not product admission): the StoredObject suite passed **24/24 GREEN**, including crash/restart with four independent callers reusing one identity and four independently visible `stored_object.created` audits; the isolated durability matrix passed 26/26. **F33-04 is CERTIFIED WITH DECLARED COVERAGE LIMITATIONS and CLOSED** at `f0d3004e2e236591ec16542c2dc1319557310086`. These engineering results are not F33-06 certification and do not complete F3.3.
+
+## F33-05 conflict, authority, and recovery
+
+F33-05 hardens recovery for the existing three offline operations. It does not extend the allowlist. Product remains `frigora@0.21.0`. SCHEMA_GENERATION remains **28**. IndexedDB remains `frigora-offline` **v1**.
+
+A dedicated read-only acceptance lookup reports `NOT_FOUND`, `ACCEPTED`, or `MISMATCH`. It does not call the submit methods, does not upload evidence bytes, and does not require the engineer to still be the current WorkOrder assignee. The receipt actor, operation, target, and server-recomputed fingerprint must match. A mismatch returns no foreign receipt data.
+
+Explicit retry looks up first. `ACCEPTED` reconciles local state only. `NOT_FOUND` continues to the existing explicit submit. `MISMATCH` becomes `CONFLICT` and does not submit. Authentication failure becomes `BLOCKED`. Transport failure on an explicit attempt becomes `RETRYABLE_FAILURE`. Authority loss and visit/work-order rejection stay `CONFLICT`, with the reason persisted on the existing outbox envelope. Reconnect and pending refresh may run the same read. They do not submit. Interrupted `SYNCING` is not treated as acceptance and is not auto-resubmitted. F33-05 does not add a discard action.

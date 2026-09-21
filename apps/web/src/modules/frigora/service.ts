@@ -49,6 +49,8 @@ import type {
   SubmitClientFieldCaptureResult,
   SubmitClientVisitEvidenceInput,
   SubmitClientVisitEvidenceResult,
+  LookupClientOperationAcceptanceInput,
+  FrigoraClientOperationAcceptanceLookup,
   FrigoraCorrectiveAction,
   FrigoraCorrectiveActionId,
   RecordCorrectiveActionInput,
@@ -316,6 +318,14 @@ export type FrigoraService = {
     visitId: FrigoraVisitId,
     input: SubmitClientVisitEvidenceInput,
   ): Promise<SubmitClientVisitEvidenceResult>;
+  /**
+   * F33-05: read whether this engineer already has an authoritative acceptance
+   * for a client operation. Does not submit, upload, or require current assignment.
+   */
+  lookupClientOperationAcceptance(
+    scope: FrigoraScope,
+    input: LookupClientOperationAcceptanceInput,
+  ): Promise<FrigoraClientOperationAcceptanceLookup>;
   getTechnicalFinding(
     scope: FrigoraScope,
     id: FrigoraTechnicalFindingId,
@@ -2872,6 +2882,10 @@ export function createFrigoraService(options: {
         throw error;
       }
     },
+    async lookupClientOperationAcceptance(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
+      return readClientOperationAcceptance(store, scope, input);
+    },
     async linkVisitEvidence(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
       const visit = await requireVisit(store, scope, visitId);
@@ -4015,6 +4029,159 @@ async function resolveExistingClientVisitEvidenceAcceptance(input: {
     );
   }
   return { evidence, receipt, duplicate: true };
+}
+
+const CLIENT_OPERATION_ACCEPTANCE_MISMATCH: FrigoraClientOperationAcceptanceLookup = {
+  status: "MISMATCH",
+};
+
+/**
+ * Read-only acceptance check. Current WorkOrder assignment is intentionally
+ * not required: a receipt accepted before reassignment must still reconcile.
+ * This function performs no insert, upload, or reservation.
+ */
+async function readClientOperationAcceptance(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  input: LookupClientOperationAcceptanceInput,
+): Promise<FrigoraClientOperationAcceptanceLookup> {
+  const clientOperationId = input.clientOperationId.trim();
+  const workOrderId = input.workOrderId.trim();
+  const visitId = input.visitId.trim();
+  if (!clientOperationId || !workOrderId || !visitId) {
+    return CLIENT_OPERATION_ACCEPTANCE_MISMATCH;
+  }
+  if (
+    input.operationType !== "recordTechnicalFinding" &&
+    input.operationType !== "recordFieldCapture" &&
+    input.operationType !== "recordVisitEvidence"
+  ) {
+    return CLIENT_OPERATION_ACCEPTANCE_MISMATCH;
+  }
+
+  const fingerprint = fingerprintLookupRequest(scope, input, workOrderId, visitId);
+  const receipt = await store.findClientOperationReceipt(scope.ventureId, clientOperationId);
+  if (!receipt) {
+    return { status: "NOT_FOUND" };
+  }
+  if (
+    receipt.actorUserId !== scope.userId ||
+    receipt.workspaceId !== scope.workspaceId ||
+    receipt.operationType !== input.operationType ||
+    receipt.workOrderId !== workOrderId ||
+    receipt.visitId !== visitId ||
+    receipt.requestFingerprint !== fingerprint
+  ) {
+    return CLIENT_OPERATION_ACCEPTANCE_MISMATCH;
+  }
+  const entityMatches = await acceptedEntityMatchesReceipt(store, scope, receipt);
+  if (!entityMatches) {
+    return CLIENT_OPERATION_ACCEPTANCE_MISMATCH;
+  }
+  return {
+    status: "ACCEPTED",
+    receiptId: receipt.id,
+    clientOperationId: receipt.clientOperationId,
+    acceptedEntityId: receipt.acceptedEntityId,
+    operationType: receipt.operationType,
+    acceptedAt: receipt.acceptedAt,
+    workOrderId: receipt.workOrderId,
+    visitId: receipt.visitId,
+  };
+}
+
+function fingerprintLookupRequest(
+  scope: FrigoraScope,
+  input: LookupClientOperationAcceptanceInput,
+  workOrderId: string,
+  visitId: string,
+): string {
+  if (input.operationType === "recordTechnicalFinding") {
+    return fingerprintTechnicalFindingRequest({
+      ventureId: scope.ventureId,
+      actorUserId: scope.userId,
+      workOrderId,
+      visitId,
+      findingKind: input.findingKind,
+      description: input.description,
+      assertedAt: input.assertedAt,
+      userId: scope.userId,
+      assetId: input.assetId,
+      sourceFieldCaptureIds: input.sourceFieldCaptureIds,
+    });
+  }
+  if (input.operationType === "recordFieldCapture") {
+    return fingerprintFieldCaptureRequest({
+      ventureId: scope.ventureId,
+      actorUserId: scope.userId,
+      workOrderId,
+      visitId,
+      captureKind: input.captureKind,
+      captureCode: input.captureCode,
+      valueNumeric: input.valueNumeric,
+      valueUnit: input.valueUnit,
+      description: input.description,
+      observedAt: input.observedAt,
+      userId: scope.userId,
+      assetId: input.assetId,
+    });
+  }
+  return fingerprintVisitEvidenceRequest({
+    ventureId: scope.ventureId,
+    actorUserId: scope.userId,
+    workOrderId,
+    visitId,
+    category: input.category,
+    description: input.description,
+    originalFilename: input.originalFilename,
+    mimeType: input.mimeType,
+    byteLength: input.byteLength,
+    contentSha256: input.contentSha256,
+    userId: scope.userId,
+    assetId: input.assetId,
+  });
+}
+
+async function acceptedEntityMatchesReceipt(
+  store: FrigoraStore,
+  scope: FrigoraScope,
+  receipt: FrigoraClientOperationReceipt,
+): Promise<boolean> {
+  if (receipt.operationType === "recordTechnicalFinding") {
+    const finding = await store.findTechnicalFinding(
+      scope.workspaceId,
+      scope.ventureId,
+      receipt.acceptedEntityId as FrigoraTechnicalFindingId,
+    );
+    return Boolean(
+      finding &&
+        finding.visitId === receipt.visitId &&
+        finding.workOrderId === receipt.workOrderId,
+    );
+  }
+  if (receipt.operationType === "recordFieldCapture") {
+    const capture = await store.findFieldCapture(
+      scope.workspaceId,
+      scope.ventureId,
+      receipt.acceptedEntityId as FrigoraFieldCaptureId,
+    );
+    return Boolean(
+      capture &&
+        capture.visitId === receipt.visitId &&
+        capture.workOrderId === receipt.workOrderId,
+    );
+  }
+  const evidence = await store.findVisitEvidence(
+    scope.workspaceId,
+    scope.ventureId,
+    receipt.acceptedEntityId as FrigoraVisitEvidenceId,
+  );
+  return Boolean(
+    evidence &&
+      evidence.storedObjectId &&
+      evidence.visitId === receipt.visitId &&
+      evidence.workOrderId === receipt.workOrderId,
+  );
 }
 
 function assertVisitAcceptsCorrectiveAction(visit: FrigoraVisit) {

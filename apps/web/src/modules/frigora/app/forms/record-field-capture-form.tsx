@@ -25,7 +25,17 @@ import {
   FRIGORA_FIELD_CAPTURE_UNITS,
 } from "@/modules/frigora/types";
 
-import { canExplicitlySubmitOffline, saveOfflineOnce, submitOfflineFromClient } from "@/modules/frigora/app/offline/offline-client-actions";
+import { saveOfflineOnce } from "@/modules/frigora/app/offline/offline-client-actions";
+import { lookupPendingOfflineAcceptanceAction } from "@/modules/frigora/app/offline/offline-acceptance-action";
+import {
+  buildOfflineAcceptanceLookupInput,
+  frigoraFieldSignInHref,
+  persistedRecoveryReason,
+  recoveryControl,
+  refreshOfflineAcceptance,
+  runExplicitOfflineSubmission,
+  runReadOnlyAcceptanceCheck,
+} from "@/modules/frigora/app/offline/offline-recovery";
 
 function subscribeOnline(onStoreChange: () => void) {
   window.addEventListener("online", onStoreChange);
@@ -44,23 +54,22 @@ function getOnlineServerSnapshot() {
   return true;
 }
 
-function statusLabel(state: FrigoraOfflineMutationEnvelope["syncState"], online: boolean): string {
+function statusLabel(state: FrigoraOfflineMutationEnvelope["syncState"]): string {
+  const copy = FRIGORA_FIELD_CAPTURE_STATUS_COPY;
   switch (state) {
     case "LOCAL_DRAFT":
     case "PENDING":
-      return online
-        ? FRIGORA_FIELD_CAPTURE_STATUS_COPY.readyToSubmit
-        : FRIGORA_FIELD_CAPTURE_STATUS_COPY.savedOnDevice;
+      return `${copy.savedOnDevice} · ${copy.notYetSubmitted}`;
     case "SYNCING":
-      return "Submission status needs reconciliation. Retry when online.";
+      return copy.acceptanceNotConfirmed;
     case "SYNCED":
-      return FRIGORA_FIELD_CAPTURE_STATUS_COPY.acceptedByServer;
+      return copy.acceptedByServer;
     case "BLOCKED":
-      return FRIGORA_FIELD_CAPTURE_STATUS_COPY.blocked;
+      return copy.blocked;
     case "CONFLICT":
-      return FRIGORA_FIELD_CAPTURE_STATUS_COPY.conflict;
+      return copy.conflict;
     case "RETRYABLE_FAILURE":
-      return FRIGORA_FIELD_CAPTURE_STATUS_COPY.retryable;
+      return copy.retryable;
   }
 }
 
@@ -88,6 +97,7 @@ export function RecordFieldCaptureForm({
   const [offlinePending, startOfflineTransition] = useTransition();
   const offlineSaveInFlight = useRef(false);
   const [pendingOps, setPendingOps] = useState<FrigoraOfflineMutationEnvelope[]>([]);
+  const [notFoundSyncing, setNotFoundSyncing] = useState<ReadonlySet<string>>(() => new Set());
   const [captureKind, setCaptureKind] = useState(
     onlineState.values?.captureKind ?? "measurement",
   );
@@ -107,12 +117,24 @@ export function RecordFieldCaptureForm({
         { ventureId, actorUserId },
         { workOrderId, visitId },
       );
-      if (!cancelled) setPendingOps(ops);
+      if (!online) {
+        if (!cancelled) setPendingOps(ops);
+        return;
+      }
+      const refreshed = await refreshOfflineAcceptance(ops, (operation) =>
+        lookupPendingOfflineAcceptanceAction(
+          buildOfflineAcceptanceLookupInput(operation, workspaceId),
+        ),
+      );
+      if (!cancelled) {
+        setPendingOps(refreshed.operations);
+        setNotFoundSyncing(new Set(refreshed.notFoundSyncingIds));
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [ventureId, actorUserId, workOrderId, visitId, online]);
+  }, [ventureId, actorUserId, workOrderId, visitId, workspaceId, online]);
 
   function onOfflineSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -221,6 +243,10 @@ export function RecordFieldCaptureForm({
               envelope={op}
               workspaceId={workspaceId}
               online={online}
+              acceptanceCheckedNotFound={notFoundSyncing.has(op.clientOperationId)}
+              onAcceptanceNotFound={() =>
+                setNotFoundSyncing((current) => new Set(current).add(op.clientOperationId))
+              }
               onChanged={refreshPending}
             />
           ))}
@@ -324,18 +350,29 @@ function PendingFieldCaptureRow({
   envelope,
   workspaceId,
   online,
+  acceptanceCheckedNotFound,
+  onAcceptanceNotFound,
   onChanged,
 }: {
   envelope: FrigoraOfflineMutationEnvelope;
   workspaceId: string;
   online: boolean;
+  acceptanceCheckedNotFound: boolean;
+  onAcceptanceNotFound: () => void;
   onChanged: () => Promise<void>;
 }) {
   const [state, action, pending] = useActionState(
     async (previous: ExplicitFieldCaptureSubmitState, data: FormData) =>
-      submitOfflineFromClient(envelope, () => submitPendingFieldCaptureFormAction(previous, data), onChanged),
+      runExplicitOfflineSubmission(
+        envelope,
+        () => lookupPendingOfflineAcceptanceAction(buildOfflineAcceptanceLookupInput(envelope, workspaceId)),
+        () => submitPendingFieldCaptureFormAction(previous, data),
+        onChanged,
+      ),
     {} as ExplicitFieldCaptureSubmitState,
   );
+  const [checkError, setCheckError] = useState<string | null>(null);
+  const [checking, startCheck] = useTransition();
   const payload = envelope.payload;
   const captureKind = String(payload.captureKind ?? "");
   const captureCode = String(payload.captureCode ?? "");
@@ -350,7 +387,27 @@ function PendingFieldCaptureRow({
   const valueUnit = typeof payload.valueUnit === "string" ? payload.valueUnit : "";
   const assetId = typeof payload.assetId === "string" ? payload.assetId : "";
 
-  const canSubmit = canExplicitlySubmitOffline(envelope.syncState, online);
+  const copy = FRIGORA_FIELD_CAPTURE_STATUS_COPY;
+  const control = recoveryControl({
+    syncState: envelope.syncState,
+    online,
+    serverErrorCode: envelope.serverReceipt?.serverErrorCode,
+    acceptanceCheckedNotFound,
+  });
+  const reason = persistedRecoveryReason(envelope);
+  const busy = pending || checking;
+
+  function onCheckAcceptance() {
+    setCheckError(null);
+    startCheck(async () => {
+      const result = await runReadOnlyAcceptanceCheck(envelope, () =>
+        lookupPendingOfflineAcceptanceAction(buildOfflineAcceptanceLookupInput(envelope, workspaceId)),
+      );
+      if (result.disposition === "not_found") onAcceptanceNotFound();
+      setCheckError(result.error ?? null);
+      await onChanged();
+    });
+  }
 
   const summary =
     captureKind === "measurement"
@@ -365,23 +422,31 @@ function PendingFieldCaptureRow({
     >
       <Stack gap="tight">
         <p className="ids-caption text-muted" role="status">
-          {pending ? FRIGORA_FIELD_CAPTURE_STATUS_COPY.submitting : statusLabel(envelope.syncState, online)}
-          {!online && (envelope.syncState === "PENDING" || envelope.syncState === "LOCAL_DRAFT")
-            ? ` · ${FRIGORA_FIELD_CAPTURE_STATUS_COPY.notYetSubmitted}`
-            : null}
+          {busy ? copy.submitting : statusLabel(envelope.syncState)}
         </p>
         <p className="ids-body">{summary}</p>
-        {state.error ? (
+        {reason ? <p className="ids-caption text-muted">{reason}</p> : null}
+        {checkError || state.error ? (
           <p className="ids-caption text-danger" role="alert">
-            {state.error}
+            {checkError ?? state.error}
           </p>
         ) : null}
         {state.acceptedEntityId ? (
           <p className="ids-caption text-muted" role="status">
-            {FRIGORA_FIELD_CAPTURE_STATUS_COPY.acceptedByServer}
+            {copy.acceptedByServer}
           </p>
         ) : null}
-        {canSubmit ? (
+        {control === "check" ? (
+          <Button type="button" disabled={busy} className="w-full sm:w-auto" onClick={onCheckAcceptance}>
+            {copy.checkAcceptance}
+          </Button>
+        ) : null}
+        {control === "sign-in" ? (
+          <a href={frigoraFieldSignInHref(envelope.ventureId, envelope.workOrderId, envelope.visitId ?? "")}>
+            {copy.signIn}
+          </a>
+        ) : null}
+        {control === "submit" || control === "retry" ? (
           <Form action={action} gap="tight">
             <input type="hidden" name="workspaceId" value={workspaceId} />
             <input type="hidden" name="ventureId" value={envelope.ventureId} />
@@ -396,12 +461,8 @@ function PendingFieldCaptureRow({
             <input type="hidden" name="valueUnit" value={valueUnit} />
             <input type="hidden" name="assetId" value={assetId} />
             <input type="hidden" name="actorUserId" value={envelope.actorUserId} />
-            <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-              {pending
-                ? FRIGORA_FIELD_CAPTURE_STATUS_COPY.submitting
-                : envelope.syncState === "RETRYABLE_FAILURE" || envelope.syncState === "SYNCING"
-                  ? "Retry submission"
-                  : "Submit to server"}
+            <Button type="submit" disabled={busy} className="w-full sm:w-auto">
+              {busy ? copy.submitting : control === "retry" ? copy.retrySubmission : copy.submitToServer}
             </Button>
           </Form>
         ) : null}

@@ -34,7 +34,18 @@ import {
   type ExplicitVisitEvidenceSubmitState,
 } from "@/modules/frigora/app/offline/visit-evidence-submit-action";
 
-import { canExplicitlySubmitOffline, saveOfflineOnce, submitOfflineFromClient } from "@/modules/frigora/app/offline/offline-client-actions";
+import { saveOfflineOnce } from "@/modules/frigora/app/offline/offline-client-actions";
+import { lookupPendingOfflineAcceptanceAction } from "@/modules/frigora/app/offline/offline-acceptance-action";
+import {
+  buildOfflineAcceptanceLookupInput,
+  frigoraFieldSignInHref,
+  OfflineEvidenceLinkageError,
+  persistedRecoveryReason,
+  recoveryControl,
+  refreshOfflineAcceptance,
+  runExplicitOfflineSubmission,
+  runReadOnlyAcceptanceCheck,
+} from "@/modules/frigora/app/offline/offline-recovery";
 
 function subscribeOnline(onStoreChange: () => void) {
   window.addEventListener("online", onStoreChange);
@@ -57,23 +68,38 @@ function categoryLabel(category: string) {
   return category.replace(/_/g, " ").toLowerCase();
 }
 
-function statusLabel(state: FrigoraOfflineMutationEnvelope["syncState"], online: boolean): string {
+async function lookupSavedEvidenceAcceptance(
+  envelope: FrigoraOfflineMutationEnvelope,
+  workspaceId: string,
+) {
+  try {
+    await loadPersistedEvidenceBlobForSubmit(envelope);
+  } catch (error) {
+    throw new OfflineEvidenceLinkageError(
+      error instanceof Error ? error.message : "Evidence linkage failed.",
+    );
+  }
+  return lookupPendingOfflineAcceptanceAction(
+    buildOfflineAcceptanceLookupInput(envelope, workspaceId),
+  );
+}
+
+function statusLabel(state: FrigoraOfflineMutationEnvelope["syncState"]): string {
+  const copy = FRIGORA_VISIT_EVIDENCE_STATUS_COPY;
   switch (state) {
     case "LOCAL_DRAFT":
     case "PENDING":
-      return online
-        ? FRIGORA_VISIT_EVIDENCE_STATUS_COPY.readyToSubmit
-        : FRIGORA_VISIT_EVIDENCE_STATUS_COPY.savedOnDevice;
+      return `${copy.savedOnDevice} · ${copy.notYetSubmitted}`;
     case "SYNCING":
-      return "Submission status needs reconciliation. Retry when online.";
+      return copy.acceptanceNotConfirmed;
     case "SYNCED":
-      return FRIGORA_VISIT_EVIDENCE_STATUS_COPY.acceptedByServer;
+      return copy.acceptedByServer;
     case "BLOCKED":
-      return FRIGORA_VISIT_EVIDENCE_STATUS_COPY.blocked;
+      return copy.blocked;
     case "CONFLICT":
-      return FRIGORA_VISIT_EVIDENCE_STATUS_COPY.conflict;
+      return copy.conflict;
     case "RETRYABLE_FAILURE":
-      return FRIGORA_VISIT_EVIDENCE_STATUS_COPY.retryable;
+      return copy.retryable;
   }
 }
 
@@ -101,6 +127,7 @@ export function RecordVisitEvidenceForm({
   const [offlinePending, startOfflineTransition] = useTransition();
   const offlineSaveInFlight = useRef(false);
   const [pendingOps, setPendingOps] = useState<FrigoraOfflineMutationEnvelope[]>([]);
+  const [notFoundSyncing, setNotFoundSyncing] = useState<ReadonlySet<string>>(() => new Set());
 
   async function refreshPending() {
     const ops = await listVisitEvidenceMutations(
@@ -117,12 +144,22 @@ export function RecordVisitEvidenceForm({
         { ventureId, actorUserId },
         { workOrderId, visitId },
       );
-      if (!cancelled) setPendingOps(ops);
+      if (!online) {
+        if (!cancelled) setPendingOps(ops);
+        return;
+      }
+      const refreshed = await refreshOfflineAcceptance(ops, (operation) =>
+        lookupSavedEvidenceAcceptance(operation, workspaceId),
+      );
+      if (!cancelled) {
+        setPendingOps(refreshed.operations);
+        setNotFoundSyncing(new Set(refreshed.notFoundSyncingIds));
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [ventureId, actorUserId, workOrderId, visitId, online]);
+  }, [ventureId, actorUserId, workOrderId, visitId, workspaceId, online]);
 
   function onOfflineSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -229,6 +266,10 @@ export function RecordVisitEvidenceForm({
               envelope={op}
               workspaceId={workspaceId}
               online={online}
+              acceptanceCheckedNotFound={notFoundSyncing.has(op.clientOperationId)}
+              onAcceptanceNotFound={() =>
+                setNotFoundSyncing((current) => new Set(current).add(op.clientOperationId))
+              }
               onChanged={refreshPending}
             />
           ))}
@@ -290,11 +331,15 @@ function PendingVisitEvidenceRow({
   envelope,
   workspaceId,
   online,
+  acceptanceCheckedNotFound,
+  onAcceptanceNotFound,
   onChanged,
 }: {
   envelope: FrigoraOfflineMutationEnvelope;
   workspaceId: string;
   online: boolean;
+  acceptanceCheckedNotFound: boolean;
+  onAcceptanceNotFound: () => void;
   onChanged: () => Promise<void>;
 }) {
   const [state, setState] = useState<ExplicitVisitEvidenceSubmitState>({});
@@ -307,8 +352,26 @@ function PendingVisitEvidenceRow({
   const originalFilename = String(payload.originalFilename ?? "evidence.bin");
   const mimeType = String(payload.mimeType ?? "application/octet-stream");
   const assetId = typeof payload.assetId === "string" ? payload.assetId : "";
+  const copy = FRIGORA_VISIT_EVIDENCE_STATUS_COPY;
+  const control = recoveryControl({
+    syncState: envelope.syncState,
+    online,
+    serverErrorCode: envelope.serverReceipt?.serverErrorCode,
+    acceptanceCheckedNotFound,
+  });
+  const reason = persistedRecoveryReason(envelope);
 
-  const canSubmit = canExplicitlySubmitOffline(envelope.syncState, online);
+  function onCheckAcceptance() {
+    setSubmitError(null);
+    startSubmitTransition(async () => {
+      const result = await runReadOnlyAcceptanceCheck(envelope, () =>
+        lookupSavedEvidenceAcceptance(envelope, workspaceId),
+      );
+      if (result.disposition === "not_found") onAcceptanceNotFound();
+      setSubmitError(result.error ?? null);
+      await onChanged();
+    });
+  }
 
   function onExplicitSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -316,33 +379,31 @@ function PendingVisitEvidenceRow({
     setSubmitError(null);
     startSubmitTransition(async () => {
       await saveOfflineOnce(submitInFlight, async () => {
-        try {
-          const blob = await loadPersistedEvidenceBlobForSubmit(envelope);
-          await markEvidenceBlobAwaitingAcceptance(blob.blobId);
-          const formData = new FormData();
-          formData.set("workspaceId", workspaceId);
-          formData.set("ventureId", envelope.ventureId);
-          formData.set("workOrderId", envelope.workOrderId);
-          formData.set("visitId", envelope.visitId ?? "");
-          formData.set("clientOperationId", envelope.clientOperationId);
-          formData.set("category", category);
-          formData.set("description", description);
-          formData.set("originalFilename", originalFilename);
-          formData.set("mimeType", mimeType);
-          formData.set("assetId", assetId);
-          formData.set("actorUserId", envelope.actorUserId);
-          formData.set(
-            "file",
-            new File([blob.bytes], originalFilename, {
-              type: mimeType,
-            }),
-          );
-          setState(await submitOfflineFromClient(envelope, () => submitPendingVisitEvidenceFormAction({}, formData), onChanged));
-        } catch (error) {
-          setSubmitError(
-            error instanceof Error ? error.message : "Could not prepare evidence for submission.",
-          );
-        }
+        const next = await runExplicitOfflineSubmission(
+          envelope,
+          () => lookupSavedEvidenceAcceptance(envelope, workspaceId),
+          async () => {
+            const blob = await loadPersistedEvidenceBlobForSubmit(envelope);
+            await markEvidenceBlobAwaitingAcceptance(blob.blobId);
+            const formData = new FormData();
+            formData.set("workspaceId", workspaceId);
+            formData.set("ventureId", envelope.ventureId);
+            formData.set("workOrderId", envelope.workOrderId);
+            formData.set("visitId", envelope.visitId ?? "");
+            formData.set("clientOperationId", envelope.clientOperationId);
+            formData.set("category", category);
+            formData.set("description", description);
+            formData.set("originalFilename", originalFilename);
+            formData.set("mimeType", mimeType);
+            formData.set("assetId", assetId);
+            formData.set("actorUserId", envelope.actorUserId);
+            formData.set("file", new File([blob.bytes], originalFilename, { type: mimeType }));
+            return submitPendingVisitEvidenceFormAction({}, formData);
+          },
+          onChanged,
+        );
+        setState(next);
+        if (next.error) setSubmitError(next.error);
       });
     });
   }
@@ -355,15 +416,13 @@ function PendingVisitEvidenceRow({
     >
       <Stack gap="tight">
         <p className="ids-caption text-muted" role="status">
-          {submitting ? FRIGORA_VISIT_EVIDENCE_STATUS_COPY.submitting : statusLabel(envelope.syncState, online)}
-          {!online && (envelope.syncState === "PENDING" || envelope.syncState === "LOCAL_DRAFT")
-            ? ` · ${FRIGORA_VISIT_EVIDENCE_STATUS_COPY.notYetSubmitted}`
-            : null}
+          {submitting ? copy.submitting : statusLabel(envelope.syncState)}
         </p>
         <p className="ids-body">
           {category}
           {description ? `: ${description}` : ""} · {originalFilename}
         </p>
+        {reason ? <p className="ids-caption text-muted">{reason}</p> : null}
         {submitError || state.error ? (
           <p className="ids-caption text-danger" role="alert">
             {submitError ?? state.error}
@@ -371,20 +430,23 @@ function PendingVisitEvidenceRow({
         ) : null}
         {state.acceptedEntityId ? (
           <p className="ids-caption text-muted" role="status">
-            {FRIGORA_VISIT_EVIDENCE_STATUS_COPY.acceptedByServer}
+            {copy.acceptedByServer}
           </p>
         ) : null}
-        {canSubmit ? (
-          <form
-            onSubmit={onExplicitSubmit}
-            className="flex flex-col gap-[var(--ids-foundation-space-3)]"
-          >
+        {control === "check" ? (
+          <Button type="button" disabled={submitting} className="w-full sm:w-auto" onClick={onCheckAcceptance}>
+            {copy.checkAcceptance}
+          </Button>
+        ) : null}
+        {control === "sign-in" ? (
+          <a href={frigoraFieldSignInHref(envelope.ventureId, envelope.workOrderId, envelope.visitId ?? "")}>
+            {copy.signIn}
+          </a>
+        ) : null}
+        {control === "submit" || control === "retry" ? (
+          <form onSubmit={onExplicitSubmit} className="flex flex-col gap-[var(--ids-foundation-space-3)]">
             <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-              {submitting
-                ? FRIGORA_VISIT_EVIDENCE_STATUS_COPY.submitting
-                : envelope.syncState === "RETRYABLE_FAILURE" || envelope.syncState === "SYNCING"
-                  ? "Retry submission"
-                  : "Submit to server"}
+              {submitting ? copy.submitting : control === "retry" ? copy.retrySubmission : copy.submitToServer}
             </Button>
           </form>
         ) : null}

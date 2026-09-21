@@ -61,9 +61,14 @@ export const FRIGORA_TECHNICAL_FINDING_STATUS_COPY = {
   readyToSubmit: "Ready to submit",
   submitting: "Submitting",
   acceptedByServer: "Accepted by server",
-  blocked: "Submission blocked — sign in again, then retry",
-  conflict: "Server did not accept this finding",
-  retryable: "Submission failed — you can retry",
+  acceptanceNotConfirmed: "Acceptance not confirmed on this device.",
+  blocked: "Sign in again before this saved work can be submitted or reconciled.",
+  conflict: "Not accepted",
+  retryable: "Not accepted — you can retry.",
+  checkAcceptance: "Check acceptance",
+  retrySubmission: "Retry submission",
+  submitToServer: "Submit to server",
+  signIn: "Sign in",
 } as const;
 
 /** F33-04 field-capture local/server honesty. */
@@ -75,9 +80,14 @@ export const FRIGORA_FIELD_CAPTURE_STATUS_COPY = {
   readyToSubmit: "Ready to submit",
   submitting: "Submitting",
   acceptedByServer: "Accepted by server",
-  blocked: "Submission blocked — sign in again, then retry",
-  conflict: "Server did not accept this capture",
-  retryable: "Submission failed — you can retry",
+  acceptanceNotConfirmed: "Acceptance not confirmed on this device.",
+  blocked: "Sign in again before this saved work can be submitted or reconciled.",
+  conflict: "Not accepted",
+  retryable: "Not accepted — you can retry.",
+  checkAcceptance: "Check acceptance",
+  retrySubmission: "Retry submission",
+  submitToServer: "Submit to server",
+  signIn: "Sign in",
 } as const;
 
 /** F33-04 visit-evidence local/server honesty. */
@@ -89,9 +99,14 @@ export const FRIGORA_VISIT_EVIDENCE_STATUS_COPY = {
   readyToSubmit: "Ready to submit",
   submitting: "Submitting",
   acceptedByServer: "Accepted by server",
-  blocked: "Submission blocked — sign in again, then retry",
-  conflict: "Server did not accept this evidence",
-  retryable: "Submission failed — you can retry",
+  acceptanceNotConfirmed: "Acceptance not confirmed on this device.",
+  blocked: "Sign in again before this saved work can be submitted or reconciled.",
+  conflict: "Not accepted",
+  retryable: "Not accepted — you can retry.",
+  checkAcceptance: "Check acceptance",
+  retrySubmission: "Retry submission",
+  submitToServer: "Submit to server",
+  signIn: "Sign in",
 } as const;
 
 /** Queue-aware status copy. */

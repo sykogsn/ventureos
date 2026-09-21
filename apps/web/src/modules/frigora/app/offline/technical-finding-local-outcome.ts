@@ -41,18 +41,20 @@ export async function applyTechnicalFindingLocalSubmitOutcome(
   }
 
   if (outcome.ok) {
+    const recordedAt = new Date().toISOString();
     await offlineStore.putReceipt({
       receiptId: outcome.receiptId,
       clientOperationId: envelope.clientOperationId,
       ventureId: envelope.ventureId,
       actorUserId: envelope.actorUserId,
-      recordedAt: new Date().toISOString(),
+      recordedAt,
       kind: "accepted",
       detail: outcome.acceptedEntityId,
     });
     return offlineStore.updateMutationState(envelope.clientOperationId, "SYNCED", {
       serverAccepted: true,
-      lastAttemptAt: new Date().toISOString(),
+      lastAttemptAt: recordedAt,
+      serverReceipt: { accepted: true, recordedAt },
     });
   }
 
@@ -63,18 +65,25 @@ export async function applyTechnicalFindingLocalSubmitOutcome(
         ? "BLOCKED"
         : "CONFLICT";
 
+  const recordedAt = new Date().toISOString();
   await offlineStore.putReceipt({
     receiptId: `reject-${envelope.clientOperationId}-${Date.now()}`,
     clientOperationId: envelope.clientOperationId,
     ventureId: envelope.ventureId,
     actorUserId: envelope.actorUserId,
-    recordedAt: new Date().toISOString(),
+    recordedAt,
     kind:
       next === "RETRYABLE_FAILURE" ? "retryable" : next === "CONFLICT" ? "conflict" : "rejected",
     detail: outcome.error,
   });
   return offlineStore.updateMutationState(envelope.clientOperationId, next, {
-    lastAttemptAt: new Date().toISOString(),
+    lastAttemptAt: recordedAt,
+    serverReceipt: {
+      accepted: false,
+      recordedAt,
+      serverErrorCode: outcome.code,
+      serverMessage: outcome.error,
+    },
   });
 }
 

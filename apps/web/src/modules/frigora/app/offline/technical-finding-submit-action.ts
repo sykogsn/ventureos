@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
-import { isFrigoraError } from "@/modules/frigora/errors";
 import { createScope, getFrigoraService } from "@/modules/frigora/service";
+import { classifyExplicitSubmitFailure } from "./offline-submit-classification";
 import type { FrigoraTechnicalFindingKind, FrigoraVisitId } from "@/modules/frigora/types";
 import { parseWithFrigora, scopeSchema } from "@/modules/frigora/validation";
 
@@ -87,21 +87,6 @@ export async function submitPendingTechnicalFindingFormAction(
       duplicate: result.duplicate,
     };
   } catch (error) {
-    if (isFrigoraError(error)) {
-      if (error.code === "forbidden") {
-        return { error: error.message, code: "authority" };
-      }
-      if (error.code === "idempotency_conflict") {
-        return { error: error.message, code: "idempotency_conflict" };
-      }
-      if (error.code === "invalid_status" || error.code === "invalid_input" || error.code === "not_found") {
-        return { error: error.message, code: "rejected" };
-      }
-      return { error: error.message, code: "rejected" };
-    }
-    return {
-      error: error instanceof Error ? error.message : "Submission failed.",
-      code: "retryable",
-    };
+    return classifyExplicitSubmitFailure(error);
   }
 }

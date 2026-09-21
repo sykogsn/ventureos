@@ -713,6 +713,63 @@ export type SubmitClientVisitEvidenceResult = {
   duplicate: boolean;
 };
 
+/**
+ * F33-05 read-only acceptance probe. Canonical fields are recomputed on the
+ * server. This input must not carry evidence bytes.
+ */
+export type LookupClientOperationAcceptanceInput = {
+  ventureId: string;
+  workspaceId: string;
+  actorUserId: string;
+  clientOperationId: string;
+  workOrderId: string;
+  visitId: string;
+} & (
+  | {
+      operationType: "recordTechnicalFinding";
+      findingKind: string;
+      description: string;
+      assertedAt: string;
+      assetId?: string | null;
+      sourceFieldCaptureIds?: string[] | null;
+    }
+  | {
+      operationType: "recordFieldCapture";
+      captureKind: string;
+      captureCode: string;
+      valueNumeric?: number | null;
+      valueUnit?: string | null;
+      description?: string | null;
+      observedAt: string;
+      assetId?: string | null;
+    }
+  | {
+      operationType: "recordVisitEvidence";
+      category: string;
+      description?: string | null;
+      originalFilename: string;
+      mimeType: string;
+      byteLength: number;
+      contentSha256: string;
+      assetId?: string | null;
+    }
+);
+
+/** Narrow read result. MISMATCH and NOT_FOUND carry no foreign receipt data. */
+export type FrigoraClientOperationAcceptanceLookup =
+  | { status: "NOT_FOUND" }
+  | { status: "MISMATCH" }
+  | {
+      status: "ACCEPTED";
+      receiptId: FrigoraClientOperationReceiptId;
+      clientOperationId: string;
+      acceptedEntityId: string;
+      operationType: FrigoraClientOperationReceipt["operationType"];
+      acceptedAt: string;
+      workOrderId: FrigoraWorkOrderId;
+      visitId: FrigoraVisitId | null;
+    };
+
 export type LinkVisitEvidenceInput = RecordVisitEvidenceInput & {
   storedObjectId: string;
 };
