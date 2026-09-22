@@ -144,9 +144,9 @@ async function scheduledAndAssigned(
   const scheduled = await seeded.service.scheduleWorkOrder(
     seeded.ownerScope,
     seeded.workOrder.id,
-    activeWindow(),
+    { ...activeWindow(), expectedUpdatedAt: seeded.workOrder.updatedAt },
   );
-  return seeded.service.assignWorkOrder(seeded.ownerScope, scheduled.id, {
+  return seeded.service.assignWorkOrder(seeded.ownerScope, scheduled.id, { expectedUpdatedAt: scheduled.updatedAt,
     userId: seeded.assigneeId,
   });
 }
@@ -154,7 +154,7 @@ async function scheduledAndAssigned(
 describe("Frigora F2.2 dispatch domain", () => {
   it("schedules, reschedules, and clears an open WorkOrder", async () => {
     const seeded = await seed();
-    const first = await seeded.service.scheduleWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
+    const first = await seeded.service.scheduleWorkOrder(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: seeded.workOrder.updatedAt,
       scheduledStartAt: "2026-09-08T08:00:00.000Z",
       scheduledEndAt: "2026-09-08T10:00:00.000Z",
     });
@@ -162,7 +162,7 @@ describe("Frigora F2.2 dispatch domain", () => {
     const rescheduled = await seeded.service.scheduleWorkOrder(
       seeded.ownerScope,
       seeded.workOrder.id,
-      {
+      { expectedUpdatedAt: first.updatedAt,
         scheduledStartAt: "2026-09-09T09:00:00.000Z",
         scheduledEndAt: "2026-09-09T11:00:00.000Z",
       },
@@ -173,14 +173,14 @@ describe("Frigora F2.2 dispatch domain", () => {
     assert.equal(rescheduled.assignmentDeclineReason, null);
     const cleared = await seeded.service.clearWorkOrderSchedule(
       seeded.ownerScope,
-      seeded.workOrder.id,
+      seeded.workOrder.id, { expectedUpdatedAt: rescheduled.updatedAt },
     );
     assert.equal(cleared.scheduledStartAt, null);
     assert.equal(cleared.scheduledEndAt, null);
     const canonical = await seeded.service.scheduleWorkOrder(
       seeded.ownerScope,
       seeded.workOrder.id,
-      {
+      { expectedUpdatedAt: cleared.updatedAt,
         scheduledStartAt: "2026-09-08T10:00:00+02:00",
         scheduledEndAt: "2026-09-08T12:00:00+02:00",
       },
@@ -201,7 +201,7 @@ describe("Frigora F2.2 dispatch domain", () => {
       { scheduledStartAt: "2026-09-08", scheduledEndAt: "2026-09-09" },
     ]) {
       await expectCode(
-        () => seeded.service.scheduleWorkOrder(seeded.ownerScope, seeded.workOrder.id, input),
+        () => seeded.service.scheduleWorkOrder(seeded.ownerScope, seeded.workOrder.id, { ...input, expectedUpdatedAt: seeded.workOrder.updatedAt }),
         "invalid_input",
       );
     }
@@ -212,25 +212,25 @@ describe("Frigora F2.2 dispatch domain", () => {
     await seeded.service.scheduleWorkOrder(
       seeded.ownerScope,
       seeded.workOrder.id,
-      activeWindow(),
+      { ...activeWindow(), expectedUpdatedAt: seeded.workOrder.updatedAt },
     );
     await seeded.service.cancelWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
       reason: "Customer cancelled.",
     });
     await expectCode(
-      () =>
+      async () =>
         seeded.service.scheduleWorkOrder(
           seeded.ownerScope,
           seeded.workOrder.id,
-          activeWindow(),
+          { ...activeWindow(), expectedUpdatedAt: (await seeded.service.getWorkOrder(seeded.ownerScope, seeded.workOrder.id))!.updatedAt },
         ),
       "invalid_status",
     );
     await expectCode(
-      () =>
+      async () =>
         seeded.service.clearWorkOrderSchedule(
           seeded.ownerScope,
-          seeded.workOrder.id,
+          seeded.workOrder.id, { expectedUpdatedAt: (await seeded.service.getWorkOrder(seeded.ownerScope, seeded.workOrder.id))!.updatedAt },
         ),
       "invalid_status",
     );
@@ -247,7 +247,7 @@ describe("Frigora F2.2 dispatch domain", () => {
         seeded.service.scheduleWorkOrder(
           seeded.ownerScope,
           seeded.workOrder.id,
-          activeWindow(),
+          { ...activeWindow(), expectedUpdatedAt: seeded.workOrder.updatedAt },
         ),
       "invalid_status",
     );
@@ -255,19 +255,19 @@ describe("Frigora F2.2 dispatch domain", () => {
       () =>
         seeded.service.clearWorkOrderSchedule(
           seeded.ownerScope,
-          seeded.workOrder.id,
+          seeded.workOrder.id, { expectedUpdatedAt: seeded.workOrder.updatedAt },
         ),
       "invalid_status",
     );
     await expectCode(
       () =>
-        seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
+        seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: seeded.workOrder.updatedAt,
           userId: seeded.assigneeId,
         }),
       "invalid_status",
     );
     await expectCode(
-      () => seeded.service.clearWorkOrderAssignment(seeded.ownerScope, seeded.workOrder.id),
+      () => seeded.service.clearWorkOrderAssignment(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: seeded.workOrder.updatedAt }),
       "invalid_status",
     );
   });
@@ -313,7 +313,7 @@ describe("Frigora F2.2 dispatch domain", () => {
 
   it("rejects responses without a service window, by another user, or twice", async () => {
     const seeded = await seed();
-    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
+    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: seeded.workOrder.updatedAt,
       userId: seeded.assigneeId,
     });
     assert.equal(
@@ -330,7 +330,7 @@ describe("Frigora F2.2 dispatch domain", () => {
       "invalid_status",
     );
 
-    await seeded.service.scheduleWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
+    await seeded.service.scheduleWorkOrder(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: (await seeded.service.getWorkOrder(seeded.ownerScope, seeded.workOrder.id))!.updatedAt,
       scheduledStartAt: "2099-01-01T00:00:00.000Z",
       scheduledEndAt: "2099-01-01T01:00:00.000Z",
     });
@@ -375,7 +375,7 @@ describe("Frigora F2.2 dispatch domain", () => {
     const rescheduled = await seeded.service.scheduleWorkOrder(
       seeded.ownerScope,
       accepted.id,
-      {
+      { expectedUpdatedAt: accepted.updatedAt,
         scheduledStartAt: "2099-01-01T00:00:00.000Z",
         scheduledEndAt: "2099-01-01T01:00:00.000Z",
       },
@@ -388,13 +388,13 @@ describe("Frigora F2.2 dispatch domain", () => {
     const reassigned = await seeded.service.assignWorkOrder(
       seeded.ownerScope,
       acceptedAgain.id,
-      { userId: seeded.assigneeId },
+      { expectedUpdatedAt: acceptedAgain.updatedAt, userId: seeded.assigneeId },
     );
     assert.equal(reassigned.scheduledStartAt, acceptedAgain.scheduledStartAt);
     assert.equal(reassigned.assignmentAcceptedAt, null);
     const cleared = await seeded.service.clearWorkOrderAssignment(
       seeded.ownerScope,
-      reassigned.id,
+      reassigned.id, { expectedUpdatedAt: reassigned.updatedAt },
     );
     assert.equal(cleared.scheduledEndAt, acceptedAgain.scheduledEndAt);
     assert.equal(cleared.assignmentAcceptedAt, null);
@@ -417,14 +417,14 @@ describe("Frigora F2.2 dispatch domain", () => {
     const rescheduled = await seeded.service.scheduleWorkOrder(
       seeded.ownerScope,
       seeded.workOrder.id,
-      {
+      { expectedUpdatedAt: (await seeded.service.getWorkOrder(seeded.ownerScope, seeded.workOrder.id))!.updatedAt,
         scheduledStartAt: "2026-09-08T08:00:00.000Z",
         scheduledEndAt: "2026-09-08T10:00:00.000Z",
       },
     );
     assert.equal(rescheduled.scheduledStartAt, "2026-09-08T08:00:00.000Z");
     assert.equal(
-      (await seeded.service.clearWorkOrderAssignment(seeded.ownerScope, seeded.workOrder.id))
+      (await seeded.service.clearWorkOrderAssignment(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: rescheduled.updatedAt }))
         .assignedUserId,
       null,
     );
@@ -432,7 +432,7 @@ describe("Frigora F2.2 dispatch domain", () => {
 
   it("lists overlapping scheduled WorkOrders in tenant-scoped [start, end) order", async () => {
     const alpha = await seed();
-    await alpha.service.scheduleWorkOrder(alpha.ownerScope, alpha.workOrder.id, {
+    await alpha.service.scheduleWorkOrder(alpha.ownerScope, alpha.workOrder.id, { expectedUpdatedAt: alpha.workOrder.updatedAt,
       scheduledStartAt: "2026-09-08T09:00:00.000Z",
       scheduledEndAt: "2026-09-08T11:00:00.000Z",
     });
@@ -442,7 +442,7 @@ describe("Frigora F2.2 dispatch domain", () => {
       ownerId: "owner-other" as UserId,
       assigneeId: "assignee-other" as UserId,
     });
-    await beta.service.scheduleWorkOrder(beta.ownerScope, beta.workOrder.id, {
+    await beta.service.scheduleWorkOrder(beta.ownerScope, beta.workOrder.id, { expectedUpdatedAt: beta.workOrder.updatedAt,
       scheduledStartAt: "2026-09-08T10:00:00.000Z",
       scheduledEndAt: "2026-09-08T11:00:00.000Z",
     });

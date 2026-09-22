@@ -13,12 +13,14 @@ export function AssignmentControls({
   workspaceId,
   ventureId,
   workOrderId,
+  updatedAt,
   assignedUserId,
   canWrite,
 }: {
   workspaceId: string;
   ventureId: string;
   workOrderId: string;
+  updatedAt: string;
   assignedUserId: string | null;
   canWrite: boolean;
 }) {
@@ -46,6 +48,7 @@ export function AssignmentControls({
           <input type="hidden" name="workspaceId" value={workspaceId} />
           <input type="hidden" name="ventureId" value={ventureId} />
           <input type="hidden" name="workOrderId" value={workOrderId} />
+          <input type="hidden" name="expectedUpdatedAt" value={updatedAt} />
           {assignState.error ? (
             <p className="ids-caption text-danger" role="alert">
               {assignState.error}
@@ -60,6 +63,7 @@ export function AssignmentControls({
           <input type="hidden" name="workspaceId" value={workspaceId} />
           <input type="hidden" name="ventureId" value={ventureId} />
           <input type="hidden" name="workOrderId" value={workOrderId} />
+          <input type="hidden" name="expectedUpdatedAt" value={updatedAt} />
           {clearState.error ? (
             <p className="ids-caption text-danger" role="alert">
               {clearState.error}

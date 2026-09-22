@@ -171,7 +171,7 @@ async function seedAssignedVisit(owner: Awaited<ReturnType<typeof seed>>, engine
     primaryAssetId: asset.id,
     reportedCondition: "warm case",
   });
-  await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: engineerId });
+  await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: engineerId });
   const engineerScope: FrigoraScope = {
     userId: engineerId,
     workspaceId: owner.workspaceId,
@@ -288,7 +288,7 @@ describe("F33-05 read-only acceptance recovery", () => {
     ]);
     assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordPartUsage"), false);
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
     const action = readFileSync(join(here, "offline-acceptance-action.ts"), "utf8");
     assert.doesNotMatch(action, /submitClientTechnicalFinding|submitClientFieldCapture|submitClientVisitEvidence/);
     const recovery = readFileSync(join(here, "offline-recovery.ts"), "utf8");
@@ -605,7 +605,7 @@ describe("F33-05 read-only acceptance recovery", () => {
     }, store);
 
     await owner.service.recordVisitDeparture(engineerScope, visit.id, { departedAt: DEPARTED });
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: engineerB });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt, userId: engineerB });
 
     const historical = await lookupFor(owner, engineerScope, owner.workspaceId)(acceptedLocal);
     assert.equal(historical.status, "ACCEPTED");
@@ -826,7 +826,7 @@ describe("F33-05 read-only acceptance recovery", () => {
       userId: engineerId,
     });
     await owner.service.recordVisitDeparture(engineerScope, visit.id, { departedAt: DEPARTED });
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: owner.userId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt, userId: owner.userId });
     const before = await businessCounts(visit.id);
     const lookup = await owner.service.lookupClientOperationAcceptance(engineerScope, {
       operationType: "recordTechnicalFinding",

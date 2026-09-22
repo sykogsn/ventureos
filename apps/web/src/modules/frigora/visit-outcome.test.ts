@@ -272,7 +272,7 @@ describe("Frigora Visit outcome", () => {
     await addMember(owner.workspaceId, assigneeId);
     await addMember(owner.workspaceId, recorderId);
     const { workOrder } = await seedHierarchy(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
       userId: attendeeId,
       arrivedAt: ARRIVED,
@@ -448,7 +448,7 @@ describe("Frigora Visit outcome", () => {
     await addMember(owner.workspaceId, attendeeId);
     await addMember(owner.workspaceId, recorderId);
     const { workOrder } = await seedHierarchy(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
       userId: attendeeId,
       arrivedAt: ARRIVED,
@@ -680,7 +680,7 @@ describe("Frigora Visit outcome", () => {
   });
 
   it("resolves frigora@0.10.0 from catalog with visit outcome admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /Visit outcomes/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /recommended actions/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /full repair workflow/);

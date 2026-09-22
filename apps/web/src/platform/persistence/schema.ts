@@ -602,6 +602,39 @@ export const frigoraVisits = sqliteTable(
   ],
 );
 
+/** Append-only Frigora dispatch operational history (F34-01). */
+export const frigoraDispatchEvents = sqliteTable(
+  "frigora_dispatch_events",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    workOrderId: text("work_order_id").notNull(),
+    eventType: text("event_type").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    occurredAt: text("occurred_at").notNull(),
+    previousAssignedUserId: text("previous_assigned_user_id"),
+    nextAssignedUserId: text("next_assigned_user_id"),
+    previousScheduledStartAt: text("previous_scheduled_start_at"),
+    previousScheduledEndAt: text("previous_scheduled_end_at"),
+    nextScheduledStartAt: text("next_scheduled_start_at"),
+    nextScheduledEndAt: text("next_scheduled_end_at"),
+  },
+  (table) => [
+    index("frigora_dispatch_events_ws_ven_wo_occurred_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.workOrderId,
+      table.occurredAt,
+    ),
+    index("frigora_dispatch_events_ws_ven_occurred_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.occurredAt,
+    ),
+  ],
+);
+
 export const frigoraFieldCaptures = sqliteTable(
   "frigora_field_captures",
   {

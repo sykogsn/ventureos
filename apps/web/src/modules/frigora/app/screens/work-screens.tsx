@@ -590,6 +590,7 @@ export function WorkDetailScreen({
             workspaceId={ctx.workspaceId}
             ventureId={ctx.ventureId}
             workOrderId={workOrder.id}
+            updatedAt={workOrder.updatedAt}
             assignedUserId={workOrder.assignedUserId}
             scheduledStartAt={workOrder.scheduledStartAt}
             scheduledEndAt={workOrder.scheduledEndAt}

@@ -1,4 +1,5 @@
 import { and, asc, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
+import type { Transaction } from "@libsql/client";
 import type { VentureId, WorkspaceId, UserId, StoredObjectId } from "@/contracts";
 import { ensureSchema, getClient, getDb } from "@/platform/persistence/db";
 import {
@@ -21,8 +22,9 @@ import {
   frigoraVisitCustomerAcknowledgements,
   frigoraVisitEvidence,
   frigoraWorkOrders,
+  frigoraDispatchEvents,
 } from "@/platform/persistence/schema";
-import { FrigoraError } from "./errors";
+import { FrigoraError, FRIGORA_DISPATCH_CONFLICT_MESSAGE } from "./errors";
 import type {
   FrigoraAsset,
   FrigoraAssetId,
@@ -77,6 +79,9 @@ import type {
   FrigoraVisitEvidence,
   FrigoraVisitEvidenceId,
   FrigoraVisitEvidenceCategory,
+  FrigoraDispatchEvent,
+  FrigoraDispatchEventId,
+  FrigoraDispatchEventType,
 } from "./types";
 
 export type FrigoraStore = {
@@ -185,6 +190,22 @@ export type FrigoraStore = {
     ventureId: VentureId,
     sourceRecommendedActionId: FrigoraRecommendedActionId,
   ): Promise<FrigoraWorkOrder | null>;
+  /**
+   * F34-01: atomic guarded WorkOrder UPDATE, optionally with a dispatch event INSERT.
+   * When event is null, UPDATE-only (metadata/stamp cleanup) under the same guard.
+   * When next is null, validate a true no-op under the owned write transaction;
+   * neither the WorkOrder nor the event table is mutated.
+   */
+  applyGuardedDispatchMutation(input: {
+    expected: FrigoraWorkOrder;
+    next: FrigoraWorkOrder | null;
+    event: FrigoraDispatchEvent | null;
+  }): Promise<void>;
+  listDispatchEventsByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraDispatchEvent[]>;
   insertVisit(row: FrigoraVisit): Promise<void>;
   updateVisit(row: FrigoraVisit): Promise<void>;
   findVisit(
@@ -862,6 +883,175 @@ export function createFrigoraStore(): FrigoraStore {
         )
         .limit(1);
       return row ? mapWorkOrder(row) : null;
+    },
+    async applyGuardedDispatchMutation({ expected, next, event }) {
+      await ensureSchema();
+      if (next === null && event !== null) {
+        throw new FrigoraError("invalid_input", "A dispatch event requires a mutation.");
+      }
+      const target = next ?? expected;
+      if (
+        expected.id !== target.id ||
+        expected.workspaceId !== target.workspaceId ||
+        expected.ventureId !== target.ventureId
+      ) {
+        throw new FrigoraError("invalid_input", "Dispatch mutation identity mismatch.");
+      }
+
+      const guardArgs = [
+        expected.id,
+        expected.workspaceId,
+        expected.ventureId,
+        expected.updatedAt,
+        expected.assignedUserId,
+        expected.scheduledStartAt,
+        expected.scheduledEndAt,
+        expected.id,
+        expected.workspaceId,
+        expected.ventureId,
+      ];
+
+      const guardSql = `
+        id = ?
+        AND workspace_id = ?
+        AND venture_id = ?
+        AND updated_at = ?
+        AND assigned_user_id IS ?
+        AND scheduled_start_at IS ?
+        AND scheduled_end_at IS ?
+        AND status = 'open'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM frigora_visits v
+          WHERE v.work_order_id = ?
+            AND v.workspace_id = ?
+            AND v.venture_id = ?
+            AND v.status = 'open'
+        )
+      `;
+
+      const insertSql = `
+        INSERT INTO frigora_dispatch_events (
+          id, workspace_id, venture_id, work_order_id, event_type, actor_user_id, occurred_at,
+          previous_assigned_user_id, next_assigned_user_id,
+          previous_scheduled_start_at, previous_scheduled_end_at,
+          next_scheduled_start_at, next_scheduled_end_at
+        )
+        SELECT
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?,
+          ?, ?,
+          ?, ?
+        FROM frigora_work_orders
+        WHERE ${guardSql}
+      `;
+
+      const updateSql = `
+        UPDATE frigora_work_orders
+        SET
+          customer_id = ?,
+          site_id = ?,
+          primary_asset_id = ?,
+          work_reference = ?,
+          work_kind = ?,
+          reported_condition = ?,
+          status = ?,
+          assigned_user_id = ?,
+          scheduled_start_at = ?,
+          scheduled_end_at = ?,
+          assignment_accepted_at = ?,
+          assignment_declined_at = ?,
+          assignment_decline_reason = ?,
+          cancellation_reason = ?,
+          source_recommended_action_id = ?,
+          updated_at = ?
+        WHERE ${guardSql}
+      `;
+
+      const updateArgs = [
+        target.customerId,
+        target.siteId,
+        target.primaryAssetId,
+        target.workReference,
+        target.workKind,
+        target.reportedCondition,
+        target.status,
+        target.assignedUserId,
+        target.scheduledStartAt,
+        target.scheduledEndAt,
+        target.assignmentAcceptedAt,
+        target.assignmentDeclinedAt,
+        target.assignmentDeclineReason,
+        target.cancellationReason,
+        target.sourceRecommendedActionId,
+        target.updatedAt,
+        ...guardArgs,
+      ];
+
+      // The supported transaction handle owns its connection. Raw BEGIN on
+      // getClient() lets unrelated batches roll back this operation.
+      const transaction = await getClient().transaction("write");
+      try {
+        const guarded = await transaction.execute({
+          sql: `SELECT id FROM frigora_work_orders WHERE ${guardSql}`,
+          args: guardArgs,
+        });
+        if (guarded.rows.length !== 1) {
+          await classifyFailedDispatchGuard(transaction, expected);
+        }
+        if (next === null) {
+          // A true no-op validates under the write lock without mutating a row.
+          await transaction.commit();
+          return;
+        }
+        if (event !== null) {
+          const insertArgs = [
+            event.id,
+            event.workspaceId,
+            event.ventureId,
+            event.workOrderId,
+            event.eventType,
+            event.actorUserId,
+            event.occurredAt,
+            event.previousAssignedUserId,
+            event.nextAssignedUserId,
+            event.previousScheduledStartAt,
+            event.previousScheduledEndAt,
+            event.nextScheduledStartAt,
+            event.nextScheduledEndAt,
+            ...guardArgs,
+          ];
+          const inserted = await transaction.execute({ sql: insertSql, args: insertArgs });
+          if (inserted.rowsAffected !== 1) {
+            await classifyFailedDispatchGuard(transaction, expected);
+          }
+        }
+        const updated = await transaction.execute({ sql: updateSql, args: updateArgs });
+        if (updated.rowsAffected !== 1) {
+          await classifyFailedDispatchGuard(transaction, expected);
+        }
+        await transaction.commit();
+      } catch (error) {
+        if (!transaction.closed) await transaction.rollback();
+        throw error;
+      } finally {
+        transaction.close();
+      }
+    },
+    async listDispatchEventsByWorkOrder(workspaceId, ventureId, workOrderId) {
+      await ensureSchema();
+      const rows = await getDb()
+        .select()
+        .from(frigoraDispatchEvents)
+        .where(
+          and(
+            eq(frigoraDispatchEvents.workspaceId, workspaceId),
+            eq(frigoraDispatchEvents.ventureId, ventureId),
+            eq(frigoraDispatchEvents.workOrderId, workOrderId),
+          ),
+        )
+        .orderBy(asc(frigoraDispatchEvents.occurredAt), asc(frigoraDispatchEvents.id));
+      return rows.map(mapDispatchEvent);
     },
     async insertVisit(row) {
       await ensureSchema();
@@ -2494,6 +2684,54 @@ function mapWorkOrder(row: typeof frigoraWorkOrders.$inferSelect): FrigoraWorkOr
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+function mapDispatchEvent(
+  row: typeof frigoraDispatchEvents.$inferSelect,
+): FrigoraDispatchEvent {
+  return {
+    id: row.id as FrigoraDispatchEventId,
+    workspaceId: row.workspaceId as WorkspaceId,
+    ventureId: row.ventureId as VentureId,
+    workOrderId: row.workOrderId as FrigoraWorkOrderId,
+    eventType: row.eventType as FrigoraDispatchEventType,
+    actorUserId: row.actorUserId as UserId,
+    occurredAt: row.occurredAt,
+    previousAssignedUserId: (row.previousAssignedUserId as UserId | null) ?? null,
+    nextAssignedUserId: (row.nextAssignedUserId as UserId | null) ?? null,
+    previousScheduledStartAt: row.previousScheduledStartAt ?? null,
+    previousScheduledEndAt: row.previousScheduledEndAt ?? null,
+    nextScheduledStartAt: row.nextScheduledStartAt ?? null,
+    nextScheduledEndAt: row.nextScheduledEndAt ?? null,
+  };
+}
+
+async function classifyFailedDispatchGuard(transaction: Transaction, expected: FrigoraWorkOrder): Promise<never> {
+  const scopeArgs = [expected.id, expected.workspaceId, expected.ventureId];
+  const [row] = (await transaction.execute({
+    sql: "SELECT status FROM frigora_work_orders WHERE id = ? AND workspace_id = ? AND venture_id = ?",
+    args: scopeArgs,
+  })).rows;
+  if (!row) {
+    throw new FrigoraError("not_found", "Work order was not found.");
+  }
+  const openVisits = (await transaction.execute({
+    sql: "SELECT id FROM frigora_visits WHERE work_order_id = ? AND workspace_id = ? AND venture_id = ? AND status = 'open' LIMIT 1",
+    args: scopeArgs,
+  })).rows;
+  if (openVisits.length > 0) {
+    throw new FrigoraError(
+      "invalid_status",
+      "Dispatch is locked while a visit is in progress.",
+    );
+  }
+  if (row.status !== "open") {
+    throw new FrigoraError(
+      "invalid_status",
+      "Only open work orders can be dispatched.",
+    );
+  }
+  throw new FrigoraError("dispatch_conflict", FRIGORA_DISPATCH_CONFLICT_MESSAGE);
 }
 
 function mapVisit(row: typeof frigoraVisits.$inferSelect): FrigoraVisit {

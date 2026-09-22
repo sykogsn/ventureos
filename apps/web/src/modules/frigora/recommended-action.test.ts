@@ -618,7 +618,7 @@ describe("Frigora Recommended action", () => {
     await addMember(owner.workspaceId, attendeeId);
     await addMember(owner.workspaceId, recorderId);
     const { workOrder } = await seedHierarchy(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
       userId: attendeeId,
       arrivedAt: ARRIVED,
@@ -780,7 +780,7 @@ describe("Frigora Recommended action", () => {
   });
 
   it("resolves frigora@0.21.0 from catalog with recommended action admission", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     assert.match(platformVentureRegistry.resolve("frigora").description, /recommended actions/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /refrigerant events/);
     assert.match(platformVentureRegistry.resolve("frigora").description, /part usages/);

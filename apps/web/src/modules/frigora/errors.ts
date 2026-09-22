@@ -5,11 +5,16 @@ export type FrigoraErrorCode =
   | "archived_parent"
   | "duplicate"
   | "idempotency_conflict"
+  | "dispatch_conflict"
   | "invalid_input"
   | "invalid_status"
   | "invalid_kind"
   | "cross_venture"
   | "evidence_bytes_delete_failed";
+
+/** Stable UI copy when a dispatch CAS fails. */
+export const FRIGORA_DISPATCH_CONFLICT_MESSAGE =
+  "This work order changed since you opened it. Refresh before trying again.";
 
 export class FrigoraError extends Error {
   readonly code: FrigoraErrorCode;

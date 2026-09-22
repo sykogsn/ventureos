@@ -484,7 +484,7 @@ describe("Frigora Part usage", () => {
     await addMember(owner.workspaceId, recorderId);
     await addMember(owner.workspaceId, assigneeId);
     const { workOrder } = await seedHierarchy(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
       userId: attendeeId,
       arrivedAt: ARRIVED,
@@ -654,7 +654,7 @@ describe("Frigora Part usage", () => {
     await addMember(owner.workspaceId, attendeeId);
     await addMember(owner.workspaceId, recorderId);
     const { workOrder, asset } = await seedHierarchy(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
       userId: attendeeId,
       arrivedAt: ARRIVED,
@@ -868,7 +868,7 @@ describe("Frigora Part usage", () => {
 
   it("resolves frigora@0.21.0 from catalog with part usage admission and retained exclusions", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.21.0");
+    assert.equal(frigora.version, "0.22.0");
     assert.match(frigora.description, /part usages/);
     assert.match(frigora.description, /refrigerant events/);
     assert.match(frigora.description, /F3\.0 structured parts and refrigerant catalogues/);

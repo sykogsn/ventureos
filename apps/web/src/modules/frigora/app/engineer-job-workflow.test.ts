@@ -180,7 +180,7 @@ async function seed() {
     reportedCondition: "Cold room is warm",
     primaryAssetId: asset.id,
   });
-  const workOrder = await service.assignWorkOrder(ownerScope, created.id, {
+  const workOrder = await service.assignWorkOrder(ownerScope, created.id, { expectedUpdatedAt: created.updatedAt,
     userId: engineerAId,
   });
 
@@ -388,7 +388,7 @@ describe("F2.3 Engineer Job Workflow", () => {
     const seeded = await seed();
     await seeded.service.clearWorkOrderAssignment(
       seeded.ownerScope,
-      seeded.workOrder.id,
+      seeded.workOrder.id, { expectedUpdatedAt: seeded.workOrder.updatedAt },
     );
     await expectCode(
       () =>
@@ -400,7 +400,7 @@ describe("F2.3 Engineer Job Workflow", () => {
       "forbidden",
     );
 
-    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
+    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: (await seeded.service.getWorkOrder(seeded.ownerScope, seeded.workOrder.id))!.updatedAt,
       userId: seeded.engineerAId,
     });
     const visit = await seeded.service.recordVisitArrival(
@@ -411,7 +411,7 @@ describe("F2.3 Engineer Job Workflow", () => {
     await seeded.service.recordVisitDeparture(seeded.engineerAScope, visit.id, {
       departedAt: DEPARTED,
     });
-    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
+    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: (await seeded.service.getWorkOrder(seeded.ownerScope, seeded.workOrder.id))!.updatedAt,
       userId: seeded.engineerBId,
     });
     await expectCode(
@@ -440,7 +440,7 @@ describe("F2.3 Engineer Job Workflow", () => {
       workKind: "reactive",
       reportedCondition: "Closed job must stay closed",
     });
-    await seeded.service.assignWorkOrder(seeded.ownerScope, closedOrder.id, {
+    await seeded.service.assignWorkOrder(seeded.ownerScope, closedOrder.id, { expectedUpdatedAt: closedOrder.updatedAt,
       userId: seeded.engineerAId,
     });
     const visit = await seeded.service.recordVisitArrival(
@@ -472,7 +472,7 @@ describe("F2.3 Engineer Job Workflow", () => {
       workKind: "reactive",
       reportedCondition: "Cancelled job must stay cancelled",
     });
-    await seeded.service.assignWorkOrder(seeded.ownerScope, cancelledOrder.id, {
+    await seeded.service.assignWorkOrder(seeded.ownerScope, cancelledOrder.id, { expectedUpdatedAt: cancelledOrder.updatedAt,
       userId: seeded.engineerAId,
     });
     await seeded.service.cancelWorkOrder(seeded.ownerScope, cancelledOrder.id, {
@@ -493,7 +493,7 @@ describe("F2.3 Engineer Job Workflow", () => {
     const seeded = await seed();
     await expectCode(
       () =>
-        seeded.service.scheduleWorkOrder(seeded.engineerAScope, seeded.workOrder.id, {
+        seeded.service.scheduleWorkOrder(seeded.engineerAScope, seeded.workOrder.id, { expectedUpdatedAt: seeded.workOrder.updatedAt,
           scheduledStartAt: "2026-09-08T08:00:00.000Z",
           scheduledEndAt: "2026-09-08T10:00:00.000Z",
         }),
@@ -501,7 +501,7 @@ describe("F2.3 Engineer Job Workflow", () => {
     );
     await expectCode(
       () =>
-        seeded.service.assignWorkOrder(seeded.engineerAScope, seeded.workOrder.id, {
+        seeded.service.assignWorkOrder(seeded.engineerAScope, seeded.workOrder.id, { expectedUpdatedAt: seeded.workOrder.updatedAt,
           userId: seeded.engineerBId,
         }),
       "forbidden",
@@ -700,7 +700,7 @@ describe("F2.3 Engineer Job Workflow", () => {
       departedAt: DEPARTED,
     });
 
-    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
+    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: (await seeded.service.getWorkOrder(seeded.ownerScope, seeded.workOrder.id))!.updatedAt,
       userId: seeded.engineerBId,
     });
 
@@ -773,7 +773,7 @@ describe("F2.3 Engineer Job Workflow", () => {
     });
 
     // Reassign away from A (A never attended).
-    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, {
+    await seeded.service.assignWorkOrder(seeded.ownerScope, seeded.workOrder.id, { expectedUpdatedAt: (await seeded.service.getWorkOrder(seeded.ownerScope, seeded.workOrder.id))!.updatedAt,
       userId: seeded.engineerBId,
     });
 

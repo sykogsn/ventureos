@@ -190,7 +190,8 @@ describe("F33-03 client corrective lifecycle", () => {
     const source = readFileSync(new URL("../forms/record-technical-finding-form.tsx", import.meta.url), "utf8");
     const row = source.slice(source.indexOf("function PendingTechnicalFindingRow"));
     assert.doesNotMatch(row, /useEffect\(/);
-    assert.match(row, /useActionState\([\s\S]*submitTechnicalFindingFromClient\(/);
+    assert.match(row, /useActionState\([\s\S]*runExplicitOfflineSubmission\(/);
+    assert.match(row, /runExplicitOfflineSubmission\(\s*envelope,\s*\(\) => lookupPendingOfflineAcceptanceAction\(buildOfflineAcceptanceLookupInput\(envelope, workspaceId\)\),\s*\(\) => submitPendingTechnicalFindingFormAction\(previous, formData\),\s*onChanged,/);
     assert.match(source, /startOfflineTransition\(async \(\) => \{\s*await saveTechnicalFindingOnce/);
   });
 });

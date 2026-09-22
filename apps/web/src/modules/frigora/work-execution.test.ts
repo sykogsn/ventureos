@@ -692,9 +692,9 @@ describe("F2.1 Work Execution — permissions and office surface", () => {
   });
 
   it("ships office Complete/Cancel/Convert controls without Visit Recorder lifecycle actions", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
     assert.match(dbSource, /cancellation_reason/);
     assert.match(dbSource, /source_recommended_action_id/);
 

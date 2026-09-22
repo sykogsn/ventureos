@@ -10,7 +10,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 28; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 29; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -1103,6 +1103,40 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_client_operation_receipts_workspace_venture_idx ON frigora_client_operation_receipts (workspace_id, venture_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_dispatch_events (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          work_order_id TEXT NOT NULL,
+          event_type TEXT NOT NULL,
+          actor_user_id TEXT NOT NULL,
+          occurred_at TEXT NOT NULL,
+          previous_assigned_user_id TEXT,
+          next_assigned_user_id TEXT,
+          previous_scheduled_start_at TEXT,
+          previous_scheduled_end_at TEXT,
+          next_scheduled_start_at TEXT,
+          next_scheduled_end_at TEXT,
+          CHECK (
+            event_type IN (
+              'ASSIGNED',
+              'UNASSIGNED',
+              'REASSIGNED',
+              'SCHEDULED',
+              'RESCHEDULED',
+              'SCHEDULE_CLEARED'
+            )
+          )
+        )
+      `);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_dispatch_events_ws_ven_wo_occurred_idx ON frigora_dispatch_events (workspace_id, venture_id, work_order_id, occurred_at)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS frigora_dispatch_events_ws_ven_occurred_idx ON frigora_dispatch_events (workspace_id, venture_id, occurred_at)`,
       );
     })();
   }

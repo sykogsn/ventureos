@@ -23,6 +23,34 @@ export type FrigoraVisitCustomerAcknowledgementId = string & {
   readonly __brand: "FrigoraVisitCustomerAcknowledgementId";
 };
 export type FrigoraVisitEvidenceId = string & { readonly __brand: "FrigoraVisitEvidenceId" };
+export type FrigoraDispatchEventId = string & { readonly __brand: "FrigoraDispatchEventId" };
+
+export const FRIGORA_DISPATCH_EVENT_TYPES = [
+  "ASSIGNED",
+  "UNASSIGNED",
+  "REASSIGNED",
+  "SCHEDULED",
+  "RESCHEDULED",
+  "SCHEDULE_CLEARED",
+] as const;
+
+export type FrigoraDispatchEventType = (typeof FRIGORA_DISPATCH_EVENT_TYPES)[number];
+
+export type FrigoraDispatchEvent = {
+  id: FrigoraDispatchEventId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  workOrderId: FrigoraWorkOrderId;
+  eventType: FrigoraDispatchEventType;
+  actorUserId: UserId;
+  occurredAt: string;
+  previousAssignedUserId: UserId | null;
+  nextAssignedUserId: UserId | null;
+  previousScheduledStartAt: string | null;
+  previousScheduledEndAt: string | null;
+  nextScheduledStartAt: string | null;
+  nextScheduledEndAt: string | null;
+};
 
 export const FRIGORA_VISIT_EVIDENCE_CATEGORIES = [
   "SITE_CONDITION",
@@ -275,11 +303,22 @@ export type CancelWorkOrderInput = {
 
 export type AssignWorkOrderInput = {
   userId: string;
+  /** Exact WorkOrder.updatedAt the dispatcher acted upon. */
+  expectedUpdatedAt: string;
+};
+
+export type ClearWorkOrderAssignmentInput = {
+  expectedUpdatedAt: string;
 };
 
 export type ScheduleWorkOrderInput = {
   scheduledStartAt: string;
   scheduledEndAt: string;
+  expectedUpdatedAt: string;
+};
+
+export type ClearWorkOrderScheduleInput = {
+  expectedUpdatedAt: string;
 };
 
 export type DeclineWorkOrderAssignmentInput = {

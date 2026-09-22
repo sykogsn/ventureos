@@ -155,7 +155,7 @@ async function seedWorkHierarchy(owner: Awaited<ReturnType<typeof seed>>) {
     reportedCondition: "Walk-in warm",
     primaryAssetId: asset.id,
   });
-  const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+  const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
     userId: owner.userId,
   });
   return { customer, site, asset, workOrder: assigned };
@@ -184,7 +184,7 @@ describe("F1.2 Field Visit Recorder", () => {
       workReference: "WO-CLOSED",
       workKind: "reactive",
     });
-    await owner.service.assignWorkOrder(owner.scope, closed.id, {
+    await owner.service.assignWorkOrder(owner.scope, closed.id, { expectedUpdatedAt: closed.updatedAt,
       userId: owner.userId,
     });
     const closedVisit = await owner.service.recordVisitArrival(owner.scope, closed.id, {
@@ -516,10 +516,10 @@ describe("F1.2 Field Visit Recorder", () => {
   });
 
   it("ships F1.2 routes and field mutation module without F0 edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
 
     const assignedPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/work/assigned/page.tsx"),

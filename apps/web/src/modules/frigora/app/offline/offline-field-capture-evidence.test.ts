@@ -185,7 +185,7 @@ async function seedAssignedVisit(owner: Awaited<ReturnType<typeof seed>>, engine
     primaryAssetId: asset.id,
     reportedCondition: "warm case",
   });
-  await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+  await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
     userId: engineerId,
   });
   const engineerScope: FrigoraScope = {
@@ -232,7 +232,7 @@ async function seedLeasedWorkspace(
 describe("F33-04 field capture + visit evidence local capture + idempotent explicit acceptance", () => {
   it("A. SCHEMA_GENERATION is 28, product 0.22.0, allowlist exactly 3, global flag false", async () => {
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.equal(FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED, false);
     assert.deepEqual(
@@ -666,7 +666,7 @@ describe("F33-04 field capture + visit evidence local capture + idempotent expli
     await owner.service.recordVisitDeparture(engineerScope, visit.id, {
       departedAt: "2026-09-16T10:00:00.000Z",
     });
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt,
       userId: engineerB,
     });
 

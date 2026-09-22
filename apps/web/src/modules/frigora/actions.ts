@@ -5,6 +5,8 @@ import { isFrigoraError } from "./errors";
 import { createScope, getFrigoraService } from "./service";
 import type {
   AssignWorkOrderInput,
+  ClearWorkOrderAssignmentInput,
+  ClearWorkOrderScheduleInput,
   CancelWorkOrderInput,
   CreateAssetInput,
   CreateCustomerInput,
@@ -235,10 +237,14 @@ export async function assignWorkOrderAction(
 }
 
 export async function clearWorkOrderAssignmentAction(
-  input: ScopedInput & { id: string },
+  input: ScopedInput & { id: string } & ClearWorkOrderAssignmentInput,
 ): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
   return mutate(input, (scope) =>
-    getFrigoraService().clearWorkOrderAssignment(scope, input.id as FrigoraWorkOrderId),
+    getFrigoraService().clearWorkOrderAssignment(
+      scope,
+      input.id as FrigoraWorkOrderId,
+      input,
+    ),
   );
 }
 
@@ -251,10 +257,14 @@ export async function scheduleWorkOrderAction(
 }
 
 export async function clearWorkOrderScheduleAction(
-  input: ScopedInput & { id: string },
+  input: ScopedInput & { id: string } & ClearWorkOrderScheduleInput,
 ): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
   return mutate(input, (scope) =>
-    getFrigoraService().clearWorkOrderSchedule(scope, input.id as FrigoraWorkOrderId),
+    getFrigoraService().clearWorkOrderSchedule(
+      scope,
+      input.id as FrigoraWorkOrderId,
+      input,
+    ),
   );
 }
 

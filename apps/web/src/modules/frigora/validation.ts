@@ -258,14 +258,23 @@ export const updateWorkOrderSchema = z.object({
   primaryAssetId: patchAssetId,
 });
 
+/** Exact stored updatedAt token — no trim / ISO rewrite (CAS equality). */
+const expectedUpdatedAtToken = z.string().min(1, "Required text is empty.");
+
 export const assignWorkOrderSchema = z.object({
   userId: requiredText,
+  expectedUpdatedAt: expectedUpdatedAtToken,
+});
+
+export const clearWorkOrderAssignmentSchema = z.object({
+  expectedUpdatedAt: expectedUpdatedAtToken,
 });
 
 export const scheduleWorkOrderSchema = z
   .object({
     scheduledStartAt: canonicalIsoInstant,
     scheduledEndAt: canonicalIsoInstant,
+    expectedUpdatedAt: expectedUpdatedAtToken,
   })
   .superRefine((value, ctx) => {
     if (Date.parse(value.scheduledEndAt) <= Date.parse(value.scheduledStartAt)) {
@@ -276,6 +285,10 @@ export const scheduleWorkOrderSchema = z
       });
     }
   });
+
+export const clearWorkOrderScheduleSchema = z.object({
+  expectedUpdatedAt: expectedUpdatedAtToken,
+});
 
 export const declineWorkOrderAssignmentSchema = z.object({
   reason: requiredText,

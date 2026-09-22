@@ -199,6 +199,7 @@ export function OperationsScreen({
                                 workspaceId={ctx.workspaceId}
                                 ventureId={ctx.ventureId}
                                 workOrderId={item.workOrder.id}
+                                updatedAt={item.workOrder.updatedAt}
                                 assignedUserId={item.workOrder.assignedUserId}
                                 scheduledStartAt={item.workOrder.scheduledStartAt}
                                 scheduledEndAt={item.workOrder.scheduledEndAt}

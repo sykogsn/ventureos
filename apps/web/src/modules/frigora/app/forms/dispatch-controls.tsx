@@ -16,6 +16,7 @@ type DispatchControlsProps = {
   workspaceId: string;
   ventureId: string;
   workOrderId: string;
+  updatedAt: string;
   assignedUserId: string | null;
   scheduledStartAt: string | null;
   scheduledEndAt: string | null;
@@ -29,12 +30,17 @@ function HiddenScope({
   workspaceId,
   ventureId,
   workOrderId,
-}: Pick<DispatchControlsProps, "workspaceId" | "ventureId" | "workOrderId">) {
+  updatedAt,
+}: Pick<
+  DispatchControlsProps,
+  "workspaceId" | "ventureId" | "workOrderId" | "updatedAt"
+>) {
   return (
     <>
       <input type="hidden" name="workspaceId" value={workspaceId} />
       <input type="hidden" name="ventureId" value={ventureId} />
       <input type="hidden" name="workOrderId" value={workOrderId} />
+      <input type="hidden" name="expectedUpdatedAt" value={updatedAt} />
     </>
   );
 }

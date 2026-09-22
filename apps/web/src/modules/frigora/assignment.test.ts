@@ -179,7 +179,7 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
       userId: assigneeId,
     });
     assert.equal(assigned.assignedUserId, assigneeId);
@@ -204,8 +204,8 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: firstId });
-    const reassigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: firstId });
+    const reassigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt,
       userId: secondId,
     });
     assert.equal(reassigned.assignedUserId, secondId);
@@ -228,8 +228,8 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: firstId });
-    const reassigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: firstId });
+    const reassigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt,
       userId: secondId,
     });
     assert.equal(reassigned.assignedUserId, secondId);
@@ -240,7 +240,7 @@ describe("Frigora WorkOrder assignment", () => {
     assert.equal(selectedAfterRemount, secondId);
     assert.notEqual(selectedAfterRemount, firstId);
 
-    const submittedAgain = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    const submittedAgain = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: reassigned.updatedAt,
       userId: selectedAfterRemount as UserId,
     });
     assert.equal(submittedAgain.assignedUserId, secondId);
@@ -258,8 +258,8 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
-    const cleared = await owner.service.clearWorkOrderAssignment(owner.scope, workOrder.id);
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
+    const cleared = await owner.service.clearWorkOrderAssignment(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt });
     assert.equal(cleared.assignedUserId, null);
   });
 
@@ -273,7 +273,7 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const loaded = await owner.service.getWorkOrder(owner.scope, workOrder.id);
     assert.equal(loaded?.assignedUserId, assigneeId);
   });
@@ -293,7 +293,7 @@ describe("Frigora WorkOrder assignment", () => {
       workReference: "WO-2",
       workKind: "reactive",
     });
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const listed = await owner.service.listWorkOrdersByAssignee(owner.scope, assigneeId);
     assert.equal(listed.length, 1);
     assert.equal(listed[0]?.id, workOrder.id);
@@ -317,7 +317,7 @@ describe("Frigora WorkOrder assignment", () => {
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
     await expectCode(
       () =>
-        owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+        owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
           userId: "user-guess",
         }),
       "not_found",
@@ -342,7 +342,7 @@ describe("Frigora WorkOrder assignment", () => {
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
     await expectCode(
       () =>
-        owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+        owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
           userId: other.userId,
         }),
       "not_found",
@@ -359,7 +359,7 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const otherVenture = "ven-other" as VentureId;
     await getPersistence().ventures.insert(
       ventureRow({
@@ -400,14 +400,14 @@ describe("Frigora WorkOrder assignment", () => {
       owner.userId,
     );
     await expectCode(
-      () =>
-        owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+      async () =>
+        owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt,
           userId: assigneeId,
         }),
       "invalid_status",
     );
     await expectCode(
-      () => owner.service.clearWorkOrderAssignment(owner.scope, workOrder.id),
+      async () => owner.service.clearWorkOrderAssignment(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt }),
       "invalid_status",
     );
   });
@@ -426,8 +426,8 @@ describe("Frigora WorkOrder assignment", () => {
       reason: TEST_CANCELLATION_REASON,
     });
     await expectCode(
-      () =>
-        owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+      async () =>
+        owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt,
           userId: assigneeId,
         }),
       "invalid_status",
@@ -444,7 +444,7 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
       userId: assigneeId,
     });
     assert.equal(assigned.status, "open");
@@ -462,7 +462,7 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
       userId: owner.userId,
       arrivedAt: "2026-08-28T10:00:00.000Z",
@@ -488,7 +488,7 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { userId: assigneeId });
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt, userId: assigneeId });
     const cancelled = await owner.service.cancelWorkOrder(owner.scope, workOrder.id, {
       reason: TEST_CANCELLATION_REASON,
     });
@@ -506,14 +506,14 @@ describe("Frigora WorkOrder assignment", () => {
       createdAt: NOW,
     });
     const { workOrder } = await seedOpenWorkOrder(owner.service, owner.scope);
-    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
       userId: assigneeId,
     });
     assert.equal(assigned.assignedUserId, assigneeId);
   });
 
   it("resolves frigora@0.10.0 from catalog", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /current WorkOrder assignment/,

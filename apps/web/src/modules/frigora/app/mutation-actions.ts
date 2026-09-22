@@ -263,6 +263,7 @@ export async function assignToMeFormAction(
     ...scope,
     id: workOrderId,
     userId: session.id,
+    expectedUpdatedAt: text(formData, "expectedUpdatedAt"),
   });
 
   if (result.error) {
@@ -374,10 +375,12 @@ export async function clearAssignmentFormAction(
 ): Promise<OfficeFormState> {
   const scope = scopeFromForm(formData);
   const workOrderId = text(formData, "workOrderId");
+  const expectedUpdatedAt = text(formData, "expectedUpdatedAt");
 
   const result = await clearWorkOrderAssignmentAction({
     ...scope,
     id: workOrderId,
+    expectedUpdatedAt,
   });
 
   if (result.error) {
@@ -397,10 +400,12 @@ export async function assignWorkOrderFormAction(
   const scope = scopeFromForm(formData);
   const workOrderId = text(formData, "workOrderId");
   const userId = text(formData, "userId");
+  const expectedUpdatedAt = text(formData, "expectedUpdatedAt");
   const result = await assignWorkOrderAction({
     ...scope,
     id: workOrderId,
     userId,
+    expectedUpdatedAt,
   });
   if (result.error) {
     return { error: result.error, values: { userId } };
@@ -417,11 +422,13 @@ export async function scheduleWorkOrderFormAction(
   const workOrderId = text(formData, "workOrderId");
   const scheduledStartAt = utcInstant(formData, "scheduledStartAt");
   const scheduledEndAt = utcInstant(formData, "scheduledEndAt");
+  const expectedUpdatedAt = text(formData, "expectedUpdatedAt");
   const result = await scheduleWorkOrderAction({
     ...scope,
     id: workOrderId,
     scheduledStartAt,
     scheduledEndAt,
+    expectedUpdatedAt,
   });
   if (result.error) {
     return {
@@ -442,9 +449,11 @@ export async function clearWorkOrderScheduleFormAction(
 ): Promise<OfficeFormState> {
   const scope = scopeFromForm(formData);
   const workOrderId = text(formData, "workOrderId");
+  const expectedUpdatedAt = text(formData, "expectedUpdatedAt");
   const result = await clearWorkOrderScheduleAction({
     ...scope,
     id: workOrderId,
+    expectedUpdatedAt,
   });
   if (result.error) {
     return { error: result.error };

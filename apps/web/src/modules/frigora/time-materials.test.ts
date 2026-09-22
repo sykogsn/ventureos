@@ -162,12 +162,15 @@ async function seedOpenVisit(
     workKind: "reactive",
     reportedCondition: "Warm",
   });
-  await service.assignWorkOrder(scope, workOrder.id, { userId: attendingUserId });
-  const visit = await service.recordVisitArrival(scope, workOrder.id, {
+  const assigned = await service.assignWorkOrder(scope, workOrder.id, {
+    userId: attendingUserId,
+    expectedUpdatedAt: workOrder.updatedAt,
+  });
+  const visit = await service.recordVisitArrival(scope, assigned.id, {
     userId: attendingUserId,
     arrivedAt: ARRIVED,
   });
-  return { customer, site, asset, workOrder, visit };
+  return { customer, site, asset, workOrder: assigned, visit };
 }
 
 async function expectCode(run: () => Promise<unknown>, code: FrigoraError["code"]) {
@@ -687,7 +690,7 @@ describe("F3.1 time & materials customer charge", () => {
 
   it("admits F3.1 T&M at frigora@0.21.0 and SCHEMA_GENERATION 26", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.21.0");
+    assert.equal(frigora.version, "0.22.0");
     assert.match(frigora.description, /F3\.1/);
     assert.match(frigora.description, /ZAR cents|customer charge|Time & Materials/i);
     assert.match(frigora.description, /without inventory|inventory/);
@@ -696,6 +699,6 @@ describe("F3.1 time & materials customer charge", () => {
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
   });
 });

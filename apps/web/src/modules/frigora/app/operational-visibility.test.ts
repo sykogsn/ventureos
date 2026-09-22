@@ -207,7 +207,7 @@ describe("F1.3 Operational Visibility", () => {
       workKind: "reactive",
       primaryAssetId: asset.id,
     });
-    await owner.service.assignWorkOrder(owner.scope, assigned.id, {
+    await owner.service.assignWorkOrder(owner.scope, assigned.id, { expectedUpdatedAt: assigned.updatedAt,
       userId: owner.userId,
     });
 
@@ -274,7 +274,7 @@ describe("F1.3 Operational Visibility", () => {
       workKind: "reactive",
       primaryAssetId: asset.id,
     });
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
       userId: owner.userId,
     });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
@@ -362,7 +362,7 @@ describe("F1.3 Operational Visibility", () => {
       workKind: "reactive",
       primaryAssetId: asset.id,
     });
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
       userId: owner.userId,
     });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
@@ -407,7 +407,7 @@ describe("F1.3 Operational Visibility", () => {
       workReference: "WO-OPEN-A",
       workKind: "reactive",
     });
-    await owner.service.assignWorkOrder(owner.scope, openAssigned.id, {
+    await owner.service.assignWorkOrder(owner.scope, openAssigned.id, { expectedUpdatedAt: openAssigned.updatedAt,
       userId: owner.userId,
     });
     const closed = await owner.service.createWorkOrder(owner.scope, {
@@ -447,7 +447,7 @@ describe("F1.3 Operational Visibility", () => {
       workReference: "WO-VISITS",
       workKind: "reactive",
     });
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
       userId: owner.userId,
     });
     const first = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
@@ -492,7 +492,7 @@ describe("F1.3 Operational Visibility", () => {
     const reopened = await owner.service.reopenWorkOrder(owner.scope, workOrder.id);
     assert.equal(reopened.status, "open");
 
-    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: reopened.updatedAt,
       userId: owner.userId,
     });
     const visit = await owner.service.recordVisitArrival(owner.scope, assigned.id, {
@@ -583,10 +583,10 @@ describe("F1.3 Operational Visibility", () => {
   });
 
   it("ships F1.3 routes and mutation wrappers without F0 edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
 
     const operationsPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/operations/page.tsx"),

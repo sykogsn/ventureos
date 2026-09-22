@@ -226,14 +226,14 @@ describe("F1.1 Office Work Spine", () => {
     assert.equal(workOrder.status, "open");
     assert.equal(workOrder.assignedUserId, null);
 
-    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    const assigned = await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
       userId: owner.userId,
     });
     assert.equal(assigned.assignedUserId, owner.userId);
 
     const cleared = await owner.service.clearWorkOrderAssignment(
       owner.scope,
-      workOrder.id,
+      workOrder.id, { expectedUpdatedAt: assigned.updatedAt },
     );
     assert.equal(cleared.assignedUserId, null);
 
@@ -357,10 +357,10 @@ describe("F1.1 Office Work Spine", () => {
   });
 
   it("keeps the schema lock and ships F1.1 routes without runtime edits", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
 
     const customersPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/customers/page.tsx"),

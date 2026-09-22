@@ -424,7 +424,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     await addMember(owner.workspaceId, attendeeId);
     await addMember(owner.workspaceId, memberId);
     const { workOrder } = await seedHierarchy(owner.service, owner.scope);
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
       userId: attendeeId,
     });
     const visit = await owner.service.recordVisitArrival(owner.scope, workOrder.id, {
@@ -587,7 +587,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     const schemaPath = fileURLToPath(
       new URL("../../platform/persistence/schema.ts", import.meta.url),
     );
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 28/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 29/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_visit_evidence/);
     assert.match(
       readFileSync(schemaPath, "utf8"),
@@ -599,7 +599,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     );
 
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.21.0");
+    assert.equal(frigora.version, "0.22.0");
     assert.match(frigora.description, /Visit evidence/i);
   });
 });

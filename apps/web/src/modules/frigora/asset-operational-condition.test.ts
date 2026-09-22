@@ -649,14 +649,14 @@ describe("Frigora asset operational condition (F0.14)", () => {
 
     const dbPath = fileURLToPath(new URL("../../platform/persistence/db.ts", import.meta.url));
     const schemaPath = fileURLToPath(new URL("../../platform/persistence/schema.ts", import.meta.url));
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 28/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 29/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_asset_operational_conditions/);
     assert.equal(readFileSync(schemaPath, "utf8").includes("frigora_asset_history"), false);
   });
 
   it("admits frigora@0.21.0 and remains compatible with persisted 0.14.0", async () => {
     const frigora = platformVentureRegistry.resolve("frigora");
-    assert.equal(frigora.version, "0.21.0");
+    assert.equal(frigora.version, "0.22.0");
     assert.match(frigora.description, /Asset operational condition/);
     assert.match(frigora.description, /F3\.0 structured parts and refrigerant catalogues/);
     assert.match(frigora.description, /without inventory/);

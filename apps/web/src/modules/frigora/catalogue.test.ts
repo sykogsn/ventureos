@@ -157,7 +157,10 @@ async function seedOpenVisit(
     workKind: "reactive",
     reportedCondition: "Warm",
   });
-  await service.assignWorkOrder(scope, workOrder.id, { userId: attendingUserId });
+  await service.assignWorkOrder(scope, workOrder.id, {
+    userId: attendingUserId,
+    expectedUpdatedAt: workOrder.updatedAt,
+  });
   const visit = await service.recordVisitArrival(scope, workOrder.id, {
     userId: attendingUserId,
     arrivedAt: ARRIVED,
@@ -408,7 +411,7 @@ describe("F3.0 structured catalogues", () => {
   });
 
   it("admits F3.1 T&M at frigora@0.21.0 and SCHEMA_GENERATION 26", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
       /F3\.0 structured parts and refrigerant catalogues/,
@@ -429,7 +432,7 @@ describe("F3.0 structured catalogues", () => {
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
   });
 
   it("preserves added ≠ leaked and rejects leaked kind", async () => {

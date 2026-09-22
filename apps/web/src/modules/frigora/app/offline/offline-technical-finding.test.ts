@@ -170,7 +170,7 @@ async function seedAssignedVisit(owner: Awaited<ReturnType<typeof seed>>, engine
     primaryAssetId: asset.id,
     reportedCondition: "warm case",
   });
-  await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+  await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: workOrder.updatedAt,
     userId: engineerId,
   });
   const engineerScope: FrigoraScope = {
@@ -188,7 +188,7 @@ async function seedAssignedVisit(owner: Awaited<ReturnType<typeof seed>>, engine
 describe("F33-03 technical finding local capture + idempotent explicit acceptance", () => {
   it("A. SCHEMA_GENERATION is 28 and receipt uniqueness exists", async () => {
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 28/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
     assert.match(dbSource, /frigora_client_operation_receipts/);
     assert.match(
       dbSource,
@@ -417,7 +417,7 @@ describe("F33-03 technical finding local capture + idempotent explicit acceptanc
     await owner.service.recordVisitDeparture(engineerScope, visit.id, {
       departedAt: "2026-09-16T10:00:00.000Z",
     });
-    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, { expectedUpdatedAt: (await owner.service.getWorkOrder(owner.scope, workOrder.id))!.updatedAt,
       userId: engineerB,
     });
 
