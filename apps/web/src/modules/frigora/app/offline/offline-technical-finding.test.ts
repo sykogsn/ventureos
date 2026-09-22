@@ -713,11 +713,11 @@ describe("F33-03 technical finding local capture + idempotent explicit acceptanc
     assert.equal(receipts[0]?.acceptedEntityId, findings[0]?.id);
   });
 
-  it("product remains 0.21.0", () => {
+  it("product is 0.22.0", () => {
     const catalog = readFileSync(
       join(here, "../../../../core/venture-definition/catalog.ts"),
       "utf8",
     );
-    assert.match(catalog, /id:\s*"frigora"[\s\S]*?version:\s*"0\.21\.0"/);
+    assert.match(catalog, /id:\s*"frigora"[\s\S]*?version:\s*"0\.22\.0"/);
   });
 });

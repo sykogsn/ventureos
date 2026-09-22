@@ -278,7 +278,7 @@ async function submitFinding(
 
 describe("F33-05 read-only acceptance recovery", () => {
   it("Q/R/S/T. allowlist, product, schema, and IndexedDB stay at the F33-04 baseline", () => {
-    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.21.0");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.equal(FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED, false);
     assert.deepEqual([...FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST], [

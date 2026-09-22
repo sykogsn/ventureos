@@ -230,7 +230,7 @@ async function seedLeasedWorkspace(
 }
 
 describe("F33-04 field capture + visit evidence local capture + idempotent explicit acceptance", () => {
-  it("A. SCHEMA_GENERATION is 28, product 0.21.0, allowlist exactly 3, global flag false", async () => {
+  it("A. SCHEMA_GENERATION is 28, product 0.22.0, allowlist exactly 3, global flag false", async () => {
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
     assert.match(dbSource, /SCHEMA_GENERATION = 28/);
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
@@ -243,7 +243,7 @@ describe("F33-04 field capture + visit evidence local capture + idempotent expli
       join(here, "../../../../core/venture-definition/catalog.ts"),
       "utf8",
     );
-    assert.match(catalog, /id:\s*"frigora"[\s\S]*?version:\s*"0\.21\.0"/);
+    assert.match(catalog, /id:\s*"frigora"[\s\S]*?version:\s*"0\.22\.0"/);
   });
 
   it("B. field capture: first acceptance + identical duplicate share entity and receipt", async () => {
