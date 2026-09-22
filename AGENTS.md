@@ -14,12 +14,14 @@ Then read the permanent delivery law:
 
 ## Default AI engineering workflow
 
-The default VentureOS engineering model is:
+VentureOS uses risk-based engineering routing. Control classifies every implementation packet before assigning a writer.
+
+### High-risk / cross-cutting path
 
 ```text
 CONTROL (GPT-5.6 Sol)
   ↓
-ASTRA BUILD (GPT-6 Astra / Codex) — primary engineering executor
+ASTRA BUILD (GPT-6 Astra / Codex)
   ↓
 CURSOR ADVERSARIAL REVIEW — when warranted by risk, complexity, or Control
   ↓
@@ -32,9 +34,25 @@ NARROW RE-VERIFY — only when a proven defect was corrected
 CONTROL CERTIFY
 ```
 
-For low-risk, routine work, Control may use the lean path:
+### Routine / bounded path
 
-`CONTROL → ASTRA BUILD → AUTOMATED EVIDENCE → CONTROL CLOSE`
+```text
+CONTROL
+  ↓
+CURSOR BUILD
+  ↓
+AUTOMATED EVIDENCE
+  ↓
+INDEPENDENT VERIFY — when product-facing evidence is required
+  ↓
+CONTROL CLOSE / CERTIFY
+```
+
+Astra is the default implementation owner for concurrency, transactions, persistence/schema migrations, offline/reconciliation, security/authority, data integrity, cross-system runtime work, major refactors, release-critical fixes, and any concern already escalated by Control.
+
+Cursor is the default implementation owner for bounded low-risk work such as straightforward CRUD, isolated UI/action wiring, mechanical compatibility migrations, simple API plumbing, contained bugs, documentation, and routine implementation where architecture is already settled.
+
+If Cursor needs more than one corrective loop on the same engineering concern, Control automatically escalates that concern to Astra before another implementation attempt.
 
 For frontend/visual work, Lovable remains the preferred implementation owner when Control assigns that scope.
 

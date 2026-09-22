@@ -3,7 +3,7 @@
 **Purpose.** Engineering method and recovery decisions that Engineering HQ should remember.  
 **Authority.** Engineering Records. Does not replace Architecture Decision Register (ADR) or Founder Decisions (FD).  
 **Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
-**Last Updated.** 2026-09-12
+**Last Updated.** 2026-09-22
 
 Cross-links:
 
@@ -107,3 +107,15 @@ Cross-links:
 | Reason | Preserve the fast Frigora development rhythm while restoring separation of duties, independent product evidence, and bounded phase authority. Avoid approval-by-screenshot loops for routine safe commands while keeping high-risk and permanence operations gated. |
 | Outcome | Permanent protocol recorded in `CONTROLLED_DELIVERY_PROTOCOL.md` and inherited by VentureOS, Frigora, Farmora, Qualora, Calviora, and future Ventures. Narrow verification observations generate narrow correction/re-verification rather than full milestone restarts unless evidence proves the candidate unsafe. |
 | Status | Accepted — Founder approval 2026-09-12 |
+## ERD-009 — Risk-based engineering routing and automatic Astra escalation
+
+| Field | Record |
+|---|---|
+| Decision ID | ERD-009 |
+| Title | Risk-based engineering routing and automatic Astra escalation |
+| Problem | A universal implementation-agent rule is inefficient. Routine bounded work does not need the same reasoning depth as concurrency, transaction, persistence, security, offline, migration, or cross-system work. Repeated corrective loops also create approval churn and can hide deeper integrity defects. |
+| Decision | Control routes implementation by engineering risk. Cursor is the default implementation owner for bounded low-risk work with settled architecture. GPT-6 Astra / Codex is the default implementation owner for high-risk, cross-cutting, release-critical, and escalated work. One Cursor corrective loop is permitted per engineering concern; if another corrective implementation loop would be required, Control automatically escalates that concern to Astra. Control may escalate immediately when evidence reveals a high-risk class. |
+| Reason | Preserve speed on straightforward implementation while applying stronger repo-wide reasoning where silent failure is costly. The routing law prevents endless approval/correction cycles without making Astra the universal executor. |
+| Outcome | `AGENTS.md`, `CONTROLLED_DELIVERY_PROTOCOL.md`, `MASTER_ENGINEERING_PROMPT.md`, `ENGINEERING_CONSTITUTION.md`, and the Engineering Index are aligned to one risk-based model for VentureOS, Frigora, Farmora, Qualora, Calviora, and future Ventures. Lovable remains the frontend/visual owner when assigned; Independent Verification Work remains separate; Control alone certifies. |
+| Status | Accepted — Founder approval 2026-09-22 |
+

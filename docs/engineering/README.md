@@ -4,7 +4,7 @@
 
 **Status.** Governance Foundation complete (VS-008A–C). Project Constitution registered as supreme law (2026-08-22). Controlled Delivery & Independent Verification constituted 2026-09-12.  
 **Owner.** Engineering  
-**Last Updated.** 2026-09-12
+**Last Updated.** 2026-09-22
 
 These records do not replace the Foundation Library, code-adjacent READMEs, or Runtime/IDS/Definition implementation sources. They index completed engineering work so the desk can remember it. They also name the standard every future change must follow.
 
@@ -14,9 +14,12 @@ Read the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). It is the
 
 Then read the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. Do not start work on an unhealthy foundation. Do not tell the founder a task is complete until the required evidence exists.
 
-Then read the [Controlled Delivery & Independent Verification Protocol](./CONTROLLED_DELIVERY_PROTOCOL.md). Its default pipeline is:
+Then read the [Controlled Delivery & Independent Verification Protocol](./CONTROLLED_DELIVERY_PROTOCOL.md). VentureOS now uses risk-based implementation routing:
 
-`CONTROL → CURSOR BUILD → INDEPENDENT VERIFY → CURSOR FIX (only if needed) → NARROW INDEPENDENT RE-VERIFY → CONTROL CERTIFY`
+- Routine bounded work: `CONTROL → CURSOR BUILD → AUTOMATED EVIDENCE → INDEPENDENT VERIFY when required → CONTROL CLOSE / CERTIFY`
+- High-risk / cross-cutting / escalated work: `CONTROL → ASTRA BUILD → CURSOR ADVERSARIAL REVIEW when warranted → ASTRA CORRECTION when accepted → INDEPENDENT VERIFY → CONTROL CERTIFY`
+
+One Cursor corrective loop is permitted per engineering concern. Before a second corrective implementation loop, Control automatically escalates that concern to Astra.
 
 How the VES lifecycle and modes proceed remains in the [Engineering Constitution](./ENGINEERING_CONSTITUTION.md). How engineers are expected to think remains in the [Engineering Creed](./ENGINEERING_CREED.md). What the platform *is* remains the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) and the [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md).
 

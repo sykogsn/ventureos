@@ -1,11 +1,11 @@
 # VentureOS Engineering Constitution
 
 **Status.** Constitutional for engineering method  
-**Version.** 1.1.0  
-**Date.** 2026-09-12  
+**Version.** 1.2.0  
+**Date.** 2026-09-22  
 **Programme.** VS-008B  
 **Owner.** Engineering  
-**Amended.** 2026-09-12 — Controlled Delivery & Independent Verification (ERD-008)
+**Amended.** 2026-09-22 — Risk-Based Engineering Routing & Astra Escalation (ERD-009)
 
 This document is the official engineering lifecycle rulebook for VentureOS and every future Venture built on it.
 
@@ -13,7 +13,7 @@ It is subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTIO
 
 The authoritative engineering standard is the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. It binds pre-flight, development rules, root-cause policy, validation, git practice, completion, and reporting. If this Constitution and the Master Engineering Prompt appear to conflict on those subjects, the Master Engineering Prompt wins. Index: [Engineering Index](./README.md).
 
-The permanent execution-role law is the [Controlled Delivery & Independent Verification Protocol](./CONTROLLED_DELIVERY_PROTOCOL.md). It defines the default separation between Control, Cursor implementation, Independent Verification Work, correction, re-verification, and certification. It is part of this Constitution's operating law.
+The permanent execution-role law is the [Controlled Delivery & Independent Verification Protocol](./CONTROLLED_DELIVERY_PROTOCOL.md). It defines risk-based routing between Cursor and Astra, separation from Independent Verification Work, correction, re-verification, and certification. It is part of this Constitution's operating law.
 
 It does not replace the Project Constitution or the Platform Constitution. It does not restate locked architecture. Sprint shape remains in the Foundation Library [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md). Accepted method decisions remain in [DECISION_REGISTER.md](./DECISION_REGISTER.md).
 
@@ -31,7 +31,7 @@ Architecture answers *what the platform is*. This Constitution answers *how work
 
 ## 2. Engineering Principles
 
-These principles are the same method already accepted as ERD-001–ERD-008. They are stated here as standing law, not as a second unmarked copy of those outcomes.
+These principles are the same method already accepted as ERD-001–ERD-009. They are stated here as standing law, not as a second unmarked copy of those outcomes.
 
 | Principle | Meaning |
 |---|---|
@@ -42,7 +42,7 @@ These principles are the same method already accepted as ERD-001–ERD-008. They
 | One source of truth | One orchestrator, one definition registry, one generated token pipeline, one engineering-memory folder. [ERD-003](./DECISION_REGISTER.md#erd-003--one-source-of-truth). |
 | Never fix the same bug twice | A proven development-environment failure gets a guard that fails closed. |
 | VentureOS builds itself | Engineering knowledge is recorded in-repo so Engineering HQ can consume it. [ERD-004](./DECISION_REGISTER.md#erd-004--ventureos-builds-itself). |
-| Builder and verifier are separate | Control decides; Cursor builds; Independent Verification Work verifies; Control certifies. [ERD-008](./DECISION_REGISTER.md#erd-008--split-builder-independent-verifier-and-control). |
+| Builder and verifier are separate | Control routes implementation by risk; Cursor handles routine bounded work; Astra handles high-risk/cross-cutting/escalated work; Independent Verification Work verifies; Control certifies. [ERD-008](./DECISION_REGISTER.md#erd-008--split-builder-independent-verifier-and-control), [ERD-009](./DECISION_REGISTER.md#erd-009--risk-based-engineering-routing-and-automatic-astra-escalation). |
 | Quality over speed | A sprint that skips verification is not done. Speed that reopens a certified foundation is not progress. |
 | Speed without bureaucracy | Routine safe work inside an authorised packet proceeds continuously. High-risk, phase-transition, architecture, schema, dependency, permanence, deployment, and production operations remain explicitly gated. |
 
@@ -57,9 +57,9 @@ Diagnostic Mode
     ↓
 Design Mode
     ↓
-Founder / Control Approval
+Founder / Control Approval + Risk Routing
     ↓
-Implementation Mode — Cursor
+Implementation Mode — Cursor (routine) / Astra (high-risk or escalated)
     ↓
 Independent Running-Product Verification
     ↓
@@ -76,8 +76,8 @@ Release when authorised
 |---|---|
 | **Diagnostic Mode** | Prove what is true. Name the root cause with files and runtime evidence. No implementation. |
 | **Design Mode** | Name the smallest change that removes that class of failure. State what must not be redesigned. |
-| **Founder / Control Approval** | Accept diagnosis, design, scope, acceptance criteria, and the implementation packet before code changes. |
-| **Implementation Mode** | Cursor executes only the approved packet, including routine repo inspection, implementation, debugging, tests, typecheck, lint, build, and narrow local runtime checks needed by that packet. |
+| **Founder / Control Approval** | Accept diagnosis, design, scope, acceptance criteria, implementation packet, and risk routing before code changes. |
+| **Implementation Mode** | The Control-routed implementation owner executes only the approved packet. Cursor is the default for routine bounded work; Astra is the default for high-risk, cross-cutting, release-critical, and escalated work. |
 | **Independent Running-Product Verification** | A separate verifier proves the real product behaviour against the authorised acceptance criteria. The builder does not self-verify as the independent authority. |
 | **Observation Correction Loop** | Verification findings become named narrow observations. Cursor fixes only the proven defect and necessary siblings; Independent Work performs narrow re-verification. |
 | **Control Certification Decision** | Control interprets builder + verifier evidence and decides IMPLEMENTED / VERIFIED / CERTIFIED state. |
@@ -108,11 +108,13 @@ Pre-flight, validation, completion, and reporting stay in the [Master Engineerin
 
 **Rules.** No unrelated refactoring. No second source of truth. Update Engineering Records when the change creates a fact this folder must remember.
 
-Routine safe commands inside the authorised packet are not separate governance phases. Cursor may proceed continuously with the read/implement/debug/test/type/lint/build work needed to finish the packet.
+Routine safe commands inside the authorised packet are not separate governance phases. The current implementation owner may proceed continuously with the read/implement/debug/test/type/lint/build work needed to finish the packet.
 
-A named packet grants authority only for that packet. Cursor must not invent or begin a successor revision, recovery phase, verification environment, independent verification step, certification step, commit/push/PR/release/deployment, schema change, dependency change, or production mutation unless the current packet explicitly authorises it.
+Control routes routine bounded work to Cursor by default and high-risk/cross-cutting work to Astra by default. If a Cursor-owned engineering concern requires more than one corrective loop, that concern is automatically escalated to Astra before another implementation attempt.
 
-At packet completion Cursor returns COMPLETE, PARTIAL, or BLOCKED with evidence, then stops for Control.
+A named packet grants authority only for that packet. The implementation owner must not invent or begin a successor revision, recovery phase, verification environment, independent verification step, certification step, commit/push/PR/release/deployment, schema change, dependency change, or production mutation unless the current packet explicitly authorises it.
+
+At packet completion the implementation owner returns COMPLETE, PARTIAL, or BLOCKED with evidence, then stops for Control.
 
 ### Independent Verification Mode
 

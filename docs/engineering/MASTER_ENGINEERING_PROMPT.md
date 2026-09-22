@@ -1,8 +1,8 @@
 # VentureOS Master Engineering Prompt
 
 **Status.** Permanent engineering constitution of VentureOS  
-**Version.** 1.3.0  
-**Date.** 2026-09-17  
+**Version.** 1.4.0  
+**Date.** 2026-09-22  
 **Owner.** Engineering  
 **Applies to.** Every sprint, implementation, review, refactor, and bug fix on VentureOS, Qualora, Calviora, Farmora, Frigora, and every future Venture on this OS  
 **Index.** [Engineering Index](./README.md)  
@@ -30,7 +30,7 @@ The [Engineering Constitution](./ENGINEERING_CONSTITUTION.md) remains the VES li
 | Scalability first | Prefer the change that still holds when the desk, the Ventures, and the team grow. Do not solve only for the file in front of you. |
 | Security by default | Fail closed at auth, capability, definition, and secret boundaries. Do not commit secrets. Do not swallow redirect or schema errors. |
 | Testability by default | New behaviour is proven at the layer it belongs to. A change that cannot be verified is not done. |
-| Separation of duties | Control decides; Astra builds by default; Cursor adversarially reviews or implements only when Control assigns ownership; Independent Verification Work verifies; Control certifies. |
+| Separation of duties | Control decides and routes by risk; Cursor builds routine bounded work; Astra builds high-risk/cross-cutting/escalated work; Independent Verification Work verifies; Control certifies. |
 | One writer at a time | Astra and Cursor must not concurrently edit the same candidate. Control owns implementation handoff. |
 | Speed without bureaucracy | Routine safe work inside an authorised packet proceeds continuously. Only material scope/risk/permanence transitions return to Control. |
 
@@ -68,33 +68,35 @@ If the running process disagrees with source, treat the running process as a fir
 
 ## 3. Controlled Delivery Roles and Phase Lock
 
-The default high-risk / product-facing delivery pipeline is:
+The default high-risk / cross-cutting / release-critical pipeline is:
 
 `CONTROL → ASTRA BUILD → CURSOR ADVERSARIAL REVIEW (when warranted) → ASTRA CORRECTION (only if Control accepts a finding) → INDEPENDENT VERIFY → NARROW INDEPENDENT RE-VERIFY (if needed) → CONTROL CERTIFY`
 
-The default low-risk fast path is:
+The default low-risk / routine bounded path is:
 
-`CONTROL → ASTRA BUILD → AUTOMATED EVIDENCE → CONTROL CLOSE`
+`CONTROL → CURSOR BUILD → AUTOMATED EVIDENCE → INDEPENDENT VERIFY when required → CONTROL CLOSE / CERTIFY`
 
-Control decides which path applies.
+Control decides and records which path applies before implementation.
 
 ### Control
 
 Control owns architecture, scope, sequencing, acceptance criteria, implementation packets, review packets, verification packets, interpretation of evidence, agent routing, phase transitions, and certification.
 
-### Astra / primary implementation agent
+### Astra / high-risk and escalation implementation agent
 
-GPT-6 Astra / Codex is the default primary engineering executor. Astra owns repo-grounded implementation inside the currently authorised packet. It may inspect, implement, debug, run automated tests, typecheck, lint, build, and perform narrow local runtime checks required by that packet.
+GPT-6 Astra / Codex is the default implementation owner for concurrency, transactions, persistence/schema migrations, offline/reconciliation, security/authority, data integrity, complex state machines, cross-system/runtime integration, major refactors, release-critical fixes, and concerns escalated by Control. Astra owns repo-grounded implementation inside the currently authorised packet and may inspect, implement, debug, run automated tests, typecheck, lint, build, and perform narrow local runtime checks required by that packet.
 
 A named packet grants authority only for that packet. Astra MUST NOT infer or invent the next revision or phase. Completion of `IMP` does not authorise a successor revision, environment phase, independent verification, certification, commit, push, PR, release, deployment, schema changes, dependency changes, or production mutation unless the current packet explicitly grants that authority.
 
 At the end of its packet Astra returns COMPLETE, PARTIAL, or BLOCKED with evidence and stops.
 
-### Cursor / adversarial reviewer and secondary implementation agent
+### Cursor / routine implementation agent and adversarial reviewer
 
-Cursor's default role is read-only adversarial review of the current candidate. It may inspect source, tests, persistence, architecture, diffs, evidence, and regression risk and report concrete findings to Control.
+Cursor is the default implementation owner for bounded low-risk work where architecture is already settled, including straightforward CRUD, isolated UI/action wiring, mechanical compatibility migrations, simple API plumbing, contained bugs, documentation, and routine test maintenance.
 
-Cursor MUST NOT modify Astra's active candidate during review. Cursor becomes implementation owner only when Control explicitly transfers ownership for a named packet or correction. When ownership changes, the previous implementation agent stops editing that candidate.
+Cursor also serves as a read-only adversarial reviewer of Astra candidates when Control requests a second engineering opinion. It may inspect source, tests, persistence, architecture, diffs, evidence, and regression risk and report concrete findings to Control.
+
+Cursor MUST NOT modify Astra's active candidate during review. If a Cursor-owned concern needs more than one corrective loop, Control automatically escalates that concern to Astra before another implementation attempt. Control may escalate immediately when new evidence reveals a high-risk class.
 
 ### Lovable
 
@@ -107,8 +109,6 @@ Independent Work verifies the running product against the authorised acceptance 
 ### Control certification
 
 Control alone converts the evidence into authoritative state. IMPLEMENTED, VERIFIED, and CERTIFIED remain distinct.
-
----
 
 ## 4. Routine Execution Fast Path
 
@@ -157,6 +157,8 @@ Stop and return to Control before any unapproved:
 - Never treat agent confusion as repository corruption.
 - Never allow two implementation agents to edit the same candidate concurrently.
 - Use isolated branches/worktrees for comparative or benchmark implementations.
+- Route high-risk engineering to Astra and routine bounded engineering to Cursor.
+- Allow at most one Cursor corrective loop per engineering concern; before a second corrective implementation loop, escalate that concern to Astra.
 
 Further standing rules:
 
