@@ -1,4 +1,17 @@
-import type { FrigoraWorkKind, FrigoraWorkOrder } from "@/modules/frigora/types";
+import type { FrigoraVisit, FrigoraWorkKind, FrigoraWorkOrder } from "@/modules/frigora/types";
+import { hasActiveVisit } from "./operational-derivations";
+
+export function deriveEngineerWorkload(workOrders: readonly FrigoraWorkOrder[], range: ScheduleRange,
+  engineerId: string, visits: ReadonlyMap<string, FrigoraVisit[]>) {
+  const entries = uniqueWorkOrders(workOrders).filter((work) => work.assignedUserId === engineerId && isEngineerCalendarEntry(work, range));
+  const scheduledMinutes = entries.reduce((total, work) => {
+    const start = Math.max(Date.parse(work.scheduledStartAt!), Date.parse(range.start));
+    const end = Math.min(Date.parse(work.scheduledEndAt!), Date.parse(range.end));
+    return total + Math.max(0, end - start) / 60_000;
+  }, 0);
+  return { scheduledCount: entries.length, scheduledMinutes,
+    activeVisitCount: entries.filter((work) => hasActiveVisit(visits.get(work.id) ?? [])).length };
+}
 
 /**
  * F34-02 projections. Calendar rows and the unassigned queue are views of

@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth/session";
 import { isFrigoraError } from "./errors";
+import type { EngineerUnavailability } from "./availability";
 import { createScope, getFrigoraService } from "./service";
 import type {
   FrigoraAsset,
@@ -49,6 +50,10 @@ export type FrigoraQueryResult<T> = {
   error?: string;
   record?: T;
 };
+
+export async function listUnavailabilityQuery(input: ScopedInput & ListScheduledWorkOrdersInput): Promise<FrigoraQueryResult<EngineerUnavailability[]>> {
+  return query(input, (scope) => getFrigoraService().listUnavailability(scope, input));
+}
 
 type ScopedInput = {
   workspaceId: string;

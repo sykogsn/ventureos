@@ -302,6 +302,7 @@ export type CancelWorkOrderInput = {
 };
 
 export type AssignWorkOrderInput = {
+  confirmDoubleBooking?: boolean;
   userId: string;
   /** Exact WorkOrder.updatedAt the dispatcher acted upon. */
   expectedUpdatedAt: string;
@@ -312,6 +313,7 @@ export type ClearWorkOrderAssignmentInput = {
 };
 
 export type ScheduleWorkOrderInput = {
+  confirmDoubleBooking?: boolean;
   scheduledStartAt: string;
   scheduledEndAt: string;
   expectedUpdatedAt: string;

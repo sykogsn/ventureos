@@ -25,6 +25,7 @@ import type { PersistedVenture } from "@/platform/persistence/repositories/ports
 import { FrigoraError, FRIGORA_DISPATCH_CONFLICT_MESSAGE } from "./errors";
 import { createFrigoraService } from "./service";
 import { createFrigoraStore } from "./store";
+import { createFrigoraWriteClient } from "./owned-write";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
 import type { FrigoraScope, FrigoraWorkOrder } from "./types";
 import { FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST } from "./app/offline/capture-gate";
@@ -444,23 +445,22 @@ describe("F34-01 dispatch integrity", () => {
         return result;
       };
     const interception = t.mock.method(client, "execute", intercept(execute));
-    const begin = client.transaction.bind(client);
-    const transactionInterception = t.mock.method(
-      client,
-      "transaction",
-      async (mode?: TransactionMode) => {
-        const transaction = await begin(mode);
-        t.mock.method(
-          transaction,
-          "execute",
-          intercept(transaction.execute.bind(transaction)),
-        );
-        return transaction;
-      },
-    );
+    const dispatchService = createFrigoraService({
+      permissions: createPermissionService(createDbMembershipStore()),
+      store: createFrigoraStore({ createWriteClient: () => {
+        const writer = createFrigoraWriteClient();
+        const begin = writer.transaction.bind(writer);
+        t.mock.method(writer, "transaction", async (mode?: TransactionMode) => {
+          const transaction = await begin(mode);
+          t.mock.method(transaction, "execute", intercept(transaction.execute.bind(transaction)));
+          return transaction;
+        });
+        return writer;
+      } }),
+    });
     let dispatchError = "";
     try {
-      await service.assignWorkOrder(scope, wo.id, {
+      await dispatchService.assignWorkOrder(scope, wo.id, {
         userId: engineer,
         expectedUpdatedAt: wo.updatedAt,
       });
@@ -468,7 +468,6 @@ describe("F34-01 dispatch integrity", () => {
       dispatchError = String(error);
     } finally {
       interception.mock.restore();
-      transactionInterception.mock.restore();
     }
     const observer = createClient({ url: getDatabaseUrl() });
     try {
@@ -894,7 +893,7 @@ describe("F34-01 dispatch integrity", () => {
       join(here, "../../platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.deepEqual(
       [...FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST],

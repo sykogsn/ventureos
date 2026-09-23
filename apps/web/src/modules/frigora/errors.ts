@@ -6,6 +6,9 @@ export type FrigoraErrorCode =
   | "duplicate"
   | "idempotency_conflict"
   | "dispatch_conflict"
+  | "double_booking"
+  | "engineer_unavailable"
+  | "availability_conflict"
   | "invalid_input"
   | "invalid_status"
   | "invalid_kind"
@@ -18,13 +21,22 @@ export const FRIGORA_DISPATCH_CONFLICT_MESSAGE =
 
 export class FrigoraError extends Error {
   readonly code: FrigoraErrorCode;
+  readonly conflicts?: SchedulingConflict[];
 
-  constructor(code: FrigoraErrorCode, message: string) {
+  constructor(code: FrigoraErrorCode, message: string, conflicts?: SchedulingConflict[]) {
     super(message);
     this.name = "FrigoraError";
     this.code = code;
+    this.conflicts = conflicts;
   }
 }
+
+export type SchedulingConflict = {
+  id: string;
+  workReference: string;
+  scheduledStartAt: string;
+  scheduledEndAt: string;
+};
 
 export function isFrigoraError(error: unknown): error is FrigoraError {
   return error instanceof FrigoraError;

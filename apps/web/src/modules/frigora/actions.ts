@@ -2,6 +2,8 @@
 
 import { getSession } from "@/lib/auth/session";
 import { isFrigoraError } from "./errors";
+import type { FrigoraErrorCode, SchedulingConflict } from "./errors";
+import type { AvailabilityMutationResult, UnavailabilityInput } from "./availability";
 import { createScope, getFrigoraService } from "./service";
 import type {
   AssignWorkOrderInput,
@@ -74,6 +76,8 @@ import type {
 import { parseWithFrigora, scopeSchema } from "./validation";
 
 export type FrigoraMutationResult<T> = {
+  code?: FrigoraErrorCode;
+  conflicts?: SchedulingConflict[];
   error?: string;
   record?: T;
 };
@@ -107,10 +111,22 @@ async function mutate<T>(
     return { record };
   } catch (error) {
     if (isFrigoraError(error)) {
-      return { error: error.message };
+      return { error: error.message, code: error.code, conflicts: error.conflicts };
     }
     throw error;
   }
+}
+
+export async function createUnavailabilityAction(input: ScopedInput & UnavailabilityInput): Promise<FrigoraMutationResult<AvailabilityMutationResult>> {
+  return mutate(input, (scope) => getFrigoraService().createUnavailability(scope, input));
+}
+
+export async function updateUnavailabilityAction(input: ScopedInput & UnavailabilityInput & { id: string; expectedUpdatedAt: string }): Promise<FrigoraMutationResult<AvailabilityMutationResult>> {
+  return mutate(input, (scope) => getFrigoraService().updateUnavailability(scope, input.id, input));
+}
+
+export async function deleteUnavailabilityAction(input: ScopedInput & { id: string; expectedUpdatedAt: string }): Promise<FrigoraMutationResult<AvailabilityMutationResult>> {
+  return mutate(input, (scope) => getFrigoraService().deleteUnavailability(scope, input.id, input.expectedUpdatedAt));
 }
 
 export async function createCustomerAction(

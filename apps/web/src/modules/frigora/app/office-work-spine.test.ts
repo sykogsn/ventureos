@@ -360,7 +360,7 @@ describe("F1.1 Office Work Spine", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
 
     const customersPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/customers/page.tsx"),

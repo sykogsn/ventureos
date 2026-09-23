@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@repo/ui/button";
 import { Form, Stack } from "@/core/layout";
 import {
@@ -126,6 +126,8 @@ export function DispatchControls(props: DispatchControlsProps) {
         </Button>
       </Form>
 
+      <DoubleBookingConfirmation state={scheduleState} action={scheduleAction} pending={schedulePending} scope={props} />
+
       {props.scheduledStartAt ? (
         <Form action={clearScheduleAction} gap="tight">
           <HiddenScope {...props} />
@@ -179,6 +181,8 @@ export function DispatchControls(props: DispatchControlsProps) {
         </Button>
       </Form>
 
+      <DoubleBookingConfirmation state={assignState} action={assignAction} pending={assignPending} scope={props} />
+
       {props.assignedUserId ? (
         <Form action={clearAssignAction} gap="tight">
           <HiddenScope {...props} />
@@ -194,4 +198,24 @@ export function DispatchControls(props: DispatchControlsProps) {
       ) : null}
     </Stack>
   );
+}
+
+function DoubleBookingConfirmation({ state, action, pending, scope }: {
+  state: OfficeFormState; action: (data: FormData) => void; pending: boolean; scope: DispatchControlsProps;
+}) {
+  const [dismissed, setDismissed] = useState<OfficeFormState | null>(null);
+  if (state.code !== "double_booking" || state === dismissed || !state.values) return null;
+  return <Form action={action} gap="tight">
+    <HiddenScope {...scope} updatedAt={state.values.expectedUpdatedAt ?? ""} />
+    {Object.entries(state.values).filter(([key]) => key !== "expectedUpdatedAt").map(([key, value]) =>
+      <input key={key} type="hidden" name={key} value={value} />)}
+    <p className="ids-caption">Confirm the previously submitted booking:
+      {state.values.userId ? ` ${scope.members.find((member) => member.id === state.values?.userId)?.name ?? state.values.userId}`
+        : ` ${state.values.scheduledStartAt} – ${state.values.scheduledEndAt} UTC`}
+    </p>
+    <ul className="ids-caption">{state.conflicts?.map((conflict) =>
+      <li key={conflict.id}>{conflict.workReference}: {conflict.scheduledStartAt} – {conflict.scheduledEndAt}</li>)}</ul>
+    <Button type="submit" name="confirmDoubleBooking" value="true" disabled={pending}>Confirm double-booking</Button>
+    <Button type="button" variant="secondary" disabled={pending} onClick={() => setDismissed(state)}>Cancel</Button>
+  </Form>;
 }

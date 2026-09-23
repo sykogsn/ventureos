@@ -332,7 +332,7 @@ describe("F34-02 Service Desk integration", () => {
   it("keeps product, schema, and offline dispatch boundaries unchanged", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
     assert.equal(FRIGORA_OFFLINE_DB_NAME, "frigora-offline");
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.deepEqual(

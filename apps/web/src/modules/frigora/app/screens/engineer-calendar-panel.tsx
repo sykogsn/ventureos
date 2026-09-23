@@ -8,6 +8,7 @@ import {
   shiftUtcDate,
 } from "@/modules/frigora/app/engineer-calendar";
 import { DispatchControls } from "@/modules/frigora/app/forms/dispatch-controls";
+import { UnavailabilityForm } from "@/modules/frigora/app/forms/unavailability-form";
 import { hasActiveVisit } from "@/modules/frigora/app/operational-derivations";
 import type {
   DispatchBoardItem,
@@ -143,6 +144,11 @@ export function EngineerCalendarPanel({
           Scheduled open work, grouped by the assigned engineer. Placement follows the work
           order service window.
         </p>
+        <p className="ids-caption text-muted">Unavailable periods are explicit restrictions. No record means no recorded restriction, not confirmed availability.</p>
+        {ctx.canWrite ? <details>
+          <summary className="ids-caption cursor-pointer">Add unavailable period</summary>
+          <UnavailabilityForm workspaceId={ctx.workspaceId} ventureId={ctx.ventureId} members={members} />
+        </details> : null}
         {calendar.groups.length === 0 ? (
           <p className="ids-caption text-muted">
             {calendar.engineerId
@@ -158,8 +164,14 @@ export function EngineerCalendarPanel({
                     <h3 className="ids-body text-foreground">
                       {group.assignee?.name ?? group.engineerId}
                     </h3>
-                    <span className="ids-caption text-muted">{group.entries.length}</span>
+                    <span className="ids-caption text-muted">{group.workload.scheduledCount} scheduled jobs · {Math.round(group.workload.scheduledMinutes * 10) / 10} scheduled minutes on this day · {group.workload.activeVisitCount} active visits</span>
                   </div>
+                  {group.unavailablePeriods.map((period) => <div key={period.id} className="rounded-[var(--ids-foundation-radius-md)] border border-dashed border-[var(--ids-foundation-stroke-subtle)] p-4">
+                    <p className="ids-caption">Unavailable: {formatScheduledWindow(period.unavailableStartAt, period.unavailableEndAt)}</p>
+                    {ctx.canWrite ? <details><summary className="ids-caption cursor-pointer">Manage unavailable period</summary>
+                      <UnavailabilityForm workspaceId={ctx.workspaceId} ventureId={ctx.ventureId} members={members} period={period} />
+                    </details> : null}
+                  </div>)}
                   {group.entries.length === 0 ? (
                     <p className="ids-caption text-muted">No scheduled work for this engineer.</p>
                   ) : (

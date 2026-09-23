@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import type { FrigoraErrorCode, SchedulingConflict } from "@/modules/frigora/errors";
 import {
   acceptWorkOrderAssignmentAction,
   assignWorkOrderAction,
@@ -18,10 +19,16 @@ import {
   declineWorkOrderAssignmentAction,
   reopenWorkOrderAction,
   scheduleWorkOrderAction,
+  createUnavailabilityAction,
+  updateUnavailabilityAction,
+  deleteUnavailabilityAction,
 } from "@/modules/frigora/actions";
 import { FRIGORA_ASSET_KINDS, FRIGORA_WORK_KINDS } from "@/modules/frigora/types";
 
 export type OfficeFormState = {
+  code?: FrigoraErrorCode;
+  conflicts?: SchedulingConflict[];
+  message?: string;
   error?: string;
   values?: Record<string, string>;
 };
@@ -85,6 +92,29 @@ function utcInstant(formData: FormData, key: string): string {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)
     ? `${value}:00.000Z`
     : value;
+}
+
+export async function unavailabilityFormAction(_prev: OfficeFormState, formData: FormData): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const id = text(formData, "id");
+  const expectedUpdatedAt = text(formData, "expectedUpdatedAt");
+  const values = {
+    userId: text(formData, "userId"),
+    unavailableStartAt: text(formData, "unavailableStartAt"),
+    unavailableEndAt: text(formData, "unavailableEndAt"),
+  };
+  const input = { ...scope, ...values,
+    unavailableStartAt: utcInstant(formData, "unavailableStartAt"),
+    unavailableEndAt: utcInstant(formData, "unavailableEndAt") };
+  const deleting = text(formData, "operation") === "delete";
+  const result = deleting
+    ? await deleteUnavailabilityAction({ ...scope, id, expectedUpdatedAt })
+    : id ? await updateUnavailabilityAction({ ...input, id, expectedUpdatedAt })
+      : await createUnavailabilityAction(input);
+  if (result.error || !result.record) return { error: result.error ?? "Could not save unavailable period.", values };
+  revalidatePath(operationsPath(scope.ventureId));
+  return { message: deleting ? "Unavailable period removed." : "Unavailable period saved.",
+    conflicts: result.record.affectedWorkOrders };
 }
 
 export async function createCustomerFormAction(
@@ -260,6 +290,7 @@ export async function assignToMeFormAction(
   const workOrderId = text(formData, "workOrderId");
 
   const result = await assignWorkOrderAction({
+    confirmDoubleBooking: text(formData, "confirmDoubleBooking") === "true",
     ...scope,
     id: workOrderId,
     userId: session.id,
@@ -408,7 +439,7 @@ export async function assignWorkOrderFormAction(
     expectedUpdatedAt,
   });
   if (result.error) {
-    return { error: result.error, values: { userId } };
+    return { error: result.error, code: result.code, conflicts: result.conflicts, values: { userId, expectedUpdatedAt } };
   }
   revalidateDispatch(scope.ventureId, workOrderId);
   return {};
@@ -424,6 +455,7 @@ export async function scheduleWorkOrderFormAction(
   const scheduledEndAt = utcInstant(formData, "scheduledEndAt");
   const expectedUpdatedAt = text(formData, "expectedUpdatedAt");
   const result = await scheduleWorkOrderAction({
+    confirmDoubleBooking: text(formData, "confirmDoubleBooking") === "true",
     ...scope,
     id: workOrderId,
     scheduledStartAt,
@@ -433,9 +465,12 @@ export async function scheduleWorkOrderFormAction(
   if (result.error) {
     return {
       error: result.error,
+      code: result.code,
+      conflicts: result.conflicts,
       values: {
         scheduledStartAt: text(formData, "scheduledStartAt"),
         scheduledEndAt: text(formData, "scheduledEndAt"),
+        expectedUpdatedAt,
       },
     };
   }

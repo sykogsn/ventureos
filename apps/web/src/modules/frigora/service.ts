@@ -13,6 +13,8 @@ import {
   sha256HexOfBytes,
 } from "./client-operation-fingerprint";
 import { createFrigoraStore, type FrigoraStore } from "./store";
+import type { AvailabilityMutationResult, EngineerUnavailability, UnavailabilityInput } from "./availability";
+import { availabilityIdentitySchema, unavailabilitySchema } from "./validation";
 import type {
   AssignWorkOrderInput,
   ClearWorkOrderAssignmentInput,
@@ -152,6 +154,10 @@ import {
 } from "./validation";
 
 export type FrigoraService = {
+  createUnavailability(scope: FrigoraScope, input: UnavailabilityInput): Promise<AvailabilityMutationResult>;
+  updateUnavailability(scope: FrigoraScope, id: string, input: UnavailabilityInput & { expectedUpdatedAt: string }): Promise<AvailabilityMutationResult>;
+  deleteUnavailability(scope: FrigoraScope, id: string, expectedUpdatedAt: string): Promise<AvailabilityMutationResult>;
+  listUnavailability(scope: FrigoraScope, input: ListScheduledWorkOrdersInput): Promise<EngineerUnavailability[]>;
   createCustomer(scope: FrigoraScope, input: CreateCustomerInput): Promise<FrigoraCustomer>;
   updateCustomer(
     scope: FrigoraScope,
@@ -595,7 +601,30 @@ export function createFrigoraService(options: {
   async function permissionService(): Promise<PermissionService> {
     return permissions ?? getPlatform().permissions;
   }
+  async function saveUnavailability(scope: FrigoraScope, input: UnavailabilityInput, identity?: { id: string; expectedUpdatedAt: string }) {
+    await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+    const parsed = parseWithFrigora(unavailabilitySchema, input);
+    const version = identity ? parseWithFrigora(availabilityIdentitySchema, identity) : undefined;
+    await requireWorkspaceMember(scope.workspaceId, parsed.userId as UserId);
+    const now = nowIso();
+    const id = version?.id ?? createId();
+    return store.mutateUnavailability({ scope, id, expectedUpdatedAt: version?.expectedUpdatedAt,
+      next: { ...parsed, id, workspaceId: scope.workspaceId, ventureId: scope.ventureId,
+        userId: parsed.userId as UserId, createdByUserId: scope.userId, createdAt: now, updatedAt: now } });
+  }
   return {
+    createUnavailability: (scope, input) => saveUnavailability(scope, input),
+    updateUnavailability: (scope, id, input) => saveUnavailability(scope, input, { id, expectedUpdatedAt: input.expectedUpdatedAt }),
+    async deleteUnavailability(scope, id, expectedUpdatedAt) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const parsed = parseWithFrigora(availabilityIdentitySchema, { id, expectedUpdatedAt });
+      return store.mutateUnavailability({ scope, ...parsed, next: null });
+    },
+    async listUnavailability(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
+      const parsed = parseWithFrigora(listScheduledWorkOrdersSchema, input);
+      return store.listUnavailability(scope, parsed.rangeStart, parsed.rangeEnd);
+    },
     async createCustomer(scope, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
       const parsed = parseWithFrigora(createCustomerSchema, input);
@@ -1188,7 +1217,7 @@ export function createFrigoraService(options: {
               nextScheduledEndAt: existing.scheduledEndAt,
             });
 
-      await store.applyGuardedDispatchMutation({ expected: existing, next, event });
+      await store.applyGuardedDispatchMutation({ expected: existing, next, event, confirmDoubleBooking: parsed.confirmDoubleBooking });
       return next;
     },
     async clearWorkOrderAssignment(scope, id, input) {
@@ -1297,7 +1326,7 @@ export function createFrigoraService(options: {
             nextScheduledEndAt: parsed.scheduledEndAt,
           });
 
-      await store.applyGuardedDispatchMutation({ expected: existing, next, event });
+      await store.applyGuardedDispatchMutation({ expected: existing, next, event, confirmDoubleBooking: parsed.confirmDoubleBooking });
       return next;
     },
     async clearWorkOrderSchedule(scope, id, input) {

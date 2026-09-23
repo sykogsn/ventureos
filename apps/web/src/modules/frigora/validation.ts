@@ -262,6 +262,7 @@ export const updateWorkOrderSchema = z.object({
 const expectedUpdatedAtToken = z.string().min(1, "Required text is empty.");
 
 export const assignWorkOrderSchema = z.object({
+  confirmDoubleBooking: z.boolean().optional(),
   userId: requiredText,
   expectedUpdatedAt: expectedUpdatedAtToken,
 });
@@ -270,8 +271,22 @@ export const clearWorkOrderAssignmentSchema = z.object({
   expectedUpdatedAt: expectedUpdatedAtToken,
 });
 
+export const unavailabilitySchema = z.object({
+  userId: requiredText,
+  unavailableStartAt: canonicalIsoInstant,
+  unavailableEndAt: canonicalIsoInstant,
+}).refine((value) => value.unavailableEndAt > value.unavailableStartAt, {
+  message: "Unavailable end must be after start.", path: ["unavailableEndAt"],
+});
+
+export const availabilityIdentitySchema = z.object({
+  id: requiredText,
+  expectedUpdatedAt: expectedUpdatedAtToken,
+});
+
 export const scheduleWorkOrderSchema = z
   .object({
+    confirmDoubleBooking: z.boolean().optional(),
     scheduledStartAt: canonicalIsoInstant,
     scheduledEndAt: canonicalIsoInstant,
     expectedUpdatedAt: expectedUpdatedAtToken,

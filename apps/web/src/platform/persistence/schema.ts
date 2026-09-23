@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm";
 import {
+  check,
   index,
   integer,
   primaryKey,
@@ -7,6 +9,26 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+
+export const frigoraEngineerUnavailability = sqliteTable(
+  "frigora_engineer_unavailability",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    userId: text("user_id").notNull(),
+    unavailableStartAt: text("unavailable_start_at").notNull(),
+    unavailableEndAt: text("unavailable_end_at").notNull(),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    check("frigora_unavailability_valid_window", sql`${table.unavailableEndAt} > ${table.unavailableStartAt}`),
+    index("frigora_unavailability_engineer_range_idx").on(table.workspaceId, table.ventureId, table.userId, table.unavailableStartAt, table.unavailableEndAt),
+    index("frigora_unavailability_venture_date_idx").on(table.workspaceId, table.ventureId, table.unavailableStartAt, table.unavailableEndAt),
+  ],
+);
 
 export const users = sqliteTable(
   "users",

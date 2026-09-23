@@ -1,5 +1,7 @@
 import { and, asc, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import type { Transaction } from "@libsql/client";
+import { assertSchedulingWindow, createAvailabilityStore } from "./availability-store";
+import { withFrigoraWriteTransaction, type FrigoraWriteClientFactory } from "./owned-write";
 import type { VentureId, WorkspaceId, UserId, StoredObjectId } from "@/contracts";
 import { ensureSchema, getClient, getDb } from "@/platform/persistence/db";
 import {
@@ -84,7 +86,7 @@ import type {
   FrigoraDispatchEventType,
 } from "./types";
 
-export type FrigoraStore = {
+export type FrigoraStore = ReturnType<typeof createAvailabilityStore> & {
   insertCustomer(row: FrigoraCustomer): Promise<void>;
   updateCustomer(row: FrigoraCustomer): Promise<void>;
   findCustomer(
@@ -197,6 +199,7 @@ export type FrigoraStore = {
    * neither the WorkOrder nor the event table is mutated.
    */
   applyGuardedDispatchMutation(input: {
+    confirmDoubleBooking?: boolean;
     expected: FrigoraWorkOrder;
     next: FrigoraWorkOrder | null;
     event: FrigoraDispatchEvent | null;
@@ -482,8 +485,9 @@ export type FrigoraStore = {
   ): Promise<FrigoraVisitEvidence[]>;
 };
 
-export function createFrigoraStore(): FrigoraStore {
+export function createFrigoraStore(options: { createWriteClient?: FrigoraWriteClientFactory } = {}): FrigoraStore {
   return {
+    ...createAvailabilityStore(options.createWriteClient),
     async insertCustomer(row) {
       await ensureSchema();
       try {
@@ -884,7 +888,7 @@ export function createFrigoraStore(): FrigoraStore {
         .limit(1);
       return row ? mapWorkOrder(row) : null;
     },
-    async applyGuardedDispatchMutation({ expected, next, event }) {
+    async applyGuardedDispatchMutation({ expected, next, event, confirmDoubleBooking = false }) {
       await ensureSchema();
       if (next === null && event !== null) {
         throw new FrigoraError("invalid_input", "A dispatch event requires a mutation.");
@@ -988,10 +992,7 @@ export function createFrigoraStore(): FrigoraStore {
         ...guardArgs,
       ];
 
-      // The supported transaction handle owns its connection. Raw BEGIN on
-      // getClient() lets unrelated batches roll back this operation.
-      const transaction = await getClient().transaction("write");
-      try {
+      await withFrigoraWriteTransaction(async (transaction) => {
         const guarded = await transaction.execute({
           sql: `SELECT id FROM frigora_work_orders WHERE ${guardSql}`,
           args: guardArgs,
@@ -1001,8 +1002,13 @@ export function createFrigoraStore(): FrigoraStore {
         }
         if (next === null) {
           // A true no-op validates under the write lock without mutating a row.
-          await transaction.commit();
           return;
+        }
+        if (event !== null && next.assignedUserId && next.scheduledStartAt && next.scheduledEndAt) {
+          await assertSchedulingWindow(transaction, {
+            workspaceId: next.workspaceId, ventureId: next.ventureId, userId: next.assignedUserId,
+            start: next.scheduledStartAt, end: next.scheduledEndAt,
+          }, next.id, confirmDoubleBooking);
         }
         if (event !== null) {
           const insertArgs = [
@@ -1030,13 +1036,7 @@ export function createFrigoraStore(): FrigoraStore {
         if (updated.rowsAffected !== 1) {
           await classifyFailedDispatchGuard(transaction, expected);
         }
-        await transaction.commit();
-      } catch (error) {
-        if (!transaction.closed) await transaction.rollback();
-        throw error;
-      } finally {
-        transaction.close();
-      }
+      }, options.createWriteClient);
     },
     async listDispatchEventsByWorkOrder(workspaceId, ventureId, workOrderId) {
       await ensureSchema();

@@ -288,7 +288,7 @@ describe("F33-05 read-only acceptance recovery", () => {
     ]);
     assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordPartUsage"), false);
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
     const action = readFileSync(join(here, "offline-acceptance-action.ts"), "utf8");
     assert.doesNotMatch(action, /submitClientTechnicalFinding|submitClientFieldCapture|submitClientVisitEvidence/);
     const recovery = readFileSync(join(here, "offline-recovery.ts"), "utf8");

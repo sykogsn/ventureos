@@ -10,7 +10,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 29; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 30; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -1104,6 +1104,25 @@ export async function ensureSchema() {
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_client_operation_receipts_workspace_venture_idx ON frigora_client_operation_receipts (workspace_id, venture_id)`,
       );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS frigora_engineer_unavailability (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          unavailable_start_at TEXT NOT NULL,
+          unavailable_end_at TEXT NOT NULL,
+          created_by_user_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          CHECK (unavailable_end_at > unavailable_start_at)
+        )
+      `);
+      await exec(`CREATE INDEX IF NOT EXISTS frigora_unavailability_engineer_range_idx
+        ON frigora_engineer_unavailability (workspace_id, venture_id, user_id, unavailable_start_at, unavailable_end_at)`);
+      await exec(`CREATE INDEX IF NOT EXISTS frigora_unavailability_venture_date_idx
+        ON frigora_engineer_unavailability (workspace_id, venture_id, unavailable_start_at, unavailable_end_at)`);
 
       await exec(`
         CREATE TABLE IF NOT EXISTS frigora_dispatch_events (

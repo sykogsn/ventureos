@@ -776,7 +776,7 @@ describe("Frigora asset history projection (F0.13)", () => {
     const schemaPath = fileURLToPath(new URL("../../platform/persistence/schema.ts", import.meta.url));
     const dbSource = readFileSync(dbPath, "utf8");
     const schemaSource = readFileSync(schemaPath, "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 29/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
     assert.equal(schemaSource.includes("frigora_asset_history"), false);
   });
 

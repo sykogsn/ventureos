@@ -1,4 +1,5 @@
 import { getPersistence } from "@/platform/persistence/repositories";
+import type { EngineerUnavailability } from "@/modules/frigora/availability";
 import {
   getAssetQuery,
   getCurrentAssetOperationalConditionQuery,
@@ -34,11 +35,13 @@ import {
   listVisitOutcomesByWorkOrderQuery,
   listVisitsByWorkOrderQuery,
   listScheduledWorkOrdersQuery,
+  listUnavailabilityQuery,
   listWorkOrdersByAssigneeQuery,
   listWorkOrdersQuery,
 } from "@/modules/frigora/queries";
 import {
   projectEngineerCalendar,
+  deriveEngineerWorkload,
   projectUnassignedQueue,
 } from "@/modules/frigora/app/engineer-calendar";
 import {
@@ -123,6 +126,8 @@ export type DispatchBoardItem = {
 };
 
 export type EngineerCalendarGroupView = {
+  unavailablePeriods: EngineerUnavailability[];
+  workload: ReturnType<typeof deriveEngineerWorkload>;
   engineerId: string;
   assignee: UserDisplay | null;
   entries: DispatchBoardItem[];
@@ -891,17 +896,18 @@ export async function loadOperationsOverview(
   error?: string;
   view: OperationsOverviewView;
 }> {
-  const [openResult, scheduledResult] = await Promise.all([
+  const [openResult, scheduledResult, unavailableResult] = await Promise.all([
     listWorkOrdersQuery({ ...scope, status: "open" }),
     listScheduledWorkOrdersQuery({
       ...scope,
       rangeStart: range.start,
       rangeEnd: range.end,
     }),
+    listUnavailabilityQuery({ ...scope, rangeStart: range.start, rangeEnd: range.end }),
   ]);
-  if (openResult.error || scheduledResult.error) {
+  if (openResult.error || scheduledResult.error || unavailableResult.error) {
     return {
-      error: openResult.error ?? scheduledResult.error,
+      error: openResult.error ?? scheduledResult.error ?? unavailableResult.error,
       view: {
         counts: {
           openWork: 0,
@@ -1009,6 +1015,14 @@ export async function loadOperationsOverview(
     scheduleRange,
     engineerId,
   );
+  const periods = unavailableResult.record ?? [];
+  const groupIds = new Set(calendarProjection.map((group) => group.engineerId));
+  for (const id of new Set([...members.map((member) => member.id), ...periods.map((period) => period.userId)])) {
+    if ((!engineerId || engineerId === id) && !groupIds.has(id)) {
+      calendarProjection.push({ engineerId: id, entries: [] });
+      groupIds.add(id);
+    }
+  }
   const calendarGroups = await Promise.all(
     calendarProjection.map(async (group) => {
       const entries = await Promise.all(
@@ -1023,7 +1037,9 @@ export async function loadOperationsOverview(
       );
       return {
         engineerId: group.engineerId,
-        assignee: entries[0]?.assignee ?? null,
+        assignee: entries[0]?.assignee ?? members.find((member) => member.id === group.engineerId) ?? null,
+        unavailablePeriods: periods.filter((period) => period.userId === group.engineerId),
+        workload: deriveEngineerWorkload(openWorkOrders, scheduleRange, group.engineerId, visitsByWorkOrderId),
         entries,
       };
     }),

@@ -225,7 +225,7 @@ describe("Frigora F3.2 online PWA boundary", () => {
 
   it("does not change persistence generation or invent F3.3 stores", () => {
     const db = read("platform/persistence/db.ts");
-    assert.match(db, /SCHEMA_GENERATION = 29/);
+    assert.match(db, /SCHEMA_GENERATION = 30/);
     assert.equal(platformVentureRegistry.resolve("frigora").lifecycle, "concept");
     const sw = readPublic("sw.js");
     assert.equal(sw.includes("workbox"), false);
