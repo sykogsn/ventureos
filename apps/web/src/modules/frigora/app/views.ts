@@ -38,6 +38,10 @@ import {
   listWorkOrdersQuery,
 } from "@/modules/frigora/queries";
 import {
+  projectEngineerCalendar,
+  projectUnassignedQueue,
+} from "@/modules/frigora/app/engineer-calendar";
+import {
   ATTENTION_SIGNAL_LABELS,
   deriveDispatchBoardBucket,
   deriveDispatchResponseState,
@@ -118,6 +122,17 @@ export type DispatchBoardItem = {
   signals: OperationalAttentionSignal[];
 };
 
+export type EngineerCalendarGroupView = {
+  engineerId: string;
+  assignee: UserDisplay | null;
+  entries: DispatchBoardItem[];
+};
+
+export type EngineerCalendarSurface = {
+  engineerId: string | null;
+  groups: EngineerCalendarGroupView[];
+};
+
 export type OperationsOverviewView = {
   counts: OperationsOverviewCounts;
   attention: OperationalAttentionItem[];
@@ -125,6 +140,8 @@ export type OperationsOverviewView = {
   range: { date: string; start: string; end: string };
   members: UserDisplay[];
   board: Record<DispatchBoardBucket, DispatchBoardItem[]>;
+  calendar: EngineerCalendarSurface;
+  unassignedQueue: DispatchBoardItem[];
 };
 
 export type VisitFactsView = {
@@ -815,6 +832,33 @@ async function buildRecentActivity(scope: Scope): Promise<OperationalActivityEve
   return takeRecentActivity(events);
 }
 
+function emptyCalendar(engineerId: string | null): EngineerCalendarSurface {
+  return { engineerId, groups: [] };
+}
+
+async function toDispatchBoardItem(
+  scope: Scope,
+  workOrder: FrigoraWorkOrder,
+  visits: FrigoraVisit[],
+  eligibleAssigneeIds: ReadonlySet<string>,
+): Promise<DispatchBoardItem> {
+  const [customer, site, assignee] = await Promise.all([
+    getCustomerQuery({ ...scope, id: workOrder.customerId }),
+    getSiteQuery({ ...scope, id: workOrder.siteId }),
+    resolveUserDisplay(workOrder.assignedUserId),
+  ]);
+  return {
+    workOrder,
+    customer: customer.record ?? null,
+    site: site.record ?? null,
+    assignee,
+    visits,
+    responseState: deriveDispatchResponseState(workOrder),
+    bucket: deriveDispatchBoardBucket(workOrder, visits),
+    signals: deriveAttentionSignals(workOrder, visits, eligibleAssigneeIds),
+  };
+}
+
 function emptyDispatchBoard(): OperationsOverviewView["board"] {
   return {
     unscheduled: [],
@@ -829,12 +873,18 @@ function emptyDispatchBoard(): OperationsOverviewView["board"] {
 
 export async function loadOperationsOverview(
   scope: Scope,
-  range: { date: string; start: string; end: string } = (() => {
+  range: {
+    date: string;
+    start: string;
+    end: string;
+    engineerId?: string | null;
+  } = (() => {
     const date = new Date().toISOString().slice(0, 10);
     return {
       date,
       start: `${date}T00:00:00.000Z`,
       end: new Date(Date.parse(`${date}T00:00:00.000Z`) + 86_400_000).toISOString(),
+      engineerId: null,
     };
   })(),
 ): Promise<{
@@ -865,6 +915,8 @@ export async function loadOperationsOverview(
         range,
         members: [],
         board: emptyDispatchBoard(),
+        calendar: emptyCalendar(range.engineerId ?? null),
+        unassignedQueue: [],
       },
     };
   }
@@ -941,27 +993,62 @@ export async function loadOperationsOverview(
       });
       visits = visitResult.record ?? [];
     }
-    const [customer, site, assignee] = await Promise.all([
-      getCustomerQuery({ ...scope, id: workOrder.customerId }),
-      getSiteQuery({ ...scope, id: workOrder.siteId }),
-      resolveUserDisplay(workOrder.assignedUserId),
-    ]);
-    const bucket = deriveDispatchBoardBucket(workOrder, visits);
-    board[bucket].push({
+    const item = await toDispatchBoardItem(
+      scope,
       workOrder,
-      customer: customer.record ?? null,
-      site: site.record ?? null,
-      assignee,
       visits,
-      responseState: deriveDispatchResponseState(workOrder),
-      bucket,
-      signals: deriveAttentionSignals(
+      eligibleAssigneeIds,
+    );
+    board[item.bucket].push(item);
+  }
+
+  const scheduleRange = { start: range.start, end: range.end };
+  const engineerId = range.engineerId ?? null;
+  const calendarProjection = projectEngineerCalendar(
+    openWorkOrders,
+    scheduleRange,
+    engineerId,
+  );
+  const calendarGroups = await Promise.all(
+    calendarProjection.map(async (group) => {
+      const entries = await Promise.all(
+        group.entries.map((workOrder) =>
+          toDispatchBoardItem(
+            scope,
+            workOrder,
+            visitsByWorkOrderId.get(workOrder.id) ?? [],
+            eligibleAssigneeIds,
+          ),
+        ),
+      );
+      return {
+        engineerId: group.engineerId,
+        assignee: entries[0]?.assignee ?? null,
+        entries,
+      };
+    }),
+  );
+  calendarGroups.sort((left, right) => {
+    const leftName = left.assignee?.name ?? left.engineerId;
+    const rightName = right.assignee?.name ?? right.engineerId;
+    if (leftName !== rightName) {
+      return leftName < rightName ? -1 : 1;
+    }
+    if (left.engineerId !== right.engineerId) {
+      return left.engineerId < right.engineerId ? -1 : 1;
+    }
+    return 0;
+  });
+  const unassignedQueue = await Promise.all(
+    projectUnassignedQueue(openWorkOrders).map((workOrder) =>
+      toDispatchBoardItem(
+        scope,
         workOrder,
-        visits,
+        visitsByWorkOrderId.get(workOrder.id) ?? [],
         eligibleAssigneeIds,
       ),
-    });
-  }
+    ),
+  );
 
   const recentActivity = await buildRecentActivity(scope);
 
@@ -973,6 +1060,8 @@ export async function loadOperationsOverview(
       range,
       members,
       board,
+      calendar: { engineerId, groups: calendarGroups },
+      unassignedQueue,
     },
   };
 }

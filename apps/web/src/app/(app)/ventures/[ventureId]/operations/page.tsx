@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { frigoraScope, requireFrigoraOpsContext } from "@/modules/frigora/app/context";
+import { parseEngineerFilterParam } from "@/modules/frigora/app/engineer-calendar";
 import { OperationsScreen } from "@/modules/frigora/app/screens/operations-screen";
 import { loadOperationsOverview } from "@/modules/frigora/app/views";
 
@@ -8,10 +9,12 @@ export default async function FrigoraOperationsPage({
   searchParams,
 }: {
   params: Promise<{ ventureId: string }>;
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; engineer?: string }>;
 }) {
   const { ventureId } = await params;
-  const requestedDate = (await searchParams).date;
+  const query = await searchParams;
+  const requestedDate = query.date;
+  const engineerId = parseEngineerFilterParam(query.engineer);
   const today = new Date().toISOString().slice(0, 10);
   const requestedDateMs = requestedDate
     ? Date.parse(`${requestedDate}T00:00:00.000Z`)
@@ -33,6 +36,7 @@ export default async function FrigoraOperationsPage({
     date,
     start,
     end,
+    engineerId,
   });
 
   return <OperationsScreen ctx={ctx} view={view} error={error} />;

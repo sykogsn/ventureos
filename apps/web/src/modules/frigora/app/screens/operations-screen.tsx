@@ -3,6 +3,7 @@ import { PageFrame } from "@/core";
 import { Fit, Stack } from "@/core/layout";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
 import { DispatchControls } from "@/modules/frigora/app/forms/dispatch-controls";
+import { EngineerCalendarPanel } from "@/modules/frigora/app/screens/engineer-calendar-panel";
 import {
   DISPATCH_BUCKET_LABELS,
   type DispatchBoardBucket,
@@ -62,7 +63,8 @@ export function OperationsScreen({
   error?: string;
 }) {
   const workBase = `/ventures/${ctx.ventureId}/work`;
-  const { counts, attention, recentActivity, range, members, board } = view;
+  const { counts, attention, recentActivity, range, members, board, calendar, unassignedQueue } =
+    view;
 
   return (
     <PageFrame
@@ -92,6 +94,9 @@ export function OperationsScreen({
             <label className="ids-caption text-muted" htmlFor="service-date">
               Service date (UTC)
             </label>
+            {calendar.engineerId ? (
+              <input type="hidden" name="engineer" value={calendar.engineerId} />
+            ) : null}
             <input
               id="service-date"
               name="date"
@@ -108,6 +113,14 @@ export function OperationsScreen({
             open work remain visible.
           </p>
         </Stack>
+
+        <EngineerCalendarPanel
+          ctx={ctx}
+          date={range.date}
+          members={members}
+          calendar={calendar}
+          unassignedQueue={unassignedQueue}
+        />
 
         <Stack gap="compact">
           <h2 className="ids-label text-foreground">Dispatch summary</h2>
