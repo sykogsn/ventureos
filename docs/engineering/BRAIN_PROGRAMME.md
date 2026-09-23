@@ -83,3 +83,59 @@ changes; no new source files were created. No Git permanence was performed.
 
 This is builder evidence for Control review only. No independent verification,
 certification, running compounding-loop claim or successor milestone is implied.
+
+## AIF-01 — Independent Verification defect correction
+
+**State:** successor working-tree correction for Control publication review; not
+committed, independently re-verified or certified. Published candidate
+`7b712530c31f4c295ec922ebfb3240b71be447b3` remains immutable. PR #3 remains draft
+and unmerged. The earlier candidate-green evidence above does not certify that
+candidate: Independent Verification found a semantic assessment defect.
+
+**RED reproduction:** on that exact candidate, an ACTIVE Learning declaring
+VALIDATED_ORGANISATIONAL_PRINCIPLE with empty maturityHistory and validationHistory
+was returned as a validated principle by assessKnowledgeAt. The full catalogue
+validator rejected the same record. A direct safety assertion failed with exit 1.
+
+**Root cause:** point assessment checked only that history timestamps were not future,
+then projected record.maturity. Empty-array every() succeeded, and nonempty history
+also bypassed authoritative transition, validation and evidence requirements.
+
+**Usage review:** all 12 pre-existing invocations are in operating.test.ts at candidate
+lines 253, 283, 286, 331, 452, 493, 701, 724, 725, 843, 854 and 857. They cover Claim
+classification/effective time/retraction, outcomes, legacy results, determinism and
+future Learning transitions. index.ts only re-exports the API. No production consumer
+uses the unvalidated Learning projection.
+
+**Correction:** assessKnowledgeAt retains its two-argument public signature and calls
+the same private Learning-history validator as catalogue validation. Record-local
+contradictions are rejected using the existing rules. With no catalogue context,
+advanced maturity remains UNASSESSED, even when the record's structure is valid.
+Initial OBSERVATION remains assessable. A reversal does not bypass validation of
+prior promotions. Future transitions are not projected backwards. Full catalogue
+validation retains strict evaluation-time, reference, scope, source-independence,
+measured-success and challenge checks. There is no second maturity algorithm.
+
+**Delta:** operating.ts is the only production-code change (+44/-31 lines).
+operating.test.ts adds 28 regressions (+269/-0 lines). This section records the
+correction and supersedes any interpretation of the original point assessment as
+proof of advanced Learning maturity.
+
+All correction gates used pnpm 9.0.0 and exited 0:
+
+| Gate | Result |
+|---|---|
+| Targeted independent-defect regressions | 28/28 |
+| Brain focused tests/catalogue coverage | 108/108 (previously 80) |
+| Capability focused tests | 32/32 |
+| IDS tests | 92/92 |
+| Full workspace tests | 431/431 (Brain 108, IDS 92, web 231; previously 403) |
+| Workspace typechecks | PASS |
+| Workspace lint | PASS |
+| Production build | PASS |
+| git diff --check | PASS |
+
+No Runtime/EIR, Definition/Genome, persistence, schema/migration, UI/web graph,
+dependency graph, package manifest, lockfile or package-manager configuration change.
+The pre-existing breakpoints.css line-ending marker remains; its byte hash is unchanged.
+Nothing in this correction authorises a commit, push, merge, re-verification or certification.

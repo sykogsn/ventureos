@@ -572,9 +572,10 @@ export function independentEvidenceOrigins(
   return [...new Set(ids.flatMap(visit))].sort();
 }
 
+/** One maturity rule path. Missing catalogue context never validates a promotion. */
 function assertLearningHistory(
   record: LearningKnowledgeObject,
-  records: KnowledgeObject[],
+  records: KnowledgeObject[] | undefined,
   evaluationTime: string,
 ) {
   const now = assertKnowledgeTime(evaluationTime);
@@ -584,11 +585,14 @@ function assertLearningHistory(
     ids.add(v.id);
     demand(
       assertKnowledgeTime(v.at) >= assertKnowledgeTime(record.recordedAt) &&
-        assertKnowledgeTime(v.at) <= now,
+        (records === undefined || assertKnowledgeTime(v.at) <= now),
       "Invalid Learning validation time.",
     );
-    for (const id of v.evidenceIds) reference(record, id, records, "Evidence");
-    independentEvidenceOrigins(v.evidenceIds, records, v.at);
+    if (records !== undefined) {
+      for (const id of v.evidenceIds)
+        reference(record, id, records, "Evidence");
+      independentEvidenceOrigins(v.evidenceIds, records, v.at);
+    }
   }
   let maturity: LearningMaturity = "OBSERVATION";
   let last = assertKnowledgeTime(record.recordedAt);
@@ -604,7 +608,10 @@ function assertLearningHistory(
       "Invalid Learning maturity transition.",
     );
     const at = assertKnowledgeTime(step.at);
-    demand(at >= last && at <= now, "Invalid maturity transition time.");
+    demand(
+      at >= last && (records === undefined || at <= now),
+      "Invalid maturity transition time.",
+    );
     const selected = step.validationIds.map((id) => {
       const v = record.validationHistory.find((entry) => entry.id === id);
       demand(
@@ -622,7 +629,7 @@ function assertLearningHistory(
         selected.every((v) => v.result === "SUPPORTED"),
         "Promotion requires supported validation.",
       );
-      if (to >= 2) {
+      if (to >= 2 && records !== undefined) {
         const roots = selected.map((v) =>
           independentEvidenceOrigins(v.evidenceIds, records, step.at),
         );
@@ -640,22 +647,23 @@ function assertLearningHistory(
           new Set(selected.map((v) => v.context)).size >= 2,
           "Principle requires distinct validation contexts.",
         );
-        demand(
-          selected.every((v) =>
-            v.evidenceIds.some((id) => {
-              const evidence = lookup(
-                id,
-                records,
-                "Evidence",
-              ) as EvidenceKnowledgeObject;
-              return (
-                evidence.provenance?.origin === "OBSERVED" &&
-                evidence.outcomeObservation?.assessment === "MET"
-              );
-            }),
-          ),
-          "Principle requires measured successful outcome evidence.",
-        );
+        if (records !== undefined)
+          demand(
+            selected.every((v) =>
+              v.evidenceIds.some((id) => {
+                const evidence = lookup(
+                  id,
+                  records,
+                  "Evidence",
+                ) as EvidenceKnowledgeObject;
+                return (
+                  evidence.provenance?.origin === "OBSERVED" &&
+                  evidence.outcomeObservation?.assessment === "MET"
+                );
+              }),
+            ),
+            "Principle requires measured successful outcome evidence.",
+          );
         demand(
           !record.validationHistory.some(
             (v) => v.result === "CHALLENGED" && assertKnowledgeTime(v.at) <= at,
@@ -680,6 +688,14 @@ function assertLearningHistory(
       "Challenged principle requires explicit reversal or retraction.",
     );
   }
+  // A record-only assessment cannot establish provenance, independence or measured success.
+  // Even a reversal to OBSERVATION needs catalogue validation of its prior promotions.
+  return records !== undefined ||
+    (maturity === "OBSERVATION" &&
+      record.maturityHistory.length === 0 &&
+      record.validationHistory.every((v) => assertKnowledgeTime(v.at) <= now))
+    ? maturity
+    : "UNASSESSED";
 }
 
 export function assertIntelligenceReferences(
@@ -834,7 +850,7 @@ export function assertIntelligenceReferences(
   }
 }
 
-/** Absent legacy metadata stays unassessed. Governance approval changes none of these dimensions. */
+/** Record-only projection. Advanced Learning maturity requires catalogue validation and stays UNASSESSED here. */
 export function assessKnowledgeAt(
   record: KnowledgeObject,
   evaluationTime: string,
@@ -844,6 +860,10 @@ export function assessKnowledgeAt(
   const known =
     (record.type === "Claim" || record.type === "Learning") &&
     assertKnowledgeTime(record.recordedAt) <= now;
+  const maturity =
+    record.type === "Learning"
+      ? assertLearningHistory(record, undefined, evaluationTime)
+      : "UNASSESSED";
   return {
     classification:
       record.type === "Claim" && known ? record.classification : "UNKNOWN",
@@ -852,14 +872,7 @@ export function assessKnowledgeAt(
       (!record.retraction || assertKnowledgeTime(record.retraction.at) <= now)
         ? record.validity
         : "UNKNOWN",
-    maturity:
-      record.type === "Learning" &&
-      known &&
-      record.maturityHistory.every(
-        (step) => assertKnowledgeTime(step.at) <= now,
-      )
-        ? record.maturity
-        : "UNASSESSED",
+    maturity: known ? maturity : "UNASSESSED",
     outcome:
       record.type === "Evidence" &&
       record.provenance &&

@@ -877,3 +877,272 @@ describe("AIF-01 additional boundary cases", () => {
     assert.throws(() => assertOperatingPayload(c), /classification/);
   });
 });
+
+describe("AIF-01 independent defect correction", () => {
+  it("rejects the exact ACTIVE principle declaration with empty histories", () => {
+    const rows = sample(),
+      l = learning(rows);
+    l.maturity = "VALIDATED_ORGANISATIONAL_PRINCIPLE";
+    assert.equal(l.validity, "ACTIVE");
+    assert.deepEqual(l.maturityHistory, []);
+    assert.deepEqual(l.validationHistory, []);
+    assert.throws(
+      () => assessKnowledgeAt(l, evaluatedAt),
+      /maturity does not match explicit history/,
+    );
+    assert.throws(
+      () => assertIntelligenceCatalogue(rows, evaluatedAt),
+      /maturity does not match explicit history/,
+    );
+  });
+  for (const maturity of LEARNING_MATURITIES.slice(1)) {
+    it(
+      "rejects declaration-only " + maturity + " even with validation records",
+      () => {
+        const rows = sample(),
+          l = mature(rows, 0);
+        l.maturity = maturity;
+        assert.throws(
+          () => assessKnowledgeAt(l, evaluatedAt),
+          /maturity does not match explicit history/,
+        );
+        assert.throws(
+          () => assertIntelligenceCatalogue(rows, evaluatedAt),
+          /maturity does not match explicit history/,
+        );
+      },
+    );
+  }
+  for (let level = 0; level < LEARNING_MATURITIES.length; level++) {
+    it(
+      "preserves authoritative progression to " +
+        LEARNING_MATURITIES[level] +
+        " without trusting it in a context-free assessment",
+      () => {
+        const rows = sample(),
+          l = mature(rows, level);
+        assertIntelligenceCatalogue(rows, evaluatedAt);
+        assert.equal(
+          assessKnowledgeAt(l, evaluatedAt).maturity,
+          level === 0 ? "OBSERVATION" : "UNASSESSED",
+        );
+      },
+    );
+  }
+  const malformed: {
+    name: string;
+    change: (l: LearningKnowledgeObject) => void;
+    error: RegExp;
+  }[] = [
+    {
+      name: "non-adjacent promotion",
+      change: (l) => {
+        l.maturityHistory = [{ ...l.maturityHistory[0]!, to: l.maturity }];
+      },
+      error: /transition/,
+    },
+    {
+      name: "broken transition chain",
+      change: (l) => {
+        l.maturityHistory[1]!.from = "OBSERVATION";
+      },
+      error: /transition/,
+    },
+    {
+      name: "duplicate validation identity",
+      change: (l) => {
+        l.validationHistory[1]!.id = l.validationHistory[0]!.id;
+      },
+      error: /Duplicate/,
+    },
+    {
+      name: "missing validation reference",
+      change: (l) => {
+        l.maturityHistory[0]!.validationIds = ["missing"];
+      },
+      error: /Missing or future validation/,
+    },
+    {
+      name: "validation later than transition",
+      change: (l) => {
+        l.validationHistory[0]!.at = evaluatedAt;
+      },
+      error: /future validation/,
+    },
+    {
+      name: "unsupported promotion",
+      change: (l) => {
+        l.validationHistory[0]!.result = "INCONCLUSIVE";
+      },
+      error: /supported validation/,
+    },
+    {
+      name: "duplicate transition validation",
+      change: (l) => {
+        l.maturityHistory[0]!.validationIds = ["validation-1", "validation-1"];
+      },
+      error: /Duplicate transition/,
+    },
+    {
+      name: "non-distinct principle contexts",
+      change: (l) => {
+        l.validationHistory[1]!.context = l.validationHistory[0]!.context;
+      },
+      error: /distinct validation contexts/,
+    },
+    {
+      name: "unresolved challenge",
+      change: (l) => {
+        l.validationHistory.push({
+          ...l.validationHistory[0]!,
+          id: "challenge",
+          result: "CHALLENGED",
+        });
+      },
+      error: /challenge/i,
+    },
+  ];
+  for (const { name, change, error } of malformed) {
+    it("uses the same rejection semantics for " + name, () => {
+      const rows = sample(),
+        l = mature(rows);
+      change(l);
+      assert.throws(() => assessKnowledgeAt(l, evaluatedAt), error);
+      assert.throws(
+        () => assertIntelligenceCatalogue(rows, evaluatedAt),
+        error,
+      );
+    });
+  }
+  it("keeps copied/derived sources insufficient for independent validation", () => {
+    const rows = sample(),
+      l = mature(rows),
+      copy = derived(rows);
+    l.validationHistory[1]!.evidenceIds = [copy.id];
+    assert.equal(assessKnowledgeAt(l, evaluatedAt).maturity, "UNASSESSED");
+    assert.throws(
+      () => assertIntelligenceCatalogue(rows, evaluatedAt),
+      /independent/,
+    );
+  });
+  it("keeps source versions insufficient for independent validation", () => {
+    const rows = sample(),
+      l = mature(rows);
+    const second = rows.find(
+      (r) => r.id === "evidence-second",
+    ) as EvidenceKnowledgeObject;
+    second.provenance!.source = {
+      ...evidence(rows).provenance!.source,
+      version: "2",
+    };
+    assert.equal(assessKnowledgeAt(l, evaluatedAt).maturity, "UNASSESSED");
+    assert.throws(
+      () => assertIntelligenceCatalogue(rows, evaluatedAt),
+      /independent/,
+    );
+  });
+  it("keeps overlapping source bundles insufficient for independent validation", () => {
+    const rows = sample(),
+      l = mature(rows);
+    l.validationHistory[1]!.evidenceIds.push(evidence(rows).id);
+    assert.equal(assessKnowledgeAt(l, evaluatedAt).maturity, "UNASSESSED");
+    assert.throws(
+      () => assertIntelligenceCatalogue(rows, evaluatedAt),
+      /independent/,
+    );
+  });
+  for (const outcome of ["absent", "MISSED", "INCONCLUSIVE"] as const) {
+    it(
+      "retains measured-success requirements when outcome is " + outcome,
+      () => {
+        const rows = sample(),
+          l = mature(rows);
+        if (outcome === "absent") delete evidence(rows).outcomeObservation;
+        else evidence(rows).outcomeObservation!.assessment = outcome;
+        assert.equal(assessKnowledgeAt(l, evaluatedAt).maturity, "UNASSESSED");
+        assert.throws(
+          () => assertIntelligenceCatalogue(rows, evaluatedAt),
+          /measured successful/,
+        );
+      },
+    );
+  }
+  it("does not project future transitions backwards and leaves catalogue timing strict", () => {
+    const rows = sample(),
+      l = mature(rows);
+    const beforeTransition = "2026-09-01T13:00:00Z";
+    assert.equal(assessKnowledgeAt(l, beforeTransition).maturity, "UNASSESSED");
+    assert.throws(
+      () => assertIntelligenceCatalogue(rows, beforeTransition),
+      /validation time/,
+    );
+  });
+  it("preserves explicit retraction and reversal without trusting earlier promotions", () => {
+    const rows = sample(),
+      l = mature(rows);
+    l.validity = "RETRACTED";
+    l.retraction = {
+      reason: "Later evidence.",
+      actor: "reviewer",
+      at: evaluatedAt,
+    };
+    assertIntelligenceCatalogue(rows, evaluatedAt);
+    const result = assessKnowledgeAt(l, evaluatedAt);
+    assert.equal(result.validity, "RETRACTED");
+    assert.equal(result.maturity, "UNASSESSED");
+    l.maturityHistory.push({
+      from: l.maturity,
+      to: "OBSERVATION",
+      at: evaluatedAt,
+      actor: "reviewer",
+      reason: "Reverse prior conclusion.",
+      validationIds: ["validation-1"],
+    });
+    l.maturity = "OBSERVATION";
+    assertIntelligenceCatalogue(rows, evaluatedAt);
+    assert.equal(assessKnowledgeAt(l, evaluatedAt).maturity, "UNASSESSED");
+    l.validationHistory[1]!.evidenceIds = [evidence(rows).id];
+    assert.throws(
+      () => assertIntelligenceCatalogue(rows, evaluatedAt),
+      /independent/,
+    );
+  });
+  it("is deterministic and non-mutating for valid and contradictory Learning records", () => {
+    const rows = sample(),
+      l = mature(rows),
+      before = structuredClone(rows);
+    assert.deepEqual(
+      assessKnowledgeAt(l, evaluatedAt),
+      assessKnowledgeAt(structuredClone(l), evaluatedAt),
+    );
+    assert.deepEqual(rows, before);
+    l.maturityHistory = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      assert.throws(
+        () => assessKnowledgeAt(l, evaluatedAt),
+        /maturity does not match explicit history/,
+      );
+    }
+  });
+  it("keeps valid existing fixtures green and initial OBSERVATION assessable", () => {
+    const rows = sample(),
+      l = learning(rows);
+    assertIntelligenceCatalogue(rows, evaluatedAt);
+    assert.equal(assessKnowledgeAt(l, evaluatedAt).maturity, "OBSERVATION");
+  });
+  it("keeps assessment pure and shares the authoritative history validator", () => {
+    const source = readFileSync(join(packageRoot, "src/operating.ts"), "utf8");
+    const point = source.slice(
+      source.indexOf("export function assessKnowledgeAt("),
+    );
+    assert.match(
+      point,
+      /assertLearningHistory\(record, undefined, evaluationTime\)/,
+    );
+    assert.doesNotMatch(point, /record\.maturity\b/);
+    assert.doesNotMatch(
+      source,
+      /Date\.now|new Date\(\)|Math\.random|fetch\(|https?:|node:(fs|http)|runExecutiveIntelligenceRuntime/,
+    );
+  });
+});
