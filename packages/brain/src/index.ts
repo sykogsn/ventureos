@@ -66,3 +66,37 @@ export {
   type RiskKnowledgeObject,
   type TaskKnowledgeObject,
 } from "./types";
+
+export { assertIntelligenceCatalogue } from "./assert";
+export {
+  assertIntelligencePayload,
+  assertIntelligenceReferences,
+  independentEvidenceOrigins,
+  assessKnowledgeAt,
+  assertOperatingScope,
+  assertScopeReference,
+  assertKnowledgeTime,
+} from "./operating";
+export {
+  CLAIM_CLASSIFICATIONS,
+  KNOWLEDGE_VALIDITIES,
+  LEARNING_MATURITIES,
+  type VentureAddress,
+  type OperatingScope,
+  type SourceReference,
+  type KnowledgeConfidence,
+  type ClaimClassification,
+  type KnowledgeValidity,
+  type KnowledgeRetraction,
+  type ClaimKnowledgeObject,
+  type EvidenceProvenance,
+  type OutcomeObservation,
+  type SuccessCriterion,
+  type VentureIntent,
+  type ObjectiveMeasures,
+  type DecisionTraceability,
+  type LearningMaturity,
+  type LearningValidation,
+  type LearningMaturityTransition,
+  type LearningKnowledgeObject,
+} from "./types";
