@@ -824,3 +824,16 @@ Already decided by constitutions (do not reopen):
 **Remaining risk.** Starting VC-010 before C0, or implementing two sprints at once.
 
 C0 is VC-003 (ADR-009). VC-010 landed the kernel in `packages/brain` without changing `apps/`. VC-011 is not opened.
+
+## AIF-01 bounded contract milestone (2026-09-23)
+
+Control separately authorised the minimum Compounding Intelligence contracts and
+pure validation foundation, with corrected ownership boundaries. See the AIF-01
+section of [BRAIN-001](./BRAIN-001-VentureOS-Brain-Architecture.md).
+
+This candidate adds Claim/Learning and extends existing Evidence, Brain Decision,
+Company/Goal and Capability metadata. Existing graph kinds carry Evidence derivation.
+It does not complete or open VC-020 graph integration, VC-060 operational learning,
+VC-070 persistence, a Definition/Genome projection, a web adapter, or another Runtime
+phase. Candidate eligibility is not shared-capability promotion. Independent Verification,
+certification and Git permanence remain Control decisions.

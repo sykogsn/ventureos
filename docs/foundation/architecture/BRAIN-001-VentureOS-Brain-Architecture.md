@@ -665,3 +665,109 @@ Out of order on purpose: chat UI, vector search as Brain, Brain API gateway, eig
 **Named change (design only).** Brain is the intelligence substrate: Knowledge Objects (two planes), graph, memory layers, reasoning services, executive-intelligence products, learning loops — consumed by existing Runtime stages.
 
 **Remaining risk.** Implementation that quietly adds an orchestrator, a Qualora knowledge product, or a chat. This document exists so that sprint is refused.
+
+## AIF-01 — Compounding Intelligence contracts (2026-09-23)
+
+**Authority:** Control-authorised AIF-01 with corrected Brain-only ownership, canonical
+Evidence relationships, and source-based Capability reuse assessment. This section
+extends the shared kernel in `packages/brain`. It does not activate the operational
+compounding loop or authorise a subsequent roadmap milestone.
+
+Exactly two operating Knowledge Object concepts are added: **Claim** and **Learning**.
+Both retain the existing kernel, identity, history, governance status and relationship
+vocabulary. No Outcome, DecisionRecord, Purpose registry, evidence store, memory
+system, capability registry or orchestrator is introduced.
+
+### Distinct epistemic dimensions
+
+Claim classification is exactly FACT, EVIDENCED_CLAIM, INFERENCE, ASSUMPTION,
+HYPOTHESIS, OPINION, UNKNOWN. Classification, validity, governance approval,
+confidence and Learning maturity remain separate. Approval does not turn a Claim
+into FACT. Classification is a declared contract value, not a model-based truth verdict.
+
+Claim effective-from and optional effective-to form a half-open interval, separate
+from recorded-at. New timestamps require explicit UTC, including calendar validity.
+Validity is ACTIVE, UNKNOWN, SUPERSEDED or RETRACTED. Retraction retains reason,
+actor and timestamp. Supersession retains prior objects and history, resolves the
+same object type, and rejects deterministically visible cycles, including existing
+`supersedes` edges. Validators cannot prove that a caller has not deleted history
+outside the supplied snapshot.
+
+Confidence carries a bounded score, method and Evidence references. It is not
+calibrated probability. Governance approval and consensus do not supply evidence.
+
+### Evidence, lineage and outcomes
+
+Evidence extends its existing payload with external source system, source record
+identity/version, observed-at, provenance method and OBSERVED/DERIVED origin.
+Existing captured-at is recording/capture time. Internal derivation uses only
+`relationships.kind === "derived_from"`, Evidence to Evidence. OBSERVED Evidence
+cannot borrow an internal parent as an independent origin. DERIVED Evidence requires
+at least one resolving Evidence parent, inherits its roots and adds none of its own.
+
+Source independence is keyed by external system and underlying record identity,
+excluding version and copy identity. Source-system identifiers must be unambiguous
+within the supplied catalogue. Different records from the same underlying source
+must retain that same source identity or canonical derivation; validators cannot
+detect dishonest or incomplete provenance declarations.
+
+Evidence links reuse `supports`, `contradicts` and `evidence_for`. The existing
+object-to-object semantics of supports/contradicts are preserved; evidence_for from
+Evidence resolves Claim, Decision or Risk. No parallel link arrays are added.
+The legacy supportsObjectId field retains its existing meaning.
+
+Outcome observation remains optional payload on Evidence. It requires a Decision
+or typed external execution reference, metric, expected and observed value, observation
+time/window, assessment and the enclosing Evidence provenance. Zero is a valid
+measurement. A resolved Decision or legacy result string never becomes outcome proof.
+
+### Decision, purpose and scope
+
+The existing Brain Decision gains optional Goal/Claim/Evidence traceability,
+assumptions, selected action, bounded business rationale, expected outcomes,
+success thresholds, authority and review conditions. Existing alternatives remain
+the considered alternatives. Hidden model chain-of-thought is not a contract field.
+
+Brain Company may hold mission, customer problem, target/economic outcomes,
+constraints, priorities, non-goals and review conditions. Brain Goal may hold
+measurable success criteria, thresholds and priority. Definition and Genome remain
+unchanged; future projections into their owners require separate authorisation.
+
+Operating scope distinguishes workspace, originating Venture, applicability and
+authorised sharing recipients. A supplied sharing authority reference is a structural
+declaration, not permission verification. Product scope labels never grant access.
+New cross-object references require compatible explicit scope; unresolved scope is
+unassessed and cannot support new assessments. No runtime sharing is implemented.
+
+### Learning
+
+Maturity is exactly OBSERVATION, HYPOTHESIS, REPEATED_PATTERN,
+VALIDATED_ORGANISATIONAL_PRINCIPLE. Every record starts at OBSERVATION; promotions
+must be explicit adjacent transitions with actor, reason, time and validation history.
+Backward transitions are explicit and preserve prior validations. Validity independently
+supports retraction and supersession.
+
+Repeated-pattern promotion requires independent, non-overlapping validation origins.
+Principles additionally require distinct validation contexts and measured successful
+outcomes. Copies and overlapping source bundles do not establish independent validation.
+Unresolved challenges block principle promotion; later challenges require an explicit
+reversal or retraction. Root-cause assessments retain their own classification, including
+HYPOTHESIS. These are deterministic structural gates, not causal or probabilistic
+truth adjudication. There is no automatic maturity promotion.
+
+### Capability boundary and compatibility
+
+Capability provenance remains in its existing owner, without Brain imports or a live
+adapter. Caller-supplied reference/origin resolutions support pure structural assessment.
+DOMAIN_SPECIFIC, REUSABLE_CAPABILITY_CANDIDATE and future shared promotion are distinct.
+Candidate evidence must concern the assessed implementation version and include
+independent underlying origins; **no minimum Venture count is imposed**. Same-Venture
+and cross-Venture contexts retain their identities. Promotion eligibility separately
+requires explicit authority, evidence within the assessment and valid timing. It never
+executes promotion or modifies lifecycle. Future integration must establish the
+trustworthiness of caller-supplied source resolutions and authority references.
+
+Legacy metadata remains absent: unknown/unassessed is returned where applicable,
+without backfill or invented epistemic defaults. `assertIntelligenceCatalogue` uses a
+caller-supplied closed catalogue and explicit evaluation time. It does not read the
+system clock, persist, access a network, enforce live permissions or invoke Runtime.

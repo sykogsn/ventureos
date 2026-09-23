@@ -13,6 +13,8 @@ export const KNOWLEDGE_TYPES = [
 export type InstitutionalKnowledgeType = (typeof KNOWLEDGE_TYPES)[number];
 
 export const OPERATING_KNOWLEDGE_TYPES = [
+  "Claim",
+  "Learning",
   "Company",
   "Person",
   "Procedure",
@@ -36,7 +38,9 @@ export type KnowledgeType = InstitutionalKnowledgeType | OperatingKnowledgeType;
 
 const operatingTypeSet = new Set<string>(OPERATING_KNOWLEDGE_TYPES);
 
-export function isOperatingKnowledgeType(type: string): type is OperatingKnowledgeType {
+export function isOperatingKnowledgeType(
+  type: string,
+): type is OperatingKnowledgeType {
   return operatingTypeSet.has(type);
 }
 
@@ -44,11 +48,21 @@ export const KNOWLEDGE_PLANES = ["institutional", "operating"] as const;
 
 export type KnowledgePlane = (typeof KNOWLEDGE_PLANES)[number];
 
-export const KNOWLEDGE_STATUSES = ["Approved", "Living", "Specified", "Concept"] as const;
+export const KNOWLEDGE_STATUSES = [
+  "Approved",
+  "Living",
+  "Specified",
+  "Concept",
+] as const;
 
 export type KnowledgeStatus = (typeof KNOWLEDGE_STATUSES)[number];
 
-export const BRAIN_VENTURE_SCOPES = ["Platform", "Qualora", "Calviora", "Farmora"] as const;
+export const BRAIN_VENTURE_SCOPES = [
+  "Platform",
+  "Qualora",
+  "Calviora",
+  "Farmora",
+] as const;
 
 export type BrainVentureScope = (typeof BRAIN_VENTURE_SCOPES)[number];
 
@@ -116,20 +130,26 @@ export const KNOWLEDGE_RELATIONSHIP_KINDS = [
   "supersedes",
 ] as const;
 
-export type KnowledgeRelationshipKind = (typeof KNOWLEDGE_RELATIONSHIP_KINDS)[number];
+export type KnowledgeRelationshipKind =
+  (typeof KNOWLEDGE_RELATIONSHIP_KINDS)[number];
 
 export const KNOWLEDGE_RELATIONSHIP_KIND_ALIASES = {
   replaces: "supersedes",
 } as const;
 
-export type KnowledgeRelationshipKindAlias = keyof typeof KNOWLEDGE_RELATIONSHIP_KIND_ALIASES;
+export type KnowledgeRelationshipKindAlias =
+  keyof typeof KNOWLEDGE_RELATIONSHIP_KIND_ALIASES;
 
 export type KnowledgeRelationship = {
   objectId: string;
   kind?: KnowledgeRelationshipKind;
 };
 
-export const DECISION_IMPACTS = ["Platform", "Product", "Presentation"] as const;
+export const DECISION_IMPACTS = [
+  "Platform",
+  "Product",
+  "Presentation",
+] as const;
 
 export type DecisionImpact = (typeof DECISION_IMPACTS)[number];
 
@@ -150,6 +170,7 @@ export type KnowledgeObjectKernel = {
   aiContext: string;
   scopes: BrainVentureScope[];
   plane: KnowledgePlane;
+  operatingScope?: OperatingScope;
 };
 
 export type DecisionKnowledgeObject = KnowledgeObjectKernel & {
@@ -157,6 +178,7 @@ export type DecisionKnowledgeObject = KnowledgeObjectKernel & {
   impact: DecisionImpact;
   alternatives: string[];
   issuedAt: string;
+  traceability?: DecisionTraceability;
 };
 
 export type DocumentKnowledgeObject = KnowledgeObjectKernel & {
@@ -172,9 +194,14 @@ export const EVIDENCE_WEIGHT_CLASSES = [
 
 export type EvidenceWeightClass = (typeof EVIDENCE_WEIGHT_CLASSES)[number];
 
-export const OPERATING_DOCUMENT_STATUSES = ["suggested", "draft", "live"] as const;
+export const OPERATING_DOCUMENT_STATUSES = [
+  "suggested",
+  "draft",
+  "live",
+] as const;
 
-export type OperatingDocumentStatus = (typeof OPERATING_DOCUMENT_STATUSES)[number];
+export type OperatingDocumentStatus =
+  (typeof OPERATING_DOCUMENT_STATUSES)[number];
 
 export type CompanyKnowledgeObject = KnowledgeObjectKernel & {
   type: "Company";
@@ -184,6 +211,7 @@ export type CompanyKnowledgeObject = KnowledgeObjectKernel & {
   workspaceId: string;
   stage: string;
   genomePointers: string[];
+  intent?: VentureIntent;
 };
 
 export type PersonKnowledgeObject = KnowledgeObjectKernel & {
@@ -205,6 +233,8 @@ export type EvidenceKnowledgeObject = KnowledgeObjectKernel & {
   capturedAt: string;
   supportsObjectId: string;
   weightClass: EvidenceWeightClass;
+  provenance?: EvidenceProvenance;
+  outcomeObservation?: OutcomeObservation;
 };
 
 export type MeetingKnowledgeObject = KnowledgeObjectKernel & {
@@ -232,6 +262,7 @@ export type GoalKnowledgeObject = KnowledgeObjectKernel & {
   objective: string;
   horizon: string;
   taskIds: string[];
+  measures?: ObjectiveMeasures;
 };
 
 export type ProjectKnowledgeObject = KnowledgeObjectKernel & {
@@ -285,6 +316,8 @@ export type OperatingDocumentKnowledgeObject = KnowledgeObjectKernel & {
 };
 
 export type OperatingKnowledgeObject =
+  | ClaimKnowledgeObject
+  | LearningKnowledgeObject
   | CompanyKnowledgeObject
   | PersonKnowledgeObject
   | ProcedureKnowledgeObject
@@ -305,3 +338,159 @@ export type KnowledgeObject =
   | DecisionKnowledgeObject
   | DocumentKnowledgeObject
   | OperatingKnowledgeObject;
+
+/** Contract metadata only; these are structural declarations, not access controls. */
+export type VentureAddress = { workspaceId: string; ventureId: string };
+export type OperatingScope = {
+  workspaceId: string;
+  originatingVentureId: string;
+  applicability: VentureAddress[];
+  sharing: { recipients: VentureAddress[]; authorityRef?: string };
+};
+export type SourceReference = {
+  system: string;
+  recordId: string;
+  version: string;
+};
+/** A bounded score, never an assertion of calibrated probability. */
+export type KnowledgeConfidence = {
+  value: number;
+  method: string;
+  evidenceIds: string[];
+};
+export const CLAIM_CLASSIFICATIONS = [
+  "FACT",
+  "EVIDENCED_CLAIM",
+  "INFERENCE",
+  "ASSUMPTION",
+  "HYPOTHESIS",
+  "OPINION",
+  "UNKNOWN",
+] as const;
+export type ClaimClassification = (typeof CLAIM_CLASSIFICATIONS)[number];
+export const KNOWLEDGE_VALIDITIES = [
+  "ACTIVE",
+  "UNKNOWN",
+  "SUPERSEDED",
+  "RETRACTED",
+] as const;
+export type KnowledgeValidity = (typeof KNOWLEDGE_VALIDITIES)[number];
+export type KnowledgeRetraction = { reason: string; actor: string; at: string };
+export type ClaimKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Claim";
+  operatingScope: OperatingScope;
+  statement: string;
+  classification: ClaimClassification;
+  evidenceIds: string[];
+  sourceRefs: SourceReference[];
+  assumptions: string[];
+  confidence?: KnowledgeConfidence;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  recordedAt: string;
+  validity: KnowledgeValidity;
+  supersededById?: string;
+  retraction?: KnowledgeRetraction;
+};
+export type EvidenceProvenance = {
+  source: SourceReference;
+  observedAt: string;
+  method: string;
+  origin: "OBSERVED" | "DERIVED";
+};
+export type OutcomeObservation = {
+  decisionId?: string;
+  executionRef?: SourceReference;
+  metric: string;
+  expectedValue: number | string;
+  observedValue: number | string;
+  unit?: string;
+  observedAt: string;
+  window: { from: string; to: string };
+  assessment: "MET" | "MISSED" | "INCONCLUSIVE";
+};
+export type SuccessCriterion = {
+  metric: string;
+  target: number;
+  threshold: number;
+  comparison: "AT_LEAST" | "AT_MOST" | "EQUAL";
+  unit?: string;
+};
+/** Brain Company context; Definition/Genome projection is deferred. */
+export type VentureIntent = {
+  mission: string;
+  customerProblem: string;
+  targetOutcomes: string[];
+  economicObjectives: string[];
+  constraints: string[];
+  priorities: string[];
+  nonGoals: string[];
+  reviewConditions: string[];
+};
+export type ObjectiveMeasures = {
+  successCriteria: SuccessCriterion[];
+  constraints: string[];
+  priority: number;
+  nonGoals: string[];
+  reviewConditions: string[];
+};
+export type DecisionTraceability = {
+  goalIds: string[];
+  claimIds: string[];
+  evidenceIds: string[];
+  assumptions: string[];
+  selectedAction: string;
+  businessRationale: string;
+  expectedOutcomes: string[];
+  successThresholds: SuccessCriterion[];
+  authorityRef: string;
+  reviewConditions: string[];
+};
+export const LEARNING_MATURITIES = [
+  "OBSERVATION",
+  "HYPOTHESIS",
+  "REPEATED_PATTERN",
+  "VALIDATED_ORGANISATIONAL_PRINCIPLE",
+] as const;
+export type LearningMaturity = (typeof LEARNING_MATURITIES)[number];
+export type LearningValidation = {
+  id: string;
+  at: string;
+  actor: string;
+  context: string;
+  evidenceIds: string[];
+  result: "SUPPORTED" | "CHALLENGED" | "INCONCLUSIVE";
+};
+export type LearningMaturityTransition = {
+  from: LearningMaturity;
+  to: LearningMaturity;
+  at: string;
+  actor: string;
+  reason: string;
+  validationIds: string[];
+};
+export type LearningKnowledgeObject = KnowledgeObjectKernel & {
+  type: "Learning";
+  operatingScope: OperatingScope;
+  sourceEvidenceIds: string[];
+  sourceEventRefs: SourceReference[];
+  expectedResult: string;
+  actualResult: string;
+  deviation: string;
+  rootCause: {
+    statement: string;
+    classification: ClaimClassification;
+    evidenceIds: string[];
+  };
+  lesson: string;
+  confidence: KnowledgeConfidence;
+  proposedChange: string;
+  recordedAt: string;
+  maturity: LearningMaturity;
+  /** Initial maturity is OBSERVATION; all subsequent changes are explicitly recorded. */
+  maturityHistory: LearningMaturityTransition[];
+  validationHistory: LearningValidation[];
+  validity: KnowledgeValidity;
+  supersededById?: string;
+  retraction?: KnowledgeRetraction;
+};
