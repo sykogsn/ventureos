@@ -15,6 +15,7 @@ import { createFrigoraWriteClient } from "./owned-write";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
 import type { FrigoraScope, FrigoraWorkOrder } from "./types";
 import { deriveEngineerWorkload } from "./app/engineer-calendar";
+import { confirmationHarness } from "./app/dispatch-confirmation.test-support";
 const START = "2026-09-23T10:00:00.000Z";
 const END = "2026-09-23T11:00:00.000Z";
 const ENGINEER = "engineer-f34" as UserId;
@@ -433,4 +434,107 @@ describe("F34-03 availability rollback", () => {
       assert.equal(clients[0]?.closed, true);
     });
   }
+});
+
+describe("F34-03 confirmation form correction", () => {
+  async function prepare(reassign: boolean) {
+    const context = await setup();
+    const { service, scope, a, b } = context;
+    let target = await service.clearWorkOrderAssignment(scope, b.id, { expectedUpdatedAt: b.updatedAt });
+    target = await schedule(service, scope, target);
+    if (reassign) {
+      const other = "engineer-other" as UserId;
+      await ensureMember(scope.workspaceId, other);
+      target = await service.assignWorkOrder(scope, target.id, { userId: other, expectedUpdatedAt: target.updatedAt });
+    }
+    const booked = await schedule(service, scope, a);
+    let actor: UserId | null = scope.userId;
+    const harness = confirmationHarness(service, () => actor);
+    const form = new FormData();
+    Object.entries({ workspaceId: scope.workspaceId, ventureId: scope.ventureId,
+      workOrderId: target.id, userId: ENGINEER, expectedUpdatedAt: target.updatedAt,
+    }).forEach(([key, value]) => form.set(key, value));
+    return { ...context, target, booked, harness, form, setActor: (next: UserId | null) => { actor = next; } };
+  }
+
+  for (const reassign of [false, true]) {
+    const mode = reassign ? "reassignment" : "assignment";
+    it(`${mode}: actual form warning is mutation-free; explicit component submit forwards confirmation and commits`, async () => {
+      const { scope, target, harness, form } = await prepare(reassign);
+      const before = await durable();
+      const warning = await harness.forms.assignWorkOrderFormAction({}, form);
+      assert.equal(warning.code, "double_booking");
+      assert.deepEqual(await durable(), before);
+      const confirmation = harness.confirmation(warning, scope, target);
+      assert.equal(confirmation.fields.get("userId"), ENGINEER);
+      assert.deepEqual(await durable(), before);
+      assert.equal((await confirmation.confirm()).error, undefined);
+      const after = await durable();
+      assert.equal(after.work.filter((row) => row.assigned_user_id === ENGINEER && row.scheduled_start_at === START).length, 2);
+      assert.equal(after.history.length, before.history.length + 1);
+      assert.equal(after.history.filter((event) => !before.history.some((old) => old.id === event.id))[0]?.event_type,
+        reassign ? "REASSIGNED" : "ASSIGNED");
+    });
+
+    it(`${mode}: actual Cancel handler dismisses warning without submitting or mutating`, async () => {
+      const { scope, target, harness, form } = await prepare(reassign);
+      const warning = await harness.forms.assignWorkOrderFormAction({}, form);
+      assert.equal(warning.code, "double_booking");
+      const before = await durable();
+      harness.confirmation(warning, scope, target).cancel();
+      assert.deepEqual(await durable(), before);
+    });
+
+    for (const guard of ["unavailability", "stale", "visit", "authority", "closed"] as const) {
+      it(`${mode}: confirmed form retry cannot bypass ${guard}`, async () => {
+        const { scope, target, service, harness, form, setActor } = await prepare(reassign);
+        const warning = await harness.forms.assignWorkOrderFormAction({}, form);
+        assert.equal(warning.code, "double_booking");
+        if (guard === "unavailability") await service.createUnavailability(scope, unavailable);
+        if (guard === "stale") await service.clearWorkOrderSchedule(scope, target.id, { expectedUpdatedAt: target.updatedAt });
+        if (guard === "visit") await service.recordVisitArrival(scope, target.id, { userId: ENGINEER, arrivedAt: START });
+        if (guard === "authority") setActor(ENGINEER);
+        if (guard === "closed") await getClient().execute({ sql: "UPDATE frigora_work_orders SET status = 'closed' WHERE id = ?", args: [target.id] });
+        const before = await durable();
+        const result = await harness.confirmation(warning, scope, target).confirm();
+        if (guard === "visit") assert.equal(result.error, "Dispatch is locked while a visit is in progress.");
+        else assert.equal(result.code, { unavailability: "engineer_unavailable", stale: "dispatch_conflict",
+          authority: "forbidden", closed: "invalid_status" }[guard]);
+        assert.deepEqual(await durable(), before);
+      });
+    }
+
+    it(`${mode}: retry recomputes replaced conflicts and does not treat old warning as authority`, async () => {
+      const { scope, target, booked, service, harness, form } = await prepare(reassign);
+      const warning = await harness.forms.assignWorkOrderFormAction({}, form);
+      assert.equal(warning.conflicts?.[0]?.id, booked.id);
+      await service.clearWorkOrderSchedule(scope, booked.id, { expectedUpdatedAt: booked.updatedAt });
+      const fresh = await createOpenWorkOrder(scope, service);
+      const assigned = await service.assignWorkOrder(scope, fresh.id, { userId: ENGINEER, expectedUpdatedAt: fresh.updatedAt });
+      await schedule(service, scope, assigned);
+      const before = await durable();
+      const refreshed = await harness.forms.assignWorkOrderFormAction(warning, form);
+      assert.equal(refreshed.code, "double_booking");
+      assert.deepEqual(refreshed.conflicts?.map((conflict) => conflict.id), [fresh.id]);
+      assert.deepEqual(await durable(), before);
+      assert.equal((await harness.confirmation(warning, scope, target).confirm()).error, undefined);
+      assert.equal((await durable()).work.filter((row) => row.assigned_user_id === ENGINEER && row.scheduled_start_at === START).length, 2);
+    });
+  }
+
+  it("scheduling: actual form and confirmation component retain the working confirmation path", async () => {
+    const { scope, service, a, b } = await setup();
+    await schedule(service, scope, a);
+    const harness = confirmationHarness(service, () => scope.userId);
+    const form = new FormData();
+    Object.entries({ workspaceId: scope.workspaceId, ventureId: scope.ventureId, workOrderId: b.id,
+      scheduledStartAt: START, scheduledEndAt: END, expectedUpdatedAt: b.updatedAt,
+    }).forEach(([key, value]) => form.set(key, value));
+    const before = await durable();
+    const warning = await harness.forms.scheduleWorkOrderFormAction({}, form);
+    assert.equal(warning.code, "double_booking");
+    assert.deepEqual(await durable(), before);
+    assert.equal((await harness.confirmation(warning, scope, b, true).confirm()).error, undefined);
+    assert.equal((await durable()).work.filter((row) => row.scheduled_start_at === START).length, 2);
+  });
 });

@@ -433,6 +433,7 @@ export async function assignWorkOrderFormAction(
   const userId = text(formData, "userId");
   const expectedUpdatedAt = text(formData, "expectedUpdatedAt");
   const result = await assignWorkOrderAction({
+    confirmDoubleBooking: text(formData, "confirmDoubleBooking") === "true",
     ...scope,
     id: workOrderId,
     userId,

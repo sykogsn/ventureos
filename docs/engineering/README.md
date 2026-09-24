@@ -62,6 +62,7 @@ If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wi
 | [CYCLE_EVIDENCE.md](./CYCLE_EVIDENCE.md) | Append-only engineering cycle evidence (ECE) for process intelligence |
 | [FRIGORA_F34_01_DISPATCH_INTEGRITY.md](./FRIGORA_F34_01_DISPATCH_INTEGRITY.md) | F34-01 owned dispatch transaction, regression evidence, and verification limits |
 | [FRIGORA_F34_03_ASTRA_IMPLEMENTATION_REPORT.md](./FRIGORA_F34_03_ASTRA_IMPLEMENTATION_REPORT.md) | F34-03 final candidate: disk recovery, disposable-client concurrency proof, green regressions/gates and authenticated builder health; ready for Control review |
+| [FRIGORA_F34_03_IV_CORRECTION_REPORT.md](./FRIGORA_F34_03_IV_CORRECTION_REPORT.md) | Control-authorised successor correction for assignment/reassignment confirmation propagation; validation and publication-review evidence |
 
 The Project Constitution is supreme. The Master Engineering Prompt is the default sprint standard. The Creed is culture. The Constitution is lifecycle law. The Decision Register is the dated acceptances of that law. Lessons Learned is what the sprints taught. History, certification, debt, and releases are the memory HQ will query. Do not copy those tables into the Creed, the Constitution, or the Master Engineering Prompt.
 
