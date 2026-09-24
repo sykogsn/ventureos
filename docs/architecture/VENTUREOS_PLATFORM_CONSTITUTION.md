@@ -1,10 +1,11 @@
 # VentureOS Platform Constitution
 
 **Status.** Constitutional  
-**Version.** 1.0.0  
-**Date.** 2026-08-21  
+**Version.** 1.1.0  
+**Date.** 2026-09-10  
 **Foundation.** v1.1 (locked)  
-**Owner.** Architecture
+**Owner.** Architecture  
+**Amended.** 2026-09-10 — Product-branded customer surfaces over shared Platform Identity (FD-007, ADR-010)
 
 This document is the highest governing specification for **architectural decisions** on VentureOS. It is subordinate to the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). The Project Constitution is the supreme governing document of the repository. If this Constitution and the Project Constitution conflict, the Project Constitution wins.
 
@@ -36,13 +37,13 @@ The founder founds, operates, and decides from one desk. Situation Room, Company
 
 The desk exists so judgement is legible: briefing, health, decision, story, and memory. It is not a dashboard farm, not a plugin host, and not a marketing kit.
 
-Qualora, Calviora, and Farmora are products that run on the OS. A generic founded company uses the VentureOS Company definition. Products do not fork the shell, the Runtime, or the navigation model.
+Qualora, Calviora, Farmora, and every marketed Venture are distinct customer-facing products that run on the OS. A generic founded company uses the VentureOS Company definition. Products do not fork the shell, the Runtime, Platform Identity, the Workspace Engine, or the navigation model. Shared shell architecture does not require VentureOS branding on customer-facing deployments.
 
 ## 2. Platform Philosophy
 
 VentureOS is **platform-first**.
 
-1. **One OS, many products.** Architecture is shared. Identity arrives after architecture.
+1. **One OS, many products.** Architecture is shared. Identity arrives after architecture. Marketed Ventures are distinct customer-facing products, not separate platform stacks.
 2. **One orchestrator.** Intelligence is run by the Executive Intelligence Runtime alone.
 3. **One catalogue.** Reusable building blocks are capabilities in the Shared Capability Registry.
 4. **One definition system.** Products are Venture Definitions. There is no Product Registry.
@@ -50,7 +51,7 @@ VentureOS is **platform-first**.
 6. **The founder is the principal.** Language, empty states, and primary actions address the person who founds and decides.
 7. **Judgement over dashboard.** One primary action. One primary heading. Surfaces present operating judgement, not scoreboards.
 8. **Fail visibly.** Missing intelligence is explained. Costumes for excluded features are forbidden.
-9. **Identity after architecture.** Brand overlay and copy may change. Orchestration, capability, definition, and navigation models may not.
+9. **Identity after architecture.** Brand overlay, customer-facing sign-in presentation, and copy may change. Orchestration, capability, definition, authentication implementation, tenancy, and navigation models may not. “Identity after architecture” is architectural order. It does not require external customers to see VentureOS branding.
 
 Calm before spectacle. Hierarchy before density. Guidance before vacancy.
 
@@ -63,11 +64,11 @@ These restatement the Twelve Founding Principles. A change to any of them is a F
 3. The Definition Registry is the only product-definition system. A definition is metadata. It does not execute.
 4. IDS is presentation. Changing IDS must not require changing Runtime, Capability Framework, or Venture Definitions.
 5. Persistence does not orchestrate. Repositories do CRUD and mapping. The intelligence service is the only adapter that persists Runtime mutation snapshots.
-6. Platform owns identity. Identity, sessions, workspace cookies, membership, and permissions do not import Runtime.
-7. One desk. Situation Room, Company HQ, and the Executive Office share chrome, type, spacing contract, and empty-state tone. Navigation is wayfinding. It does not instantiate ventures or call the Runtime.
+6. Platform owns identity. Identity, sessions, workspace cookies, membership, and permissions do not import Runtime. Product-specific authentication presentation is allowed and required for marketed customer deployments. Platform Identity continues to perform authentication underneath.
+7. One desk. Situation Room, Company HQ, and the Executive Office share chrome, type, spacing contract, and empty-state tone. Navigation is wayfinding. It does not instantiate ventures or call the Runtime. Shared desk architecture does not require all customer-facing Ventures to display VentureOS branding.
 8. The founder is the principal.
 9. Judgement over dashboard.
-10. Products run on the OS. They do not fork architecture.
+10. Products run on the OS. They do not fork architecture. They are distinct customer-facing products. Product identity resolves through the Venture Definition.
 11. Fail visibly. Generic “Loading…” and “No items” are unconstitutional.
 12. Accessible by construction. Colour is never the only encoding of health, danger, or selection.
 
@@ -146,6 +147,7 @@ The Workspace Engine is the established platform tenancy layer. It is not an int
 5. `workspace.create` remains on owner/admin role maps. Workspace creation grants the creator `owner` after session check.
 6. Navigation may switch workspace. Navigation does not instantiate ventures and does not call the Runtime.
 7. A product may not ship a private workspace model, a private membership graph, or a private session cookie.
+8. Product-branded customer login is a presentation projection over shared Platform Identity. It is not permission to create a private product authentication system.
 
 ## 8. Interaction Engine Rules
 
@@ -157,7 +159,7 @@ The Interaction Engine is the established interaction constitution of the desk. 
 4. The command palette is a command surface. Ask is not a chat Runtime. Commands are grouped as Intelligence, Navigate, and System.
 5. Keyboard order follows visual order. No interaction exists only on hover.
 6. Skip to main content is OS chrome. The main landmark is `#main-content`. Focus indicators remain visible.
-7. Authentication is part of the desk, not a marketing page. Fields stay empty after logout. Remembered credentials belong to the browser password manager, not to VentureOS storage.
+7. Authentication is part of the desk, not a marketing page. Fields stay empty after logout. Remembered credentials belong to the browser password manager, not to VentureOS storage. On a marketed customer deployment, authentication presentation must resolve the Venture’s product identity through the Venture Definition or approved product-identity configuration. Platform Identity still performs the authentication. Do not create a second auth architecture.
 8. Loading prefers structure. Empty states guide the next founding or return to the Situation Room.
 9. If a definition excludes a feature, do not offer a control that leads nowhere. Hidden is honest. Disabled-as-costume is not.
 
@@ -225,7 +227,7 @@ Ask, in order:
    Shell or module. Presentational. May not call the Runtime.
 
 8. **Does this exist only so one product looks different?**  
-   Copy and brand overlay keyed to definition id. Not architecture.
+   Copy, brand overlay, customer sign-in presentation, and application chrome identity keyed to definition id. Not architecture. Not a second auth system.
 
 If the change would be required by a second product tomorrow, it is platform.  
 If the change would be meaningless without a specific definition id, it is product identity or a definition profile — not a private stack.
@@ -311,6 +313,7 @@ There is **no second capability registry** for products.
 - which shared capabilities the definition `uses` or excludes (except Runtime-required capabilities)
 - which desk **features** it supports or excludes
 - brand overlay keyed to definition id
+- customer-facing product identity needed for sign-in and application presentation
 - copy that fits the product’s purpose
 
 Those profiles are not capabilities. They are instance law.
@@ -341,11 +344,12 @@ The following are unconstitutional:
 13. Generic “Loading…” / “No items” as product copy.
 14. Colour as the only encoding of health, danger, or selection.
 15. Ask or command palette used as a chat Runtime.
-16. A private workspace, session, or membership model inside a product.
+16. A private workspace, session, membership, or authentication implementation inside a product.
 17. Duplicate unmarked sources of architectural truth.
 18. A Foundation amendment hidden inside a feature sprint.
 19. Implementing EAS-001 as an architecture fork rather than a dedicated visual programme.
 20. Treating IDS or layout certification as Runtime certification.
+21. A second Runtime, second Workspace Engine, or Product Registry created so a Venture can look branded.
 
 ## 18. Evolution Rules
 
@@ -384,8 +388,8 @@ Is this climate, token, type, surface, or layout?
 Is this projecting existing intelligence onto a room of the desk?
   YES → Shell/module. Compose Executive Layout. Do not call Runtime.
   NO ↓
-Is this only copy or brand for one definition?
-  YES → Overlay and writing. Do not fork architecture.
+Is this only copy, brand, or customer-facing identity for one definition?
+  YES → Overlay, writing, and definition-driven presentation. Do not fork architecture or Platform Identity.
   NO → The feature is unclassified. Do not implement until it is placed.
 ```
 
@@ -421,7 +425,7 @@ This Constitution restates, and does not replace:
 - Master Engineering Prompt (`docs/engineering/MASTER_ENGINEERING_PROMPT.md`) — permanent engineering constitution of the repository
 - Engineering Index (`docs/engineering/README.md`)
 - Engineering Standards, Review Process, Sprint Standard
-- ADR-001 through ADR-008
+- ADR-001 through ADR-010
 - `apps/web/src/FOUNDATION.md`
 
 **Workspace Engine** and **Interaction Engine** in this document are constitutional names for platform tenancy and desk interaction as they already exist. They are not new orchestrators.

@@ -3,7 +3,7 @@
 **Purpose.** Engineering method and recovery decisions that Engineering HQ should remember.  
 **Authority.** Engineering Records. Does not replace Architecture Decision Register (ADR) or Founder Decisions (FD).  
 **Engineering standard.** [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) · [Engineering Index](./README.md)  
-**Last Updated.** 2026-09-03
+**Last Updated.** 2026-09-22
 
 Cross-links:
 
@@ -96,14 +96,26 @@ Cross-links:
 | Outcome | Certification recorded 2026-08-21. Qualora visual programme is not opened by VS-008A. |
 | Status | Accepted |
 
-## ERD-008 — Cursor-first diagnosis and certification discipline
+## ERD-008 — Split builder, independent verifier, and Control
 
 | Field | Record |
 |---|---|
 | Decision ID | ERD-008 |
-| Title | Cursor-first diagnosis and certification discipline |
-| Problem | Unexplained failures were being chased with pasted guardrail prompts and founder-operated terminal sequences. Assertions could pass while a process hung or exited non-zero, and speculative stacked fixes mixed with verification-only runs. |
-| Decision | Refine ERD-001: Cursor is the default execution environment for inspection, commands, tests, diagnostics, and read-only Git. Unexplained failures receive a read-only diagnostic report (root cause, evidence, ownership A–D, smallest correction, rebuild, regression, certification impact, confidence) before code changes. One hypothesis receives one authorised correction. Targeted verification precedes the full suite and does not waive sprint-completion gates. A failing or hanging verification-only gate stops; it does not silently repair. Dirty files are classified before staging. Exact-path staging only; never `git add .` or `git add -A`. Certification reports assertions and process-exit evidence. Approved process improvements are written into the Master Engineering Prompt so future Ventures inherit them. |
-| Reason | Frigora F2.0 certification: a hanging `visit-evidence` FileTest was diagnosed as a VentureOS kernel scheduler side-effect of `getPlatform()`, not as domain-logic failure. Constrained Cursor diagnosis outperformed manual terminal loops. [LL-008](./LESSONS_LEARNED.md#ll-008--cursor-read-only-diagnosis-before-correction). |
-| Outcome | Standing law in [Master Engineering Prompt §10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol). Cursor alwaysApply rule points at §10. Engineering Constitution Diagnostic and Verification Modes aligned. Git Workflow exact-path staging aligned. |
-| Status | Accepted |
+| Title | Split builder, independent verifier, and Control |
+| Problem | A builder agent can become trapped in self-directed phase changes: inventing successor revisions, rebuilding verification environments, repeating settled pre-flight checks, or treating its own checks as independent verification. That wastes time and weakens assurance. |
+| Decision | Adopt the permanent pipeline `CONTROL → CURSOR BUILD → INDEPENDENT VERIFY → CURSOR FIX (only if needed) → NARROW INDEPENDENT RE-VERIFY → CONTROL CERTIFY`. A named packet grants authority only for that packet. Cursor may execute routine safe implementation/test/build work continuously inside scope, but may not self-promote to another phase. Independent Verification Work verifies the running product and does not implement fixes. Control alone authorises transitions and certification. |
+| Reason | Preserve the fast Frigora development rhythm while restoring separation of duties, independent product evidence, and bounded phase authority. Avoid approval-by-screenshot loops for routine safe commands while keeping high-risk and permanence operations gated. |
+| Outcome | Permanent protocol recorded in `CONTROLLED_DELIVERY_PROTOCOL.md` and inherited by VentureOS, Frigora, Farmora, Qualora, Calviora, and future Ventures. Narrow verification observations generate narrow correction/re-verification rather than full milestone restarts unless evidence proves the candidate unsafe. |
+| Status | Accepted — Founder approval 2026-09-12 |
+## ERD-009 — Risk-based engineering routing and automatic Astra escalation
+
+| Field | Record |
+|---|---|
+| Decision ID | ERD-009 |
+| Title | Risk-based engineering routing and automatic Astra escalation |
+| Problem | A universal implementation-agent rule is inefficient. Routine bounded work does not need the same reasoning depth as concurrency, transaction, persistence, security, offline, migration, or cross-system work. Repeated corrective loops also create approval churn and can hide deeper integrity defects. |
+| Decision | Control routes implementation by engineering risk. Cursor is the default implementation owner for bounded low-risk work with settled architecture. GPT-6 Astra / Codex is the default implementation owner for high-risk, cross-cutting, release-critical, and escalated work. One Cursor corrective loop is permitted per engineering concern; if another corrective implementation loop would be required, Control automatically escalates that concern to Astra. Control may escalate immediately when evidence reveals a high-risk class. |
+| Reason | Preserve speed on straightforward implementation while applying stronger repo-wide reasoning where silent failure is costly. The routing law prevents endless approval/correction cycles without making Astra the universal executor. |
+| Outcome | `AGENTS.md`, `CONTROLLED_DELIVERY_PROTOCOL.md`, `MASTER_ENGINEERING_PROMPT.md`, `ENGINEERING_CONSTITUTION.md`, and the Engineering Index are aligned to one risk-based model for VentureOS, Frigora, Farmora, Qualora, Calviora, and future Ventures. Lovable remains the frontend/visual owner when assigned; Independent Verification Work remains separate; Control alone certifies. |
+| Status | Accepted — Founder approval 2026-09-22 |
+

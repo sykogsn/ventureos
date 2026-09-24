@@ -48,7 +48,9 @@ function kernel(
 
 /** Correlates with a venture identity id. Does not write VIC. */
 export const operatingCompany: CompanyKnowledgeObject = {
-  ...kernel("north-star", "Company", [{ objectId: "person-founder", kind: "owns" }]),
+  ...kernel("north-star", "Company", [
+    { objectId: "person-founder", kind: "owns" },
+  ]),
   type: "Company",
   legalName: "North Star Limited",
   operatingName: "North Star",
@@ -68,13 +70,17 @@ export const operatingPerson: PersonKnowledgeObject = {
 };
 
 export const operatingProcedure: ProcedureKnowledgeObject = {
-  ...kernel("procedure-inspect", "Procedure", [{ objectId: "north-star", kind: "depends_on" }]),
+  ...kernel("procedure-inspect", "Procedure", [
+    { objectId: "north-star", kind: "depends_on" },
+  ]),
   type: "Procedure",
   steps: ["Prepare evidence.", "Record the inspection.", "File the outcome."],
 };
 
 export const operatingEvidence: EvidenceKnowledgeObject = {
-  ...kernel("evidence-audit", "Evidence", [{ objectId: "risk-capacity", kind: "evidence_for" }]),
+  ...kernel("evidence-audit", "Evidence", [
+    { objectId: "risk-capacity", kind: "evidence_for" },
+  ]),
   type: "Evidence",
   source: "Capacity audit",
   capturedAt: "2026-08-22",
@@ -92,7 +98,9 @@ export const operatingMeeting: MeetingKnowledgeObject = {
 
 /** Same Decision type as the institutional kernel. Operating plane only. */
 export const operatingDecision: DecisionKnowledgeObject = {
-  ...kernel("decision-capacity", "Open capacity", [{ objectId: "risk-capacity", kind: "supports" }]),
+  ...kernel("decision-capacity", "Open capacity", [
+    { objectId: "risk-capacity", kind: "supports" },
+  ]),
   type: "Decision",
   impact: "Product",
   alternatives: ["Hire", "Defer"],
@@ -108,7 +116,9 @@ export const operatingRisk: RiskKnowledgeObject = {
 };
 
 export const operatingTask: TaskKnowledgeObject = {
-  ...kernel("task-staff", "Task", [{ objectId: "goal-coverage", kind: "depends_on" }]),
+  ...kernel("task-staff", "Task", [
+    { objectId: "goal-coverage", kind: "depends_on" },
+  ]),
   type: "Task",
   outcome: "Seat an inspector.",
   blockerIds: [],
@@ -147,7 +157,9 @@ export const operatingProvider: ProviderKnowledgeObject = {
 };
 
 export const operatingInspection: InspectionKnowledgeObject = {
-  ...kernel("inspection-labs", "Inspection", [{ objectId: "evidence-audit", kind: "evidence_for" }]),
+  ...kernel("inspection-labs", "Inspection", [
+    { objectId: "evidence-audit", kind: "evidence_for" },
+  ]),
   type: "Inspection",
   subjectId: "provider-labs",
   outcome: "Passed with notes.",
@@ -172,14 +184,145 @@ export const operatingContract: ContractKnowledgeObject = {
 };
 
 export const operatingDocument: OperatingDocumentKnowledgeObject = {
-  ...kernel("document-protocol", "Document", [{ objectId: "procedure-inspect" }]),
+  ...kernel("document-protocol", "Document", [
+    { objectId: "procedure-inspect" },
+  ]),
   type: "Document",
   kind: "protocol",
   documentStatus: "live",
   evidenceOfIds: ["procedure-inspect"],
 };
 
+export const intelligenceScope: import("./types").OperatingScope = {
+  workspaceId: "ws-desk",
+  originatingVentureId: "north-star",
+  applicability: [{ workspaceId: "ws-desk", ventureId: "north-star" }],
+  sharing: { recipients: [] },
+};
+export const intelligenceEvidence: EvidenceKnowledgeObject = {
+  ...kernel("evidence-measured", "Measured capacity", [
+    { objectId: "claim-capacity", kind: "evidence_for" },
+  ]),
+  type: "Evidence",
+  operatingScope: intelligenceScope,
+  source: "Inspection ledger",
+  capturedAt: "2026-09-01T12:00:00Z",
+  supportsObjectId: "claim-capacity",
+  weightClass: "Primary",
+  provenance: {
+    source: {
+      system: "inspection-ledger",
+      recordId: "observation-1",
+      version: "1",
+    },
+    observedAt: "2026-09-01T11:00:00Z",
+    method: "Count completed inspections.",
+    origin: "OBSERVED",
+  },
+  outcomeObservation: {
+    executionRef: {
+      system: "inspection-execution",
+      recordId: "run-1",
+      version: "1",
+    },
+    metric: "inspections",
+    expectedValue: 4,
+    observedValue: 4,
+    unit: "count",
+    observedAt: "2026-09-01T11:00:00Z",
+    window: { from: "2026-09-01T00:00:00Z", to: "2026-09-01T11:00:00Z" },
+    assessment: "MET",
+  },
+};
+export const intelligenceClaim: import("./types").ClaimKnowledgeObject = {
+  ...kernel("claim-capacity", "Capacity observation"),
+  type: "Claim",
+  operatingScope: intelligenceScope,
+  statement: "Four inspections were completed.",
+  classification: "EVIDENCED_CLAIM",
+  evidenceIds: ["evidence-measured"],
+  sourceRefs: [],
+  assumptions: [],
+  confidence: {
+    value: 0.8,
+    method: "Named ledger observation; uncalibrated score.",
+    evidenceIds: ["evidence-measured"],
+  },
+  effectiveFrom: "2026-09-01T11:00:00Z",
+  recordedAt: "2026-09-01T12:00:00Z",
+  validity: "ACTIVE",
+};
+export const intelligenceLearning: import("./types").LearningKnowledgeObject = {
+  ...kernel("learning-capacity", "Capacity lesson"),
+  type: "Learning",
+  operatingScope: intelligenceScope,
+  sourceEvidenceIds: ["evidence-measured"],
+  sourceEventRefs: [],
+  expectedResult: "Four inspections.",
+  actualResult: "Four inspections.",
+  deviation: "None.",
+  rootCause: {
+    statement: "Staff coverage may explain completion.",
+    classification: "HYPOTHESIS",
+    evidenceIds: ["evidence-measured"],
+  },
+  lesson: "Coverage warrants further validation.",
+  confidence: intelligenceClaim.confidence!,
+  proposedChange: "Repeat observation before changing policy.",
+  recordedAt: "2026-09-01T12:00:00Z",
+  maturity: "OBSERVATION",
+  maturityHistory: [],
+  validationHistory: [],
+  validity: "ACTIVE",
+};
+export const intelligenceGoal: GoalKnowledgeObject = {
+  ...operatingGoal,
+  operatingScope: intelligenceScope,
+  relationships: [],
+  measures: {
+    successCriteria: [
+      {
+        metric: "inspections",
+        target: 4,
+        threshold: 4,
+        comparison: "AT_LEAST",
+      },
+    ],
+    constraints: [],
+    priority: 1,
+    nonGoals: ["Automatic staffing."],
+    reviewConditions: ["Weekly review."],
+  },
+};
+export const intelligenceDecision: DecisionKnowledgeObject = {
+  ...operatingDecision,
+  operatingScope: intelligenceScope,
+  relationships: [],
+  traceability: {
+    goalIds: [intelligenceGoal.id],
+    claimIds: [intelligenceClaim.id],
+    evidenceIds: [intelligenceEvidence.id],
+    assumptions: ["Demand stays steady."],
+    selectedAction: "Maintain coverage.",
+    businessRationale: "Observed completion meets the stated threshold.",
+    expectedOutcomes: ["Four inspections."],
+    successThresholds: intelligenceGoal.measures!.successCriteria,
+    authorityRef: "founder-ruling-1",
+    reviewConditions: ["Review at next inspection."],
+  },
+};
+export const intelligenceCatalogue = [
+  intelligenceEvidence,
+  intelligenceClaim,
+  intelligenceLearning,
+  intelligenceGoal,
+  intelligenceDecision,
+];
+
 export const operatingKernelCatalogue = [
+  intelligenceClaim,
+  intelligenceLearning,
+  intelligenceEvidence,
   operatingCompany,
   operatingPerson,
   operatingProcedure,

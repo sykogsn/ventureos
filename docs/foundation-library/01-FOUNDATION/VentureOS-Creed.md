@@ -12,11 +12,11 @@
 
 **Status.** Approved
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Founder
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-09-10
 
 ---
 
@@ -42,11 +42,11 @@ VentureOS is not a plugin host. The Executive Intelligence Runtime is the only o
 
 VentureOS is not a marketing kit. IntelligenceOS (IDS) clothes the OS. It does not become the OS.
 
-VentureOS is not four applications. Qualora, Calviora, and Farmora run on the OS. They do not fork the shell, the Runtime, or the navigation model.
+VentureOS is not four operating systems. Qualora, Calviora, Farmora, and every marketed Venture run on the OS. They are distinct customer-facing products. They do not fork the shell, the Runtime, or the navigation model.
 
 ## Recognition
 
-The founder must recognise judgement, constraint, and cadence. The partner and the investor must recognise composure. The operator of a product on this OS must recognise the same desk, with a product identity that does not rewrite the architecture.
+The founder must recognise judgement, constraint, and cadence. The partner and the investor must recognise composure. The operator of a product on this OS must recognise the same desk, with a product identity that does not rewrite the architecture. An external customer of a marketed Venture must recognise that Venture’s own product, not a generic VentureOS interface.
 
 Calm before spectacle. Hierarchy before density. Guidance before vacancy. Identity after architecture.
 

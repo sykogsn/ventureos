@@ -15,6 +15,7 @@ Then use `docs/engineering/README.md` (Engineering Index) for the Foundation Run
 - One logical change at a time. Reuse existing architecture. Never bypass validation.
 - Find the root cause, explain why it occurred, and permanently prevent recurrence. Do not patch symptoms.
 - Do not redesign Runtime, IDS, Capability Registry, Definition Registry, persistence, or Executive Environments unless that is the named programme.
+- Do not assume marketed customer products should display VentureOS branding. Real customer deployments present the Venture’s own identity. Internal and verification surfaces may keep a generic VentureOS shell. See the Project Constitution, FD-007, and ADR-010.
 - Never tell the founder a task is complete until it has been verified in the running application.
 
 ## Operating checklist (MEP §10)

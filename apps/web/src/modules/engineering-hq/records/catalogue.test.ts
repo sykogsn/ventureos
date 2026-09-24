@@ -15,7 +15,7 @@ describe("Engineering Records catalogue", () => {
     assert.ok(catalogue.sprints.some((item) => item.id === "VS-008C"));
     assert.ok(!catalogue.sprints.some((item) => item.bucket === "current"));
     assert.equal(catalogue.certification.version, "v1.1");
-    assert.equal(catalogue.decisions.length, 8);
+    assert.equal(catalogue.decisions.length, 9);
     assert.equal(catalogue.debt.length, 5);
     assert.equal(catalogue.lessons.length, 8);
     const ece001 = catalogue.cycles.find((cycle) => cycle.id === "ECE-001");

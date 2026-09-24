@@ -8,28 +8,36 @@
 
 **Dependencies.** [Product Philosophy](../01-FOUNDATION/Product-Philosophy.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md)
 
-**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Qualora](./Qualora/README.md) · [Calviora](./Calviora/README.md) · [Farmora](./Farmora/README.md) · [Frigora](./Frigora/README.md) · [Future](./Future/README.md) · [IDS](../03-DESIGN/IDS.md)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Qualora](./Qualora/README.md) · [Calviora](./Calviora/README.md) · [Farmora](./Farmora/README.md) · [Frigora](./Frigora/README.md) · [Future](./Future/README.md) · [IDS](../03-DESIGN/IDS.md) · [FD-007](../05-GOVERNANCE/Founder-Decisions.md) · [ADR-010](../05-GOVERNANCE/Architecture-Decision-Register.md#adr-010--product-branded-customer-surfaces)
 
 **Status.** Approved
 
-**Version.** 1.3.0
+**Version.** 1.2.0
 
 **Owner.** Product
 
-**Last Updated.** 2026-09-09
+**Last Updated.** 2026-09-10
 
 ---
 
-The founder selects a Product. The Definition Registry resolves it. The Runtime orchestrates. IDS may theme the instance later; it may not invent a Product Registry.
+Every marketed VentureOS-built Venture is a distinct customer-facing software product. The customer buys and uses that Venture — not a generic VentureOS interface that merely contains it.
 
-| Product           | Definition id       | Lifecycle  | Distinctive exclusion                                                                                                                                                                                                                                                                   |
-| ----------------- | ------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| VentureOS Company | `ventureos.company` | operating  | None (full desk)                                                                                                                                                                                                                                                                        |
-| Qualora           | `qualora`           | incubating | None                                                                                                                                                                                                                                                                                    |
-| Calviora          | `calviora`          | concept    | Morning briefing                                                                                                                                                                                                                                                                        |
-| Farmora           | `farmora`           | concept    | Executive Office feature                                                                                                                                                                                                                                                                |
+This law is general. It covers every marketed Venture, including Ventures not yet listed in the live definition index below.
+
+A marketed Venture may have its own brand, domain, sign-in, customer UX, and service proposition while sharing VentureOS architecture. Product identity resolves through the Venture Definition. There is no Product Registry.
+
+The founder selects a Product. The Definition Registry resolves it. The Runtime orchestrates. Platform Identity authenticates. IDS may theme the instance later; it may not invent a Product Registry.
+
+| Product | Definition id | Lifecycle | Distinctive exclusion |
+|---|---|---|---|
+| VentureOS Company | `ventureos.company` | operating | None (full desk) |
+| Qualora | `qualora` | incubating | None |
+| Calviora | `calviora` | concept | Morning briefing |
+| Farmora | `farmora` | concept | Executive Office feature |
 | Frigora           | `frigora`           | concept    | None (full desk; Programme 1 certified at `frigora@0.18.0`; live `frigora@0.22.0` admits F3.0 catalogues, F3.1 Time & Materials customer charge, F3.2 Mobile / PWA Delivery, and F3.3 Offline Field Capability as ADMITTED / COMPLETE with declared coverage limitations; inventory, procurement, invoice, quote, VAT, and payroll remain excluded; F3.4 remains PLANNED / NEXT) |
 
-VentureOS Company is the default instance for founder-created companies. It is the OS’s generic company, not a fourth marketed product in the launch sense.
+This table is the current live-definition snapshot. It is not an exhaustive list of marketed Ventures and does not limit FD-007.
 
-Qualora, Calviora, Farmora, and Frigora are independent products on the same platform. They share capabilities. They do not depend on each other.
+VentureOS Company is the default instance for founder-created companies. It is the OS’s generic company, not a marketed customer product in the launch sense. Generic VentureOS branding remains legitimate on Company, founder, internal, engineering, development, and verification surfaces.
+
+Live catalogued Ventures are independent products on the same platform. They share capabilities. They do not depend on each other. Unintended cross-product identity leakage in a customer deployment is a product identity defect.

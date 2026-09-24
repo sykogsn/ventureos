@@ -3,7 +3,11 @@ import { describe, it } from "node:test";
 import { createEmptyIntelligenceCore } from "../venture/model";
 import { runExecutiveIntelligenceRuntime } from "../runtime";
 import { CAPABILITY_CONTRACTS } from "./contracts";
-import { CAPABILITY_DESIGN_STANDARD, capabilityCatalogue, capabilityDependencyMap } from "./documentation";
+import {
+  CAPABILITY_DESIGN_STANDARD,
+  capabilityCatalogue,
+  capabilityDependencyMap,
+} from "./documentation";
 import { assertLifecycleTransition, canTransitionLifecycle } from "./lifecycle";
 import { createCapabilityManifest } from "./model";
 import {
@@ -19,7 +23,9 @@ import type { CapabilityManifest } from "./types";
 
 const C = CAPABILITY_CONTRACTS;
 
-function stub(partial: Partial<CapabilityManifest> & Pick<CapabilityManifest, "id">): CapabilityManifest {
+function stub(
+  partial: Partial<CapabilityManifest> & Pick<CapabilityManifest, "id">,
+): CapabilityManifest {
   return createCapabilityManifest({
     name: partial.name ?? partial.id,
     classification: partial.classification ?? "Platform",
@@ -48,8 +54,11 @@ describe("Capability registry", () => {
   });
 
   it("lists capabilities by classification", () => {
-    const intelligence = platformCapabilityRegistry.byClassification("Intelligence");
-    assert.ok(intelligence.some((item) => item.id === "intelligence.venture-core"));
+    const intelligence =
+      platformCapabilityRegistry.byClassification("Intelligence");
+    assert.ok(
+      intelligence.some((item) => item.id === "intelligence.venture-core"),
+    );
     assert.equal(platformCapabilityRegistry.byClassification("AI").length, 0);
   });
 
@@ -75,7 +84,10 @@ describe("Capability registry", () => {
 describe("Capability validation", () => {
   it("rejects duplicate ids", () => {
     const one = stub({ id: "platform.dup" });
-    assert.throws(() => createCapabilityRegistry([one, { ...one }]), /Duplicate capability id/);
+    assert.throws(
+      () => createCapabilityRegistry([one, { ...one }]),
+      /Duplicate capability id/,
+    );
   });
 
   it("rejects missing dependencies", () => {
@@ -106,7 +118,10 @@ describe("Capability validation", () => {
     assert.throws(
       () =>
         createCapabilityRegistry([
-          stub({ id: "platform.bad-contract", provides: ["contract.not-real"] }),
+          stub({
+            id: "platform.bad-contract",
+            provides: ["contract.not-real"],
+          }),
         ]),
       /unknown contract/,
     );
@@ -126,7 +141,10 @@ describe("Capability lifecycle", () => {
     assert.equal(canTransitionLifecycle("stable", "shared"), false);
     assert.equal(canTransitionLifecycle("experimental", "shared"), false);
     assert.equal(canTransitionLifecycle("deprecated", "stable"), false);
-    assert.throws(() => assertLifecycleTransition("stable", "experimental"), /Invalid capability lifecycle/);
+    assert.throws(
+      () => assertLifecycleTransition("stable", "experimental"),
+      /Invalid capability lifecycle/,
+    );
   });
 });
 
@@ -142,7 +160,10 @@ describe("Runtime integration", () => {
 
   it("fails when a Runtime-required capability is missing", () => {
     const registry = createCapabilityRegistry([stub({ id: "platform.only" })]);
-    assert.throws(() => assertRuntimeCapabilities(registry), /Unknown capability/);
+    assert.throws(
+      () => assertRuntimeCapabilities(registry),
+      /Unknown capability/,
+    );
   });
 
   it("lets the Executive Intelligence Runtime run after capability resolution", () => {
@@ -167,7 +188,306 @@ describe("Capability documentation", () => {
     const map = capabilityDependencyMap();
     assert.match(catalogue, /Venture Intelligence Core/);
     assert.match(map, /intelligence\.runtime/);
-    assert.match(CAPABILITY_DESIGN_STANDARD, /Executive Intelligence Runtime remains the only orchestrator/);
-    assert.equal(platformCapabilityCatalog.length, platformCapabilityRegistry.list().length);
+    assert.match(
+      CAPABILITY_DESIGN_STANDARD,
+      /Executive Intelligence Runtime remains the only orchestrator/,
+    );
+    assert.equal(
+      platformCapabilityCatalog.length,
+      platformCapabilityRegistry.list().length,
+    );
+  });
+});
+
+import { assessCapabilityReuse, validateManifest } from "./manifest";
+import type {
+  CapabilityProvenance,
+  CapabilityProvenanceContext,
+} from "./types";
+
+const evaluationTime = "2026-09-03T12:00:00Z";
+function reuseFixture() {
+  const provenance: CapabilityProvenance = {
+    origin: {
+      workspaceId: "ws",
+      ventureId: "venture-a",
+      sourceRef: "implementation-origin",
+    },
+    implementationRefs: [{ id: "implementation-a", version: "1.0.0" }],
+    dependencyRefs: [{ capabilityId: "dependency-a", version: "1.0.0" }],
+    validationContexts: [
+      {
+        id: "context-a",
+        workspaceId: "ws",
+        ventureId: "venture-a",
+        at: "2026-09-01T12:00:00Z",
+        implementationVersion: "1.0.0",
+        evidenceIds: ["evidence-a", "evidence-b"],
+        result: "SUPPORTED",
+      },
+    ],
+    performanceEvidenceIds: ["evidence-a"],
+    learningIds: ["learning-a"],
+    reuseEvidenceIds: ["evidence-a", "evidence-b"],
+    reuseAssessment: {
+      classification: "REUSABLE_CAPABILITY_CANDIDATE",
+      rationale: "Independent validation supports considering reuse.",
+      proposedBy: "reviewer",
+      at: "2026-09-02T12:00:00Z",
+    },
+  };
+  const capability = stub({
+    id: "candidate-a",
+    dependencies: ["dependency-a"],
+    provenance,
+  });
+  const context: CapabilityProvenanceContext = {
+    capabilities: [{ id: "dependency-a", version: "1.0.0" }],
+    references: [
+      {
+        id: "evidence-a",
+        kind: "Evidence",
+        workspaceId: "ws",
+        ventureId: "venture-a",
+      },
+      {
+        id: "evidence-b",
+        kind: "Evidence",
+        workspaceId: "ws",
+        ventureId: "venture-a",
+      },
+      {
+        id: "learning-a",
+        kind: "Learning",
+        workspaceId: "ws",
+        ventureId: "venture-a",
+      },
+    ],
+    evidenceOrigins: [
+      { evidenceId: "evidence-a", originKeys: ["source-a"] },
+      { evidenceId: "evidence-b", originKeys: ["source-b"] },
+    ],
+  };
+  return { capability, context, provenance };
+}
+
+describe("AIF-01 Capability provenance and reuse", () => {
+  it("leaves absent provenance unassessed even on a stable capability", () => {
+    const result = assessCapabilityReuse(
+      stub({ id: "legacy", lifecycle: "stable" }),
+      { capabilities: [], references: [], evidenceOrigins: [] },
+      evaluationTime,
+    );
+    assert.equal(result.classification, "UNASSESSED");
+    assert.equal(result.candidate, false);
+    assert.equal(result.promotionEligible, false);
+  });
+  it("keeps DOMAIN_SPECIFIC separate from candidate", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.reuseAssessment.classification = "DOMAIN_SPECIFIC";
+    assert.equal(
+      assessCapabilityReuse(capability, context, evaluationTime).candidate,
+      false,
+    );
+  });
+  it("accepts sufficient independent evidence within one Venture and one context", () => {
+    const { capability, context } = reuseFixture();
+    const result = assessCapabilityReuse(capability, context, evaluationTime);
+    assert.equal(result.candidate, true);
+    assert.equal(result.promotionEligible, false);
+    assert.equal(capability.lifecycle, "stable");
+  });
+  it("rejects two copied records from one source as independent support", () => {
+    const { capability, context } = reuseFixture();
+    context.evidenceOrigins[1]!.originKeys = ["source-a"];
+    assert.equal(
+      assessCapabilityReuse(capability, context, evaluationTime).candidate,
+      false,
+    );
+  });
+  it("accepts represented cross-Venture validation without making it mandatory", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.validationContexts[0]!.evidenceIds = ["evidence-a"];
+    provenance.validationContexts.push({
+      ...provenance.validationContexts[0]!,
+      id: "context-b",
+      ventureId: "venture-b",
+      evidenceIds: ["evidence-b"],
+    });
+    context.references[1]!.ventureId = "venture-b";
+    assert.equal(
+      assessCapabilityReuse(capability, context, evaluationTime).candidate,
+      true,
+    );
+  });
+  it("rejects unresolved challenges", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.validationContexts[0]!.result = "CHALLENGED";
+    assert.equal(
+      assessCapabilityReuse(capability, context, evaluationTime).candidate,
+      false,
+    );
+  });
+  it("rejects unresolved implementation versions", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.validationContexts[0]!.implementationVersion = "2.0.0";
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /implementation version/,
+    );
+  });
+  it("does not use validation of an old version for the assessed version", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.implementationRefs.push({
+      id: "implementation-a",
+      version: "2.0.0",
+    });
+    capability.version = "2.0.0";
+    assert.equal(
+      assessCapabilityReuse(capability, context, evaluationTime).candidate,
+      false,
+    );
+  });
+  it("rejects dependency provenance mismatch and missing dependency declaration", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.dependencyRefs[0]!.version = "9.0.0";
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /dependency version/,
+    );
+    provenance.dependencyRefs = [];
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /dependency provenance/,
+    );
+  });
+  it("rejects missing or wrong-type Evidence/Learning references", () => {
+    for (const id of ["evidence-a", "learning-a"]) {
+      const { capability, context } = reuseFixture();
+      context.references = context.references.filter((r) => r.id !== id);
+      assert.throws(
+        () => assessCapabilityReuse(capability, context, evaluationTime),
+        /reference/,
+      );
+    }
+    const { capability, context } = reuseFixture();
+    context.references[0]!.kind = "Learning";
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /wrong-type/,
+    );
+  });
+  it("requires performance and reuse evidence", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.performanceEvidenceIds = [];
+    assert.equal(
+      assessCapabilityReuse(capability, context, evaluationTime).candidate,
+      false,
+    );
+  });
+  it("requires source-origin resolution and rejects duplicate resolutions", () => {
+    const { capability, context } = reuseFixture();
+    context.evidenceOrigins = [];
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /origins/,
+    );
+    const other = reuseFixture();
+    other.context.evidenceOrigins.push(other.context.evidenceOrigins[0]!);
+    assert.throws(
+      () =>
+        assessCapabilityReuse(other.capability, other.context, evaluationTime),
+      /origins/,
+    );
+  });
+  it("requires authority separately and allows structural eligibility with explicit authority", () => {
+    const { capability, context, provenance } = reuseFixture();
+    assert.equal(
+      assessCapabilityReuse(capability, context, evaluationTime)
+        .promotionEligible,
+      false,
+    );
+    provenance.promotionAuthority = {
+      reference: "control-decision",
+      actor: "Control",
+      at: evaluationTime,
+      evidenceIds: ["evidence-a", "evidence-b"],
+    };
+    const before = structuredClone(capability);
+    assert.equal(
+      assessCapabilityReuse(capability, context, evaluationTime)
+        .promotionEligible,
+      true,
+    );
+    assert.deepEqual(capability, before);
+  });
+  it("rejects empty authority evidence and invalid authority timing", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.promotionAuthority = {
+      reference: "control-decision",
+      actor: "Control",
+      at: evaluationTime,
+      evidenceIds: [],
+    };
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /requires evidence/,
+    );
+    provenance.promotionAuthority.evidenceIds = ["evidence-a"];
+    provenance.promotionAuthority.at = "2027-01-01T00:00:00Z";
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /authority time/,
+    );
+  });
+  it("rejects authority evidence outside the reuse assessment", () => {
+    const { capability, context, provenance } = reuseFixture();
+    provenance.reuseEvidenceIds = ["evidence-a"];
+    provenance.promotionAuthority = {
+      reference: "control-decision",
+      actor: "Control",
+      at: evaluationTime,
+      evidenceIds: ["evidence-b"],
+    };
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /outside reuse/,
+    );
+  });
+  it("rejects cross-workspace and mismatched validation scopes", () => {
+    const { capability, context } = reuseFixture();
+    context.references[0]!.workspaceId = "other";
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, evaluationTime),
+      /cross-workspace/,
+    );
+    const other = reuseFixture();
+    other.context.references[0]!.ventureId = "unlisted";
+    assert.throws(
+      () =>
+        assessCapabilityReuse(other.capability, other.context, evaluationTime),
+      /scope/,
+    );
+  });
+  it("checks optional provenance shape through the existing manifest validator", () => {
+    const { capability, provenance } = reuseFixture();
+    validateManifest(capability);
+    provenance.reuseAssessment.classification = "SHARED" as never;
+    assert.throws(() => validateManifest(capability), /classification/);
+  });
+  it("is deterministic for identical inputs and explicit time", () => {
+    const { capability, context } = reuseFixture();
+    assert.deepEqual(
+      assessCapabilityReuse(capability, context, evaluationTime),
+      assessCapabilityReuse(
+        structuredClone(capability),
+        structuredClone(context),
+        evaluationTime,
+      ),
+    );
+    assert.throws(
+      () => assessCapabilityReuse(capability, context, "2026-09-03"),
+      /UTC/,
+    );
   });
 });

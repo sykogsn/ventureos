@@ -1,12 +1,21 @@
 import { normaliseRelationshipKind } from "./kind";
-import { assertOperatingPayload, isOperatingKnowledgeObject } from "./operating";
+import {
+  assertOperatingPayload,
+  assertIntelligencePayload,
+  assertIntelligenceReferences,
+  isOperatingKnowledgeObject,
+} from "./operating";
 import {
   isOperatingKnowledgeType,
   KNOWLEDGE_OBJECT_KERNEL_FIELDS,
   KNOWLEDGE_TYPES,
   OPERATING_KNOWLEDGE_TYPES,
 } from "./types";
-import type { KnowledgeObject, KnowledgeType, OperatingKnowledgeType } from "./types";
+import type {
+  KnowledgeObject,
+  KnowledgeType,
+  OperatingKnowledgeType,
+} from "./types";
 
 function requireText(id: string, field: string, value: string) {
   if (!value.trim()) {
@@ -15,6 +24,7 @@ function requireText(id: string, field: string, value: string) {
 }
 
 export function assertKnowledgeObject(record: KnowledgeObject) {
+  assertIntelligencePayload(record);
   requireText(record.id, "id", record.id);
   requireText(record.id, "title", record.title);
   requireText(record.id, "summary", record.summary);
@@ -55,7 +65,9 @@ export function assertKnowledgeObject(record: KnowledgeObject) {
 
   for (const field of KNOWLEDGE_OBJECT_KERNEL_FIELDS) {
     if (!(field in record)) {
-      throw new Error(`Knowledge Object ${record.id} is missing kernel field ${field}.`);
+      throw new Error(
+        `Knowledge Object ${record.id} is missing kernel field ${field}.`,
+      );
     }
   }
 
@@ -101,7 +113,9 @@ export function assertOperatingCatalogue(records: KnowledgeObject[]) {
 
   for (const type of OPERATING_KNOWLEDGE_TYPES) {
     if (!types.has(type)) {
-      throw new Error(`Operating catalogue has no Knowledge Object of type ${type}.`);
+      throw new Error(
+        `Operating catalogue has no Knowledge Object of type ${type}.`,
+      );
     }
   }
 
@@ -140,4 +154,19 @@ export function assertKnowledgeCatalogue(records: KnowledgeObject[]) {
       }
     }
   }
+}
+
+/** Closed-catalogue contract validation only. Never reads a system clock. */
+export function assertIntelligenceCatalogue(
+  records: KnowledgeObject[],
+  evaluationTime: string,
+) {
+  const ids = new Set<string>();
+  for (const record of records) {
+    if (ids.has(record.id))
+      throw new Error("Duplicate Knowledge Object id " + record.id);
+    ids.add(record.id);
+    assertKnowledgeObject(record);
+  }
+  assertIntelligenceReferences(records, evaluationTime);
 }

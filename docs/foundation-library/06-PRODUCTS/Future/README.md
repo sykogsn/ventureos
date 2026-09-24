@@ -12,15 +12,15 @@
 
 **Status.** Approved
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Product
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-09-10
 
 ---
 
-A future product is a Venture Definition, not a new application.
+A future marketed product is a distinct customer-facing software product and a Venture Definition. It is not a new platform stack, private authentication system, or second application architecture.
 
 ## Admission
 
@@ -30,10 +30,11 @@ A future product is a Venture Definition, not a new application.
 4. Map the definition id in IDS bind (unknown ids fail closed to VentureOS).
 5. Add a product page under `06-PRODUCTS/` and a row to the [Products](../README.md) index.
 6. If atmosphere is required, add a key and a token file in a visual programme — not in a Runtime sprint.
+7. Production customer identity — name, brand, sign-in, application chrome, hostname, and recovery communication — is a product concern. The underlying authentication, session, and tenancy mechanisms remain shared VentureOS concerns. See [FD-007](../../05-GOVERNANCE/Founder-Decisions.md) and [ADR-010](../../05-GOVERNANCE/Architecture-Decision-Register.md#adr-010--product-branded-customer-surfaces).
 
 ## Refusals
 
-- A second shell, nav tree, or orchestrator
+- A second shell, nav tree, orchestrator, Workspace Engine, or authentication implementation
 - A Product Registry beside the Definition Registry
 - A private type scale or spacing system
 - Restoring excluded features with theme

@@ -12,11 +12,11 @@
 
 **Status.** Approved
 
-**Version.** 1.1.0
+**Version.** 1.2.0
 
 **Owner.** Design
 
-**Last Updated.** 2026-08-20
+**Last Updated.** 2026-09-10
 
 ---
 
@@ -40,7 +40,7 @@ Skip to main content is part of the OS chrome. Focus indicators remain visible o
 
 ## Forms and authentication
 
-Authentication is part of the desk, not a marketing page. Fields stay empty after logout. Remembered credentials belong to the browser’s password manager, not to VentureOS storage. Application session memory is the session cookie and optional Remember me — see the auth module, not this constitution.
+Authentication is part of the desk, not a marketing page. Fields stay empty after logout. Remembered credentials belong to the browser’s password manager, not to VentureOS storage. Application session memory is the session cookie and optional Remember me — see the auth module, not this constitution. On a marketed customer deployment, authentication presentation resolves the Venture’s product identity. Platform Identity still performs the authentication. See [FD-007](../05-GOVERNANCE/Founder-Decisions.md) and [ADR-010](../05-GOVERNANCE/Architecture-Decision-Register.md#adr-010--product-branded-customer-surfaces).
 
 ## Loading and empty
 

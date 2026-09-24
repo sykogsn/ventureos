@@ -2,9 +2,9 @@
 
 **Purpose.** This folder is the engineering memory of VentureOS and the index of how engineering work is allowed to proceed.
 
-**Status.** Governance Foundation complete (VS-008A–C). Project Constitution registered as supreme law (2026-08-22).  
+**Status.** Governance Foundation complete (VS-008A–C). Project Constitution registered as supreme law (2026-08-22). Controlled Delivery & Independent Verification constituted 2026-09-12.  
 **Owner.** Engineering  
-**Last Updated.** 2026-09-04
+**Last Updated.** 2026-09-22
 
 These records do not replace the Foundation Library, code-adjacent READMEs, or Runtime/IDS/Definition implementation sources. They index completed engineering work so the desk can remember it. They also name the standard every future change must follow.
 
@@ -12,11 +12,18 @@ These records do not replace the Foundation Library, code-adjacent READMEs, or R
 
 Read the [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md). It is the supreme governing document of the repository.
 
-Then read the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. Unexplained failures, corrections, and certification follow [§10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol). Do not start work on an unhealthy foundation. Do not tell the founder a task is complete until it has been verified in the running application.
+Then read the [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md). Every sprint, implementation, review, refactor, and bug fix follows it by default. Do not start work on an unhealthy foundation. Do not tell the founder a task is complete until the required evidence exists.
+
+Then read the [Controlled Delivery & Independent Verification Protocol](./CONTROLLED_DELIVERY_PROTOCOL.md). VentureOS now uses risk-based implementation routing:
+
+- Routine bounded work: `CONTROL → CURSOR BUILD → AUTOMATED EVIDENCE → INDEPENDENT VERIFY when required → CONTROL CLOSE / CERTIFY`
+- High-risk / cross-cutting / escalated work: `CONTROL → ASTRA BUILD → CURSOR ADVERSARIAL REVIEW when warranted → ASTRA CORRECTION when accepted → INDEPENDENT VERIFY → CONTROL CERTIFY`
+
+One Cursor corrective loop is permitted per engineering concern. Before a second corrective implementation loop, Control automatically escalates that concern to Astra.
 
 How the VES lifecycle and modes proceed remains in the [Engineering Constitution](./ENGINEERING_CONSTITUTION.md). How engineers are expected to think remains in the [Engineering Creed](./ENGINEERING_CREED.md). What the platform *is* remains the [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) and the [VentureOS Creed](../foundation-library/01-FOUNDATION/VentureOS-Creed.md).
 
-The Project Constitution is supreme. The Platform Constitution defines architecture. The Master Engineering Prompt is the sprint operating standard. The Engineering Constitution defines the lifecycle. The Engineering Creed defines the culture.
+The Project Constitution is supreme. The Platform Constitution defines architecture. The Master Engineering Prompt is the sprint operating standard. The Engineering Constitution defines the lifecycle. The Controlled Delivery Protocol defines builder/verifier/Control role boundaries and phase locks. The Engineering Creed defines the culture.
 
 Locked architecture and teaching documents remain at:
 
@@ -34,7 +41,8 @@ Every future sprint, implementation, review, refactor, and bug fix uses this ind
 | Supreme governing document | [VentureOS Project Constitution](../PROJECT_CONSTITUTION.md) |
 | Architecture Constitution | [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) |
 | Authoritative engineering standard | [Master Engineering Prompt](./MASTER_ENGINEERING_PROMPT.md) |
-| Diagnostic, correction, and certification protocol | [Master Engineering Prompt §10](./MASTER_ENGINEERING_PROMPT.md#10-diagnostic-correction-and-certification-operating-protocol) |
+| Controlled delivery / independent verification | [CONTROLLED_DELIVERY_PROTOCOL.md](./CONTROLLED_DELIVERY_PROTOCOL.md) |
+| Engineering lifecycle | [ENGINEERING_CONSTITUTION.md](./ENGINEERING_CONSTITUTION.md) |
 | Foundation Runbook | [FOUNDATION_RUNBOOK.md](./FOUNDATION_RUNBOOK.md) |
 | Architecture documentation | [Architecture Overview](../foundation-library/02-ARCHITECTURE/Architecture-Overview.md) · [VentureOS Platform Constitution](../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md) |
 | Coding standards | [Engineering Standards](../foundation-library/04-ENGINEERING/Engineering-Standards.md) |
@@ -42,16 +50,17 @@ Every future sprint, implementation, review, refactor, and bug fix uses this ind
 | Release process | [Release Process](../foundation-library/04-ENGINEERING/Release-Process.md) |
 | Sprint process | [Sprint Standard](../foundation-library/04-ENGINEERING/Sprint-Standard.md) |
 
-If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wins first. Architecture wins on *what may exist*. On checklist, validation, completion, or reporting, the Master Engineering Prompt wins over process pages.
+If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wins first. Architecture wins on *what may exist*. On checklist, validation, completion, or reporting, the Master Engineering Prompt wins over process pages. The Controlled Delivery Protocol governs execution roles and phase transitions.
 
 ## Engineering memory
 
 | Document | Role |
 |---|---|
-| [MASTER_ENGINEERING_PROMPT.md](./MASTER_ENGINEERING_PROMPT.md) | Permanent engineering constitution: pre-flight, rules, validation, completion, reporting, diagnostic and certification operating protocol (§10) |
+| [MASTER_ENGINEERING_PROMPT.md](./MASTER_ENGINEERING_PROMPT.md) | Permanent engineering constitution: pre-flight, rules, validation, completion, reporting |
+| [CONTROLLED_DELIVERY_PROTOCOL.md](./CONTROLLED_DELIVERY_PROTOCOL.md) | Permanent default handoff: Control → builder → independent verifier → correction → certification |
 | [FOUNDATION_RUNBOOK.md](./FOUNDATION_RUNBOOK.md) | How to keep the certified foundation healthy |
 | [ENGINEERING_CREED.md](./ENGINEERING_CREED.md) | Culture: how we think, what we refuse, what we vow |
-| [ENGINEERING_CONSTITUTION.md](./ENGINEERING_CONSTITUTION.md) | Rulebook: VES lifecycle, modes, definition of done |
+| [ENGINEERING_CONSTITUTION.md](./ENGINEERING_CONSTITUTION.md) | Rulebook: VES lifecycle, modes, separation of duties, definition of done |
 | [LESSONS_LEARNED.md](./LESSONS_LEARNED.md) | Living journal; grows after each major sprint |
 | [ENGINEERING_HISTORY.md](./ENGINEERING_HISTORY.md) | Master sprint timeline (VS-001–VS-008C ledger) |
 | [BRAIN_PROGRAMME.md](./BRAIN_PROGRAMME.md) | Brain programme close-out (VC-001–VC-003). Not the VS history parser |
@@ -64,7 +73,7 @@ If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wi
 | [FRIGORA_F34_03_ASTRA_IMPLEMENTATION_REPORT.md](./FRIGORA_F34_03_ASTRA_IMPLEMENTATION_REPORT.md) | F34-03 final candidate: disk recovery, disposable-client concurrency proof, green regressions/gates and authenticated builder health; ready for Control review |
 | [FRIGORA_F34_03_IV_CORRECTION_REPORT.md](./FRIGORA_F34_03_IV_CORRECTION_REPORT.md) | Control-authorised successor correction for assignment/reassignment confirmation propagation; validation and publication-review evidence |
 
-The Project Constitution is supreme. The Master Engineering Prompt is the default sprint standard. The Creed is culture. The Constitution is lifecycle law. The Decision Register is the dated acceptances of that law. Lessons Learned is what the sprints taught. History, certification, debt, and releases are the memory HQ will query. Do not copy those tables into the Creed, the Constitution, or the Master Engineering Prompt.
+The Project Constitution is supreme. The Master Engineering Prompt is the default sprint standard. The Controlled Delivery Protocol is the role/phase law. The Creed is culture. The Constitution is lifecycle law. The Decision Register is the dated acceptances of that law. Lessons Learned is what the sprints taught. History, certification, debt, and releases are the memory HQ will query. Do not copy those tables into the Creed, the Constitution, or the Master Engineering Prompt.
 
 ## How to maintain these records
 
@@ -74,6 +83,7 @@ The Project Constitution is supreme. The Master Engineering Prompt is the defaul
 4. **Debt is named, not licensed.** New follow-up items go in this Technical Debt Register and, when they are Foundation-layer debt, in the library register as well.
 5. **Certification is layer-specific.** A new certificate gets its own file. Do not treat IDS certification as Runtime certification.
 6. **Do not amend a certified foundation inside a feature sprint.** Freeze is recorded in [FOUNDATION_CERTIFICATION_v1.1.md](./FOUNDATION_CERTIFICATION_v1.1.md).
+7. **Do not self-promote phases.** A named implementation packet does not authorise its own successor. Control opens the next phase.
 
 ## Engineering HQ
 
@@ -83,6 +93,7 @@ When it is built, it should consume these files directly as the engineering work
 
 - Project Constitution → supreme governing document
 - Master Engineering Prompt → authoritative engineering standard
+- Controlled Delivery Protocol → builder/verifier/Control handoff and phase lock
 - Foundation Runbook → how the certified foundation is kept healthy
 - Creed → how builders are expected to think
 - Constitution → VES lifecycle and modes

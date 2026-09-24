@@ -12,11 +12,11 @@
 
 **Status.** Approved (locked)
 
-**Version.** 1.3.0
+**Version.** 1.2.0
 
 **Owner.** Definition Registry
 
-**Last Updated.** 2026-09-07
+**Last Updated.** 2026-09-10
 
 ---
 
@@ -24,7 +24,7 @@ A Venture Definition is the authoritative metadata for a product running on Vent
 
 A founded company is a Venture Instance: VIC plus `definition: { id, version }`.
 
-The founder selects a Product. Products resolve to definitions through the Definition Registry. There is no Product Registry.
+The founder selects a Product. Products resolve to definitions through the Definition Registry. There is no Product Registry. Customer-facing product identity must also resolve through that definition. The implementation shape of identity metadata is a later programme; do not invent fields in this page. See [FD-007](../05-GOVERNANCE/Founder-Decisions.md) and [ADR-010](../05-GOVERNANCE/Architecture-Decision-Register.md#adr-010--product-branded-customer-surfaces).
 
 ## Rules
 
@@ -47,12 +47,12 @@ Rows stored before definition columns existed may have empty `definition_id` / `
 
 ## Live definitions
 
-| Id                  | Version | Name              | Lifecycle  | Notes                                                                                                                                                                                                                                                                           |
-| ------------------- | ------- | ----------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ventureos.company` | 1.0.0   | VentureOS Company | operating  | Default instance for founder-created companies                                                                                                                                                                                                                                  |
-| `qualora`           | 0.3.0   | Qualora           | incubating | Full intelligence pack including briefing                                                                                                                                                                                                                                       |
-| `calviora`          | 0.1.0   | Calviora          | concept    | Excludes `intelligence.briefing` / morning-briefing                                                                                                                                                                                                                             |
-| `farmora`           | 0.1.0   | Farmora           | concept    | Excludes executive-office feature; still uses office capability for VIC                                                                                                                                                                                                         |
+| Id | Version | Name | Lifecycle | Notes |
+|---|---|---|---|---|
+| `ventureos.company` | 1.0.0 | VentureOS Company | operating | Default instance for founder-created companies |
+| `qualora` | 0.3.0 | Qualora | incubating | Full intelligence pack including briefing |
+| `calviora` | 0.1.0 | Calviora | concept | Excludes `intelligence.briefing` / morning-briefing |
+| `farmora` | 0.1.0 | Farmora | concept | Excludes executive-office feature; still uses office capability for VIC |
 | `frigora`           | 0.22.0  | Frigora           | concept    | Full intelligence pack including briefing. Customer, Site, Asset, WorkOrder identity, current assignment, Visit attendance and facts, Visit evidence, F2.1–F2.3 (Programme 1 certified at `frigora@0.18.0`), F3.0 structured parts/refrigerant catalogues, F3.1 Time & Materials customer charge (ZAR cents snapshots), F3.2 Mobile / PWA Delivery, and F3.3 Offline Field Capability (ADMITTED / COMPLETE with declared coverage limitations) admitted beside VIC; inventory, procurement, invoice, quote, VAT, and payroll remain excluded; F3.4 remains PLANNED / NEXT |
 
 The Runtime skips briefing assembly when the instance cannot consume `intelligence.briefing`. Projections hide excluded Situation Room, HQ, and Executive Office surfaces.
