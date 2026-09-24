@@ -132,21 +132,28 @@ export function FoundationGalleryScreen() {
           <FoundationLedger />
         </PresentationRegion>
 
-        <Desk>
-          <Flow>
-            <PresentationRegion title="Canvas">
-              <BodyCopy>
-                Inspector uses the certified sidebar.lg token. Hard-coded workshop
-                inspector widths are rejected.
-              </BodyCopy>
-            </PresentationRegion>
-          </Flow>
-          <Inspector>
-            <EmptyCopy kicker="Context panel" title="Reserved slot">
-              Empty presentation slot. No inspector feed. No EIR.
-            </EmptyCopy>
-          </Inspector>
-        </Desk>
+        <PresentationRegion
+          title="Inspector composition"
+          note="Presentation / reference only. No live intelligence."
+        >
+          <Desk>
+            <Flow>
+              <Stack gap="compact">
+                <GroupTitle>Page-level Desk</GroupTitle>
+                <BodyCopy>
+                  Executive Workspace composes Desk and Inspector on the product
+                  page. Inspector width is the certified sidebar.lg token.
+                  Hard-coded workshop inspector widths are rejected.
+                </BodyCopy>
+              </Stack>
+            </Flow>
+            <Inspector>
+              <EmptyCopy kicker="Presentation / reference" title="Context panel composition">
+                Token copy only. No SAMPLE records, no inspector feed, and no EIR.
+              </EmptyCopy>
+            </Inspector>
+          </Desk>
+        </PresentationRegion>
 
         <PresentationRegion title="IDS mapping">
           <MetaCopy>

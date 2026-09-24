@@ -1,4 +1,4 @@
-import type { DocumentPort, EventBus, NotificationPort, PermissionService, WorkflowEngine } from "@/contracts";
+import type { DocumentPort, EventBus, NotificationPort, PermissionService, StoredObjectPort, WorkflowEngine } from "@/contracts";
 import { createKnowledgeGraph, createReasoner, type KnowledgeGraph, type Reasoner } from "@/knowledge";
 import { createAuditLog, type AuditLog } from "@/platform/audit/log";
 import { createDocumentPort } from "@/platform/documents/port";
@@ -7,9 +7,12 @@ import { createJobOrchestrator, type JobOrchestrator } from "@/platform/jobs/orc
 import { createNotificationPort } from "@/platform/notifications/port";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
 import { createPermissionService } from "@/platform/permissions/service";
+import { createLocalBlobStorageAdapter } from "@/platform/storage/local-adapter";
+import { createStoredObjectPort } from "@/platform/storage/port";
 import { createScheduler, type Scheduler } from "@/platform/scheduler/scheduler";
 import { createTelemetry, type Telemetry } from "@/platform/telemetry/telemetry";
 import { createWorkflowEngine } from "@/platform/workflows/engine";
+import { WORKFORCE_RUN_STEP_JOB } from "@/core/workforce/run";
 
 export type Platform = {
   events: EventBus;
@@ -21,6 +24,7 @@ export type Platform = {
   jobs: JobOrchestrator;
   notifications: NotificationPort;
   documents: DocumentPort;
+  storedObjects: StoredObjectPort;
   knowledge: KnowledgeGraph;
   reasoner: Reasoner;
 };
@@ -50,20 +54,36 @@ export function createPlatform(): Platform {
   });
 
   jobs.register("noop", async () => undefined);
-  scheduler.every("jobs.processDue", 15_000, () => {
-    void jobs.processDue();
+  jobs.register(WORKFORCE_RUN_STEP_JOB, async (job) => {
+    const { getWorkforceService } = await import("@/modules/workforce/service");
+    await getWorkforceService().orchestrator.handleJob(job);
   });
+  scheduler.every("jobs.processDue", 15_000, () => {
+    void (async () => {
+      await jobs.processDue();
+      const { getWorkforceService } = await import("@/modules/workforce/service");
+      await getWorkforceService().orchestrator.recover();
+    })();
+  });
+
+  const permissions = createPermissionService(createDbMembershipStore());
+  const storedObjectAdapter = createLocalBlobStorageAdapter();
 
   return {
     events,
     scheduler,
     workflows: createWorkflowEngine(),
-    permissions: createPermissionService(createDbMembershipStore()),
+    permissions,
     audit,
     telemetry,
     jobs,
     notifications: createNotificationPort(),
     documents: createDocumentPort(),
+    storedObjects: createStoredObjectPort({
+      adapter: storedObjectAdapter,
+      audit,
+      permissions,
+    }),
     knowledge,
     reasoner: createReasoner(knowledge),
   };

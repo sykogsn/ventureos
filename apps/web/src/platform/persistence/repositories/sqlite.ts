@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, isNull, lt } from "drizzle-orm";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import type { CompanyStory } from "@/core/company-story";
 import type { Decision } from "@/core/decision-engine";
@@ -12,6 +12,7 @@ import type { Recommendation } from "@/core/recommendation";
 import type { RiskIntelligence } from "@/core/risk-intelligence";
 import type { VentureGenome } from "@/core/venture-genome";
 import { DEFAULT_VENTURE_DEFINITION_REF } from "@/core/venture-definition/types";
+import { isVentureLifecycle } from "@/core/venture-definition/lifecycle";
 import { getDb, resetDatabaseLifecycle } from "@/platform/persistence/db";
 import { fromJson, toJson } from "@/platform/persistence/json";
 import {
@@ -115,6 +116,7 @@ function mapVenture(row: typeof ventures.$inferSelect): PersistedVenture {
     risk: fromJson<RiskIntelligence>(row.riskJson, { headline: "", signals: [] }),
     definitionId: row.definitionId || DEFAULT_VENTURE_DEFINITION_REF.id,
     definitionVersion: row.definitionVersion || DEFAULT_VENTURE_DEFINITION_REF.version,
+    lifecycle: isVentureLifecycle(row.lifecycle) ? row.lifecycle : "operating",
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -344,6 +346,19 @@ function createMembershipRepository(): MembershipRepository {
         .limit(1);
       return row?.role ?? null;
     },
+    async listByWorkspace(workspaceId) {
+      const rows = await getDb()
+        .select()
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, workspaceId))
+        .orderBy(asc(workspaceMembers.createdAt), asc(workspaceMembers.userId));
+      return rows.map((row) => ({
+        workspaceId: row.workspaceId as WorkspaceId,
+        userId: row.userId as UserId,
+        role: row.role,
+        createdAt: row.createdAt,
+      }));
+    },
     async setRole(row: MembershipRow) {
       const db = getDb();
       const existing = await this.getRole(row.userId, row.workspaceId);
@@ -385,6 +400,7 @@ function createVentureRepository(): VentureRepository {
         riskJson: toJson(row.risk),
         definitionId: row.definitionId,
         definitionVersion: row.definitionVersion,
+        lifecycle: row.lifecycle,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       });
@@ -408,6 +424,7 @@ function createVentureRepository(): VentureRepository {
           riskJson: toJson(row.risk),
           definitionId: row.definitionId,
           definitionVersion: row.definitionVersion,
+          lifecycle: row.lifecycle,
           updatedAt: row.updatedAt,
         })
         .where(eq(ventures.id, row.id));

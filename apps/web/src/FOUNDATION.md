@@ -8,7 +8,7 @@ Executive Intelligence Runtime (`runExecutiveIntelligenceRuntime`) is the only o
 
 ## Persistence ownership
 
-SQLite repositories store VIC snapshots, auth, workspaces, and membership. The intelligence service is the only adapter that persists Runtime mutation snapshots. Repositories do CRUD and mapping only. See `platform/persistence/README.md`.
+SQLite repositories store VIC snapshots, auth, workspaces, and membership. The intelligence service is the only adapter that persists Runtime mutation snapshots. Repositories do CRUD and mapping only. Product operational modules (for example Frigora Customer/Site/Asset) may persist beside VIC through the same SQLite connection via `getDb()`, consistent with workforce, jobs, and audit. They are not VIC snapshots and must not be added to the VIC Persistence facade. See `platform/persistence/README.md`.
 
 ## Capability ownership
 

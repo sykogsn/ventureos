@@ -6,6 +6,15 @@ describe("safeInternalPath", () => {
   it("returns the requested app path", () => {
     assert.equal(safeInternalPath("/settings"), "/settings");
     assert.equal(safeInternalPath("/ventures/launch"), "/ventures/launch");
+    assert.equal(safeInternalPath("/frigora"), "/frigora");
+    assert.equal(
+      safeInternalPath("/ventures/ven-1/work/assigned"),
+      "/ventures/ven-1/work/assigned",
+    );
+    assert.equal(
+      safeInternalPath("/ventures/ven-1/work/assigned?from=pwa"),
+      "/ventures/ven-1/work/assigned?from=pwa",
+    );
   });
 
   it("keeps an internal query string", () => {
@@ -21,5 +30,9 @@ describe("safeInternalPath", () => {
     assert.equal(safeInternalPath("/login"), "/dashboard");
     assert.equal(safeInternalPath("/signup"), "/dashboard");
     assert.equal(safeInternalPath("/login?next=/settings"), "/dashboard");
+    assert.equal(safeInternalPath("/sw.js"), "/dashboard");
+    assert.equal(safeInternalPath("/offline.html"), "/dashboard");
+    assert.equal(safeInternalPath("/manifest.webmanifest"), "/dashboard");
+    assert.equal(safeInternalPath("/frigora-icon/192"), "/dashboard");
   });
 });

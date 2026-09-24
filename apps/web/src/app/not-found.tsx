@@ -21,7 +21,7 @@ export default function NotFound() {
               </EmptyCopy>
               <Fit>
                 <Link href="/dashboard" className="vos-btn-primary">
-                  Return to the Situation Room
+                  Return to the Executive Workspace
                 </Link>
               </Fit>
             </Stack>

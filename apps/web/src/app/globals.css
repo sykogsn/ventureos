@@ -1,5 +1,6 @@
 @import "@repo/ids/tokens.css";
 @import "tailwindcss";
+@import "../modules/auth/presentation/entrance.css";
 @source "../../../../packages/ui/src";
 @source "../../../../packages/ids";
 @custom-variant dark (&:where(.dark, .dark *));
@@ -23,6 +24,15 @@
   --color-surface-hover: var(--surface-hover);
   --color-surface-selected: var(--surface-selected);
   --color-surface-focus: var(--surface-focus);
+  /* Auth-entrance plumbing. Values are set only under [data-auth-entrance]. */
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-interactive: var(--surface-interactive);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-venture-accent: var(--venture-accent);
+  --color-status-high: var(--status-high);
+  --color-status-positive: var(--status-positive);
   --color-border: var(--border);
   --color-divider: var(--divider);
   --color-muted: var(--text-muted);
@@ -592,6 +602,7 @@
 html,
 body {
   height: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -599,6 +610,24 @@ body {
   color: var(--text-primary);
   font-family: var(--ids-foundation-font-sans);
   -webkit-font-smoothing: antialiased;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+/* F33-04: block pointer interaction on disconnected mutation controls, except
+   the three allowlisted offline capture operations in capture-gate.ts.
+   File inputs are covered by the `input` selector. */
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) {
+  opacity: 0.72;
+}
+
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) button,
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) input,
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) select,
+html[data-frigora-offline] form:not([data-frigora-offline-capture="recordTechnicalFinding"]):not([data-frigora-offline-capture="recordFieldCapture"]):not([data-frigora-offline-capture="recordVisitEvidence"]) textarea {
+  pointer-events: none;
 }
 
 a[href="#main-content"] {
@@ -702,6 +731,29 @@ select:focus-visible {
   .vos-screen {
     padding-inline: var(--ids-foundation-space-6);
     padding-block: var(--ids-foundation-space-10);
+  }
+}
+
+textarea.vos-field {
+  height: auto;
+  min-height: calc(var(--ids-foundation-control-height-lg) * 2);
+  padding-block: var(--ids-foundation-space-3);
+}
+
+input[type="file"].vos-field,
+.vos-file-field {
+  height: auto;
+  min-height: var(--ids-foundation-control-height-lg);
+  padding-block: var(--ids-foundation-space-3);
+}
+
+@media (max-width: 639px) {
+  .vos-btn-primary,
+  .vos-btn-secondary {
+    min-height: var(--ids-foundation-control-height-lg);
+    width: 100%;
+    height: auto;
+    padding-block: var(--ids-foundation-space-2);
   }
 }
 

@@ -1,4 +1,10 @@
-export const IDS_BRANDS = ["ventureos", "qualora", "calviora", "farmora"] as const;
+export const IDS_BRANDS = [
+  "ventureos",
+  "qualora",
+  "calviora",
+  "farmora",
+  "frigora",
+] as const;
 
 export type IdsBrand = (typeof IDS_BRANDS)[number];
 
@@ -7,6 +13,7 @@ const definitionToBrand: Record<string, IdsBrand> = {
   qualora: "qualora",
   calviora: "calviora",
   farmora: "farmora",
+  frigora: "frigora",
 };
 
 export function brandFromDefinitionId(

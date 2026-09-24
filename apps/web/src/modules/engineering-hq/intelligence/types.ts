@@ -103,6 +103,39 @@ export type QualityIntelligence = {
   signals: QualitySignal[];
 };
 
+export type ProcessTrend = "improving" | "stable" | "worsening" | "unknown";
+
+export type ProcessRatio = {
+  held: number;
+  known: number;
+  sampleSize: number;
+  label: string;
+};
+
+export type ProcessCount = {
+  total: number | null;
+  knownCycles: number;
+  label: string;
+};
+
+export type ProcessIntelligence = {
+  sampleSize: number;
+  posture: "baseline" | "review" | "unknown";
+  windowLabel: string;
+  leadTime: { label: string; trend: ProcessTrend };
+  firstCorrectionHeld: ProcessRatio;
+  certificationFirstPass: ProcessRatio;
+  cleanExit: ProcessRatio;
+  founderInterventions: ProcessCount;
+  terminalInterventions: ProcessCount;
+  correctionAttempts: ProcessCount;
+  failedCorrections: ProcessCount;
+  failureClasses: string[];
+  linkedImprovements: { id: string; kind: "ERD" | "LL"; source: string }[];
+  nextRecommendation: EngineeringRecommendation | null;
+  evidence: string[];
+};
+
 export type EngineeringIntelligence = {
   health: EngineeringHealthReport;
   architecture: ArchitectureHealthReport;
@@ -112,5 +145,6 @@ export type EngineeringIntelligence = {
   timeline: TimelineEvent[];
   debt: DebtIntelligence;
   quality: QualityIntelligence;
+  process: ProcessIntelligence;
   sources: SignalSource[];
 };

@@ -8,7 +8,7 @@
 
 **Dependencies.** [Product Philosophy](../01-FOUNDATION/Product-Philosophy.md) · [Venture Definitions](../02-ARCHITECTURE/Venture-Definitions.md)
 
-**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Qualora](./Qualora/README.md) · [Calviora](./Calviora/README.md) · [Farmora](./Farmora/README.md) · [Future](./Future/README.md) · [IDS](../03-DESIGN/IDS.md) · [FD-007](../05-GOVERNANCE/Founder-Decisions.md) · [ADR-010](../05-GOVERNANCE/Architecture-Decision-Register.md#adr-010--product-branded-customer-surfaces)
+**Related Documents.** [VentureOS Project Constitution](../../PROJECT_CONSTITUTION.md) · [Qualora](./Qualora/README.md) · [Calviora](./Calviora/README.md) · [Farmora](./Farmora/README.md) · [Frigora](./Frigora/README.md) · [Future](./Future/README.md) · [IDS](../03-DESIGN/IDS.md) · [FD-007](../05-GOVERNANCE/Founder-Decisions.md) · [ADR-010](../05-GOVERNANCE/Architecture-Decision-Register.md#adr-010--product-branded-customer-surfaces)
 
 **Status.** Approved
 
@@ -34,6 +34,7 @@ The founder selects a Product. The Definition Registry resolves it. The Runtime 
 | Qualora | `qualora` | incubating | None |
 | Calviora | `calviora` | concept | Morning briefing |
 | Farmora | `farmora` | concept | Executive Office feature |
+| Frigora           | `frigora`           | concept    | None (full desk; Programme 1 certified at `frigora@0.18.0`; live `frigora@0.22.0` admits F3.0 catalogues, F3.1 Time & Materials customer charge, F3.2 Mobile / PWA Delivery, and F3.3 Offline Field Capability as ADMITTED / COMPLETE with declared coverage limitations; inventory, procurement, invoice, quote, VAT, and payroll remain excluded; F3.4 remains PLANNED / NEXT) |
 
 This table is the current live-definition snapshot. It is not an exhaustive list of marketed Ventures and does not limit FD-007.
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { ShellProvider, useShell } from "@/core/context/shell-context";
 import { CommandPalette } from "@/core/shell/command-palette";
 import { Sidebar } from "@/core/shell/sidebar";
@@ -17,6 +17,7 @@ import {
 import type { WorkspaceRecord } from "@/modules/workspaces/service";
 import type { VentureRecord } from "@/modules/ventures/service";
 import type { ShellUser } from "@/core/context/shell-context";
+import { isFrigoraCustomerPath } from "@/modules/frigora/app/pwa/paths";
 import "@/extensions";
 
 function VentureRouteSync() {
@@ -42,19 +43,38 @@ function VentureRouteSync() {
 }
 
 function ShellFrame({ children }: { children: ReactNode }) {
+  const pathname = usePathname() ?? "";
+  const frigoraCustomer = isFrigoraCustomerPath(pathname);
+
   return (
     <Workspace>
       <SkipLink />
       <SplitView>
-        <Sidebar />
+        {frigoraCustomer ? null : <Sidebar />}
         <Stage>
           <TopNav />
           <WorkspaceMain>{children}</WorkspaceMain>
         </Stage>
       </SplitView>
-      <CommandPalette />
+      {frigoraCustomer ? null : <CommandPalette />}
     </Workspace>
   );
+}
+
+function RejectPersistedAuthenticatedView() {
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) {
+        return;
+      }
+      window.location.reload();
+    };
+
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
+  return null;
 }
 
 export function OsShell({
@@ -78,6 +98,7 @@ export function OsShell({
       initialWorkspaceId={activeWorkspaceId}
     >
       <VentureRouteSync />
+      <RejectPersistedAuthenticatedView />
       <IdsBrandBinder />
       <ShellFrame>{children}</ShellFrame>
     </ShellProvider>

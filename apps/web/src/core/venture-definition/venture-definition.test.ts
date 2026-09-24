@@ -60,14 +60,59 @@ describe("Venture definition registry", () => {
     assert.equal(platformVentureRegistry.resolve("qualora").name, "Qualora");
     assert.equal(platformVentureRegistry.resolve("calviora").lifecycle, "concept");
     assert.equal(platformVentureRegistry.resolve("farmora").owner, "founder");
-    assert.equal(platformVentureRegistry.list().length, 4);
+    assert.equal(platformVentureRegistry.resolve("frigora").name, "Frigora");
+    assert.equal(platformVentureRegistry.resolve("frigora").lifecycle, "concept");
+    assert.equal(platformVentureRegistry.resolve("frigora").maturity, "experimental");
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /Customer, Site, Asset, WorkOrder/,
+    );
+    assert.match(platformVentureRegistry.resolve("frigora").description, /F2\.1 Work Execution/);
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /F2\.2 Service Desk & Dispatch/,
+    );
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /F3\.0 structured parts and refrigerant catalogues/,
+    );
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /F3\.1 Time & Materials customer charge/,
+    );
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /F3\.2 Mobile \/ PWA Delivery/,
+    );
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /are part of this definition version/,
+    );
+    assert.match(
+      platformVentureRegistry.resolve("frigora").description,
+      /without a second WorkOrder lifecycle or automatic Visit creation/,
+    );
+    assert.ok(
+      RUNTIME_REQUIRED_CAPABILITIES.every((id) =>
+        platformVentureRegistry.resolve("frigora").capabilityProfile.uses.includes(id),
+      ),
+    );
+    assert.ok(
+      platformVentureRegistry
+        .resolve("frigora")
+        .capabilityProfile.uses.includes("intelligence.briefing"),
+    );
+    assert.deepEqual(platformVentureRegistry.resolve("frigora").capabilityProfile.excludes, []);
+    assert.deepEqual(platformVentureRegistry.resolve("frigora").excludedFeatures, []);
+    assert.equal(platformVentureRegistry.list().length, 5);
   });
 
   it("filters by lifecycle", () => {
     assert.equal(platformVentureRegistry.byLifecycle("incubating")[0]?.id, "qualora");
     assert.deepEqual(
       platformVentureRegistry.byLifecycle("concept").map((item) => item.id).sort(),
-      ["calviora", "farmora"],
+      ["calviora", "farmora", "frigora"],
     );
   });
 
@@ -197,7 +242,7 @@ describe("Venture definition documentation", () => {
     assert.match(VENTURE_DEFINITION_STANDARD, /does not execute/i);
     assert.match(VENTURE_MANIFEST_SPECIFICATION, /runtimeProfile/);
     assert.match(VENTURE_DEPENDENCY_GUIDE, /Capability Registry/);
-    assert.equal(platformVentureCatalog.length, 4);
+    assert.equal(platformVentureCatalog.length, 5);
   });
 });
 

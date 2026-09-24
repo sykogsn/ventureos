@@ -11,12 +11,14 @@ const ventureos = readFileSync(join(root, "tokens/atmosphere/ventureos.css"), "u
 const qualora = readFileSync(join(root, "tokens/atmosphere/qualora.css"), "utf8");
 const farmora = readFileSync(join(root, "tokens/atmosphere/farmora.css"), "utf8");
 const calviora = readFileSync(join(root, "tokens/atmosphere/calviora.css"), "utf8");
+const frigora = readFileSync(join(root, "tokens/atmosphere/frigora.css"), "utf8");
 
 const atmospheres = {
   ventureos,
   qualora,
   farmora,
   calviora,
+  frigora,
 } as const;
 
 describe("Executive Atmosphere tokens", () => {
@@ -25,6 +27,7 @@ describe("Executive Atmosphere tokens", () => {
     assert.match(index, /atmosphere\/qualora\.css/);
     assert.match(index, /atmosphere\/calviora\.css/);
     assert.match(index, /atmosphere\/farmora\.css/);
+    assert.match(index, /atmosphere\/frigora\.css/);
   });
 
   it("exposes chrome aliases on climate", () => {

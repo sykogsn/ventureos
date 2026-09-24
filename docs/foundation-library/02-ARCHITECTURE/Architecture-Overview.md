@@ -50,7 +50,7 @@ Empty `src/api/*` barrels are unused HTTP facades retained as future extension p
 
 ## Persistence
 
-SQLite repositories store VIC snapshots, auth, workspaces, and membership. Authoritative notes: `apps/web/src/platform/persistence/README.md`.
+SQLite repositories store VIC snapshots, auth, workspaces, and membership. Product operational modules may persist beside VIC on the same connection via `getDb()`, consistent with workforce, jobs, and audit. Authoritative notes: `apps/web/src/platform/persistence/README.md`.
 
 `getDb()` / `getClient()` are process-scoped. The intelligence service is the only adapter that persists Runtime mutation snapshots.
 

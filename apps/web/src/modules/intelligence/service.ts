@@ -423,6 +423,7 @@ export async function persistVentureIntelligence(
       risk: venture.risk,
       definitionId: venture.definition?.id ?? existing?.definitionId ?? "",
       definitionVersion: venture.definition?.version ?? existing?.definitionVersion ?? "",
+      lifecycle: existing?.lifecycle ?? "operating",
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };

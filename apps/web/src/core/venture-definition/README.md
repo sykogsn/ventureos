@@ -40,9 +40,10 @@ See `VENTURE_DEPENDENCY_GUIDE`.
 
 The Runtime skips briefing assembly for instances that cannot consume `intelligence.briefing`. Projections hide excluded Situation Room, HQ and Executive Office surfaces.
 
-| Id | Version | Name | Lifecycle | Notes |
-|---|---|---|---|---|
-| `ventureos.company` | 1.0.0 | VentureOS Company | operating | Default instance for founder-created companies |
-| `qualora` | 0.3.0 | Qualora | incubating | Full intelligence pack including briefing |
-| `calviora` | 0.1.0 | Calviora | concept | Excludes briefing capability and morning-briefing feature |
-| `farmora` | 0.1.0 | Farmora | concept | Excludes executive-office feature; still uses office capability for VIC |
+| Id                  | Version | Name              | Lifecycle  | Notes                                                                                                                                                                                                                                                                           |
+| ------------------- | ------- | ----------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ventureos.company` | 1.0.0   | VentureOS Company | operating  | Default instance for founder-created companies                                                                                                                                                                                                                                  |
+| `qualora`           | 0.3.0   | Qualora           | incubating | Full intelligence pack including briefing                                                                                                                                                                                                                                       |
+| `calviora`          | 0.1.0   | Calviora          | concept    | Excludes briefing capability and morning-briefing feature                                                                                                                                                                                                                       |
+| `farmora`           | 0.1.0   | Farmora           | concept    | Excludes executive-office feature; still uses office capability for VIC                                                                                                                                                                                                         |
+| `frigora`           | 0.22.0  | Frigora           | concept    | Full intelligence pack including briefing. Customer, Site, Asset, WorkOrder identity, current assignment, Visit attendance and facts, Visit evidence, F2.1–F2.3 (Programme 1 certified at `frigora@0.18.0`), F3.0 structured parts/refrigerant catalogues, F3.1 Time & Materials customer charge (ZAR cents snapshots), F3.2 Mobile / PWA Delivery, and F3.3 Offline Field Capability (ADMITTED / COMPLETE with declared coverage limitations) admitted beside VIC; inventory, procurement, invoice, quote, VAT, and payroll remain excluded; F3.4 remains PLANNED / NEXT |

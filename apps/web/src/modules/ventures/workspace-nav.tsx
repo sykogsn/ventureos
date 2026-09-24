@@ -4,23 +4,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { companyHomeHref } from "@/modules/ventures/home";
 import { SurfaceTabFace, SurfaceTabs } from "@/core/layout";
+import { buildVentureSurfaceLinks } from "@/modules/frigora/app/nav";
 
 export function VentureWorkspaceNav({
   ventureId,
   slug,
+  definitionId,
 }: {
   ventureId: string;
   slug: string;
+  definitionId: string;
 }) {
   const pathname = usePathname();
-  const base = `/ventures/${ventureId}`;
-  const links = [
-    { href: companyHomeHref(slug), label: "Company HQ", match: "exact" as const },
-    { href: `${base}/agents`, label: "Executive Office", match: "prefix" as const },
-    { href: `${base}/documents`, label: "Documents", match: "exact" as const },
-    { href: `${base}/crm`, label: "CRM", match: "exact" as const },
-    { href: `${base}/finance`, label: "Finance", match: "exact" as const },
-  ];
+  const links = buildVentureSurfaceLinks({
+    ventureId,
+    slug,
+    definitionId,
+    companyHomeHref: companyHomeHref(slug),
+  });
 
   return (
     <SurfaceTabs label="Company surfaces">

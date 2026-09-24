@@ -50,6 +50,46 @@ export type LessonRecord = {
   body: string;
 };
 
+export type CycleOwnershipClass = "A" | "B" | "C" | "D";
+
+export type CycleClosedAs = "certified" | "stopped" | "deferred";
+
+export type CycleTernary = "YES" | "NO" | "UNKNOWN";
+
+export type CycleEvidenceRecord = {
+  id: string;
+  title: string;
+  scope: string;
+  ownershipClass: CycleOwnershipClass | null;
+  workItem: string;
+  checkpointSha: string | null;
+  erdRef: string | null;
+  llRef: string | null;
+  openedAt: string | null;
+  closedAt: string | null;
+  closedAs: CycleClosedAs | null;
+  diagnosticCycles: number | null;
+  correctionAttempts: number | null;
+  failedCorrections: number | null;
+  targetedTestRuns: number | null;
+  relatedDomainTestRuns: number | null;
+  fullSuiteRuns: number | null;
+  certificationFailures: number | null;
+  regressionsFound: number | null;
+  manualFounderInterventions: number | null;
+  manualTerminalInterventions: number | null;
+  tests: number | null;
+  pass: number | null;
+  fail: number | null;
+  cancelled: number | null;
+  skipped: number | null;
+  exitCode: number | null;
+  cleanProcessExit: CycleTernary;
+  failureClass: string | null;
+  firstCorrectionHeld: CycleTernary;
+  notes: string;
+};
+
 export type ReleaseRecord = {
   name: string;
   status: string;
@@ -93,6 +133,7 @@ export type EngineeringCatalogue = {
   decisions: DecisionRecord[];
   debt: DebtRecord[];
   lessons: LessonRecord[];
+  cycles: CycleEvidenceRecord[];
   releases: ReleaseRecord[];
   certification: CertificationSnapshot;
   constitution: ConstitutionDocument[];

@@ -1,11 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ResetPasswordScreen } from "@/modules/auth";
-import {
-  ExecutiveDocument,
-  ExecutiveFit,
-  ExecutiveStack,
-} from "@/core/layout";
+import { ResetPasswordMissingScreen, ResetPasswordScreen } from "@/modules/auth";
 
 export const metadata: Metadata = {
   title: "Reset password",
@@ -20,20 +14,7 @@ export default async function ResetPasswordPage({
   const token = typeof params.token === "string" ? params.token : "";
 
   if (!token) {
-    return (
-      <ExecutiveStack gap="section">
-        <ExecutiveDocument
-          kicker="Authentication"
-          title="Reset password"
-          description="This reset link is missing or invalid."
-        />
-        <ExecutiveFit>
-          <Link href="/forgot-password" className="vos-btn-primary">
-            Request a new link
-          </Link>
-        </ExecutiveFit>
-      </ExecutiveStack>
-    );
+    return <ResetPasswordMissingScreen />;
   }
 
   return <ResetPasswordScreen token={token} />;

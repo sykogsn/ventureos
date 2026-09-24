@@ -26,6 +26,9 @@ importers:
       '@repo/ids':
         specifier: workspace:*
         version: link:../../packages/ids
+      '@repo/storage-authority-kernel':
+        specifier: workspace:*
+        version: link:../../packages/storage-authority-kernel
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -174,6 +177,8 @@ importers:
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+
+  packages/storage-authority-kernel: {}
 
   packages/typescript-config: {}
 

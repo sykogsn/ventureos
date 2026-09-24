@@ -114,6 +114,33 @@ export const platformVentureCatalog: VentureDefinitionManifest[] = [
     excludedFeatures: ["executive-office"],
   }),
   createVentureManifest({
+    id: "frigora",
+    name: "Frigora",
+    purpose: "Refrigeration operations for companies that run on VentureOS.",
+    description:
+      "Frigora is a VentureOS venture. Customer, Site, Asset, WorkOrder identity, current WorkOrder assignment, Visit attendance identity, Visit field capture, Visit technical findings, Visit corrective actions, Visit outcomes, Visit recommended actions, Visit refrigerant events, Visit part usages, Asset history projection, Asset operational condition assertions, Visit customer acknowledgements, Visit evidence, F2.1 Work Execution, F2.2 Service Desk & Dispatch, F2.3 Engineer Job Workflow, F3.0 structured parts and refrigerant catalogues, F3.1 Time & Materials customer charge (ZAR cents snapshots on labour, parts, and added refrigerant), and F3.2 Mobile / PWA Delivery are part of this definition version. F2.2 admits persisted service windows, assignment coordination, exact-assignee acceptance or decline, derived dispatch readiness and attention, and the Service Desk day board without a second WorkOrder lifecycle or automatic Visit creation. F2.3 admits the engineer job workflow on certified My Work / Visit Recorder foundations, current-assignee operational authority, Visit attendance integrity, Visit Evidence capture under assignment, protected evidence read policy, and stale-assignee revocation after reassignment, without customer signature or CSAM. F3.0 admits venture-scoped PartReference and RefrigerantReference identities with optional links from PartUsage and RefrigerantEvent while retaining historical free-text snapshots. F3.1 admits Owner-configured venture labour hourly charge, catalogue default unit/R-per-kg charges, historical commercial snapshots, office completion of unpriced chargeable lines, and derived WorkOrder T&M completeness without inventory, warehouse or van stock, cylinder custody, purchasing, procurement, invoice, quote, VAT, payroll, margin, or PPM. F3.2 admits installable online Frigora PWA and mobile field packaging, Frigora customer-facing product identity across authentication and authenticated journeys, and online-only connectivity messaging without an offline mutation queue, business-data synchronisation, conflict resolution, or durable offline business cache. full diagnosis workflow, root cause, full repair workflow, inventory, cylinder inventory, PPM, invoicing, quotations, VAT, payroll, FACT → PATTERN → SIGNAL, and employee agents are not.",
+    owner: "founder",
+    version: "0.22.0",
+    lifecycle: "concept",
+    maturity: "experimental",
+    runtimeProfile: sharedRuntime,
+    capabilityProfile: {
+      uses: [...sharedUses, "intelligence.briefing"],
+      excludes: [],
+    },
+    governanceProfile: sharedGovernance,
+    dependencies: [],
+    supportedFeatures: [
+      "situation-room",
+      "company-hq",
+      "executive-office",
+      "founder-decisions",
+      "morning-briefing",
+      "portfolio",
+    ],
+    excludedFeatures: [],
+  }),
+  createVentureManifest({
     id: "ventureos.company",
     name: "VentureOS Company",
     purpose: "Default company definition for founder-created companies on VentureOS.",

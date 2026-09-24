@@ -74,6 +74,76 @@ export function EngineeringDashboardScreen({
         </SectionCard>
       </Grid>
 
+      <SectionCard
+        title="Engineering process"
+        description="Derived from CYCLE_EVIDENCE.md. Foundation health remains a separate score. n<5 withholds rates and trends."
+      >
+        <Grid variant="analytics">
+          <Fact
+            kicker="Cycles in window"
+            value={String(intelligence.process.sampleSize)}
+            note={`${intelligence.process.windowLabel}. Posture: ${intelligence.process.posture.toUpperCase()}.`}
+          />
+          <Fact
+            kicker="Cycle lead time"
+            value={intelligence.process.leadTime.label}
+            note={`Trend: ${intelligence.process.leadTime.trend}.`}
+          />
+          <Fact
+            kicker="First-correction held"
+            value={intelligence.process.firstCorrectionHeld.label}
+            note="Known first-correction outcomes only. Unknown counts are not zero."
+          />
+          <Fact
+            kicker="Certification first-pass"
+            value={intelligence.process.certificationFirstPass.label}
+            note="Certified close, zero certification failures, clean process exit."
+          />
+          <Fact
+            kicker="Clean exit"
+            value={intelligence.process.cleanExit.label}
+            note="§10.9 clean process exit. Unknown is not treated as YES."
+          />
+          <Fact
+            kicker="Manual founder interventions"
+            value={intelligence.process.founderInterventions.label}
+            note="Counted only where the cycle recorded the field."
+          />
+          <Fact
+            kicker="Manual terminal interventions"
+            value={intelligence.process.terminalInterventions.label}
+            note="Founder-operated terminal use, not Cursor-executed commands."
+          />
+        </Grid>
+        <Stack gap="tight">
+          <p className="ids-body text-muted">
+            Repeated failure classes:{" "}
+            {intelligence.process.failureClasses.length > 0
+              ? intelligence.process.failureClasses.join(", ")
+              : "None recorded"}
+          </p>
+          <p className="ids-body text-muted">
+            Linked improvements:{" "}
+            {intelligence.process.linkedImprovements.length > 0
+              ? intelligence.process.linkedImprovements
+                  .map((item) => `${item.id} (${item.source})`)
+                  .join("; ")
+              : "None recorded"}
+          </p>
+          <p className="ids-body text-muted">
+            Next recommendation:{" "}
+            {intelligence.process.nextRecommendation
+              ? `${intelligence.process.nextRecommendation.title} Why: ${intelligence.process.nextRecommendation.why} Source: ${intelligence.process.nextRecommendation.source}`
+              : "Unknown"}
+          </p>
+          {intelligence.process.evidence.map((line) => (
+            <p key={line} className="ids-caption">
+              {line}
+            </p>
+          ))}
+        </Stack>
+      </SectionCard>
+
       <Desk>
         <Stack gap="section">
           <SectionCard

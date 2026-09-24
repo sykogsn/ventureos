@@ -6,7 +6,10 @@ import {
   SESSION_COOKIE,
   WORKSPACE_COOKIE,
 } from "@/lib/auth/cookies";
-import { sessionCookieOptions } from "@/lib/auth/session-cookie";
+import {
+  expiredAuthCookieOptions,
+  sessionCookieOptions,
+} from "@/lib/auth/session-cookie";
 import { lookupPersistedSession } from "@/lib/auth/session-store";
 import {
   authSecretKey,
@@ -84,10 +87,11 @@ export async function clearSessionCookie() {
       await getPersistence().sessions.deleteById(user.sessionId);
     }
   }
-  jar.delete(SESSION_COOKIE);
-  jar.delete(WORKSPACE_COOKIE);
-  jar.delete(OAUTH_COOKIE);
-  jar.delete(GOOGLE_LINK_COOKIE);
+  const expired = expiredAuthCookieOptions();
+  jar.set(SESSION_COOKIE, "", expired);
+  jar.set(WORKSPACE_COOKIE, "", expired);
+  jar.set(OAUTH_COOKIE, "", expired);
+  jar.set(GOOGLE_LINK_COOKIE, "", expired);
 }
 
 export async function getActiveWorkspaceId() {

@@ -89,3 +89,15 @@ Required architectural statement:
 A Frigora, Farmora, Qualora, Calviora, or future marketed-Venture customer login may look product-specific while Platform Identity performs authentication underneath. Shared desk architecture does not require VentureOS branding on those customer surfaces.
 
 Law: [FD-007](./Founder-Decisions.md) · [Project Constitution](../../PROJECT_CONSTITUTION.md) · [Platform Constitution](../../architecture/VENTUREOS_PLATFORM_CONSTITUTION.md).
+
+## Frigora branch architecture record
+
+The following existing record is retained from the certified Frigora history. Its branch-local ADR-010 label is historical; the current main ADR-010 above remains the authoritative product-identity decision. No decision is renumbered or newly adopted by this merge. The status and schema below describe that earlier checkpoint.
+
+### ADR-010 — Optional durable Platform StoredObject idempotency
+
+Control authorisation: **F33-04-ASTRA-COR-01**, continued 2026-09-20. Shared Platform storage owns durable upload arbitration through schema-28 reservations. SQLite uniqueness remains StoredObject identity arbitration authority across concurrent processes and crash/restart; changed canonical content conflicts. Ventures retain completed business-acceptance receipts. Compensation is not the duplicate-prevention mechanism.
+
+Durability-path SQL uses dedicated short-lived clients. Native `SQLITE_BUSY` is never retried on the same poisoned handle; each retry opens a new clean native client. Native timeout is 250ms. The absolute contention budget is 5 seconds. Reservation uses dedicated reservation `INSERT`/`SELECT`. Reserved metadata uses a dedicated reserved-object `INSERT`. Reserved-object lookup `SQLITE_BUSY` recovers on a fresh connection without allocating another identity. `stored_object.created` retains the same event ID and values across retry and requires an independent fresh-client read-back before success. `SQLITE_LOCKED` remains non-retry / fail-closed. Permanent, unknown, and deadline-exhausted failures remain fail-closed. WAL is not enabled. There is no dependency or package upgrade. SCHEMA generation remains 28. IndexedDB remains v1. The upstream libSQL failed-statement lifecycle defect is isolated, not fixed.
+
+**F33-04 remains ACTIVE.** The engineering candidate awaits Independent Running-Product Verification and Control certification. Focused StoredObject evidence is 24/24 GREEN. See [COR-01 architecture and engineering evidence](../../engineering/FRIGORA_F3_3_ARCHITECTURE.md#cor-01-durable-evidence-correction). This records Control's authorised architecture and engineering evidence, not final product admission.

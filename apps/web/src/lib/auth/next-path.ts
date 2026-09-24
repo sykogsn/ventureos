@@ -1,3 +1,5 @@
+import { isFrigoraPwaPublicPath } from "@/modules/frigora/app/pwa/paths";
+
 const DEFAULT_AFTER_AUTH = "/dashboard";
 
 function pathOnly(value: string) {
@@ -24,6 +26,10 @@ export function safeInternalPath(raw: unknown): string {
 
   const path = pathOnly(next);
   if (path === "/login" || path === "/signup" || path.startsWith("/login/") || path.startsWith("/signup/")) {
+    return DEFAULT_AFTER_AUTH;
+  }
+
+  if (isFrigoraPwaPublicPath(path)) {
     return DEFAULT_AFTER_AUTH;
   }
 

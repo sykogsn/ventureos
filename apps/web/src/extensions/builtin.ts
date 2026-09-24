@@ -6,7 +6,7 @@ registerExtension({
   nav: [
     {
       id: "dashboard",
-      label: "Situation Room",
+      label: "Executive Workspace",
       href: "/dashboard",
       section: "operate",
       icon: "layout-dashboard",
@@ -50,10 +50,10 @@ registerExtension({
   commands: [
     {
       id: "nav.dashboard",
-      title: "Go to Situation Room",
+      title: "Go to Executive Workspace",
       group: "navigation",
       href: "/dashboard",
-      keywords: ["home", "os", "dashboard", "briefing"],
+      keywords: ["home", "os", "dashboard", "briefing", "situation-room", "executive-workspace"],
     },
     {
       id: "nav.ventures",

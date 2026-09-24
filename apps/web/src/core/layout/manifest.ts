@@ -128,7 +128,7 @@ export const LAYOUT_PRIMITIVES: readonly LayoutPrimitiveRecord[] = [
     responsibilities: "Fixed toolbar height. Horizontal cluster of wayfinding controls.",
     allowedChildren: "Reveal, Grow, Trailing, switchers, icon buttons",
     forbiddenChildren: "WorkspaceCanvas, Grid, forms as page documents",
-    responsive: "Padding and gap increase at small. Children use Reveal.",
+    responsive: "Padding and gap increase at small. Children use Reveal. Switchers and trailing chrome compact below small so phone widths do not overflow.",
     accessibility: "role=banner. Does not replace SkipLink.",
     tokens: [
       "--ids-foundation-layout-toolbar",

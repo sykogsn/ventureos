@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { SituationRoomScreen } from "@/modules/situation-room";
-import { FounderWelcome } from "@/modules/situation-room/welcome";
-import { loadActiveIntelligence } from "@/modules/intelligence/request";
 import { projectSituationRoom } from "@/core/venture";
+import {
+  adaptExecutiveWorkspace,
+  ExecutiveWorkspaceScreen,
+} from "@/modules/executive-workspace";
+import { loadActiveIntelligence } from "@/modules/intelligence/request";
+import { FounderWelcome } from "@/modules/situation-room/welcome";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Situation Room",
+  title: "Executive Workspace",
 };
 
 export default async function DashboardPage() {
@@ -21,5 +24,11 @@ export default async function DashboardPage() {
     return <FounderWelcome founderName={active.core.founder.name} />;
   }
 
-  return <SituationRoomScreen data={projectSituationRoom(active.core)} />;
+  const room = projectSituationRoom(active.core);
+  const model = adaptExecutiveWorkspace({
+    room,
+    recommendations: active.core.recommendations.items,
+  });
+
+  return <ExecutiveWorkspaceScreen model={model} />;
 }

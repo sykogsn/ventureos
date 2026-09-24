@@ -1,18 +1,32 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
-import Link from "next/link";
-import { Button } from "@repo/ui/button";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 import {
-  ExecutiveCluster,
-  ExecutiveDocument,
-  ExecutiveField,
-  ExecutiveFill,
-  ExecutiveForm,
-  ExecutiveInline,
-  ExecutiveRule,
-  ExecutiveStack,
-} from "@/core/layout";
+  AUTH_CREATE_ORIENTATION,
+  AUTH_CREATE_TITLE,
+  AUTH_ORIENTATION,
+  AUTH_ORIENTATION_RETURNING,
+  AuthDivider,
+  AuthFamilySection,
+  AuthField,
+  AuthFieldGroup,
+  AuthGoogleStack,
+  AuthHeading,
+  AuthMethodStack,
+  AuthMutedLine,
+  AuthNativeForm,
+  AuthNotice,
+  AuthPanelHeading,
+  AuthSignInSection,
+  AuthToolbarRow,
+  AuthTrust,
+  GoogleSignInButton,
+  QuietButton,
+  QuietLink,
+  RememberMe,
+  TextLink,
+  type NoticeTone,
+} from "@/modules/auth/presentation";
 import {
   forgotPasswordAction,
   loginAction,
@@ -20,80 +34,14 @@ import {
   signupAction,
   type AuthActionState,
 } from "@/modules/auth/actions";
+import {
+  FRIGORA_AUTH_ORIENTATION_RETURNING,
+  FRIGORA_AUTH_SIGN_IN_TITLE,
+  FRIGORA_AUTH_TRUST_NOTES,
+} from "@/modules/frigora/app/pwa/copy";
+import { isFrigoraAuthContinuation } from "@/modules/frigora/app/pwa/paths";
 
-const inputClass = "vos-field";
-
-function AuthForm({
-  kicker,
-  title,
-  description,
-  mode,
-  action,
-  submitLabel,
-  pendingLabel,
-  extra,
-  afterPassword,
-  afterSubmit,
-  footer,
-}: {
-  kicker: string;
-  title: string;
-  description: string;
-  mode: "login" | "signup";
-  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>;
-  submitLabel: string;
-  pendingLabel: string;
-  extra?: ReactNode;
-  afterPassword?: ReactNode;
-  afterSubmit?: ReactNode;
-  footer: ReactNode;
-}) {
-  const [state, formAction, pending] = useActionState(action, {});
-
-  return (
-    <ExecutiveStack gap="section">
-      <ExecutiveDocument kicker={kicker} title={title} description={description} />
-      <ExecutiveForm action={formAction}>
-        {extra}
-        <ExecutiveField>
-          Email
-          <input
-            className={inputClass}
-            type="email"
-            name="email"
-            autoComplete="email"
-            required
-            defaultValue=""
-          />
-        </ExecutiveField>
-        <ExecutiveField>
-          Password
-          <input
-            className={inputClass}
-            type="password"
-            name="password"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            minLength={8}
-            required
-            defaultValue=""
-          />
-        </ExecutiveField>
-        {afterPassword}
-        {state.error ? <p className="ids-body text-danger">{state.error}</p> : null}
-        {state.notice ? <p className="ids-body text-foreground">{state.notice}</p> : null}
-        <ExecutiveFill>
-          <Button type="submit" disabled={pending}>
-            {pending ? pendingLabel : submitLabel}
-          </Button>
-        </ExecutiveFill>
-      </ExecutiveForm>
-      {afterSubmit ? <ExecutiveStack gap="form">{afterSubmit}</ExecutiveStack> : null}
-      <p className="ids-body text-muted">{footer}</p>
-    </ExecutiveStack>
-  );
-}
-
-function GoogleContinue({ next, remember }: { next: string; remember: boolean }) {
+function googleHref(next: string, remember: boolean) {
   const params = new URLSearchParams();
   if (next) {
     params.set("next", next);
@@ -101,115 +49,269 @@ function GoogleContinue({ next, remember }: { next: string; remember: boolean })
   if (remember) {
     params.set("remember", "1");
   }
+  return `/auth/google${params.toString() ? `?${params.toString()}` : ""}`;
+}
 
-  return (
-    <ExecutiveFill>
-      <a
-        href={`/auth/google${params.toString() ? `?${params.toString()}` : ""}`}
-        className="vos-btn-secondary"
-      >
-        Continue with Google
-      </a>
-    </ExecutiveFill>
-  );
+function retryHref(next: string) {
+  return next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+}
+
+function queryNotice(
+  code: string | undefined,
+  message: string | undefined,
+  next: string,
+): {
+  tone: NoticeTone;
+  title: string;
+  action?: string;
+  actionHref?: string;
+  assertive?: boolean;
+} | null {
+  if (!code || !message) {
+    return null;
+  }
+
+  if (code === "google_denied") {
+    return {
+      tone: "neutral",
+      title: message,
+      action: "Try again",
+      actionHref: retryHref(next),
+    };
+  }
+
+  if (code === "google_link" || code === "google_in_use") {
+    return { tone: "informative", title: message };
+  }
+
+  if (
+    code === "google_failed" ||
+    code === "google_config" ||
+    code === "google_unverified"
+  ) {
+    return {
+      tone: "warning",
+      title: message,
+      action: "Try again",
+      actionHref: retryHref(next),
+      assertive: true,
+    };
+  }
+
+  return { tone: "warning", title: message, assertive: true };
 }
 
 export function LoginScreen({
   next = "",
-  message,
+  error,
+  errorCode,
+  notice,
 }: {
   next?: string;
-  message?: string;
+  error?: string;
+  errorCode?: string;
+  notice?: string;
 }) {
   const [remember, setRemember] = useState(false);
+  const [state, formAction, pending] = useActionState(loginAction, {});
+  const query = queryNotice(errorCode, error, next);
+  const frigora = isFrigoraAuthContinuation(next);
+
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) {
+        return;
+      }
+      const form = document.getElementById("ventureos-login-form");
+      if (form instanceof HTMLFormElement) {
+        form.reset();
+      }
+    };
+
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   return (
-    <AuthForm
-      kicker="Authentication"
-      title="Sign in"
-      description="Open your desk to operate companies from this workspace."
-      mode="login"
-      action={loginAction}
-      submitLabel="Open desk"
-      pendingLabel="Opening desk…"
-      extra={
-        <>
+    <AuthSignInSection labelledBy="sign-in-title">
+      <AuthHeading
+        id="sign-in-title"
+        title={frigora ? FRIGORA_AUTH_SIGN_IN_TITLE : "Sign in to VentureOS"}
+        description={
+          frigora
+            ? FRIGORA_AUTH_ORIENTATION_RETURNING
+            : next
+              ? AUTH_ORIENTATION_RETURNING
+              : AUTH_ORIENTATION
+        }
+      />
+
+      {notice ? <AuthNotice tone="informative" title={notice} /> : null}
+      {query ? (
+        <AuthNotice
+          tone={query.tone}
+          title={query.title}
+          action={query.action}
+          actionHref={query.actionHref}
+          assertive={query.assertive}
+        />
+      ) : null}
+      {state.error ? (
+        <AuthNotice tone="warning" title={state.error} assertive />
+      ) : null}
+      {state.notice ? <AuthNotice tone="informative" title={state.notice} /> : null}
+
+      <AuthGoogleStack>
+        <GoogleSignInButton href={googleHref(next, remember)} />
+        {next ? (
+          <AuthMutedLine>
+            You will be returned to your previous destination after signing in.
+          </AuthMutedLine>
+        ) : null}
+      </AuthGoogleStack>
+
+      <AuthMethodStack>
+        <AuthDivider label="or" />
+        <AuthNativeForm id="ventureos-login-form" action={formAction} autoComplete="on">
           <input type="hidden" name="next" value={next} />
-          {message ? <p className="ids-body text-foreground">{message}</p> : null}
-        </>
-      }
-      afterPassword={
-        <ExecutiveCluster>
-          <ExecutiveInline>
-            <input
-              type="checkbox"
-              name="remember"
-              value="1"
-              checked={remember}
-              onChange={(event) => setRemember(event.target.checked)}
+          <AuthFieldGroup>
+            <AuthField
+              id="email"
+              name="email"
+              label="Work email"
+              type="email"
+              autoComplete="username"
+              required
             />
-            Remember me
-          </ExecutiveInline>
-          <Link
-            className="ids-label ids-transition text-foreground underline underline-offset-4"
-            href="/forgot-password"
-          >
-            Forgot password?
-          </Link>
-        </ExecutiveCluster>
-      }
-      afterSubmit={
-        <>
-          <ExecutiveRule>or</ExecutiveRule>
-          <GoogleContinue next={next} remember={remember} />
-        </>
-      }
-      footer={
-        <>
-          No account?{" "}
-          <Link
-            className="ids-label ids-transition text-foreground underline underline-offset-4"
-            href="/signup"
-          >
-            Create one
-          </Link>
-        </>
-      }
-    />
+            <AuthField
+              id="password"
+              name="password"
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              minLength={8}
+              required
+            />
+          </AuthFieldGroup>
+          <AuthToolbarRow>
+            <RememberMe
+              checked={remember}
+              onChange={setRemember}
+              disabled={pending}
+            />
+            <TextLink href="/forgot-password">Forgot password?</TextLink>
+          </AuthToolbarRow>
+          <QuietButton type="submit" disabled={pending}>
+            {pending ? "Signing in…" : "Sign in"}
+          </QuietButton>
+        </AuthNativeForm>
+        {frigora ? null : (
+          <AuthMutedLine>
+            New to VentureOS? <TextLink href="/signup">Create account</TextLink>
+          </AuthMutedLine>
+        )}
+      </AuthMethodStack>
+
+      <AuthTrust notes={frigora ? FRIGORA_AUTH_TRUST_NOTES : undefined} />
+    </AuthSignInSection>
+  );
+}
+
+function AuthAccountForm({
+  title,
+  description,
+  headingId,
+  mode,
+  action,
+  submitLabel,
+  pendingLabel,
+  extra,
+  afterPassword,
+  footer,
+  googleHrefValue,
+}: {
+  title: string;
+  description: string;
+  headingId: string;
+  mode: "login" | "signup";
+  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>;
+  submitLabel: string;
+  pendingLabel: string;
+  extra?: ReactNode;
+  afterPassword?: ReactNode;
+  footer: ReactNode;
+  googleHrefValue: string;
+}) {
+  const [state, formAction, pending] = useActionState(action, {});
+
+  return (
+    <AuthSignInSection labelledBy={headingId}>
+      <AuthHeading id={headingId} title={title} description={description} />
+      <AuthGoogleStack>
+        <GoogleSignInButton href={googleHrefValue} />
+      </AuthGoogleStack>
+      <AuthMethodStack>
+        <AuthDivider label="or" />
+        <AuthNativeForm action={formAction}>
+          <AuthFieldGroup>
+            {extra}
+            <AuthField
+              id={`${mode}-email`}
+              name="email"
+              label="Work email"
+              type="email"
+              autoComplete="email"
+              required
+            />
+            <AuthField
+              id={`${mode}-password`}
+              name="password"
+              label={mode === "signup" ? "Choose a password" : "Password"}
+              type="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              minLength={8}
+              required
+            />
+          </AuthFieldGroup>
+          {afterPassword}
+          {state.error ? (
+            <AuthNotice tone="warning" title={state.error} assertive />
+          ) : null}
+          {state.notice ? <AuthNotice tone="informative" title={state.notice} /> : null}
+          <QuietButton type="submit" disabled={pending}>
+            {pending ? pendingLabel : submitLabel}
+          </QuietButton>
+        </AuthNativeForm>
+        <AuthMutedLine>{footer}</AuthMutedLine>
+      </AuthMethodStack>
+      <AuthTrust />
+    </AuthSignInSection>
   );
 }
 
 export function SignupScreen() {
   return (
-    <AuthForm
-      kicker="Authentication"
-      title="Create account"
-      description="Open a desk. You will found companies from this workspace."
+    <AuthAccountForm
+      title={AUTH_CREATE_TITLE}
+      description={AUTH_CREATE_ORIENTATION}
+      headingId="sign-in-title"
       mode="signup"
       action={signupAction}
       submitLabel="Create account"
       pendingLabel="Preparing your workspace…"
+      googleHrefValue={googleHref("/dashboard", true)}
       extra={
-        <ExecutiveField>
-          Name
-          <input className={inputClass} name="name" autoComplete="name" required />
-        </ExecutiveField>
-      }
-      afterSubmit={
-        <>
-          <ExecutiveRule>or</ExecutiveRule>
-          <GoogleContinue next="/dashboard" remember />
-        </>
+        <AuthField
+          id="name"
+          name="name"
+          label="Name"
+          autoComplete="name"
+          required
+        />
       }
       footer={
         <>
-          Already have an account?{" "}
-          <Link
-            className="ids-label ids-transition text-foreground underline underline-offset-4"
-            href="/login"
-          >
-            Sign in
-          </Link>
+          Already have an account? <TextLink href="/login">Sign in</TextLink>
         </>
       }
     />
@@ -220,33 +322,48 @@ export function ForgotPasswordScreen() {
   const [state, formAction, pending] = useActionState(forgotPasswordAction, {});
 
   return (
-    <ExecutiveStack gap="section">
-      <ExecutiveDocument
-        kicker="Authentication"
-        title="Forgot password"
+    <AuthFamilySection labelledBy="reset-title">
+      <AuthPanelHeading
+        id="reset-title"
+        title="Reset your password"
         description="Enter the email on your desk. If an account exists, we will send a reset link."
       />
-      <ExecutiveForm action={formAction}>
-        <ExecutiveField>
-          Email
-          <input className={inputClass} type="email" name="email" autoComplete="email" required />
-        </ExecutiveField>
-        {state.error ? <p className="ids-body text-danger">{state.error}</p> : null}
-        <ExecutiveFill>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Sending…" : "Send reset link"}
-          </Button>
-        </ExecutiveFill>
-        <p className="ids-body text-muted">
-          <Link
-            className="ids-label ids-transition text-foreground underline underline-offset-4"
-            href="/login"
-          >
-            Return to sign in
-          </Link>
-        </p>
-      </ExecutiveForm>
-    </ExecutiveStack>
+      <AuthNativeForm action={formAction}>
+        <AuthField
+          id="reset-email"
+          name="email"
+          label="Work email"
+          type="email"
+          autoComplete="email"
+          required
+        />
+        {state.error ? (
+          <AuthNotice tone="warning" title={state.error} assertive />
+        ) : null}
+        <QuietButton type="submit" disabled={pending}>
+          {pending ? "Sending…" : "Send reset instructions"}
+        </QuietButton>
+      </AuthNativeForm>
+      <TextLink href="/login">Back to sign in</TextLink>
+    </AuthFamilySection>
+  );
+}
+
+export function ForgotPasswordSentScreen() {
+  return (
+    <AuthFamilySection labelledBy="reset-title">
+      <AuthPanelHeading
+        id="reset-title"
+        title="Reset your password"
+        description="If an account exists for that email, a reset link is on its way. The link expires in one hour."
+      />
+      <AuthNotice
+        tone="informative"
+        title="If that address is recognised, instructions are on the way"
+        description="Follow the link in the email to set a new password. The link is single use and expires."
+      />
+      <QuietLink href="/login">Back to sign in</QuietLink>
+    </AuthFamilySection>
   );
 }
 
@@ -254,43 +371,60 @@ export function ResetPasswordScreen({ token }: { token: string }) {
   const [state, formAction, pending] = useActionState(resetPasswordAction, {});
 
   return (
-    <ExecutiveStack gap="section">
-      <ExecutiveDocument
-        kicker="Authentication"
-        title="Reset password"
+    <AuthFamilySection labelledBy="new-password-title">
+      <AuthPanelHeading
+        id="new-password-title"
+        title="Set a new password"
         description="Choose a new password for this desk."
       />
-      <ExecutiveForm action={formAction}>
+      <AuthNativeForm action={formAction}>
         <input type="hidden" name="token" value={token} />
-        <ExecutiveField>
-          New password
-          <input
-            className={inputClass}
-            type="password"
+        <AuthFieldGroup>
+          <AuthField
+            id="new-password"
             name="password"
-            autoComplete="new-password"
-            minLength={8}
-            required
-          />
-        </ExecutiveField>
-        <ExecutiveField>
-          Confirm password
-          <input
-            className={inputClass}
+            label="New password"
             type="password"
-            name="confirm"
             autoComplete="new-password"
             minLength={8}
             required
           />
-        </ExecutiveField>
-        {state.error ? <p className="ids-body text-danger">{state.error}</p> : null}
-        <ExecutiveFill>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Update password"}
-          </Button>
-        </ExecutiveFill>
-      </ExecutiveForm>
-    </ExecutiveStack>
+          <AuthField
+            id="confirm-password"
+            name="confirm"
+            label="Confirm password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+        </AuthFieldGroup>
+        {state.error ? (
+          <AuthNotice tone="warning" title={state.error} assertive />
+        ) : null}
+        <QuietButton type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Set password and continue"}
+        </QuietButton>
+      </AuthNativeForm>
+      <TextLink href="/login">Back to sign in</TextLink>
+    </AuthFamilySection>
+  );
+}
+
+export function ResetPasswordMissingScreen() {
+  return (
+    <AuthFamilySection labelledBy="reset-title">
+      <AuthPanelHeading
+        id="reset-title"
+        title="Reset your password"
+        description="This reset link is missing or invalid."
+      />
+      <AuthNotice
+        tone="warning"
+        title="That reset link has expired"
+        description="Reset links are single use and time limited. Request a new one and it will arrive within a few minutes."
+      />
+      <QuietLink href="/forgot-password">Request a new link</QuietLink>
+    </AuthFamilySection>
   );
 }

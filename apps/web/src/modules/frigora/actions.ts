@@ -1,0 +1,549 @@
+"use server";
+
+import { getSession } from "@/lib/auth/session";
+import { isFrigoraError } from "./errors";
+import type { FrigoraErrorCode, SchedulingConflict } from "./errors";
+import type { AvailabilityMutationResult, UnavailabilityInput } from "./availability";
+import { createScope, getFrigoraService } from "./service";
+import type {
+  AssignWorkOrderInput,
+  ClearWorkOrderAssignmentInput,
+  ClearWorkOrderScheduleInput,
+  CancelWorkOrderInput,
+  CreateAssetInput,
+  CreateCustomerInput,
+  CreateSiteInput,
+  CreateWorkOrderInput,
+  DeclineWorkOrderAssignmentInput,
+  FrigoraAsset,
+  FrigoraAssetId,
+  FrigoraCustomer,
+  FrigoraCustomerId,
+  FrigoraSite,
+  FrigoraSiteId,
+  FrigoraWorkOrder,
+  FrigoraWorkOrderId,
+  FrigoraVisit,
+  FrigoraVisitId,
+  FrigoraFieldCapture,
+  RecordFieldCaptureInput,
+  FrigoraTechnicalFinding,
+  RecordTechnicalFindingInput,
+  SubmitClientTechnicalFindingInput,
+  SubmitClientTechnicalFindingResult,
+  FrigoraCorrectiveAction,
+  RecordCorrectiveActionInput,
+  FrigoraVisitOutcome,
+  RecordVisitOutcomeInput,
+  FrigoraRecommendedAction,
+  RecordRecommendedActionInput,
+  FrigoraRefrigerantEvent,
+  RecordRefrigerantEventInput,
+  FrigoraPartUsage,
+  RecordPartUsageInput,
+  FrigoraPartReference,
+  FrigoraPartReferenceId,
+  CreatePartReferenceInput,
+  UpdatePartReferenceInput,
+  FrigoraRefrigerantReference,
+  FrigoraRefrigerantReferenceId,
+  CreateRefrigerantReferenceInput,
+  UpdateRefrigerantReferenceInput,
+  FrigoraAssetOperationalCondition,
+  RecordAssetOperationalConditionInput,
+  FrigoraVisitCustomerAcknowledgement,
+  RecordVisitCustomerAcknowledgementInput,
+  RecordVisitArrivalInput,
+  RecordVisitDepartureInput,
+  ScheduleWorkOrderInput,
+  FrigoraRecommendedActionId,
+  FrigoraVisitEvidence,
+  FrigoraVisitEvidenceId,
+  RecordVisitEvidenceWithFileInput,
+  LinkVisitEvidenceInput,
+  UpdateAssetInput,
+  UpdateCustomerInput,
+  UpdateSiteInput,
+  UpdateWorkOrderInput,
+  SetVentureLabourHourlyChargeInput,
+  SetPartUsageUnitChargeInput,
+  SetRefrigerantEventChargePerKgInput,
+  SetVisitLabourHourlyChargeInput,
+  FrigoraVentureCommercialSettings,
+  FrigoraPartUsageId,
+  FrigoraRefrigerantEventId,
+} from "./types";
+import { parseWithFrigora, scopeSchema } from "./validation";
+
+export type FrigoraMutationResult<T> = {
+  code?: FrigoraErrorCode;
+  conflicts?: SchedulingConflict[];
+  error?: string;
+  record?: T;
+};
+
+type ScopedInput = {
+  workspaceId: string;
+  ventureId: string;
+};
+
+async function mutate<T>(
+  input: ScopedInput,
+  run: (scope: ReturnType<typeof createScope>) => Promise<T>,
+): Promise<FrigoraMutationResult<T>> {
+  const session = await getSession();
+  if (!session) {
+    return { error: "You must be signed in." };
+  }
+
+  try {
+    parseWithFrigora(scopeSchema, {
+      workspaceId: input.workspaceId,
+      ventureId: input.ventureId,
+    });
+    const record = await run(
+      createScope({
+        userId: session.id,
+        workspaceId: input.workspaceId,
+        ventureId: input.ventureId,
+      }),
+    );
+    return { record };
+  } catch (error) {
+    if (isFrigoraError(error)) {
+      return { error: error.message, code: error.code, conflicts: error.conflicts };
+    }
+    throw error;
+  }
+}
+
+export async function createUnavailabilityAction(input: ScopedInput & UnavailabilityInput): Promise<FrigoraMutationResult<AvailabilityMutationResult>> {
+  return mutate(input, (scope) => getFrigoraService().createUnavailability(scope, input));
+}
+
+export async function updateUnavailabilityAction(input: ScopedInput & UnavailabilityInput & { id: string; expectedUpdatedAt: string }): Promise<FrigoraMutationResult<AvailabilityMutationResult>> {
+  return mutate(input, (scope) => getFrigoraService().updateUnavailability(scope, input.id, input));
+}
+
+export async function deleteUnavailabilityAction(input: ScopedInput & { id: string; expectedUpdatedAt: string }): Promise<FrigoraMutationResult<AvailabilityMutationResult>> {
+  return mutate(input, (scope) => getFrigoraService().deleteUnavailability(scope, input.id, input.expectedUpdatedAt));
+}
+
+export async function createCustomerAction(
+  input: ScopedInput & CreateCustomerInput,
+): Promise<FrigoraMutationResult<FrigoraCustomer>> {
+  return mutate(input, (scope) => getFrigoraService().createCustomer(scope, input));
+}
+
+export async function updateCustomerAction(
+  input: ScopedInput & { id: string } & UpdateCustomerInput,
+): Promise<FrigoraMutationResult<FrigoraCustomer>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updateCustomer(scope, input.id as FrigoraCustomerId, input),
+  );
+}
+
+export async function archiveCustomerAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraCustomer>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().archiveCustomer(scope, input.id as FrigoraCustomerId),
+  );
+}
+
+export async function createSiteAction(
+  input: ScopedInput & CreateSiteInput,
+): Promise<FrigoraMutationResult<FrigoraSite>> {
+  return mutate(input, (scope) => getFrigoraService().createSite(scope, input));
+}
+
+export async function updateSiteAction(
+  input: ScopedInput & { id: string } & UpdateSiteInput,
+): Promise<FrigoraMutationResult<FrigoraSite>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updateSite(scope, input.id as FrigoraSiteId, input),
+  );
+}
+
+export async function archiveSiteAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraSite>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().archiveSite(scope, input.id as FrigoraSiteId),
+  );
+}
+
+export async function createAssetAction(
+  input: ScopedInput & CreateAssetInput,
+): Promise<FrigoraMutationResult<FrigoraAsset>> {
+  return mutate(input, (scope) => getFrigoraService().createAsset(scope, input));
+}
+
+export async function updateAssetAction(
+  input: ScopedInput & { id: string } & UpdateAssetInput,
+): Promise<FrigoraMutationResult<FrigoraAsset>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updateAsset(scope, input.id as FrigoraAssetId, input),
+  );
+}
+
+export async function decommissionAssetAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraAsset>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().decommissionAsset(scope, input.id as FrigoraAssetId),
+  );
+}
+
+export async function createWorkOrderAction(
+  input: ScopedInput & CreateWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) => getFrigoraService().createWorkOrder(scope, input));
+}
+
+export async function updateWorkOrderAction(
+  input: ScopedInput & { id: string } & UpdateWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updateWorkOrder(scope, input.id as FrigoraWorkOrderId, input),
+  );
+}
+
+export async function closeWorkOrderAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().closeWorkOrder(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function cancelWorkOrderAction(
+  input: ScopedInput & { id: string } & CancelWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().cancelWorkOrder(scope, input.id as FrigoraWorkOrderId, input),
+  );
+}
+
+export async function convertRecommendedActionToFollowUpWorkOrderAction(
+  input: ScopedInput & { recommendedActionId: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().convertRecommendedActionToFollowUpWorkOrder(
+      scope,
+      input.recommendedActionId as FrigoraRecommendedActionId,
+    ),
+  );
+}
+
+export async function reopenWorkOrderAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().reopenWorkOrder(scope, input.id as FrigoraWorkOrderId),
+  );
+}
+
+export async function assignWorkOrderAction(
+  input: ScopedInput & { id: string } & AssignWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().assignWorkOrder(scope, input.id as FrigoraWorkOrderId, input),
+  );
+}
+
+export async function clearWorkOrderAssignmentAction(
+  input: ScopedInput & { id: string } & ClearWorkOrderAssignmentInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().clearWorkOrderAssignment(
+      scope,
+      input.id as FrigoraWorkOrderId,
+      input,
+    ),
+  );
+}
+
+export async function scheduleWorkOrderAction(
+  input: ScopedInput & { id: string } & ScheduleWorkOrderInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().scheduleWorkOrder(scope, input.id as FrigoraWorkOrderId, input),
+  );
+}
+
+export async function clearWorkOrderScheduleAction(
+  input: ScopedInput & { id: string } & ClearWorkOrderScheduleInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().clearWorkOrderSchedule(
+      scope,
+      input.id as FrigoraWorkOrderId,
+      input,
+    ),
+  );
+}
+
+export async function acceptWorkOrderAssignmentAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().acceptWorkOrderAssignment(
+      scope,
+      input.id as FrigoraWorkOrderId,
+    ),
+  );
+}
+
+export async function declineWorkOrderAssignmentAction(
+  input: ScopedInput & { id: string } & DeclineWorkOrderAssignmentInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().declineWorkOrderAssignment(
+      scope,
+      input.id as FrigoraWorkOrderId,
+      input,
+    ),
+  );
+}
+
+export async function recordVisitArrivalAction(
+  input: ScopedInput & { workOrderId: string } & RecordVisitArrivalInput,
+): Promise<FrigoraMutationResult<FrigoraVisit>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitArrival(
+      scope,
+      input.workOrderId as FrigoraWorkOrderId,
+      input,
+    ),
+  );
+}
+
+export async function recordVisitDepartureAction(
+  input: ScopedInput & { id: string } & RecordVisitDepartureInput,
+): Promise<FrigoraMutationResult<FrigoraVisit>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitDeparture(scope, input.id as FrigoraVisitId, input),
+  );
+}
+
+export async function cancelVisitAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraVisit>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().cancelVisit(scope, input.id as FrigoraVisitId),
+  );
+}
+
+export async function recordFieldCaptureAction(
+  input: ScopedInput & { visitId: string } & RecordFieldCaptureInput,
+): Promise<FrigoraMutationResult<FrigoraFieldCapture>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordFieldCapture(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function recordTechnicalFindingAction(
+  input: ScopedInput & { visitId: string } & RecordTechnicalFindingInput,
+): Promise<FrigoraMutationResult<FrigoraTechnicalFinding>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordTechnicalFinding(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function submitClientTechnicalFindingAction(
+  input: ScopedInput & { visitId: string } & SubmitClientTechnicalFindingInput,
+): Promise<FrigoraMutationResult<SubmitClientTechnicalFindingResult>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().submitClientTechnicalFinding(
+      scope,
+      input.visitId as FrigoraVisitId,
+      input,
+    ),
+  );
+}
+
+export async function recordCorrectiveActionAction(
+  input: ScopedInput & { visitId: string } & RecordCorrectiveActionInput,
+): Promise<FrigoraMutationResult<FrigoraCorrectiveAction>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordCorrectiveAction(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function recordVisitOutcomeAction(
+  input: ScopedInput & { visitId: string } & RecordVisitOutcomeInput,
+): Promise<FrigoraMutationResult<FrigoraVisitOutcome>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitOutcome(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function recordRecommendedActionAction(
+  input: ScopedInput & { visitId: string } & RecordRecommendedActionInput,
+): Promise<FrigoraMutationResult<FrigoraRecommendedAction>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordRecommendedAction(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function recordRefrigerantEventAction(
+  input: ScopedInput & { visitId: string } & RecordRefrigerantEventInput,
+): Promise<FrigoraMutationResult<FrigoraRefrigerantEvent>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordRefrigerantEvent(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function recordPartUsageAction(
+  input: ScopedInput & { visitId: string } & RecordPartUsageInput,
+): Promise<FrigoraMutationResult<FrigoraPartUsage>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordPartUsage(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function createPartReferenceAction(
+  input: ScopedInput & CreatePartReferenceInput,
+): Promise<FrigoraMutationResult<FrigoraPartReference>> {
+  return mutate(input, (scope) => getFrigoraService().createPartReference(scope, input));
+}
+
+export async function updatePartReferenceAction(
+  input: ScopedInput & { id: string } & UpdatePartReferenceInput,
+): Promise<FrigoraMutationResult<FrigoraPartReference>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updatePartReference(
+      scope,
+      input.id as FrigoraPartReferenceId,
+      input,
+    ),
+  );
+}
+
+export async function retirePartReferenceAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraPartReference>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().retirePartReference(scope, input.id as FrigoraPartReferenceId),
+  );
+}
+
+export async function createRefrigerantReferenceAction(
+  input: ScopedInput & CreateRefrigerantReferenceInput,
+): Promise<FrigoraMutationResult<FrigoraRefrigerantReference>> {
+  return mutate(input, (scope) => getFrigoraService().createRefrigerantReference(scope, input));
+}
+
+export async function updateRefrigerantReferenceAction(
+  input: ScopedInput & { id: string } & UpdateRefrigerantReferenceInput,
+): Promise<FrigoraMutationResult<FrigoraRefrigerantReference>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().updateRefrigerantReference(
+      scope,
+      input.id as FrigoraRefrigerantReferenceId,
+      input,
+    ),
+  );
+}
+
+export async function retireRefrigerantReferenceAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraRefrigerantReference>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().retireRefrigerantReference(
+      scope,
+      input.id as FrigoraRefrigerantReferenceId,
+    ),
+  );
+}
+
+export async function setVentureLabourHourlyChargeAction(
+  input: ScopedInput & SetVentureLabourHourlyChargeInput,
+): Promise<FrigoraMutationResult<FrigoraVentureCommercialSettings>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setVentureLabourHourlyCharge(scope, input),
+  );
+}
+
+export async function setPartUsageUnitChargeAction(
+  input: ScopedInput & { partUsageId: string } & SetPartUsageUnitChargeInput,
+): Promise<FrigoraMutationResult<FrigoraPartUsage>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setPartUsageUnitCharge(
+      scope,
+      input.partUsageId as FrigoraPartUsageId,
+      input,
+    ),
+  );
+}
+
+export async function setRefrigerantEventChargePerKgAction(
+  input: ScopedInput & { eventId: string } & SetRefrigerantEventChargePerKgInput,
+): Promise<FrigoraMutationResult<FrigoraRefrigerantEvent>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setRefrigerantEventChargePerKg(
+      scope,
+      input.eventId as FrigoraRefrigerantEventId,
+      input,
+    ),
+  );
+}
+
+export async function setVisitLabourHourlyChargeAction(
+  input: ScopedInput & { visitId: string } & SetVisitLabourHourlyChargeInput,
+): Promise<FrigoraMutationResult<FrigoraVisit>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setVisitLabourHourlyCharge(
+      scope,
+      input.visitId as FrigoraVisitId,
+      input,
+    ),
+  );
+}
+
+export async function recordAssetOperationalConditionAction(
+  input: ScopedInput & RecordAssetOperationalConditionInput,
+): Promise<FrigoraMutationResult<FrigoraAssetOperationalCondition>> {
+  return mutate(input, (scope) => getFrigoraService().recordAssetOperationalCondition(scope, input));
+}
+
+export async function recordVisitCustomerAcknowledgementAction(
+  input: ScopedInput & { visitId: string } & RecordVisitCustomerAcknowledgementInput,
+): Promise<FrigoraMutationResult<FrigoraVisitCustomerAcknowledgement>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitCustomerAcknowledgement(
+      scope,
+      input.visitId as FrigoraVisitId,
+      input,
+    ),
+  );
+}
+
+export async function recordVisitEvidenceWithFileAction(
+  input: ScopedInput & { visitId: string } & RecordVisitEvidenceWithFileInput,
+): Promise<FrigoraMutationResult<FrigoraVisitEvidence>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().recordVisitEvidenceWithFile(
+      scope,
+      input.visitId as FrigoraVisitId,
+      input,
+    ),
+  );
+}
+
+export async function linkVisitEvidenceAction(
+  input: ScopedInput & { visitId: string } & LinkVisitEvidenceInput,
+): Promise<FrigoraMutationResult<FrigoraVisitEvidence>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().linkVisitEvidence(scope, input.visitId as FrigoraVisitId, input),
+  );
+}
+
+export async function removeVisitEvidenceAction(
+  input: ScopedInput & { id: string },
+): Promise<FrigoraMutationResult<FrigoraVisitEvidence>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().removeVisitEvidence(scope, input.id as FrigoraVisitEvidenceId),
+  );
+}

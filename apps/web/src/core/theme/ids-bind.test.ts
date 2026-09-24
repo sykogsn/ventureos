@@ -6,5 +6,6 @@ describe("IDS brand bind", () => {
   it("fails closed to VentureOS", () => {
     assert.equal(brandFromDefinitionId(undefined), "ventureos");
     assert.equal(brandFromDefinitionId("ventureos.company"), "ventureos");
+    assert.equal(brandFromDefinitionId("frigora"), "frigora");
   });
 });

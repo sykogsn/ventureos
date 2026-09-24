@@ -1,0 +1,27 @@
+:root {
+  --ids-brand-frigora-accent: #3d5248;
+  --ids-brand-frigora-accent-hover: #33453c;
+  --ids-brand-frigora-accent-active: #2b3a34;
+  --ids-brand-frigora-accent-foreground: #f8f6f1;
+  --ids-brand-frigora-ring: #3d5248;
+}
+
+.dark {
+  --ids-brand-frigora-accent: #c4b08a;
+  --ids-brand-frigora-accent-hover: #d0bf9e;
+  --ids-brand-frigora-accent-active: #b39d76;
+  --ids-brand-frigora-accent-foreground: #16181e;
+  --ids-brand-frigora-ring: #c4b08a;
+}
+
+html[data-ids-brand="frigora"] {
+  --accent: var(--ids-brand-frigora-accent);
+  --accent-hover: var(--ids-brand-frigora-accent-hover);
+  --accent-active: var(--ids-brand-frigora-accent-active);
+  --accent-foreground: var(--ids-brand-frigora-accent-foreground);
+  --ring: var(--ids-brand-frigora-ring);
+  --brand-primary: var(--ids-brand-frigora-accent);
+  --brand-primary-hover: var(--ids-brand-frigora-accent-hover);
+  --brand-primary-active: var(--ids-brand-frigora-accent-active);
+  --text-inverse: var(--ids-brand-frigora-accent-foreground);
+}

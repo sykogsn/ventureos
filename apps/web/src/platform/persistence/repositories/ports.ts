@@ -1,4 +1,5 @@
 import type { UserId, WorkspaceId, VentureId } from "@/contracts";
+import type { VentureLifecycle } from "@/core/venture-definition/lifecycle";
 import type { CompanyStory } from "@/core/company-story";
 import type { Decision } from "@/core/decision-engine";
 import type { DocumentIntelligence } from "@/core/document-intelligence";
@@ -80,6 +81,7 @@ export type PersistedVenture = {
   risk: RiskIntelligence;
   definitionId: string;
   definitionVersion: string;
+  lifecycle: VentureLifecycle;
   createdAt: string;
   updatedAt: string;
 };
@@ -131,6 +133,7 @@ export type OrganisationRepository = {
 export type MembershipRepository = {
   insert(row: MembershipRow): Promise<void>;
   getRole(userId: UserId, workspaceId: WorkspaceId): Promise<string | null>;
+  listByWorkspace(workspaceId: WorkspaceId): Promise<MembershipRow[]>;
   setRole(row: MembershipRow): Promise<void>;
 };
 

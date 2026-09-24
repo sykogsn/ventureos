@@ -29,6 +29,15 @@ RESEND_API_KEY=
 
 Redirect URI: `{AUTH_URL}/auth/google/callback`. Without `RESEND_API_KEY`, reset links are written to the server log. Without Google credentials, Continue with Google explains that it is not configured.
 
+Optional Workforce model adapter (server-side only; not used by the UI):
+
+```
+VOS_OPENAI_API_KEY=
+VOS_OPENAI_MODEL=
+```
+
+`VOS_OPENAI_MODEL` is optional. The adapter default is `gpt-4o-mini`. Do not prefix these names with `NEXT_PUBLIC_`.
+
 ## Ownership
 
 See `src/FOUNDATION.md` for Runtime, persistence, capability, and definition boundaries.

@@ -58,6 +58,7 @@ function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture
     risk: { headline: "", signals: [] },
     definitionId: "ventureos.company",
     definitionVersion: "1.0.0",
+    lifecycle: "operating",
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,
@@ -244,6 +245,44 @@ describe("persistence repositories", () => {
     assert.equal(found?.definitionVersion, "1.0.0");
   });
 
+  it("preserves a Frigora definition ref instead of coercing to VentureOS Company", async () => {
+    const store = getPersistence();
+    await store.organisations.insert({
+      id: workspaceId,
+      name: "Alpha",
+      slug: "alpha",
+      createdAt: NOW,
+    });
+    await store.ventures.insert(
+      ventureRow({ definitionId: "frigora", definitionVersion: "0.1.0" }),
+    );
+    const found = await store.ventures.findById(ventureId);
+    assert.equal(found?.definitionId, "frigora");
+    assert.equal(found?.definitionVersion, "0.1.0");
+  });
+
+  it("persists instance operating lifecycle separately from marketing stage", async () => {
+    const store = getPersistence();
+    await store.organisations.insert({
+      id: workspaceId,
+      name: "Alpha",
+      slug: "alpha",
+      createdAt: NOW,
+    });
+    await store.ventures.insert(ventureRow({ stage: "Seed", lifecycle: "operating" }));
+    const found = await store.ventures.findById(ventureId);
+    assert.equal(found?.stage, "Seed");
+    assert.equal(found?.lifecycle, "operating");
+    await store.ventures.update({
+      ...found!,
+      lifecycle: "sunset",
+      updatedAt: NOW,
+    });
+    const sunset = await store.ventures.findById(ventureId);
+    assert.equal(sunset?.lifecycle, "sunset");
+    assert.equal(sunset?.stage, "Seed");
+  });
+
   it("loads policy findings from the workspace snapshot", async () => {
     const store = getPersistence();
     await store.policies.upsertState({
@@ -277,5 +316,40 @@ describe("persistence repositories", () => {
     assert.equal(await memberships.getRole(userId, workspaceId), "owner");
     await memberships.setRole(userId, workspaceId, "admin");
     assert.equal(await store.memberships.getRole(userId, workspaceId), "admin");
+  });
+
+  it("lists only workspace membership rows in deterministic order", async () => {
+    const store = getPersistence();
+    const laterUser = "user-later" as UserId;
+    const otherWorkspace = "ws-other" as WorkspaceId;
+    await store.memberships.insert({
+      workspaceId,
+      userId: laterUser,
+      role: "member",
+      createdAt: "2026-08-20T00:00:00.000Z",
+    });
+    await store.memberships.insert({
+      workspaceId,
+      userId,
+      role: "owner",
+      createdAt: NOW,
+    });
+    await store.memberships.insert({
+      workspaceId: otherWorkspace,
+      userId: "user-other" as UserId,
+      role: "owner",
+      createdAt: "2026-08-18T00:00:00.000Z",
+    });
+    const listed = await store.memberships.listByWorkspace(workspaceId);
+    assert.deepEqual(listed, [
+      { workspaceId, userId, role: "owner", createdAt: NOW },
+      {
+        workspaceId,
+        userId: laterUser,
+        role: "member",
+        createdAt: "2026-08-20T00:00:00.000Z",
+      },
+    ]);
+    assert.equal(Object.keys(listed[0] ?? {}).some((key) => /password|secret|hash/i.test(key)), false);
   });
 });

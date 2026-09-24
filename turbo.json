@@ -7,10 +7,14 @@
     "AUTH_SECRET",
     "AUTH_URL",
     "DATABASE_URL",
+    "STORED_OBJECT_ROOT",
+    "STORED_OBJECT_MAX_BYTES",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
     "MAIL_FROM",
-    "RESEND_API_KEY"
+    "RESEND_API_KEY",
+    "VOS_OPENAI_API_KEY",
+    "VOS_OPENAI_MODEL"
   ],
   "tasks": {
     "generate": {
