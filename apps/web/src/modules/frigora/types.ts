@@ -95,6 +95,22 @@ export type FrigoraAssetOperationalConditionKind =
 export const FRIGORA_WORK_KINDS = ["reactive", "planned", "inspection"] as const;
 export type FrigoraWorkKind = (typeof FRIGORA_WORK_KINDS)[number];
 
+export const FRIGORA_WORK_ORDER_PRIORITIES = ["normal", "high", "urgent"] as const;
+export type FrigoraWorkOrderPriority = (typeof FRIGORA_WORK_ORDER_PRIORITIES)[number];
+
+export const FRIGORA_WORK_ORDER_PRIORITY_LABELS: Record<FrigoraWorkOrderPriority, string> = {
+  normal: "Normal",
+  high: "High",
+  urgent: "Urgent",
+};
+
+/** Lower rank is presented first: urgent, then high, then normal. */
+export const FRIGORA_WORK_ORDER_PRIORITY_RANK: Record<FrigoraWorkOrderPriority, number> = {
+  urgent: 0,
+  high: 1,
+  normal: 2,
+};
+
 export const FRIGORA_ASSET_KINDS = [
   "display_freezer",
   "cold_room",
@@ -198,6 +214,7 @@ export type FrigoraWorkOrder = {
   primaryAssetId: FrigoraAssetId | null;
   workReference: string;
   workKind: FrigoraWorkKind;
+  priority: FrigoraWorkOrderPriority;
   reportedCondition: string | null;
   status: FrigoraWorkOrderStatus;
   assignedUserId: UserId | null;
@@ -295,6 +312,12 @@ export type UpdateWorkOrderInput = {
   workKind?: FrigoraWorkKind;
   reportedCondition?: string | null;
   primaryAssetId?: string | null;
+};
+
+export type SetWorkOrderPriorityInput = {
+  priority: FrigoraWorkOrderPriority;
+  /** Exact WorkOrder.updatedAt the dispatcher acted upon. */
+  expectedUpdatedAt: string;
 };
 
 export type CancelWorkOrderInput = {

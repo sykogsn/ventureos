@@ -232,7 +232,7 @@ async function seedLeasedWorkspace(
 describe("F33-04 field capture + visit evidence local capture + idempotent explicit acceptance", () => {
   it("A. SCHEMA_GENERATION is 28, product 0.22.0, allowlist exactly 3, global flag false", async () => {
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 31/);
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.equal(FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED, false);
     assert.deepEqual(

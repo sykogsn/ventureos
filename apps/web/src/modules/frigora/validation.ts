@@ -8,6 +8,7 @@ import {
   FRIGORA_REFRIGERANT_EVENT_KINDS,
   FRIGORA_VISIT_EVIDENCE_CATEGORIES,
   FRIGORA_WORK_KINDS,
+  FRIGORA_WORK_ORDER_PRIORITIES,
 } from "./types";
 import { FrigoraError } from "./errors";
 
@@ -256,6 +257,11 @@ export const updateWorkOrderSchema = z.object({
   workKind: z.enum(FRIGORA_WORK_KINDS).optional(),
   reportedCondition: patchReportedCondition,
   primaryAssetId: patchAssetId,
+});
+
+export const setWorkOrderPrioritySchema = z.object({
+  priority: z.enum(FRIGORA_WORK_ORDER_PRIORITIES),
+  expectedUpdatedAt: z.string().min(1, "Required text is empty."),
 });
 
 /** Exact stored updatedAt token — no trim / ISO rewrite (CAS equality). */
@@ -698,6 +704,7 @@ export function parseWithFrigora<T>(
     invalidKind ||
     issue?.path.includes("assetKind") ||
     issue?.path.includes("workKind") ||
+    issue?.path.includes("priority") ||
     issue?.path.includes("captureKind") ||
     issue?.path.includes("captureCode") ||
     issue?.path.includes("eventKind") ||
@@ -708,6 +715,9 @@ export function parseWithFrigora<T>(
   ) {
     if (issue?.path.includes("workKind")) {
       throw new FrigoraError("invalid_kind", "Work kind is not allowed.");
+    }
+    if (issue?.path.includes("priority")) {
+      throw new FrigoraError("invalid_kind", "Work order priority is not allowed.");
     }
     if (issue?.path.includes("captureKind")) {
       throw new FrigoraError("invalid_kind", "Field capture kind is not allowed.");

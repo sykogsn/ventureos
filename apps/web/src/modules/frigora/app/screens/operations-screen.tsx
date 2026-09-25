@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageFrame } from "@/core";
 import { Fit, Stack } from "@/core/layout";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
-import { DispatchControls } from "@/modules/frigora/app/forms/dispatch-controls";
+import { DispatchControls, PriorityControl, PriorityLabel } from "@/modules/frigora/app/forms/dispatch-controls";
 import { EngineerCalendarPanel } from "@/modules/frigora/app/screens/engineer-calendar-panel";
 import {
   DISPATCH_BUCKET_LABELS,
@@ -169,35 +169,57 @@ export function OperationsScreen({
                 {board[bucket].length === 0 ? (
                   <p className="ids-caption text-muted">No work in this category.</p>
                 ) : (
-                  <ul className="grid gap-3 lg:grid-cols-2">
+                  <ul className="grid gap-3">
                     {board[bucket].map((item) => (
                       <li
                         key={item.workOrder.id}
                         className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4"
                       >
                         <Stack gap="tight">
-                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <p className="ids-body text-foreground">
+                            <PriorityLabel priority={item.workOrder.priority} />
+                            {" · "}
                             <Link
                               href={`${workBase}/${item.workOrder.id}`}
-                              className="ids-body underline-offset-2 hover:underline"
+                              className="underline-offset-2 hover:underline"
                             >
                               {item.workOrder.workReference}
                             </Link>
-                            <span className="ids-caption text-muted">
-                              {item.assignee?.name ?? "Unassigned"}
-                            </span>
-                          </div>
-                          <p className="ids-caption text-muted">
-                            {item.customer?.displayName ?? "—"} / {item.site?.name ?? "—"}
                           </p>
-                          <p className="ids-caption text-muted">
+                          <p className="ids-body text-foreground">
+                            {item.assignee?.name ?? "Unassigned"}
+                          </p>
+                          <p className="ids-body text-foreground">
                             {item.workOrder.scheduledStartAt && item.workOrder.scheduledEndAt
                               ? `${item.workOrder.scheduledStartAt} → ${item.workOrder.scheduledEndAt}`
                               : "No service window"}
                           </p>
+                          {item.signals.length > 0 ? (
+                            <ul role="status">
+                              {item.signals.map((signal) => (
+                                <li key={signal} className="ids-caption text-foreground">
+                                  {ATTENTION_SIGNAL_LABELS[signal]}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
                           <p className="ids-caption text-muted">
-                            Response: {item.responseState.replaceAll("_", " ")}
+                            {item.customer?.displayName ?? "—"} / {item.site?.name ?? "—"}
+                            {" · "}
+                            {item.workOrder.workKind}
+                            {" · "}
+                            Response {item.responseState.replaceAll("_", " ")}
                           </p>
+                          <PriorityControl
+                            workspaceId={ctx.workspaceId}
+                            ventureId={ctx.ventureId}
+                            workOrderId={item.workOrder.id}
+                            updatedAt={item.workOrder.updatedAt}
+                            priority={item.workOrder.priority}
+                            canWrite={ctx.canWrite}
+                            isOpen={item.workOrder.status === "open"}
+                            hasActiveVisit={item.visits.some((visit) => visit.status === "open")}
+                          />
                           {item.workOrder.assignmentDeclineReason ? (
                             <p className="ids-caption text-danger">
                               Decline reason: {item.workOrder.assignmentDeclineReason}

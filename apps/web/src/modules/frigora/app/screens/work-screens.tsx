@@ -5,7 +5,7 @@ import { Fit, Stack } from "@/core/layout";
 import { AssignmentResponseControls } from "@/modules/frigora/app/forms/assignment-response-controls";
 import { ConvertRecommendedActionForm } from "@/modules/frigora/app/forms/convert-recommended-action-form";
 import { CreateWorkOrderForm } from "@/modules/frigora/app/forms/create-work-order-form";
-import { DispatchControls } from "@/modules/frigora/app/forms/dispatch-controls";
+import { DispatchControls, PriorityControl, PriorityLabel } from "@/modules/frigora/app/forms/dispatch-controls";
 import { WorkOrderLifecycleControls } from "@/modules/frigora/app/forms/work-order-lifecycle-controls";
 import {
   formatVisitStatusLabel,
@@ -531,6 +531,12 @@ export function WorkDetailScreen({
             </div>
           ) : null}
           <div>
+            <dt className="ids-caption text-muted">Priority</dt>
+            <dd className="ids-body">
+              <PriorityLabel priority={workOrder.priority} />
+            </dd>
+          </div>
+          <div>
             <dt className="ids-caption text-muted">Work kind</dt>
             <dd className="ids-body">{workOrder.workKind}</dd>
           </div>
@@ -586,6 +592,16 @@ export function WorkDetailScreen({
           <p className="ids-caption text-muted">
             Assigned to {assignee?.name ?? workOrder.assignedUserId ?? "nobody"}.
           </p>
+          <PriorityControl
+            workspaceId={ctx.workspaceId}
+            ventureId={ctx.ventureId}
+            workOrderId={workOrder.id}
+            updatedAt={workOrder.updatedAt}
+            priority={workOrder.priority}
+            canWrite={ctx.canWrite}
+            isOpen={isOpen}
+            hasActiveVisit={openVisits.length > 0}
+          />
           <DispatchControls
             workspaceId={ctx.workspaceId}
             ventureId={ctx.ventureId}

@@ -5,6 +5,7 @@ import { describe, it } from "node:test";
 import { platformVentureRegistry } from "@/core/venture-definition/catalog";
 import {
   buildOperationsCalendarHref,
+  compareOperationalQueue,
   formatScheduledWindow,
   isEngineerCalendarEntry,
   isUnassignedQueueWorkOrder,
@@ -36,6 +37,7 @@ function workOrder(overrides: Partial<FrigoraWorkOrder> = {}): FrigoraWorkOrder 
     primaryAssetId: null,
     workReference: "WO-1",
     workKind: "reactive",
+    priority: "normal",
     reportedCondition: "Warm cabinet",
     status: "open",
     assignedUserId: null,
@@ -332,12 +334,60 @@ describe("F34-02 Service Desk integration", () => {
   it("keeps product, schema, and offline dispatch boundaries unchanged", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 31/);
     assert.equal(FRIGORA_OFFLINE_DB_NAME, "frigora-offline");
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.deepEqual(
       [...FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST],
       ["recordTechnicalFinding", "recordFieldCapture", "recordVisitEvidence"],
+    );
+  });
+
+  it("orders urgent before high before normal, then scheduled start, then reference", () => {
+    const normal = workOrder({
+      id: "wo-normal" as FrigoraWorkOrder["id"],
+      workReference: "WO-A",
+      priority: "normal",
+      scheduledStartAt: "2026-09-08T08:00:00.000Z",
+      scheduledEndAt: "2026-09-08T09:00:00.000Z",
+      assignedUserId: ENGINEER_A,
+    });
+    const highLater = workOrder({
+      id: "wo-high" as FrigoraWorkOrder["id"],
+      workReference: "WO-B",
+      priority: "high",
+      scheduledStartAt: "2026-09-08T12:00:00.000Z",
+      scheduledEndAt: "2026-09-08T13:00:00.000Z",
+      assignedUserId: ENGINEER_A,
+    });
+    const urgent = workOrder({
+      id: "wo-urgent" as FrigoraWorkOrder["id"],
+      workReference: "WO-C",
+      priority: "urgent",
+      workKind: "inspection",
+      scheduledStartAt: "2026-09-08T15:00:00.000Z",
+      scheduledEndAt: "2026-09-08T16:00:00.000Z",
+      assignedUserId: ENGINEER_A,
+    });
+    const samePriorityEarlierRef = workOrder({
+      id: "wo-high-early" as FrigoraWorkOrder["id"],
+      workReference: "WO-A2",
+      priority: "high",
+      scheduledStartAt: "2026-09-08T07:00:00.000Z",
+      scheduledEndAt: "2026-09-08T08:00:00.000Z",
+      assignedUserId: ENGINEER_A,
+    });
+    const ordered = [normal, highLater, urgent, samePriorityEarlierRef].sort(compareOperationalQueue);
+    assert.deepEqual(
+      ordered.map((row) => row.workReference),
+      ["WO-C", "WO-A2", "WO-B", "WO-A"],
+    );
+    assert.equal(urgent.workKind, "inspection");
+    assert.equal(normal.workKind, "reactive");
+    const calendar = projectEngineerCalendar([normal, urgent, highLater], RANGE, ENGINEER_A);
+    assert.deepEqual(
+      calendar[0]?.entries.map((row) => row.priority),
+      ["urgent", "high", "normal"],
     );
   });
 });

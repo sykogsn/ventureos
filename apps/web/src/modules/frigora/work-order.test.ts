@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, it } from "node:test";
 import { platformVentureRegistry } from "@/core/venture-definition/catalog";
 import type { Role, UserId, VentureId, WorkspaceId } from "@/contracts";
 import { createPermissionService } from "@/platform/permissions/service";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
-import { ensureSchema } from "@/platform/persistence/db";
+import { ensureSchema, getClient } from "@/platform/persistence/db";
 import { getPersistence, resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { closeFrigoraPersistenceAfterFile } from "./test-persistence-lifecycle";
 import {
@@ -16,9 +18,12 @@ import { FrigoraError } from "./errors";
 import { createFrigoraService } from "./service";
 import { createFrigoraStore } from "./store";
 import type { FrigoraScope, FrigoraWorkOrder, UpdateWorkOrderInput } from "./types";
+import { FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST } from "./app/offline/capture-gate";
+import { FRIGORA_OFFLINE_DB_NAME, FRIGORA_OFFLINE_DB_VERSION } from "./app/offline/types";
 import {
   createWorkOrderSchema,
   parseWithFrigora,
+  setWorkOrderPrioritySchema,
 } from "./validation";
 
 const NOW = "2026-08-28T00:00:00.000Z";
@@ -1027,6 +1032,341 @@ describe("Frigora WorkOrder validation", () => {
           workKind: "corrective",
         }),
       (error: unknown) => error instanceof FrigoraError && error.code === "invalid_kind",
+    );
+  });
+});
+
+const PRIORITY_START = "2026-09-23T10:00:00.000Z";
+const PRIORITY_END = "2026-09-23T11:00:00.000Z";
+
+function priorityCode(expected: string) {
+  return (error: unknown) => error instanceof FrigoraError && error.code === expected;
+}
+
+async function openWork(owner: Awaited<ReturnType<typeof seed>>, reference: string, workKind: "reactive" | "planned" | "inspection" = "reactive") {
+  const customer = await owner.service.createCustomer(owner.scope, {
+    code: `C-${reference}`,
+    displayName: reference,
+  });
+  const site = await owner.service.createSite(owner.scope, {
+    customerId: customer.id,
+    code: `S-${reference}`,
+    name: reference,
+  });
+  return owner.service.createWorkOrder(owner.scope, {
+    siteId: site.id,
+    workReference: reference,
+    workKind,
+  });
+}
+
+describe("Frigora WorkOrder priority", () => {
+  it("defaults new and legacy WorkOrders to normal and persists a valid priority", async () => {
+    const owner = await seed();
+    const created = await openWork(owner, "WO-NEW");
+    assert.equal(created.priority, "normal");
+    assert.equal(created.workKind, "reactive");
+    const urgent = await owner.service.setWorkOrderPriority(owner.scope, created.id, {
+      priority: "urgent",
+      expectedUpdatedAt: created.updatedAt,
+    });
+    assert.equal(urgent.priority, "urgent");
+    assert.equal(urgent.workKind, "reactive");
+    const loaded = await owner.service.getWorkOrder(owner.scope, created.id);
+    assert.equal(loaded?.priority, "urgent");
+
+    await getClient().execute(`
+      CREATE TABLE IF NOT EXISTS frigora_work_orders_legacy_probe (id TEXT PRIMARY KEY)
+    `);
+    await getClient().execute({
+      sql: `INSERT INTO frigora_work_orders (
+        id, workspace_id, venture_id, customer_id, site_id, work_reference,
+        work_kind, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        "wo-legacy-priority",
+        owner.workspaceId,
+        owner.ventureId,
+        created.customerId,
+        created.siteId,
+        "WO-LEGACY-PRIORITY",
+        "planned",
+        "open",
+        NOW,
+        NOW,
+      ],
+    });
+    const legacy = await createFrigoraStore().findWorkOrder(
+      owner.workspaceId,
+      owner.ventureId,
+      "wo-legacy-priority" as FrigoraWorkOrder["id"],
+    );
+    assert.equal(legacy?.priority, "normal");
+    assert.equal(legacy?.workKind, "planned");
+  });
+
+  it("rejects an invalid priority", () => {
+    assert.throws(
+      () =>
+        parseWithFrigora(setWorkOrderPrioritySchema, {
+          priority: "critical",
+          expectedUpdatedAt: NOW,
+        }),
+      (error: unknown) =>
+        error instanceof FrigoraError &&
+        error.code === "invalid_kind" &&
+        error.message === "Work order priority is not allowed.",
+    );
+  });
+
+  it("lets owner and admin change priority and refuses a member", async () => {
+    const owner = await seed();
+    const created = await openWork(owner, "WO-AUTH");
+    const adminId = "user-admin" as UserId;
+    const memberId = "user-member" as UserId;
+    await getPersistence().memberships.setRole({
+      userId: adminId,
+      workspaceId: owner.workspaceId,
+      role: "admin",
+      createdAt: NOW,
+    });
+    await getPersistence().memberships.setRole({
+      userId: memberId,
+      workspaceId: owner.workspaceId,
+      role: "member",
+      createdAt: NOW,
+    });
+    const adminScope = { ...owner.scope, userId: adminId };
+    const memberScope = { ...owner.scope, userId: memberId };
+    const raised = await owner.service.setWorkOrderPriority(adminScope, created.id, {
+      priority: "high",
+      expectedUpdatedAt: created.updatedAt,
+    });
+    assert.equal(raised.priority, "high");
+    await assert.rejects(
+      () =>
+        owner.service.setWorkOrderPriority(memberScope, created.id, {
+          priority: "urgent",
+          expectedUpdatedAt: raised.updatedAt,
+        }),
+      priorityCode("forbidden"),
+    );
+    await assert.rejects(
+      () =>
+        owner.service.assignWorkOrder(memberScope, created.id, {
+          userId: memberId,
+          expectedUpdatedAt: raised.updatedAt,
+        }),
+      priorityCode("forbidden"),
+    );
+    const unchanged = await owner.service.getWorkOrder(owner.scope, created.id);
+    assert.equal(unchanged?.priority, "high");
+  });
+
+  it("rejects a stale priority token without overwriting newer state", async () => {
+    const owner = await seed();
+    const created = await openWork(owner, "WO-STALE");
+    const urgent = await owner.service.setWorkOrderPriority(owner.scope, created.id, {
+      priority: "urgent",
+      expectedUpdatedAt: created.updatedAt,
+    });
+    await assert.rejects(
+      () =>
+        owner.service.setWorkOrderPriority(owner.scope, created.id, {
+          priority: "high",
+          expectedUpdatedAt: created.updatedAt,
+        }),
+      priorityCode("dispatch_conflict"),
+    );
+    const loaded = await owner.service.getWorkOrder(owner.scope, created.id);
+    assert.equal(loaded?.priority, "urgent");
+    assert.equal(loaded?.updatedAt, urgent.updatedAt);
+  });
+
+  it("keeps assignment, scheduling, overlap confirmation, and unavailability independent of priority", async () => {
+    const owner = await seed();
+    const engineer = "user-engineer" as UserId;
+    await getPersistence().memberships.setRole({
+      userId: engineer,
+      workspaceId: owner.workspaceId,
+      role: "member",
+      createdAt: NOW,
+    });
+    const first = await openWork(owner, "WO-A", "inspection");
+    const second = await openWork(owner, "WO-B", "planned");
+    const urgent = await owner.service.setWorkOrderPriority(owner.scope, second.id, {
+      priority: "urgent",
+      expectedUpdatedAt: second.updatedAt,
+    });
+    assert.equal(urgent.workKind, "planned");
+    const assigned = await owner.service.assignWorkOrder(owner.scope, first.id, {
+      userId: engineer,
+      expectedUpdatedAt: first.updatedAt,
+    });
+    const reassignedTarget = await owner.service.getWorkOrder(owner.scope, second.id);
+    const reassigned = await owner.service.assignWorkOrder(owner.scope, second.id, {
+      userId: engineer,
+      expectedUpdatedAt: reassignedTarget!.updatedAt,
+    });
+    assert.equal(assigned.assignedUserId, engineer);
+    assert.equal(reassigned.assignedUserId, engineer);
+    assert.equal(reassigned.priority, "urgent");
+    const scheduled = await owner.service.scheduleWorkOrder(owner.scope, assigned.id, {
+      scheduledStartAt: PRIORITY_START,
+      scheduledEndAt: PRIORITY_END,
+      expectedUpdatedAt: assigned.updatedAt,
+    });
+    assert.equal(scheduled.scheduledStartAt, PRIORITY_START);
+    assert.equal(scheduled.priority, "normal");
+    await assert.rejects(
+      () =>
+        owner.service.scheduleWorkOrder(owner.scope, reassigned.id, {
+          scheduledStartAt: PRIORITY_START,
+          scheduledEndAt: PRIORITY_END,
+          expectedUpdatedAt: reassigned.updatedAt,
+        }),
+      priorityCode("double_booking"),
+    );
+    const beforeConfirm = await owner.service.getWorkOrder(owner.scope, reassigned.id);
+    assert.equal(beforeConfirm?.scheduledStartAt, null);
+    const confirmed = await owner.service.scheduleWorkOrder(owner.scope, reassigned.id, {
+      scheduledStartAt: PRIORITY_START,
+      scheduledEndAt: PRIORITY_END,
+      expectedUpdatedAt: reassigned.updatedAt,
+      confirmDoubleBooking: true,
+    });
+    assert.equal(confirmed.scheduledStartAt, PRIORITY_START);
+    assert.equal(confirmed.priority, "urgent");
+
+    const blocked = await openWork(owner, "WO-BLOCK");
+    const blockedAssigned = await owner.service.assignWorkOrder(owner.scope, blocked.id, {
+      userId: engineer,
+      expectedUpdatedAt: blocked.updatedAt,
+    });
+    const blockedUrgent = await owner.service.setWorkOrderPriority(owner.scope, blocked.id, {
+      priority: "urgent",
+      expectedUpdatedAt: blockedAssigned.updatedAt,
+    });
+    await owner.service.createUnavailability(owner.scope, {
+      userId: engineer,
+      unavailableStartAt: "2026-09-24T10:00:00.000Z",
+      unavailableEndAt: "2026-09-24T11:00:00.000Z",
+    });
+    await assert.rejects(
+      () =>
+        owner.service.scheduleWorkOrder(owner.scope, blocked.id, {
+          scheduledStartAt: "2026-09-24T10:00:00.000Z",
+          scheduledEndAt: "2026-09-24T11:00:00.000Z",
+          expectedUpdatedAt: blockedUrgent.updatedAt,
+          confirmDoubleBooking: true,
+        }),
+      priorityCode("engineer_unavailable"),
+    );
+  });
+
+  it("keeps active-visit and closed-work protection intact", async () => {
+    const owner = await seed();
+    const engineer = "user-engineer" as UserId;
+    await getPersistence().memberships.setRole({
+      userId: engineer,
+      workspaceId: owner.workspaceId,
+      role: "member",
+      createdAt: NOW,
+    });
+    const created = await openWork(owner, "WO-VISIT");
+    const urgent = await owner.service.setWorkOrderPriority(owner.scope, created.id, {
+      priority: "urgent",
+      expectedUpdatedAt: created.updatedAt,
+    });
+    assert.equal(urgent.priority, "urgent");
+    await owner.service.recordVisitArrival(owner.scope, created.id, {
+      userId: engineer,
+      arrivedAt: PRIORITY_START,
+    });
+    await assert.rejects(
+      () =>
+        owner.service.setWorkOrderPriority(owner.scope, created.id, {
+          priority: "high",
+          expectedUpdatedAt: urgent.updatedAt,
+        }),
+      priorityCode("invalid_status"),
+    );
+    const duringVisit = await owner.service.getWorkOrder(owner.scope, created.id);
+    assert.equal(duringVisit?.priority, "urgent");
+    assert.equal(duringVisit?.status, "open");
+    await assert.rejects(
+      () =>
+        owner.service.assignWorkOrder(owner.scope, created.id, {
+          userId: engineer,
+          expectedUpdatedAt: urgent.updatedAt,
+        }),
+      priorityCode("invalid_status"),
+    );
+    const cancelled = await openWork(owner, "WO-CLOSED");
+    const closed = await owner.service.cancelWorkOrder(owner.scope, cancelled.id, {
+      reason: "Not required",
+    });
+    await assert.rejects(
+      () =>
+        owner.service.setWorkOrderPriority(owner.scope, closed.id, {
+          priority: "urgent",
+          expectedUpdatedAt: closed.updatedAt,
+        }),
+      priorityCode("invalid_status"),
+    );
+  });
+
+  it("rejects priority when a visit opens after the pre-check and before the write", async () => {
+    const owner = await seed();
+    const engineer = "user-engineer" as UserId;
+    await getPersistence().memberships.setRole({
+      userId: engineer,
+      workspaceId: owner.workspaceId,
+      role: "member",
+      createdAt: NOW,
+    });
+    const created = await openWork(owner, "WO-PRIORITY-RACE");
+    const store = createFrigoraStore();
+    const compare = store.compareAndSetWorkOrderPriority.bind(store);
+    let writeBoundaryReached = false;
+    store.compareAndSetWorkOrderPriority = async (expected, next) => {
+      writeBoundaryReached = true;
+      await owner.service.recordVisitArrival(owner.scope, created.id, {
+        userId: engineer,
+        arrivedAt: PRIORITY_START,
+      });
+      return compare(expected, next);
+    };
+    const guarded = createFrigoraService({
+      store,
+      permissions: createPermissionService(createDbMembershipStore()),
+    });
+    await assert.rejects(
+      guarded.setWorkOrderPriority(owner.scope, created.id, {
+        priority: "urgent",
+        expectedUpdatedAt: created.updatedAt,
+      }),
+      (error: unknown) =>
+        error instanceof FrigoraError &&
+        error.code === "invalid_status" &&
+        error.message === "Dispatch is locked while a visit is in progress.",
+    );
+    assert.equal(writeBoundaryReached, true);
+    const stored = await owner.service.getWorkOrder(owner.scope, created.id);
+    assert.equal(stored?.priority, "normal");
+    assert.equal(stored?.updatedAt, created.updatedAt);
+    assert.equal(stored?.status, "open");
+  });
+
+  it("keeps schema 31 and the offline allowlist unchanged", () => {
+    assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
+    const dbSource = readFileSync(join(process.cwd(), "src/platform/persistence/db.ts"), "utf8");
+    assert.match(dbSource, /SCHEMA_GENERATION = 31/);
+    assert.equal(FRIGORA_OFFLINE_DB_NAME, "frigora-offline");
+    assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
+    assert.deepEqual(
+      [...FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST],
+      ["recordTechnicalFinding", "recordFieldCapture", "recordVisitEvidence"],
     );
   });
 });

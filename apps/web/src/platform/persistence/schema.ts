@@ -562,6 +562,7 @@ export const frigoraWorkOrders = sqliteTable(
     primaryAssetId: text("primary_asset_id"),
     workReference: text("work_reference").notNull(),
     workKind: text("work_kind").notNull(),
+    priority: text("priority").notNull().default("normal"),
     reportedCondition: text("reported_condition"),
     status: text("status").notNull().default("open"),
     createdAt: text("created_at").notNull(),

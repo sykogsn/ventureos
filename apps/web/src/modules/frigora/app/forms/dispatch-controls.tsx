@@ -8,9 +8,22 @@ import {
   clearAssignmentFormAction,
   clearWorkOrderScheduleFormAction,
   scheduleWorkOrderFormAction,
+  setWorkOrderPriorityFormAction,
   type OfficeFormState,
 } from "@/modules/frigora/app/mutation-actions";
 import type { UserDisplay } from "@/modules/frigora/app/views";
+
+const WORK_ORDER_PRIORITY_OPTIONS = [
+  ["normal", "Normal"],
+  ["high", "High"],
+  ["urgent", "Urgent"],
+] as const;
+
+type WorkOrderPriorityValue = (typeof WORK_ORDER_PRIORITY_OPTIONS)[number][0];
+
+function priorityLabel(priority: WorkOrderPriorityValue) {
+  return WORK_ORDER_PRIORITY_OPTIONS.find(([value]) => value === priority)?.[1] ?? "Normal";
+}
 
 type DispatchControlsProps = {
   workspaceId: string;
@@ -218,4 +231,81 @@ function DoubleBookingConfirmation({ state, action, pending, scope }: {
     <Button type="submit" name="confirmDoubleBooking" value="true" disabled={pending}>Confirm double-booking</Button>
     <Button type="button" variant="secondary" disabled={pending} onClick={() => setDismissed(state)}>Cancel</Button>
   </Form>;
+}
+
+export function PriorityLabel({ priority }: { priority: WorkOrderPriorityValue }) {
+  const tone =
+    priority === "urgent" ? "text-danger" : priority === "high" ? "text-foreground" : "text-muted";
+  return (
+    <span className={`ids-caption font-medium ${tone}`}>
+      {priorityLabel(priority)}
+    </span>
+  );
+}
+
+export function PriorityControl({
+  workspaceId,
+  ventureId,
+  workOrderId,
+  updatedAt,
+  priority,
+  canWrite,
+  isOpen,
+  hasActiveVisit = false,
+}: {
+  workspaceId: string;
+  ventureId: string;
+  workOrderId: string;
+  updatedAt: string;
+  priority: WorkOrderPriorityValue;
+  canWrite: boolean;
+  isOpen: boolean;
+  hasActiveVisit?: boolean;
+}) {
+  const [state, action, pending] = useActionState(setWorkOrderPriorityFormAction, {} as OfficeFormState);
+  const labelId = `priority-${workOrderId}`;
+
+  if (!isOpen || !canWrite || hasActiveVisit) {
+    return (
+      <p className="ids-caption text-foreground">
+        Priority <PriorityLabel priority={priority} />
+        {hasActiveVisit ? ". Dispatch is locked while a visit is in progress." : ""}
+      </p>
+    );
+  }
+
+  return (
+    <Form action={action} gap="tight">
+      <HiddenScope workspaceId={workspaceId} ventureId={ventureId} workOrderId={workOrderId} updatedAt={updatedAt} />
+      <label className="ids-caption text-muted" htmlFor={labelId}>
+        Priority
+      </label>
+      <select
+        id={labelId}
+        name="priority"
+        key={priority}
+        defaultValue={priority}
+        className="vos-field min-h-11"
+      >
+        {WORK_ORDER_PRIORITY_OPTIONS.map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      {state.error ? (
+        <p className="ids-caption text-danger" role="alert">
+          {state.error}
+        </p>
+      ) : null}
+      {state.message ? (
+        <p className="ids-caption text-muted" role="status">
+          {state.message}
+        </p>
+      ) : null}
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? "Saving priority…" : "Save priority"}
+      </Button>
+    </Form>
+  );
 }

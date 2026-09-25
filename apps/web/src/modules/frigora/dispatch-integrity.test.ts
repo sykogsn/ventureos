@@ -893,7 +893,7 @@ describe("F34-01 dispatch integrity", () => {
       join(here, "../../platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 31/);
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.deepEqual(
       [...FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST],

@@ -40,6 +40,7 @@ import {
   listWorkOrdersQuery,
 } from "@/modules/frigora/queries";
 import {
+  compareOperationalQueue,
   projectEngineerCalendar,
   deriveEngineerWorkload,
   projectUnassignedQueue,
@@ -346,14 +347,7 @@ export async function loadMyWork(
     });
   }
   return {
-    rows: rows.sort((left, right) => {
-      const leftStart = left.workOrder.scheduledStartAt;
-      const rightStart = right.workOrder.scheduledStartAt;
-      if (leftStart === null && rightStart !== null) return 1;
-      if (leftStart !== null && rightStart === null) return -1;
-      if (leftStart !== rightStart) return (leftStart ?? "").localeCompare(rightStart ?? "");
-      return left.workOrder.workReference.localeCompare(right.workOrder.workReference);
-    }),
+    rows: rows.sort((left, right) => compareOperationalQueue(left.workOrder, right.workOrder)),
   };
 }
 
@@ -952,12 +946,7 @@ export async function loadOperationsOverview(
       return { workOrder, visits, signals };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null)
-    .sort((left, right) => {
-      if (left.workOrder.workReference !== right.workOrder.workReference) {
-        return left.workOrder.workReference < right.workOrder.workReference ? -1 : 1;
-      }
-      return left.workOrder.id < right.workOrder.id ? -1 : 1;
-    });
+    .sort((left, right) => compareOperationalQueue(left.workOrder, right.workOrder));
 
   const attention: OperationalAttentionItem[] = [];
   for (const candidate of attentionCandidates) {
@@ -1006,6 +995,9 @@ export async function loadOperationsOverview(
       eligibleAssigneeIds,
     );
     board[item.bucket].push(item);
+  }
+  for (const items of Object.values(board)) {
+    items.sort((left, right) => compareOperationalQueue(left.workOrder, right.workOrder));
   }
 
   const scheduleRange = { start: range.start, end: range.end };

@@ -27,6 +27,7 @@ function workOrder(
     primaryAssetId: null,
     workReference: "WO-1",
     workKind: "reactive",
+    priority: "normal",
     reportedCondition: null,
     status: "open",
     assignedUserId: null,
@@ -169,7 +170,8 @@ describe("Frigora F2.2 Service Desk projections", () => {
     assert.match(work, /AssignmentResponseControls/);
     assert.match(mutations, /scheduleWorkOrderFormAction/);
     assert.match(mutations, /acceptWorkOrderAssignmentFormAction/);
-    assert.doesNotMatch(operations, /priority/i);
+    assert.match(operations, /PriorityLabel/);
+    assert.match(operations, /PriorityControl/);
   });
 
   it("OBS-003 remounts assignee select from authoritative assignedUserId (keyed defaultValue)", () => {

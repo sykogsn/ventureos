@@ -99,6 +99,7 @@ import type {
   UpdateAssetInput,
   UpdateCustomerInput,
   UpdateSiteInput,
+  SetWorkOrderPriorityInput,
   UpdateWorkOrderInput,
   FrigoraVentureCommercialSettings,
   SetVentureLabourHourlyChargeInput,
@@ -146,6 +147,7 @@ import {
   recordVisitCustomerAcknowledgementSchema,
   recordVisitEvidenceWithFileSchema,
   scheduleWorkOrderSchema,
+  setWorkOrderPrioritySchema,
   linkVisitEvidenceSchema,
   updateAssetSchema,
   updateCustomerSchema,
@@ -189,6 +191,11 @@ export type FrigoraService = {
     scope: FrigoraScope,
     id: FrigoraWorkOrderId,
     input: UpdateWorkOrderInput,
+  ): Promise<FrigoraWorkOrder>;
+  setWorkOrderPriority(
+    scope: FrigoraScope,
+    id: FrigoraWorkOrderId,
+    input: SetWorkOrderPriorityInput,
   ): Promise<FrigoraWorkOrder>;
   closeWorkOrder(scope: FrigoraScope, id: FrigoraWorkOrderId): Promise<FrigoraWorkOrder>;
   cancelWorkOrder(
@@ -933,6 +940,7 @@ export function createFrigoraService(options: {
         primaryAssetId,
         workReference: parsed.workReference,
         workKind: parsed.workKind,
+        priority: "normal",
         reportedCondition: parsed.reportedCondition ?? null,
         status: "open",
         assignedUserId: null,
@@ -973,6 +981,23 @@ export function createFrigoraService(options: {
         updatedAt: nowIso(),
       };
       await store.updateWorkOrder(next);
+      return next;
+    },
+    async setWorkOrderPriority(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const existing = await requireOpenWorkOrder(store, scope, id);
+      const parsed = parseWithFrigora(setWorkOrderPrioritySchema, input);
+      assertExpectedDispatchToken(existing, parsed.expectedUpdatedAt);
+      await assertWorkOrderHasNoOpenVisit(store, scope, existing.id);
+      if (existing.priority === parsed.priority) {
+        return existing;
+      }
+      const next: FrigoraWorkOrder = {
+        ...existing,
+        priority: parsed.priority,
+        updatedAt: nowIso(),
+      };
+      await store.compareAndSetWorkOrderPriority(existing, next);
       return next;
     },
     async closeWorkOrder(scope, id) {
@@ -1087,6 +1112,7 @@ export function createFrigoraService(options: {
         primaryAssetId,
         workReference: `FUP-${recommendation.id}`,
         workKind: "reactive",
+        priority: "normal",
         reportedCondition: recommendation.description,
         status: "open",
         assignedUserId: null,

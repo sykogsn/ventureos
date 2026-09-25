@@ -515,8 +515,9 @@ describe("Frigora F2.2 dispatch domain", () => {
 
   it("does not introduce inferred dispatch or lifecycle fields", async () => {
     const seeded = await seed();
-    for (const field of ["dispatchStatus", "assignedEngineerId", "priority", "visitId"]) {
+    for (const field of ["dispatchStatus", "assignedEngineerId", "visitId"]) {
       assert.equal(field in seeded.workOrder, false);
     }
+    assert.equal(seeded.workOrder.priority, "normal");
   });
 });
