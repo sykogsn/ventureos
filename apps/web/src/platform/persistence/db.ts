@@ -1,7 +1,11 @@
 import { mkdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { unlink } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
 import { createClient, type Client } from "@libsql/client";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import * as schema from "./schema";
@@ -76,23 +80,140 @@ export function getDb() {
   return globalStore.__vosDb;
 }
 
+/** Exact basename produced by getDatabaseUrl() for configured in-memory persistence. */
+const OWNED_EPHEMERAL_DATABASE_BASENAME =
+  /^vos-ephemeral-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.db$/;
+
+/**
+ * Sidecars observed for this runtime are absent after close: journal_mode is delete,
+ * so no -wal/-shm file remains. Remove those exact SQLite suffixes only when present.
+ */
+const OWNED_EPHEMERAL_SIDECAR_SUFFIXES = ["-wal", "-shm"] as const;
+
+/** Windows releases the native libSQL handle on the next finalizer pass. */
+const EPHEMERAL_CLEANUP_ATTEMPTS = 8;
+const EPHEMERAL_CLEANUP_DELAY_MS = 50;
+
+let collectGarbage: (() => void) | undefined;
+
+function releaseClosedClientHandles() {
+  if (collectGarbage === undefined) {
+    try {
+      setFlagsFromString("--expose-gc");
+      const gc = runInNewContext("gc");
+      collectGarbage = typeof gc === "function" ? (gc as () => void) : () => {};
+    } catch {
+      collectGarbage = () => {};
+    }
+  }
+  collectGarbage();
+}
+
+function pathsEqual(left: string, right: string) {
+  const resolvedLeft = resolve(left);
+  const resolvedRight = resolve(right);
+  if (process.platform === "win32") {
+    return resolvedLeft.toLowerCase() === resolvedRight.toLowerCase();
+  }
+  return resolvedLeft === resolvedRight;
+}
+
+function filePathFromDatabaseUrl(url: string | undefined) {
+  if (!url || !url.startsWith("file:") || isMemoryDatabaseUrl(url)) {
+    return undefined;
+  }
+  return resolve(url.slice("file:".length));
+}
+
+/** Owned only when the resolved file is a direct tmpdir() child with the generated basename. */
+function ownedEphemeralDatabasePath(url: string | undefined) {
+  if (!url || !url.startsWith("file:") || isMemoryDatabaseUrl(url)) {
+    return undefined;
+  }
+  const raw = url.slice("file:".length);
+  const segments = raw.split(/[\\/]/);
+  if (segments.includes("..") || segments.includes(".")) {
+    return undefined;
+  }
+  const filePath = resolve(raw);
+  const tempRoot = resolve(tmpdir());
+  if (!pathsEqual(dirname(filePath), tempRoot)) {
+    return undefined;
+  }
+  const base = basename(filePath);
+  if (!OWNED_EPHEMERAL_DATABASE_BASENAME.test(base)) {
+    return undefined;
+  }
+  const fromTemp = relative(tempRoot, filePath);
+  if (!pathsEqual(join(tempRoot, fromTemp), filePath) || fromTemp !== base) {
+    if (process.platform === "win32" && fromTemp.toLowerCase() === base.toLowerCase()) {
+      return filePath;
+    }
+    return undefined;
+  }
+  return filePath;
+}
+
+function isRetryableCleanupError(error: unknown) {
+  const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+  return code === "EBUSY" || code === "EPERM";
+}
+
+async function unlinkOwnedEphemeralFile(filePath: string) {
+  for (let attempt = 1; attempt <= EPHEMERAL_CLEANUP_ATTEMPTS; attempt += 1) {
+    try {
+      await unlink(filePath);
+      return;
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+      if (code === "ENOENT") {
+        return;
+      }
+      if (!isRetryableCleanupError(error) || attempt === EPHEMERAL_CLEANUP_ATTEMPTS) {
+        throw error;
+      }
+      releaseClosedClientHandles();
+      await delay(EPHEMERAL_CLEANUP_DELAY_MS);
+    }
+  }
+}
+
+async function removeOwnedEphemeralDatabase(previousUrl: string | undefined, nextUrl: string | undefined) {
+  const filePath = ownedEphemeralDatabasePath(previousUrl);
+  if (!filePath) {
+    return;
+  }
+  const nextPath = filePathFromDatabaseUrl(nextUrl);
+  if (nextPath && pathsEqual(filePath, nextPath)) {
+    return;
+  }
+  releaseClosedClientHandles();
+  for (const suffix of OWNED_EPHEMERAL_SIDECAR_SUFFIXES) {
+    await unlinkOwnedEphemeralFile(`${filePath}${suffix}`);
+  }
+  await unlinkOwnedEphemeralFile(filePath);
+}
+
 /** Drops the process DB client so the next getDb() binds a live connection. */
 export async function resetDatabaseLifecycle(databaseUrl?: string) {
+  const previousEphemeralUrl = globalStore.__vosEphemeralDatabaseUrl;
+  const nextUrl = databaseUrl ?? configuredDatabaseUrl();
   const client = globalStore.__vosClient;
   globalStore.__vosClient = undefined;
   globalStore.__vosDb = undefined;
   globalStore.__vosSchemaReady = undefined;
   globalStore.__vosSchemaGeneration = undefined;
   globalStore.__vosEphemeralDatabaseUrl = undefined;
-  if (databaseUrl) {
-    globalStore.__vosDatabaseUrl = databaseUrl;
-  }
   if (client) {
     try {
       client.close();
     } catch {
       // Client already closed.
     }
+  }
+  await removeOwnedEphemeralDatabase(previousEphemeralUrl, nextUrl);
+  if (databaseUrl) {
+    globalStore.__vosDatabaseUrl = databaseUrl;
   }
 }
 
