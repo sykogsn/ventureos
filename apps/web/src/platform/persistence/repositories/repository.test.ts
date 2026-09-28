@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { existsSync, mkdtempSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import { beforeEach, describe, it } from "node:test";
 import type { UserId, VentureId, WorkspaceId } from "../../../contracts";
-import { ensureSchema } from "../db";
+import { ensureSchema, getDatabaseUrl } from "../db";
 import { createDbMembershipStore } from "../../permissions/membership-store";
 import {
   getPersistence,
@@ -351,5 +355,104 @@ describe("persistence repositories", () => {
       },
     ]);
     assert.equal(Object.keys(listed[0] ?? {}).some((key) => /password|secret|hash/i.test(key)), false);
+  });
+});
+
+const OWNED_EPHEMERAL_BASENAME =
+  /^vos-ephemeral-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.db$/;
+
+function ephemeralFilePath(url: string) {
+  assert.match(url, /^file:/);
+  const filePath = resolve(url.slice("file:".length));
+  assert.equal(resolve(dirname(filePath)).toLowerCase(), resolve(tmpdir()).toLowerCase());
+  assert.match(basename(filePath), OWNED_EPHEMERAL_BASENAME);
+  return filePath;
+}
+
+describe("ephemeral database lifecycle", () => {
+  it("replaces configured memory databases and deletes only the previous owned file", async () => {
+    const sourcePaths = [
+      join(process.cwd(), "src/platform/persistence/db.ts"),
+      join(process.cwd(), "src/platform/persistence/durability-client.ts"),
+      join(process.cwd(), "src/platform/persistence/schema.ts"),
+    ];
+    const sourceBefore = sourcePaths.map((path) => readFileSync(path));
+    const outside = mkdtempSync(join(tmpdir(), "vos-not-owned-"));
+    const explicitDatabase = join(outside, "application.db");
+    const lookalikeOutsideTemp = join(outside, `vos-ephemeral-${randomUUID()}.db`);
+    const unrelatedInTemp = join(tmpdir(), `vos-unrelated-${randomUUID()}.txt`);
+    writeFileSync(explicitDatabase, "");
+    writeFileSync(lookalikeOutsideTemp, "keep-outside");
+    writeFileSync(unrelatedInTemp, "keep-temp");
+    const ownedPaths: string[] = [];
+
+    try {
+      await resetPersistenceLifecycle(":memory:");
+      const firstUrl = getDatabaseUrl();
+      const firstPath = ephemeralFilePath(firstUrl);
+      ownedPaths.push(firstPath);
+      await ensureSchema();
+      assert.equal(existsSync(firstPath), true);
+      const store = getPersistence();
+      await store.organisations.insert({
+        id: workspaceId,
+        name: "Alpha",
+        slug: "alpha",
+        createdAt: NOW,
+      });
+      assert.equal((await store.organisations.findById(workspaceId))?.name, "Alpha");
+
+      await resetPersistenceLifecycle(":memory:");
+      const secondPath = ephemeralFilePath(getDatabaseUrl());
+      ownedPaths.push(secondPath);
+      assert.notEqual(secondPath, firstPath);
+      assert.equal(existsSync(firstPath), false);
+      await ensureSchema();
+      assert.equal(await getPersistence().organisations.findById(workspaceId), null);
+
+      for (let reset = 0; reset < 4; reset += 1) {
+        await resetPersistenceLifecycle(":memory:");
+        ownedPaths.push(ephemeralFilePath(getDatabaseUrl()));
+        await ensureSchema();
+      }
+      const currentPath = ownedPaths[ownedPaths.length - 1];
+      assert.ok(currentPath);
+      const surviving = ownedPaths.filter((path) => existsSync(path));
+      assert.deepEqual(surviving, [currentPath]);
+
+      const retainedUrl = getDatabaseUrl();
+      await resetPersistenceLifecycle(retainedUrl);
+      assert.equal(getDatabaseUrl(), retainedUrl);
+      assert.equal(existsSync(currentPath), true);
+
+      await resetPersistenceLifecycle(`file:${explicitDatabase.replaceAll("\\", "/")}`);
+      await ensureSchema();
+      assert.equal(existsSync(explicitDatabase), true);
+      assert.equal(existsSync(currentPath), true);
+      await getPersistence().organisations.insert({
+        id: workspaceId,
+        name: "Kept",
+        slug: "kept",
+        createdAt: NOW,
+      });
+      await resetPersistenceLifecycle(":memory:");
+      assert.equal(existsSync(explicitDatabase), true);
+      assert.equal(existsSync(lookalikeOutsideTemp), true);
+      assert.equal(readFileSync(lookalikeOutsideTemp, "utf8"), "keep-outside");
+      assert.equal(existsSync(unrelatedInTemp), true);
+      assert.equal(readFileSync(unrelatedInTemp, "utf8"), "keep-temp");
+      sourcePaths.forEach((path, index) => {
+        assert.deepEqual(readFileSync(path), sourceBefore[index]);
+      });
+    } finally {
+      await resetPersistenceLifecycle(":memory:");
+      for (const path of [explicitDatabase, lookalikeOutsideTemp, unrelatedInTemp, ...ownedPaths]) {
+        try {
+          if (existsSync(path)) unlinkSync(path);
+        } catch {
+          // Test-owned decoys can stay locked after the process client closes.
+        }
+      }
+    }
   });
 });
