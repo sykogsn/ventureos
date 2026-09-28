@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import type { UserId } from "@/contracts";
+import type { UserId, WorkspaceId } from "@/contracts";
 import {
   createEvent,
   createId,
@@ -8,6 +8,10 @@ import {
   getPlatform,
   nowIso,
 } from "@/platform";
+import {
+  acceptWorkspaceInvitation,
+  previewWorkspaceInvitation,
+} from "@/modules/workspaces/access";
 import { createWorkspace } from "@/modules/workspaces/service";
 import type { AuthProvider } from "@/platform/persistence/repositories/ports";
 import { decideGoogleSignIn } from "@/modules/auth/google-account";
@@ -42,6 +46,7 @@ export async function registerUser(input: {
   email: string;
   password: string;
   name: string;
+  createPersonalWorkspace?: boolean;
 }): Promise<UserRecord> {
   await ensureSchema();
   const store = getPersistence();
@@ -85,12 +90,49 @@ export async function registerUser(input: {
     createEvent("user.registered", { userId: id, email }, { actorId: id }),
   );
 
-  await createWorkspace({
-    userId: id,
-    name: `${name}'s workspace`,
-  });
+  if (input.createPersonalWorkspace !== false) {
+    await createWorkspace({
+      userId: id,
+      name: `${name}'s workspace`,
+    });
+  }
 
   return { id, email, name };
+}
+
+export async function registerInvitedUser(input: {
+  email: string;
+  password: string;
+  name: string;
+  token: string;
+}): Promise<{ user: UserRecord; workspaceId: WorkspaceId }> {
+  const preview = await previewWorkspaceInvitation(input.token);
+  if (!preview || preview.state !== "pending") {
+    throw new Error(
+      preview?.state === "revoked"
+        ? "This invitation has been revoked."
+        : preview?.state === "accepted"
+          ? "This invitation has already been used."
+          : preview?.state === "expired"
+            ? "This invitation has expired."
+            : "This invitation is invalid or has expired.",
+    );
+  }
+  if (normalizeEmail(input.email) !== preview.email) {
+    throw new Error("This invitation was sent to a different email.");
+  }
+
+  const user = await registerUser({
+    email: input.email,
+    password: input.password,
+    name: input.name,
+    createPersonalWorkspace: false,
+  });
+  const joined = await acceptWorkspaceInvitation({
+    userId: user.id,
+    token: input.token,
+  });
+  return { user, workspaceId: joined.workspaceId };
 }
 
 export async function requestPasswordReset(input: { email: string; origin: string }) {
@@ -166,15 +208,25 @@ export async function resetPasswordWithToken(input: { token: string; password: s
 }
 
 export type GoogleSignInResult =
-  | { status: "signed-in"; user: UserRecord }
+  | { status: "signed-in"; user: UserRecord; workspaceId?: WorkspaceId }
   | { status: "link-after-password"; email: string; subject: string; name: string };
 
-export async function completeGoogleSignIn(profile: {
-  subject: string;
-  email: string;
-  emailVerified: boolean;
-  name: string;
-}): Promise<GoogleSignInResult> {
+function rejectedInvitationMessage(state: string | undefined) {
+  if (state === "revoked") return "This invitation has been revoked.";
+  if (state === "accepted") return "This invitation has been used.";
+  if (state === "expired") return "This invitation has expired.";
+  return "This invitation is invalid or has expired.";
+}
+
+export async function completeGoogleSignIn(
+  profile: {
+    subject: string;
+    email: string;
+    emailVerified: boolean;
+    name: string;
+  },
+  options?: { invitationToken?: string },
+): Promise<GoogleSignInResult> {
   await ensureSchema();
   const store = getPersistence();
   const email = normalizeEmail(profile.email);
@@ -216,6 +268,18 @@ export async function completeGoogleSignIn(profile: {
     };
   }
 
+  const invitationToken = options?.invitationToken?.trim() ?? "";
+  let invitedWorkspaceId: WorkspaceId | undefined;
+  if (invitationToken) {
+    const preview = await previewWorkspaceInvitation(invitationToken);
+    if (!preview || preview.state !== "pending") {
+      throw new Error(rejectedInvitationMessage(preview?.state));
+    }
+    if (preview.email !== email) {
+      throw new Error("This invitation was sent to a different email.");
+    }
+  }
+
   const id = createId<UserId>();
   const createdAt = nowIso();
   const name = profile.name.trim() || email;
@@ -245,12 +309,17 @@ export async function completeGoogleSignIn(profile: {
   await platform.events.publish(
     createEvent("user.registered", { userId: id, email, provider: "google" }, { actorId: id }),
   );
-  await createWorkspace({
-    userId: id,
-    name: `${name}'s workspace`,
-  });
+  if (invitationToken) {
+    const joined = await acceptWorkspaceInvitation({ userId: id, token: invitationToken });
+    invitedWorkspaceId = joined.workspaceId;
+  } else {
+    await createWorkspace({
+      userId: id,
+      name: `${name}'s workspace`,
+    });
+  }
 
-  return { status: "signed-in", user: { id, email, name } };
+  return { status: "signed-in", user: { id, email, name }, workspaceId: invitedWorkspaceId };
 }
 
 export async function linkGoogleAfterPassword(input: {

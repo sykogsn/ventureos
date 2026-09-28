@@ -104,6 +104,28 @@ export const workspaceMembers = sqliteTable(
   ],
 );
 
+export const workspaceInvitations = sqliteTable(
+  "workspace_invitations",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    email: text("email").notNull(),
+    role: text("role").notNull(),
+    invitedBy: text("invited_by").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    acceptedAt: text("accepted_at"),
+    revokedAt: text("revoked_at"),
+    createdAt: text("created_at").notNull(),
+    activeSlot: text("active_slot"),
+  },
+  (table) => [
+    uniqueIndex("workspace_invitations_token_hash_idx").on(table.tokenHash),
+    index("workspace_invitations_workspace_email_idx").on(table.workspaceId, table.email),
+    check("workspace_invitations_role_chk", sql`${table.role} IN ('admin', 'member')`),
+  ],
+);
+
 export const workspaceCores = sqliteTable("workspace_cores", {
   workspaceId: text("workspace_id").primaryKey(),
   founderJson: text("founder_json").notNull(),
@@ -1038,6 +1060,7 @@ export const schema = {
   passwordResetTokens,
   workspaces,
   workspaceMembers,
+  workspaceInvitations,
   workspaceCores,
   ventures,
   executiveOffices,

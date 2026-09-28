@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getShellSnapshot } from "@/core/shell/snapshot";
 import { getSession } from "@/lib/auth/session";
 import { SettingsScreen } from "@/modules/settings";
+import { loadWorkspaceAccess } from "@/modules/workspaces/access";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -19,6 +20,9 @@ export default async function SettingsPage() {
     snapshot.workspaces.find((item) => item.id === snapshot.activeWorkspaceId) ??
     snapshot.workspaces[0] ??
     null;
+  const access = workspace
+    ? await loadWorkspaceAccess({ actorId: session.id, workspaceId: workspace.id })
+    : null;
 
-  return <SettingsScreen session={session} workspace={workspace} />;
+  return <SettingsScreen session={session} workspace={workspace} access={access} />;
 }

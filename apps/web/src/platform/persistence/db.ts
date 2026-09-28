@@ -10,7 +10,10 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 30; // bump when ensureSchema DDL is extended
+// IAM-001 uses generation 31 for workspace_invitations.
+// F34-04 independently uses generation 31 for frigora_work_orders.priority.
+// The combined successor must contain both changes and use SCHEMA_GENERATION > 31.
+const SCHEMA_GENERATION = 31; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -184,6 +187,33 @@ export async function ensureSchema() {
       `);
       await exec(
         `CREATE UNIQUE INDEX IF NOT EXISTS workspace_members_pk ON workspace_members (workspace_id, user_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS workspace_invitations (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          email TEXT NOT NULL,
+          role TEXT NOT NULL,
+          invited_by TEXT NOT NULL,
+          token_hash TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          accepted_at TEXT,
+          revoked_at TEXT,
+          created_at TEXT NOT NULL,
+          active_slot TEXT,
+          CHECK (role IN ('admin', 'member'))
+        )
+      `);
+      await addColumn("workspace_invitations", "active_slot", "TEXT");
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS workspace_invitations_token_hash_idx ON workspace_invitations (token_hash)`,
+      );
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS workspace_invitations_active_slot_idx ON workspace_invitations (active_slot) WHERE active_slot IS NOT NULL`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS workspace_invitations_workspace_email_idx ON workspace_invitations (workspace_id, email)`,
       );
 
       await exec(`

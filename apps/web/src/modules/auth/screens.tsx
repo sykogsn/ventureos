@@ -56,6 +56,13 @@ function retryHref(next: string) {
   return next ? `/login?next=${encodeURIComponent(next)}` : "/login";
 }
 
+function signupHref(next: string) {
+  if (next.startsWith("/invite?") || next === "/invite") {
+    return `/signup?next=${encodeURIComponent(next)}`;
+  }
+  return "/signup";
+}
+
 function queryNotice(
   code: string | undefined,
   message: string | undefined,
@@ -207,7 +214,7 @@ export function LoginScreen({
         </AuthNativeForm>
         {frigora ? null : (
           <AuthMutedLine>
-            New to VentureOS? <TextLink href="/signup">Create account</TextLink>
+            New to VentureOS? <TextLink href={signupHref(next)}>Create account</TextLink>
           </AuthMutedLine>
         )}
       </AuthMethodStack>
@@ -229,6 +236,9 @@ function AuthAccountForm({
   afterPassword,
   footer,
   googleHrefValue,
+  hiddenFields,
+  emailDefault,
+  emailReadOnly,
 }: {
   title: string;
   description: string;
@@ -241,6 +251,9 @@ function AuthAccountForm({
   afterPassword?: ReactNode;
   footer: ReactNode;
   googleHrefValue: string;
+  hiddenFields?: ReactNode;
+  emailDefault?: string;
+  emailReadOnly?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
 
@@ -253,6 +266,7 @@ function AuthAccountForm({
       <AuthMethodStack>
         <AuthDivider label="or" />
         <AuthNativeForm action={formAction}>
+          {hiddenFields}
           <AuthFieldGroup>
             {extra}
             <AuthField
@@ -262,6 +276,8 @@ function AuthAccountForm({
               type="email"
               autoComplete="email"
               required
+              defaultValue={emailDefault}
+              readOnly={emailReadOnly}
             />
             <AuthField
               id={`${mode}-password`}
@@ -289,17 +305,45 @@ function AuthAccountForm({
   );
 }
 
-export function SignupScreen() {
+export function SignupScreen({
+  invitationToken = "",
+  invitationEmail = "",
+  workspaceName = "",
+  invitationRole = "",
+}: {
+  invitationToken?: string;
+  invitationEmail?: string;
+  workspaceName?: string;
+  invitationRole?: string;
+}) {
+  const invited = invitationToken.length > 0;
+  const loginHref = invited
+    ? `/login?next=${encodeURIComponent(`/invite?token=${invitationToken}`)}`
+    : "/login";
+
   return (
     <AuthAccountForm
       title={AUTH_CREATE_TITLE}
-      description={AUTH_CREATE_ORIENTATION}
+      description={
+        invited && workspaceName
+          ? `Create an account with ${invitationEmail} to join ${workspaceName}${invitationRole ? ` as ${invitationRole}` : ""}.`
+          : AUTH_CREATE_ORIENTATION
+      }
       headingId="sign-in-title"
       mode="signup"
       action={signupAction}
-      submitLabel="Create account"
-      pendingLabel="Preparing your workspace…"
-      googleHrefValue={googleHref("/dashboard", true)}
+      submitLabel={invited ? "Create account and join" : "Create account"}
+      pendingLabel={invited ? "Joining the workspace…" : "Preparing your workspace…"}
+      googleHrefValue={
+        invited
+          ? googleHref(`/invite?token=${encodeURIComponent(invitationToken)}`, true)
+          : googleHref("/dashboard", true)
+      }
+      hiddenFields={
+        invited ? <input type="hidden" name="invitationToken" value={invitationToken} /> : null
+      }
+      emailDefault={invited ? invitationEmail : undefined}
+      emailReadOnly={invited && invitationEmail.length > 0}
       extra={
         <AuthField
           id="name"
@@ -311,7 +355,7 @@ export function SignupScreen() {
       }
       footer={
         <>
-          Already have an account? <TextLink href="/login">Sign in</TextLink>
+          Already have an account? <TextLink href={loginHref}>Sign in</TextLink>
         </>
       }
     />

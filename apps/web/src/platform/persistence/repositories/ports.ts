@@ -63,6 +63,43 @@ export type MembershipRow = {
   createdAt: string;
 };
 
+export type MembershipRoleUpdateResult =
+  | { status: "updated"; previousRole: string }
+  | { status: "unchanged" | "missing" | "forbidden" | "last-owner" };
+
+export type MembershipRemovalResult =
+  | { status: "removed"; removedRole: string }
+  | { status: "missing" | "forbidden" | "last-owner" };
+
+export type InvitationRow = {
+  id: string;
+  workspaceId: WorkspaceId;
+  email: string;
+  role: string;
+  invitedBy: UserId;
+  tokenHash: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  activeSlot: string | null;
+};
+
+export type InvitationInsertResult = "inserted" | "duplicate-active" | "forbidden";
+
+export type InvitationRevokeResult = "revoked" | "missing" | "forbidden" | "closed";
+
+export type InvitationAcceptResult =
+  | {
+      status: "joined";
+      invitationId: string;
+      workspaceId: WorkspaceId;
+      role: string;
+      userId: UserId;
+      createdMembership: boolean;
+    }
+  | { status: "invalid" | "expired" | "revoked" | "wrong-email" | "replay" | "already-member" };
+
 export type PersistedVenture = {
   id: VentureId;
   workspaceId: WorkspaceId;
@@ -135,6 +172,46 @@ export type MembershipRepository = {
   getRole(userId: UserId, workspaceId: WorkspaceId): Promise<string | null>;
   listByWorkspace(workspaceId: WorkspaceId): Promise<MembershipRow[]>;
   setRole(row: MembershipRow): Promise<void>;
+  countOwners(workspaceId: WorkspaceId): Promise<number>;
+  updateRole(input: {
+    actorId: UserId;
+    workspaceId: WorkspaceId;
+    userId: UserId;
+    role: string;
+    allow(actorRole: string, currentRole: string): boolean;
+  }): Promise<MembershipRoleUpdateResult>;
+  removeMember(input: {
+    actorId: UserId;
+    workspaceId: WorkspaceId;
+    userId: UserId;
+    allow(actorRole: string, currentRole: string): boolean;
+  }): Promise<MembershipRemovalResult>;
+};
+
+export type InvitationRepository = {
+  insert(
+    row: InvitationRow,
+    options: {
+      nowIso: string;
+      actorId: UserId;
+      allow(actorRole: string): boolean;
+    },
+  ): Promise<InvitationInsertResult>;
+  findByTokenHash(tokenHash: string): Promise<InvitationRow | null>;
+  findById(id: string): Promise<InvitationRow | null>;
+  listByWorkspace(workspaceId: WorkspaceId): Promise<InvitationRow[]>;
+  revoke(input: {
+    id: string;
+    workspaceId: WorkspaceId;
+    revokedAt: string;
+    actorId: UserId;
+    allow(actorRole: string, invitationRole: string): boolean;
+  }): Promise<InvitationRevokeResult>;
+  accept(input: {
+    tokenHash: string;
+    userId: UserId;
+    nowIso: string;
+  }): Promise<InvitationAcceptResult>;
 };
 
 export type VentureRepository = {
@@ -255,6 +332,7 @@ export type Persistence = {
   passwordResetTokens: PasswordResetTokenRepository;
   organisations: OrganisationRepository;
   memberships: MembershipRepository;
+  invitations: InvitationRepository;
   ventures: VentureRepository;
   offices: ExecutiveOfficeRepository;
   recommendations: RecommendationRepository;

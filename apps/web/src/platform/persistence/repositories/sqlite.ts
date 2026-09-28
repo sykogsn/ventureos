@@ -1,4 +1,5 @@
-import { and, asc, eq, isNull, lt } from "drizzle-orm";
+import type { Transaction } from "@libsql/client";
+import { and, asc, eq, isNull, lt, sql } from "drizzle-orm";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import type { CompanyStory } from "@/core/company-story";
 import type { Decision } from "@/core/decision-engine";
@@ -14,6 +15,7 @@ import type { VentureGenome } from "@/core/venture-genome";
 import { DEFAULT_VENTURE_DEFINITION_REF } from "@/core/venture-definition/types";
 import { isVentureLifecycle } from "@/core/venture-definition/lifecycle";
 import { getDb, resetDatabaseLifecycle } from "@/platform/persistence/db";
+import { withPlatformWriteTransaction } from "@/platform/persistence/write-transaction";
 import { fromJson, toJson } from "@/platform/persistence/json";
 import {
   authIdentities,
@@ -32,6 +34,7 @@ import {
   users,
   ventures,
   workspaceCores,
+  workspaceInvitations,
   workspaceMembers,
   workspaces,
 } from "@/platform/persistence/schema";
@@ -43,8 +46,15 @@ import type {
   ExecutiveMemoryRepository,
   ExecutiveOfficeRepository,
   IdentityRepository,
+  InvitationAcceptResult,
+  InvitationInsertResult,
+  InvitationRepository,
+  InvitationRevokeResult,
+  InvitationRow,
   KnowledgeRepository,
+  MembershipRemovalResult,
   MembershipRepository,
+  MembershipRoleUpdateResult,
   MembershipRow,
   OperatingHealthRepository,
   OrganisationRepository,
@@ -328,6 +338,64 @@ function createOrganisationRepository(): OrganisationRepository {
   };
 }
 
+function textCell(row: unknown, name: string) {
+  if (!row || typeof row !== "object") return null;
+  const value = (row as Record<string, unknown>)[name];
+  if (value === null || value === undefined) return null;
+  return String(value);
+}
+
+function singleValue(row: unknown, name: string) {
+  const named = textCell(row, name);
+  if (named !== null) return named;
+  if (!row || typeof row !== "object") return null;
+  const indexed = (row as { [index: number]: unknown })[0];
+  if (indexed === null || indexed === undefined) return null;
+  return String(indexed);
+}
+
+async function selectRole(transaction: Transaction, userId: string, workspaceId: string) {
+  const found = await transaction.execute({
+    sql: `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`,
+    args: [workspaceId, userId],
+  });
+  if (found.rows.length !== 1) return null;
+  return singleValue(found.rows[0], "role");
+}
+
+async function selectOwnerCount(transaction: Transaction, workspaceId: string) {
+  const owners = await transaction.execute({
+    sql: `SELECT COUNT(*) AS owner_count FROM workspace_members WHERE workspace_id = ? AND role = 'owner'`,
+    args: [workspaceId],
+  });
+  return Number(singleValue(owners.rows[0], "owner_count") ?? "0");
+}
+
+function mapInvitation(row: typeof workspaceInvitations.$inferSelect): InvitationRow {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId as WorkspaceId,
+    email: row.email,
+    role: row.role,
+    invitedBy: row.invitedBy as UserId,
+    tokenHash: row.tokenHash,
+    expiresAt: row.expiresAt,
+    acceptedAt: row.acceptedAt,
+    revokedAt: row.revokedAt,
+    createdAt: row.createdAt,
+    activeSlot: row.activeSlot,
+  };
+}
+
+function invitationActiveSlot(workspaceId: string, email: string) {
+  return `${workspaceId}\n${email}`;
+}
+
+function isUniqueConstraint(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("UNIQUE");
+}
+
 function createMembershipRepository(): MembershipRepository {
   return {
     async insert(row: MembershipRow) {
@@ -375,6 +443,214 @@ function createMembershipRepository(): MembershipRepository {
         return;
       }
       await db.insert(workspaceMembers).values(row);
+    },
+    async countOwners(workspaceId) {
+      const [row] = await getDb()
+        .select({ ownerCount: sql<number>`count(*)` })
+        .from(workspaceMembers)
+        .where(
+          and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.role, "owner")),
+        );
+      return Number(row?.ownerCount ?? 0);
+    },
+    async updateRole(input): Promise<MembershipRoleUpdateResult> {
+      return withPlatformWriteTransaction(async (transaction) => {
+        const actorRole = await selectRole(transaction, input.actorId, input.workspaceId);
+        if (!actorRole) return { status: "forbidden" };
+        const currentRole = await selectRole(transaction, input.userId, input.workspaceId);
+        if (!currentRole) return { status: "missing" };
+        if (!input.allow(actorRole, currentRole)) return { status: "forbidden" };
+        if (currentRole === input.role) return { status: "unchanged" };
+        if (currentRole === "owner" && input.role !== "owner") {
+          const owners = await selectOwnerCount(transaction, input.workspaceId);
+          if (owners <= 1) return { status: "last-owner" };
+        }
+        const updated = await transaction.execute({
+          sql: `UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ? AND role = ?`,
+          args: [input.role, input.workspaceId, input.userId, currentRole],
+        });
+        if (Number(updated.rowsAffected) !== 1) return { status: "missing" };
+        return { status: "updated", previousRole: currentRole };
+      });
+    },
+    async removeMember(input): Promise<MembershipRemovalResult> {
+      return withPlatformWriteTransaction(async (transaction) => {
+        const actorRole = await selectRole(transaction, input.actorId, input.workspaceId);
+        if (!actorRole) return { status: "forbidden" };
+        const currentRole = await selectRole(transaction, input.userId, input.workspaceId);
+        if (!currentRole) return { status: "missing" };
+        if (!input.allow(actorRole, currentRole)) return { status: "forbidden" };
+        if (currentRole === "owner") {
+          const owners = await selectOwnerCount(transaction, input.workspaceId);
+          if (owners <= 1) return { status: "last-owner" };
+        }
+        const removed = await transaction.execute({
+          sql: `DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ? AND role = ?`,
+          args: [input.workspaceId, input.userId, currentRole],
+        });
+        if (Number(removed.rowsAffected) !== 1) return { status: "missing" };
+        return { status: "removed", removedRole: currentRole };
+      });
+    },
+  };
+}
+
+function createInvitationRepository(): InvitationRepository {
+  return {
+    async insert(row, options): Promise<InvitationInsertResult> {
+      return withPlatformWriteTransaction(async (transaction) => {
+        const actorRole = await selectRole(transaction, options.actorId, row.workspaceId);
+        if (!actorRole || !options.allow(actorRole)) return "forbidden";
+        const slot = invitationActiveSlot(row.workspaceId, row.email);
+        await transaction.execute({
+          sql: `UPDATE workspace_invitations
+                SET active_slot = NULL
+                WHERE active_slot = ?
+                  AND accepted_at IS NULL
+                  AND revoked_at IS NULL
+                  AND expires_at <= ?`,
+          args: [slot, options.nowIso],
+        });
+        const active = await transaction.execute({
+          sql: `SELECT id FROM workspace_invitations
+                WHERE active_slot = ?
+                  AND accepted_at IS NULL
+                  AND revoked_at IS NULL
+                  AND expires_at > ?`,
+          args: [slot, options.nowIso],
+        });
+        if (active.rows.length > 0) return "duplicate-active";
+        try {
+          const inserted = await transaction.execute({
+            sql: `INSERT INTO workspace_invitations (
+                    id, workspace_id, email, role, invited_by, token_hash, expires_at, accepted_at, revoked_at, created_at, active_slot
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)`,
+            args: [
+              row.id,
+              row.workspaceId,
+              row.email,
+              row.role,
+              row.invitedBy,
+              row.tokenHash,
+              row.expiresAt,
+              row.createdAt,
+              slot,
+            ],
+          });
+          if (Number(inserted.rowsAffected) !== 1) return "duplicate-active";
+        } catch (error) {
+          if (isUniqueConstraint(error)) return "duplicate-active";
+          throw error;
+        }
+        return "inserted";
+      });
+    },
+    async findByTokenHash(tokenHash) {
+      const [row] = await getDb()
+        .select()
+        .from(workspaceInvitations)
+        .where(eq(workspaceInvitations.tokenHash, tokenHash))
+        .limit(1);
+      return row ? mapInvitation(row) : null;
+    },
+    async findById(id) {
+      const [row] = await getDb()
+        .select()
+        .from(workspaceInvitations)
+        .where(eq(workspaceInvitations.id, id))
+        .limit(1);
+      return row ? mapInvitation(row) : null;
+    },
+    async listByWorkspace(workspaceId) {
+      const rows = await getDb()
+        .select()
+        .from(workspaceInvitations)
+        .where(eq(workspaceInvitations.workspaceId, workspaceId))
+        .orderBy(asc(workspaceInvitations.createdAt), asc(workspaceInvitations.email));
+      return rows.map(mapInvitation);
+    },
+    async revoke(input): Promise<InvitationRevokeResult> {
+      return withPlatformWriteTransaction(async (transaction) => {
+        const actorRole = await selectRole(transaction, input.actorId, input.workspaceId);
+        if (!actorRole) return "forbidden";
+        const found = await transaction.execute({
+          sql: `SELECT role, accepted_at, revoked_at FROM workspace_invitations WHERE id = ? AND workspace_id = ?`,
+          args: [input.id, input.workspaceId],
+        });
+        if (found.rows.length !== 1) return "missing";
+        const invitationRole = textCell(found.rows[0], "role");
+        if (!invitationRole || !input.allow(actorRole, invitationRole)) return "forbidden";
+        const revoked = await transaction.execute({
+          sql: `UPDATE workspace_invitations
+                SET revoked_at = ?, active_slot = NULL
+                WHERE id = ?
+                  AND workspace_id = ?
+                  AND accepted_at IS NULL
+                  AND revoked_at IS NULL`,
+          args: [input.revokedAt, input.id, input.workspaceId],
+        });
+        return Number(revoked.rowsAffected) === 1 ? "revoked" : "closed";
+      });
+    },
+    async accept(input): Promise<InvitationAcceptResult> {
+      return withPlatformWriteTransaction(async (transaction) => {
+        const found = await transaction.execute({
+          sql: `SELECT id, workspace_id, email, role, expires_at, accepted_at, revoked_at
+                FROM workspace_invitations WHERE token_hash = ?`,
+          args: [input.tokenHash],
+        });
+        if (found.rows.length !== 1) return { status: "invalid" };
+        const invitation = found.rows[0];
+        if (textCell(invitation, "revoked_at")) return { status: "revoked" };
+        if (textCell(invitation, "accepted_at")) return { status: "replay" };
+        const expiresAt = textCell(invitation, "expires_at");
+        if (!expiresAt || expiresAt <= input.nowIso) return { status: "expired" };
+        const account = await transaction.execute({
+          sql: `SELECT email FROM users WHERE id = ?`,
+          args: [input.userId],
+        });
+        const email = account.rows.length === 1 ? textCell(account.rows[0], "email") : null;
+        const invitedEmail = textCell(invitation, "email");
+        if (!email || !invitedEmail || email !== invitedEmail) return { status: "wrong-email" };
+        const workspaceId = textCell(invitation, "workspace_id");
+        const role = textCell(invitation, "role");
+        const invitationId = textCell(invitation, "id");
+        if (!workspaceId || !role || !invitationId) return { status: "invalid" };
+        const existingMember = await transaction.execute({
+          sql: `SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?`,
+          args: [workspaceId, input.userId],
+        });
+        if (existingMember.rows.length === 1) return { status: "already-member" };
+        const marked = await transaction.execute({
+          sql: `UPDATE workspace_invitations
+                SET accepted_at = ?, active_slot = NULL
+                WHERE token_hash = ?
+                  AND accepted_at IS NULL
+                  AND revoked_at IS NULL
+                  AND expires_at > ?`,
+          args: [input.nowIso, input.tokenHash, input.nowIso],
+        });
+        if (Number(marked.rowsAffected) !== 1) return { status: "replay" };
+        const inserted = await transaction.execute({
+          sql: `INSERT INTO workspace_members (workspace_id, user_id, role, created_at)
+                SELECT ?, ?, ?, ?
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM workspace_members WHERE workspace_id = ? AND user_id = ?
+                )`,
+          args: [workspaceId, input.userId, role, input.nowIso, workspaceId, input.userId],
+        });
+        if (Number(inserted.rowsAffected) !== 1) {
+          throw new Error("Invitation acceptance could not create membership.");
+        }
+        return {
+          status: "joined",
+          invitationId,
+          workspaceId: workspaceId as WorkspaceId,
+          role,
+          userId: input.userId,
+          createdMembership: true,
+        };
+      });
     },
   };
 }
@@ -1022,6 +1298,7 @@ export function createSqlitePersistence(): Persistence {
     passwordResetTokens: createPasswordResetTokenRepository(),
     organisations: createOrganisationRepository(),
     memberships: createMembershipRepository(),
+    invitations: createInvitationRepository(),
     ventures: createVentureRepository(),
     offices: createOfficeRepository(),
     recommendations: createRecommendationRepository(),

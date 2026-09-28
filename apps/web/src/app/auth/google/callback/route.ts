@@ -10,6 +10,7 @@ import {
 } from "@/modules/auth/google-oauth";
 import { completeGoogleSignIn, issueSession } from "@/modules/auth/service";
 import { attachSessionCookies } from "@/lib/auth/session";
+import { invitationTokenFromNext } from "@/modules/workspaces/invitation-token";
 import { listWorkspaces } from "@/modules/workspaces/service";
 
 export const runtime = "nodejs";
@@ -54,7 +55,9 @@ export async function GET(request: NextRequest) {
       verifier: oauth.verifier,
     });
     const profile = await readGoogleProfile(idToken, oauth.nonce);
-    const result = await completeGoogleSignIn(profile);
+    const result = await completeGoogleSignIn(profile, {
+      invitationToken: invitationTokenFromNext(oauth.next) ?? undefined,
+    });
 
     if (result.status === "link-after-password") {
       const response = loginRedirect(origin, "google_link");
@@ -79,7 +82,7 @@ export async function GET(request: NextRequest) {
       result.user,
       sessionId,
       oauth.remember,
-      workspaces[0]?.id,
+      result.workspaceId ?? workspaces[0]?.id,
     );
     response.cookies.delete(OAUTH_COOKIE);
     return response;
