@@ -249,6 +249,7 @@ export type WorkspaceCoreRepository = {
 };
 
 export type Persistence = {
+  intelligence: IntelligenceRepository;
   users: UserRepository;
   identities: IdentityRepository;
   sessions: SessionRepository;
@@ -265,4 +266,92 @@ export type Persistence = {
   stories: CompanyStoryRepository;
   knowledge: KnowledgeRepository;
   cores: WorkspaceCoreRepository;
+};
+
+/** Internal storage contracts; the operational service owns permission and semantic validation. */
+export type IntelligenceMutationKind =
+  | "CREATE"
+  | "AMEND"
+  | "RETRACT"
+  | "SUPERSEDE";
+export type IntelligenceCurrent = {
+  id: string;
+  workspaceId: string;
+  originatingVentureId: string;
+  objectType: string;
+  currentRevision: number;
+  currentRevisionId: string;
+  documentJson: string;
+  documentHash: string;
+  createdAt: string;
+  updatedAt: string;
+};
+export type IntelligenceRevision = {
+  revisionId: string;
+  mutationId: string;
+  objectId: string;
+  workspaceId: string;
+  originatingVentureId: string;
+  objectType: string;
+  revision: number;
+  mutationKind: IntelligenceMutationKind;
+  documentJson: string;
+  documentHash: string;
+  previousRevisionId: string | null;
+  previousRevisionHash: string | null;
+  revisionHash: string;
+  recorderActorId: string;
+  requiredPermission: "venture.update";
+  semanticAuthorityRef: string | null;
+  reason: string;
+  evaluationTime: string;
+  catalogueVersion: number;
+  createdAt: string;
+};
+export type IntelligenceCatalogue = {
+  version: number;
+  objects: IntelligenceCurrent[];
+  revisions: IntelligenceRevision[];
+};
+export type IntelligenceWrite = {
+  objectId: string;
+  originatingVentureId: string;
+  objectType: string;
+  documentJson: string;
+  expectedObjectRevision: number;
+  mutationKind: IntelligenceMutationKind;
+};
+export type IntelligenceCommit = {
+  workspaceId: string;
+  expectedCatalogueVersion: number;
+  recorderActorId: string;
+  requiredPermission: "venture.update";
+  semanticAuthorityRef?: string;
+  reason: string;
+  evaluationTime: string;
+};
+export type IntelligenceRepository = {
+  loadCatalogue(workspaceId: string): Promise<IntelligenceCatalogue>;
+  findCurrent(
+    workspaceId: string,
+    objectId: string,
+  ): Promise<IntelligenceCurrent | null>;
+  listCurrent(workspaceId: string): Promise<IntelligenceCurrent[]>;
+  listCurrentForVenture(
+    workspaceId: string,
+    ventureId: string,
+  ): Promise<IntelligenceCurrent[]>;
+  traceObject(
+    workspaceId: string,
+    objectId: string,
+  ): Promise<IntelligenceRevision[]>;
+  commitMutation(
+    input: IntelligenceCommit & { write: IntelligenceWrite },
+  ): Promise<IntelligenceCatalogue>;
+  commitSupersession(
+    input: IntelligenceCommit & {
+      predecessor: IntelligenceWrite;
+      successor: IntelligenceWrite;
+    },
+  ): Promise<IntelligenceCatalogue>;
 };

@@ -771,3 +771,40 @@ Legacy metadata remains absent: unknown/unassessed is returned where applicable,
 without backfill or invented epistemic defaults. `assertIntelligenceCatalogue` uses a
 caller-supplied closed catalogue and explicit evaluation time. It does not read the
 system clock, persist, access a network, enforce live permissions or invoke Runtime.
+
+## AIF-02 operational persistence candidate (2026-09-24)
+
+Status: **IMPLEMENTED CANDIDATE / AWAITING VERIFICATION**; not certified.
+The web operational-intelligence service consumes the public @repo/brain contracts and
+assertIntelligenceCatalogue. Brain remains pure and unchanged. Separate catalogue,
+current-object and append-only revision tables persist complete canonical records.
+Signed/persisted session resolution and live venture.read/venture.update checks precede
+workspace integrity and scope validation. Full-catalogue semantic validation precedes
+atomic persistence; reads validate before filtering. Catalogue versions and object revisions
+reject stale commands. Trace checks exact JSON hashes and linked revisions.
+
+The workspace is the hard boundary. Learning history prefixes and Evidence origin/lineage
+are preserved. Claim/Learning retract and supersede preserve history and cannot reactivate
+terminal identities. Storage is neither approval nor truth; point assessment stays separate
+from catalogue validation. There is no Runtime integration, autonomous Learning, Capability
+promotion, legacy migration/dual-write, cross-workspace sharing, UI or Definition projection.
+See the persistence README for the transaction and integrity contract and limitations.
+
+### Current-main integration r2 (2026-09-28)
+
+Re-anchored on 67e5740cf16d0b88573307a55730f1361de5f8bd (including the merged ephemeral lifecycle correction).
+Generation 30 is preserved in full; AIF-02 adds generation 31. Existing Frigora,
+workforce, storage, auth and audit behavior and all current web tests/dependencies
+remain. Dedicated AIF transactions reuse platform resolved URLs, including ephemeral
+file resolution for configured in-memory databases, and the existing durability-client
+factory/disposal and busy timeout. No additional production helper is modified.
+
+The prior Control-reported Cursor green is design evidence, not r2 approval.
+AIF02-O1 exact-byte/non-canonical JSON hashing, AIF02-O2 sequential stale-version
+coverage and AIF02-O3 trusted raw repositories remain observations, not automatic
+correction scopes. Targeted Cursor re-review of r2 remains required.
+Status: IMPLEMENTED CANDIDATE / AWAITING VERIFICATION; no certification or publication.
+
+Control authorised 17 additional compatibility-test files for r2, solely changing
+`/SCHEMA_GENERATION = 30/` to `/SCHEMA_GENERATION = 31/`. The maximum boundary
+is 32 files; no other assertion, fixture, test name or Frigora behaviour changes.

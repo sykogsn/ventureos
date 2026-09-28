@@ -1,6 +1,6 @@
 # Persistence
 
-Repository-driven SQLite storage for VentureOS. The intelligence service remains the only adapter that persists Runtime mutation snapshots. Repositories perform CRUD and JSON mapping only.
+Repository-driven SQLite storage for VentureOS. The intelligence service remains the only adapter that persists Runtime mutation snapshots. Legacy repositories perform CRUD and JSON mapping. The separate operational-intelligence repository also enforces revision and storage integrity.
 
 ## Lifecycle
 
@@ -30,3 +30,50 @@ Mutation persist replaces the workspace recommendation set (`replaceForWorkspace
 
 Empty `definition_id` / `definition_version` map to `DEFAULT_VENTURE_DEFINITION_REF` so pre-definition rows load as VentureOS Company. See `core/venture-definition/README.md`.
 
+
+## AIF-02 operational intelligence candidate
+
+Status: IMPLEMENTED CANDIDATE / AWAITING VERIFICATION. This is not certification.
+
+Schema generation 31 (from current-main generation 30) adds only intelligence_catalogues, intelligence_objects and
+intelligence_revisions. It does not migrate legacy knowledge_nodes/knowledge_edges,
+dual-write Runtime snapshots, or replace the existing intelligence adapter.
+
+The operational-intelligence service accepts an existing signed session credential,
+resolves its persisted session and user, and checks live venture.read (get/query/trace)
+or venture.update (capture/amend/retract/supersede). OperatingScope never grants access.
+Each operation captures one application timestamp. Mutations load the complete workspace
+catalogue, verify storage integrity and row/payload scope, propose changes in memory,
+and call the public Brain assertIntelligenceCatalogue before opening the write transaction.
+Reads validate the complete catalogue before applying filters.
+
+A workspace is the hard boundary. Every record requires operatingScope with matching
+workspaceId and originatingVentureId; applicability and sharing cannot cross workspaces.
+Within-workspace sharing retains canonical authorityRef validation. User-supplied actor
+identities or evaluation times are not mutation inputs.
+
+Each write transaction rechecks catalogue version and expected object revision. It writes
+the immutable revision, current projection and catalogue head atomically. Supersession
+creates the successor and retires the predecessor in one transaction at one catalogue
+version/mutation ID. Any error rolls back all writes. There is no revision delete API.
+Object IDs are globally unique; workspace filters apply to every read. Claim/Learning
+terminal states cannot be reactivated. Other types have no invented retraction semantics.
+
+Documents use SHA-256 over exact stored UTF-8 JSON bytes. Revision hashes use the
+versioned positional AIF-02-revision-v1 serialization in sqlite.ts, including the prior
+revision ID/hash, document hash, actor, reason, permission, time and catalogue version.
+Reads check the complete chain, contiguous revisions and agreement with the current row.
+This detects corruption; it is not a signed external ledger and cannot detect a privileged
+attacker consistently rewriting all data or rolling the entire database back.
+
+Learning maturityHistory and validationHistory retain exact prefixes. Evidence source,
+capturedAt, supportsObjectId, provenance and derived_from edges cannot be rewritten.
+The canonical Brain validator remains the sole semantic authority. Stored, structurally
+validated, approved and true remain distinct. Returned catalogueValidation and
+recordAssessment are separate; advanced Learning may remain UNASSESSED. No database flag
+confers truth, independent evidence, successful Decision outcome or organisational principle.
+
+Tests use isolated file databases to exercise transaction durability across client resets.
+Each AIF-02 transaction owns a short-lived file-backed SQLite connection, explicitly commits or rolls back, then closes the native handle. Native SQLite statement handles can nevertheless retain Windows file locks until GC; tests tolerate only EPERM when removing their isolated temporary directories. Such fixtures may remain for OS cleanup. Transaction and assertion failures are never suppressed. Configured :memory: and file::memory: URLs use the platform getDatabaseUrl() ephemeral-file resolution. Dedicated connections reuse storedObjectDurability.openClient/disposeClient and SQLITE_DURABILITY_BUSY_TIMEOUT_MS (250 ms); the existing durability helper and corrected ephemeral lifecycle are preserved. Remote URLs remain unsupported. The reviewed transaction boundary and stale-version behavior are unchanged; no new retry policy is introduced.
+The service is server-side infrastructure with no new routes or UI. Future callers must
+use this authority boundary; raw repository access is trusted infrastructure, not a public API.

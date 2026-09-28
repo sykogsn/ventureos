@@ -14,7 +14,7 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 30; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 31; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -1277,6 +1277,30 @@ export async function ensureSchema() {
       );
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_dispatch_events_ws_ven_occurred_idx ON frigora_dispatch_events (workspace_id, venture_id, occurred_at)`,
+      );
+      await exec(
+        "CREATE TABLE IF NOT EXISTS intelligence_catalogues (workspace_id TEXT PRIMARY KEY NOT NULL, version INTEGER NOT NULL CHECK (version >= 0), updated_at TEXT NOT NULL)",
+      );
+      await exec(
+        "CREATE TABLE IF NOT EXISTS intelligence_objects (id TEXT PRIMARY KEY NOT NULL, workspace_id TEXT NOT NULL, originating_venture_id TEXT NOT NULL, object_type TEXT NOT NULL, current_revision INTEGER NOT NULL CHECK (current_revision > 0), current_revision_id TEXT NOT NULL, document_json TEXT NOT NULL, document_hash TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
+      );
+      await exec(
+        "CREATE TABLE IF NOT EXISTS intelligence_revisions (revision_id TEXT PRIMARY KEY NOT NULL, mutation_id TEXT NOT NULL, object_id TEXT NOT NULL, workspace_id TEXT NOT NULL, originating_venture_id TEXT NOT NULL, object_type TEXT NOT NULL, revision INTEGER NOT NULL CHECK (revision > 0), mutation_kind TEXT NOT NULL CHECK (mutation_kind IN ('CREATE','AMEND','RETRACT','SUPERSEDE')), document_json TEXT NOT NULL, document_hash TEXT NOT NULL, previous_revision_id TEXT, previous_revision_hash TEXT, revision_hash TEXT NOT NULL, recorder_actor_id TEXT NOT NULL, required_permission TEXT NOT NULL, semantic_authority_ref TEXT, reason TEXT NOT NULL, evaluation_time TEXT NOT NULL, catalogue_version INTEGER NOT NULL CHECK (catalogue_version > 0), created_at TEXT NOT NULL)",
+      );
+      await exec(
+        "CREATE INDEX IF NOT EXISTS intelligence_objects_workspace_idx ON intelligence_objects (workspace_id)",
+      );
+      await exec(
+        "CREATE INDEX IF NOT EXISTS intelligence_objects_venture_idx ON intelligence_objects (workspace_id, originating_venture_id)",
+      );
+      await exec(
+        "CREATE INDEX IF NOT EXISTS intelligence_objects_type_idx ON intelligence_objects (workspace_id, object_type)",
+      );
+      await exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS intelligence_revisions_object_revision_idx ON intelligence_revisions (object_id, revision)",
+      );
+      await exec(
+        "CREATE INDEX IF NOT EXISTS intelligence_revisions_workspace_idx ON intelligence_revisions (workspace_id, object_id)",
       );
     })();
   }

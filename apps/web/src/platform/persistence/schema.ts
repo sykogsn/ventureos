@@ -1031,7 +1031,79 @@ export const frigoraVisitEvidence = sqliteTable(
   ],
 );
 
+export const intelligenceCatalogues = sqliteTable("intelligence_catalogues", {
+  workspaceId: text("workspace_id").primaryKey(),
+  version: integer("version").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const intelligenceObjects = sqliteTable(
+  "intelligence_objects",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    originatingVentureId: text("originating_venture_id").notNull(),
+    objectType: text("object_type").notNull(),
+    currentRevision: integer("current_revision").notNull(),
+    currentRevisionId: text("current_revision_id").notNull(),
+    documentJson: text("document_json").notNull(),
+    documentHash: text("document_hash").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("intelligence_objects_workspace_idx").on(table.workspaceId),
+    index("intelligence_objects_venture_idx").on(
+      table.workspaceId,
+      table.originatingVentureId,
+    ),
+    index("intelligence_objects_type_idx").on(
+      table.workspaceId,
+      table.objectType,
+    ),
+  ],
+);
+
+export const intelligenceRevisions = sqliteTable(
+  "intelligence_revisions",
+  {
+    revisionId: text("revision_id").primaryKey(),
+    mutationId: text("mutation_id").notNull(),
+    objectId: text("object_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    originatingVentureId: text("originating_venture_id").notNull(),
+    objectType: text("object_type").notNull(),
+    revision: integer("revision").notNull(),
+    mutationKind: text("mutation_kind").notNull(),
+    documentJson: text("document_json").notNull(),
+    documentHash: text("document_hash").notNull(),
+    previousRevisionId: text("previous_revision_id"),
+    previousRevisionHash: text("previous_revision_hash"),
+    revisionHash: text("revision_hash").notNull(),
+    recorderActorId: text("recorder_actor_id").notNull(),
+    requiredPermission: text("required_permission").notNull(),
+    semanticAuthorityRef: text("semantic_authority_ref"),
+    reason: text("reason").notNull(),
+    evaluationTime: text("evaluation_time").notNull(),
+    catalogueVersion: integer("catalogue_version").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("intelligence_revisions_object_revision_idx").on(
+      table.objectId,
+      table.revision,
+    ),
+    index("intelligence_revisions_workspace_idx").on(
+      table.workspaceId,
+      table.objectId,
+    ),
+  ],
+);
+
 export const schema = {
+  intelligenceCatalogues,
+  intelligenceObjects,
+  intelligenceRevisions,
   users,
   authIdentities,
   sessions,

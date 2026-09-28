@@ -47,3 +47,36 @@ describe("founder decision authorisation", () => {
     );
   });
 });
+
+import {
+  INTELLIGENCE_READ_PERMISSION,
+  INTELLIGENCE_WRITE_PERMISSION,
+} from "./governance";
+describe("operational intelligence permissions", () => {
+  for (const role of ["owner", "admin", "member", null] as const) {
+    it("uses live role permissions for " + role, async () => {
+      const permissions = createPermissionService(storeWith(role));
+      const check = {
+        userId: "actor" as UserId,
+        resource: {
+          type: "workspace" as const,
+          id: "workspace" as WorkspaceId,
+        },
+      };
+      assert.equal(
+        await permissions.can({
+          ...check,
+          permission: INTELLIGENCE_READ_PERMISSION,
+        }),
+        role !== null,
+      );
+      assert.equal(
+        await permissions.can({
+          ...check,
+          permission: INTELLIGENCE_WRITE_PERMISSION,
+        }),
+        role === "owner" || role === "admin",
+      );
+    });
+  }
+});

@@ -586,7 +586,7 @@ describe("F1.3 Operational Visibility", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 31/);
 
     const operationsPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/operations/page.tsx"),

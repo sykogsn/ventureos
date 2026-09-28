@@ -13,3 +13,21 @@ export async function canRecordFounderDecision(
     resource: { type: "workspace", id: workspaceId },
   });
 }
+
+export const INTELLIGENCE_READ_PERMISSION = "venture.read" as const;
+export const INTELLIGENCE_WRITE_PERMISSION = "venture.update" as const;
+
+export async function canAccessOperationalIntelligence(
+  userId: UserId,
+  workspaceId: WorkspaceId,
+  mode: "read" | "write",
+): Promise<boolean> {
+  return getPlatform().permissions.can({
+    userId,
+    permission:
+      mode === "read"
+        ? INTELLIGENCE_READ_PERMISSION
+        : INTELLIGENCE_WRITE_PERMISSION,
+    resource: { type: "workspace", id: workspaceId },
+  });
+}
