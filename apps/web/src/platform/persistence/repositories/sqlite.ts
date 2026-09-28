@@ -1,3 +1,14 @@
+import { storedObjectDurability, SQLITE_DURABILITY_BUSY_TIMEOUT_MS } from "@/platform/persistence/durability-client";
+import { createHash, randomUUID } from "node:crypto";
+import type { Transaction } from "@libsql/client";
+import type {
+  IntelligenceCatalogue,
+  IntelligenceCurrent,
+  IntelligenceRevision,
+  IntelligenceRepository,
+  IntelligenceCommit,
+  IntelligenceWrite,
+} from "./ports";
 import { and, asc, eq, isNull, lt } from "drizzle-orm";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import type { CompanyStory } from "@/core/company-story";
@@ -13,7 +24,7 @@ import type { RiskIntelligence } from "@/core/risk-intelligence";
 import type { VentureGenome } from "@/core/venture-genome";
 import { DEFAULT_VENTURE_DEFINITION_REF } from "@/core/venture-definition/types";
 import { isVentureLifecycle } from "@/core/venture-definition/lifecycle";
-import { getDb, resetDatabaseLifecycle } from "@/platform/persistence/db";
+import { getDatabaseUrl, getDb, resetDatabaseLifecycle } from "@/platform/persistence/db";
 import { fromJson, toJson } from "@/platform/persistence/json";
 import {
   authIdentities,
@@ -1016,6 +1027,7 @@ function createCoreRepository(): WorkspaceCoreRepository {
 
 export function createSqlitePersistence(): Persistence {
   return {
+    intelligence: createIntelligenceRepository(),
     users: createUserRepository(),
     identities: createIdentityRepository(),
     sessions: createSessionRepository(),
@@ -1047,4 +1059,459 @@ export function getPersistence(): Persistence {
 export async function resetPersistenceLifecycle(databaseUrl = ":memory:") {
   persistence = undefined;
   await resetDatabaseLifecycle(databaseUrl);
+}
+
+// Storage integrity only. Semantic validation and live authority belong to the service.
+const currentColumns = {
+  id: "id",
+  workspaceId: "workspace_id",
+  originatingVentureId: "originating_venture_id",
+  objectType: "object_type",
+  currentRevision: "current_revision",
+  currentRevisionId: "current_revision_id",
+  documentJson: "document_json",
+  documentHash: "document_hash",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+} as const;
+const revisionColumns = {
+  revisionId: "revision_id",
+  mutationId: "mutation_id",
+  objectId: "object_id",
+  workspaceId: "workspace_id",
+  originatingVentureId: "originating_venture_id",
+  objectType: "object_type",
+  revision: "revision",
+  mutationKind: "mutation_kind",
+  documentJson: "document_json",
+  documentHash: "document_hash",
+  previousRevisionId: "previous_revision_id",
+  previousRevisionHash: "previous_revision_hash",
+  revisionHash: "revision_hash",
+  recorderActorId: "recorder_actor_id",
+  requiredPermission: "required_permission",
+  semanticAuthorityRef: "semantic_authority_ref",
+  reason: "reason",
+  evaluationTime: "evaluation_time",
+  catalogueVersion: "catalogue_version",
+  createdAt: "created_at",
+} as const;
+function selectColumns(columns: Record<string, string>) {
+  return Object.entries(columns)
+    .map(([alias, column]) => column + " AS " + alias)
+    .join(", ");
+}
+function digest(value: string): string {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+function revisionDigest(r: Omit<IntelligenceRevision, "revisionHash">): string {
+  // Versioned positional serialization; no implicit object-property ordering.
+  return digest(
+    JSON.stringify([
+      "AIF-02-revision-v1",
+      r.revisionId,
+      r.previousRevisionId,
+      r.previousRevisionHash,
+      r.mutationId,
+      r.objectId,
+      r.workspaceId,
+      r.originatingVentureId,
+      r.objectType,
+      r.revision,
+      r.mutationKind,
+      r.documentHash,
+      r.recorderActorId,
+      r.requiredPermission,
+      r.semanticAuthorityRef,
+      r.reason,
+      r.evaluationTime,
+      r.catalogueVersion,
+      r.createdAt,
+    ]),
+  );
+}
+function integrity(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error("Intelligence integrity: " + message);
+}
+function integer(value: number, minimum: number) {
+  return Number.isSafeInteger(value) && value >= minimum;
+}
+function verifyStoredCatalogue(
+  workspaceId: string,
+  catalogue: IntelligenceCatalogue,
+) {
+  integrity(integer(catalogue.version, 0), "invalid catalogue version");
+  const objects = new Map(catalogue.objects.map((row) => [row.id, row]));
+  const groups = new Map<string, IntelligenceRevision[]>();
+  const mutations = new Map<number, { id: string; time: string }>();
+  for (const r of catalogue.revisions) {
+    integrity(
+      r.workspaceId === workspaceId && objects.has(r.objectId),
+      "orphan or foreign revision",
+    );
+    integrity(
+      digest(r.documentJson) === r.documentHash,
+      "revision document hash mismatch",
+    );
+    integrity(revisionDigest(r) === r.revisionHash, "revision hash mismatch");
+    integrity(
+      integer(r.catalogueVersion, 1) && r.catalogueVersion <= catalogue.version,
+      "revision catalogue version",
+    );
+    integrity(
+      r.createdAt === r.evaluationTime &&
+        r.requiredPermission === "venture.update",
+      "revision metadata",
+    );
+    const mutation = mutations.get(r.catalogueVersion);
+    integrity(
+      !mutation ||
+        (mutation.id === r.mutationId && mutation.time === r.evaluationTime),
+      "mutation/version disagreement",
+    );
+    mutations.set(r.catalogueVersion, {
+      id: r.mutationId,
+      time: r.evaluationTime,
+    });
+    const group = groups.get(r.objectId) ?? [];
+    group.push(r);
+    groups.set(r.objectId, group);
+  }
+  integrity(
+    mutations.size === catalogue.version,
+    "missing catalogue mutation history",
+  );
+  for (const row of catalogue.objects) {
+    integrity(row.workspaceId === workspaceId, "foreign current row");
+    integrity(
+      digest(row.documentJson) === row.documentHash,
+      "current document hash mismatch",
+    );
+    const revisions = groups.get(row.id) ?? [];
+    integrity(
+      integer(row.currentRevision, 1) &&
+        revisions.length === row.currentRevision,
+      "broken revision sequence",
+    );
+    for (let i = 0; i < revisions.length; i++) {
+      const r = revisions[i]!,
+        previous = revisions[i - 1];
+      integrity(r.revision === i + 1, "broken revision sequence");
+      integrity(
+        r.previousRevisionId === (previous?.revisionId ?? null) &&
+          r.previousRevisionHash === (previous?.revisionHash ?? null),
+        "broken previous revision/hash",
+      );
+      integrity(
+        r.objectType === row.objectType &&
+          r.originatingVentureId === row.originatingVentureId,
+        "row/revision ownership mismatch",
+      );
+      integrity(
+        !previous ||
+          (r.catalogueVersion > previous.catalogueVersion &&
+            r.evaluationTime >= previous.evaluationTime),
+        "revision chronology",
+      );
+    }
+    const latest = revisions.at(-1)!;
+    integrity(
+      latest.revisionId === row.currentRevisionId &&
+        latest.documentJson === row.documentJson &&
+        latest.documentHash === row.documentHash &&
+        latest.createdAt === row.updatedAt &&
+        revisions[0]!.createdAt === row.createdAt,
+      "current/latest revision mismatch",
+    );
+  }
+}
+async function readIntelligence(
+  tx: Pick<Transaction, "execute">,
+  workspaceId: string,
+): Promise<IntelligenceCatalogue> {
+  const head = await tx.execute({
+    sql: "SELECT version FROM intelligence_catalogues WHERE workspace_id = ?",
+    args: [workspaceId],
+  });
+  const current = await tx.execute({
+    sql:
+      "SELECT " +
+      selectColumns(currentColumns) +
+      " FROM intelligence_objects WHERE workspace_id = ? ORDER BY id",
+    args: [workspaceId],
+  });
+  const history = await tx.execute({
+    sql:
+      "SELECT " +
+      selectColumns(revisionColumns) +
+      " FROM intelligence_revisions WHERE workspace_id = ? ORDER BY object_id, revision",
+    args: [workspaceId],
+  });
+  const result: IntelligenceCatalogue = {
+    version: Number(head.rows[0]?.version ?? 0),
+    objects: current.rows as unknown as IntelligenceCurrent[],
+    revisions: history.rows as unknown as IntelligenceRevision[],
+  };
+  verifyStoredCatalogue(workspaceId, result);
+  return result;
+}
+async function insertRevision(
+  tx: Pick<Transaction, "execute">,
+  row: IntelligenceRevision,
+) {
+  const keys = Object.keys(revisionColumns) as (keyof IntelligenceRevision)[];
+  await tx.execute({
+    sql:
+      "INSERT INTO intelligence_revisions (" +
+      keys.map((k) => revisionColumns[k]).join(",") +
+      ") VALUES (" +
+      keys.map(() => "?").join(",") +
+      ")",
+    args: keys.map((k) => row[k]),
+  });
+}
+function storageIdentity(write: IntelligenceWrite, workspaceId: string) {
+  const record = JSON.parse(write.documentJson);
+  integrity(
+    record?.id === write.objectId &&
+      record?.type === write.objectType &&
+      record?.operatingScope?.workspaceId === workspaceId &&
+      record?.operatingScope?.originatingVentureId ===
+        write.originatingVentureId,
+    "document/row identity mismatch",
+  );
+  return record;
+}
+async function commitIntelligence(
+  input: IntelligenceCommit,
+  writes: IntelligenceWrite[],
+): Promise<IntelligenceCatalogue> {
+  if (!integer(input.expectedCatalogueVersion, 0))
+    throw new Error("Catalogue version conflict");
+  if (
+    !input.reason.trim() ||
+    !input.recorderActorId.trim() ||
+    input.requiredPermission !== "venture.update" ||
+    new Date(input.evaluationTime).toISOString() !== input.evaluationTime
+  )
+    throw new Error("Invalid mutation metadata");
+  const tx = await openIntelligenceTransaction("write");
+  try {
+    const before = await readIntelligence(tx, input.workspaceId);
+    if (before.version !== input.expectedCatalogueVersion)
+      throw new Error("Catalogue version conflict");
+    const version = before.version + 1;
+    integrity(integer(version, 1), "catalogue version overflow");
+    const mutationId = randomUUID();
+    for (const write of writes) {
+      const record = storageIdentity(write, input.workspaceId);
+      const current = before.objects.find((row) => row.id === write.objectId);
+      const creating = write.mutationKind === "CREATE";
+      if (
+        !integer(write.expectedObjectRevision, 0) ||
+        (current?.currentRevision ?? 0) !== write.expectedObjectRevision
+      ) {
+        throw new Error("Object revision conflict");
+      }
+      if (
+        creating
+          ? Boolean(current) || write.expectedObjectRevision !== 0
+          : !current
+      )
+        throw new Error("Object revision conflict");
+      if (current) {
+        integrity(
+          current.objectType === write.objectType &&
+            current.originatingVentureId === write.originatingVentureId,
+          "immutable object ownership",
+        );
+        const old = JSON.parse(current.documentJson);
+        if (
+          (old.type === "Claim" || old.type === "Learning") &&
+          (old.validity === "RETRACTED" || old.validity === "SUPERSEDED")
+        )
+          throw new Error("Terminal validity cannot be mutated");
+      }
+      if (
+        write.mutationKind === "RETRACT" ||
+        write.mutationKind === "SUPERSEDE"
+      ) {
+        integrity(
+          (record.type === "Claim" || record.type === "Learning") &&
+            record.validity ===
+              (write.mutationKind === "RETRACT" ? "RETRACTED" : "SUPERSEDED"),
+          "unsupported validity mutation",
+        );
+      }
+      const previous = before.revisions
+        .filter((r) => r.objectId === write.objectId)
+        .at(-1);
+      const revision: IntelligenceRevision = {
+        revisionId: randomUUID(),
+        mutationId,
+        objectId: write.objectId,
+        workspaceId: input.workspaceId,
+        originatingVentureId: write.originatingVentureId,
+        objectType: write.objectType,
+        revision: (current?.currentRevision ?? 0) + 1,
+        mutationKind: write.mutationKind,
+        documentJson: write.documentJson,
+        documentHash: digest(write.documentJson),
+        previousRevisionId: previous?.revisionId ?? null,
+        previousRevisionHash: previous?.revisionHash ?? null,
+        revisionHash: "",
+        recorderActorId: input.recorderActorId,
+        requiredPermission: input.requiredPermission,
+        semanticAuthorityRef: input.semanticAuthorityRef ?? null,
+        reason: input.reason,
+        evaluationTime: input.evaluationTime,
+        catalogueVersion: version,
+        createdAt: input.evaluationTime,
+      };
+      revision.revisionHash = revisionDigest(revision);
+      await insertRevision(tx, revision);
+      if (creating) {
+        await tx.execute({
+          sql: "INSERT INTO intelligence_objects (id, workspace_id, originating_venture_id, object_type, current_revision, current_revision_id, document_json, document_hash, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+          args: [
+            write.objectId,
+            input.workspaceId,
+            write.originatingVentureId,
+            write.objectType,
+            revision.revision,
+            revision.revisionId,
+            revision.documentJson,
+            revision.documentHash,
+            input.evaluationTime,
+            input.evaluationTime,
+          ],
+        });
+      } else {
+        const result = await tx.execute({
+          sql: "UPDATE intelligence_objects SET current_revision = ?, current_revision_id = ?, document_json = ?, document_hash = ?, updated_at = ? WHERE id = ? AND workspace_id = ? AND current_revision = ?",
+          args: [
+            revision.revision,
+            revision.revisionId,
+            revision.documentJson,
+            revision.documentHash,
+            input.evaluationTime,
+            write.objectId,
+            input.workspaceId,
+            write.expectedObjectRevision,
+          ],
+        });
+        if (result.rowsAffected !== 1)
+          throw new Error("Object revision conflict");
+      }
+    }
+    if (before.version === 0) {
+      await tx.execute({
+        sql: "INSERT INTO intelligence_catalogues (workspace_id, version, updated_at) VALUES (?,?,?)",
+        args: [input.workspaceId, version, input.evaluationTime],
+      });
+    } else {
+      const result = await tx.execute({
+        sql: "UPDATE intelligence_catalogues SET version = ?, updated_at = ? WHERE workspace_id = ? AND version = ?",
+        args: [
+          version,
+          input.evaluationTime,
+          input.workspaceId,
+          before.version,
+        ],
+      });
+      if (result.rowsAffected !== 1)
+        throw new Error("Catalogue version conflict");
+    }
+    const result = await readIntelligence(tx, input.workspaceId);
+    await tx.commit();
+    return result;
+  } finally {
+    // close() rolls back any open transaction, including database failures.
+    await tx.close();
+  }
+}
+function createIntelligenceRepository(): IntelligenceRepository {
+  return {
+    async loadCatalogue(workspaceId) {
+      const tx = await openIntelligenceTransaction("read");
+      try {
+        return await readIntelligence(tx, workspaceId);
+      } finally {
+        await tx.close();
+      }
+    },
+    async findCurrent(workspaceId, objectId) {
+      return (
+        (await this.loadCatalogue(workspaceId)).objects.find(
+          (row) => row.id === objectId,
+        ) ?? null
+      );
+    },
+    async listCurrent(workspaceId) {
+      return (await this.loadCatalogue(workspaceId)).objects;
+    },
+    async listCurrentForVenture(workspaceId, ventureId) {
+      return (await this.listCurrent(workspaceId)).filter(
+        (row) => row.originatingVentureId === ventureId,
+      );
+    },
+    async traceObject(workspaceId, objectId) {
+      return (await this.loadCatalogue(workspaceId)).revisions.filter(
+        (row) => row.objectId === objectId,
+      );
+    },
+    async commitMutation(input) {
+      if (!["CREATE", "AMEND", "RETRACT"].includes(input.write.mutationKind))
+        throw new Error("Use atomic supersession");
+      return commitIntelligence(input, [input.write]);
+    },
+    async commitSupersession(input) {
+      const old = storageIdentity(input.predecessor, input.workspaceId);
+      const next = storageIdentity(input.successor, input.workspaceId);
+      integrity(
+        input.predecessor.mutationKind === "SUPERSEDE" &&
+          input.successor.mutationKind === "CREATE" &&
+          old.supersededById === next.id &&
+          old.id !== next.id &&
+          old.type === next.type &&
+          (old.type === "Claim" || old.type === "Learning"),
+        "invalid supersession pair",
+      );
+      return commitIntelligence(input, [input.successor, input.predecessor]);
+    },
+  };
+}
+
+/** AIF-02 owns a short-lived SQLite connection so transaction handles are closed deterministically. */
+async function openIntelligenceTransaction(mode: "read" | "write") {
+  const url = getDatabaseUrl();
+  if (!url.startsWith("file:") || url.includes(":memory:")) {
+    throw new Error(
+      "Operational intelligence requires a file-backed SQLite database",
+    );
+  }
+  const client = storedObjectDurability.openClient(SQLITE_DURABILITY_BUSY_TIMEOUT_MS);
+  let active = false;
+  try {
+    await client.execute(mode === "write" ? "BEGIN IMMEDIATE" : "BEGIN");
+    active = true;
+  } catch (error) {
+    storedObjectDurability.disposeClient(client);
+    throw error;
+  }
+  return {
+    execute: client.execute.bind(client),
+    async commit() {
+      await client.execute("COMMIT");
+      active = false;
+    },
+    async close() {
+      try {
+        if (active) await client.execute("ROLLBACK");
+      } finally {
+        active = false;
+        storedObjectDurability.disposeClient(client);
+      }
+    },
+  };
 }

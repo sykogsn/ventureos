@@ -837,3 +837,35 @@ It does not complete or open VC-020 graph integration, VC-060 operational learni
 VC-070 persistence, a Definition/Genome projection, a web adapter, or another Runtime
 phase. Candidate eligibility is not shared-capability promotion. Independent Verification,
 certification and Git permanence remain Control decisions.
+
+## AIF-02 bounded persistence candidate (2026-09-24)
+
+Status: **IMPLEMENTED CANDIDATE / AWAITING VERIFICATION**; not certified.
+Control authorised a separate operational service and additive schema generation 31 with
+intelligence_catalogues, intelligence_objects and intelligence_revisions. The candidate
+provides authenticated capture/amend/retract/supersede and get/query/trace, complete-catalogue
+Brain validation, workspace isolation, optimistic versions, atomic rollback and hashed history.
+The internal @repo/brain workspace dependency is the sole package integration.
+
+This does not complete broader VC-070, open AIF-03 or authorise Runtime consumption,
+autonomous learning, capability promotion, legacy migration, cross-workspace sharing or UI.
+Independent Verification, certification and Git permanence remain separate Control decisions.
+
+### Current-main integration r2 (2026-09-28)
+
+Re-anchored on 67e5740cf16d0b88573307a55730f1361de5f8bd (including the merged ephemeral lifecycle correction).
+Generation 30 is preserved in full; AIF-02 adds generation 31. Existing Frigora,
+workforce, storage, auth and audit behavior and all current web tests/dependencies
+remain. Dedicated AIF transactions reuse platform resolved URLs, including ephemeral
+file resolution for configured in-memory databases, and the existing durability-client
+factory/disposal and busy timeout. No additional production helper is modified.
+
+The prior Control-reported Cursor green is design evidence, not r2 approval.
+AIF02-O1 exact-byte/non-canonical JSON hashing, AIF02-O2 sequential stale-version
+coverage and AIF02-O3 trusted raw repositories remain observations, not automatic
+correction scopes. Targeted Cursor re-review of r2 remains required.
+Status: IMPLEMENTED CANDIDATE / AWAITING VERIFICATION; no certification or publication.
+
+Control authorised 17 additional compatibility-test files for r2, solely changing
+`/SCHEMA_GENERATION = 30/` to `/SCHEMA_GENERATION = 31/`. The maximum boundary
+is 32 files; no other assertion, fixture, test name or Frigora behaviour changes.

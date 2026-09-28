@@ -456,3 +456,271 @@ describe("ephemeral database lifecycle", () => {
     }
   });
 });
+
+import { rmSync } from "node:fs";
+import { afterEach } from "node:test";
+import { getClient } from "../db";
+import type { IntelligenceCommit, IntelligenceWrite } from "./ports";
+
+describe("AIF-02 durable repository", () => {
+  let directory: string, url: string;
+  const ws = "aif-repository";
+  const metadata = (version: number): IntelligenceCommit => ({
+    workspaceId: ws,
+    expectedCatalogueVersion: version,
+    recorderActorId: "actor",
+    requiredPermission: "venture.update",
+    reason: "Repository regression",
+    evaluationTime: "2026-09-24T12:00:00.000Z",
+  });
+  const object = (
+    id = "claim",
+    revision = 0,
+    kind: IntelligenceWrite["mutationKind"] = "CREATE",
+    extra: Record<string, unknown> = {},
+  ): IntelligenceWrite => ({
+    objectId: id,
+    originatingVentureId: "venture",
+    objectType: "Claim",
+    expectedObjectRevision: revision,
+    mutationKind: kind,
+    documentJson: JSON.stringify({
+      id,
+      type: "Claim",
+      operatingScope: { workspaceId: ws, originatingVentureId: "venture" },
+      validity: "ACTIVE",
+      ...extra,
+    }),
+  });
+  const repo = () => getPersistence().intelligence;
+  beforeEach(async () => {
+    directory = mkdtempSync(join(tmpdir(), "vos-aif-repository-"));
+    url = "file:" + join(directory, "test.db").replaceAll("\\", "/");
+    await resetPersistenceLifecycle(url);
+    await ensureSchema();
+  });
+  afterEach(async () => {
+    await resetPersistenceLifecycle(":memory:");
+    try {
+      rmSync(directory, { recursive: true, force: true });
+    } catch (error) {
+      // Windows may retain native SQLite statement handles after client.close().
+      // The isolated fixture can remain in OS temp storage; test failures still propagate.
+      if (
+        process.platform !== "win32" ||
+        (error as NodeJS.ErrnoException).code !== "EPERM"
+      )
+        throw error;
+    }
+  });
+  it("creates version 1 and survives reopen with the identical latest projection", async () => {
+    const result = await repo().commitMutation({
+      ...metadata(0),
+      write: object(),
+    });
+    assert.equal(result.version, 1);
+    assert.equal(result.objects[0]!.currentRevision, 1);
+    await resetPersistenceLifecycle(url);
+    await ensureSchema();
+    const reopened = await repo().loadCatalogue(ws);
+    assert.equal(
+      reopened.objects[0]!.documentJson,
+      result.objects[0]!.documentJson,
+    );
+    assert.equal(
+      reopened.objects[0]!.documentJson,
+      reopened.revisions[0]!.documentJson,
+    );
+    assert.equal(
+      reopened.objects[0]!.currentRevisionId,
+      reopened.revisions[0]!.revisionId,
+    );
+    assert.equal(reopened.revisions[0]!.previousRevisionHash, null);
+    assert.equal("delete" in repo(), false);
+    assert.equal("hardDelete" in repo(), false);
+  });
+  it("appends amendments without overwriting history and returns ordered trace", async () => {
+    const initial = await repo().commitMutation({
+      ...metadata(0),
+      write: object(),
+    });
+    await repo().commitMutation({
+      ...metadata(1),
+      write: object("claim", 1, "AMEND", { summary: "changed" }),
+    });
+    const trace = await repo().traceObject(ws, "claim");
+    assert.deepEqual(
+      trace.map((r) => r.revision),
+      [1, 2],
+    );
+    assert.equal(trace[0]!.documentJson, initial.revisions[0]!.documentJson);
+    assert.equal(trace[1]!.previousRevisionHash, trace[0]!.revisionHash);
+    assert.equal(trace[1]!.previousRevisionId, trace[0]!.revisionId);
+  });
+  it("rejects a stale catalogue loaded by a second writer without a lost update", async () => {
+    const a = await repo().loadCatalogue(ws),
+      b = await repo().loadCatalogue(ws);
+    await repo().commitMutation({ ...metadata(a.version), write: object() });
+    await assert.rejects(
+      repo().commitMutation({
+        ...metadata(b.version),
+        write: object("second"),
+      }),
+      /Catalogue version conflict/,
+    );
+    assert.equal((await repo().loadCatalogue(ws)).objects.length, 1);
+  });
+  it("rejects stale object revision independently of catalogue version", async () => {
+    await repo().commitMutation({ ...metadata(0), write: object() });
+    await assert.rejects(
+      repo().commitMutation({
+        ...metadata(1),
+        write: object("claim", 0, "AMEND"),
+      }),
+      /Object revision conflict/,
+    );
+    assert.equal((await repo().loadCatalogue(ws)).version, 1);
+  });
+  it("atomically supersedes two objects at one catalogue version", async () => {
+    await repo().commitMutation({ ...metadata(0), write: object() });
+    const result = await repo().commitSupersession({
+      ...metadata(1),
+      successor: object("successor"),
+      predecessor: object("claim", 1, "SUPERSEDE", {
+        validity: "SUPERSEDED",
+        supersededById: "successor",
+      }),
+    });
+    assert.equal(result.version, 2);
+    const pair = result.revisions.filter((r) => r.catalogueVersion === 2);
+    assert.equal(pair.length, 2);
+    assert.equal(pair[0]!.mutationId, pair[1]!.mutationId);
+    assert.equal(pair[0]!.evaluationTime, pair[1]!.evaluationTime);
+    assert.equal(
+      (await repo().findCurrent(ws, "successor"))!.currentRevision,
+      1,
+    );
+  });
+  for (const operation of ["CREATE", "AMEND", "SUPERSEDE"] as const) {
+    it(
+      "rolls back " +
+        operation +
+        " after revision insertion when projection fails",
+      async () => {
+        if (operation !== "CREATE")
+          await repo().commitMutation({ ...metadata(0), write: object() });
+        const before = await repo().loadCatalogue(ws);
+        const event = operation === "CREATE" ? "INSERT" : "UPDATE";
+        await getClient().execute(
+          "CREATE TRIGGER injected_projection_failure BEFORE " +
+            event +
+            " ON intelligence_objects BEGIN SELECT RAISE(ABORT, 'injected projection failure'); END",
+        );
+        if (operation === "SUPERSEDE") {
+          await assert.rejects(
+            repo().commitSupersession({
+              ...metadata(1),
+              successor: object("successor"),
+              predecessor: object("claim", 1, "SUPERSEDE", {
+                validity: "SUPERSEDED",
+                supersededById: "successor",
+              }),
+            }),
+            /injected projection failure/,
+          );
+        } else {
+          await assert.rejects(
+            repo().commitMutation({
+              ...metadata(before.version),
+              write: object("claim", before.version, operation),
+            }),
+            /injected projection failure/,
+          );
+        }
+        assert.deepEqual(await repo().loadCatalogue(ws), before);
+      },
+    );
+  }
+  it("keeps retracted identities terminal even for raw repository amendments", async () => {
+    await repo().commitMutation({ ...metadata(0), write: object() });
+    await repo().commitMutation({
+      ...metadata(1),
+      write: object("claim", 1, "RETRACT", { validity: "RETRACTED" }),
+    });
+    await assert.rejects(
+      repo().commitMutation({
+        ...metadata(2),
+        write: object("claim", 2, "AMEND"),
+      }),
+      /Terminal/,
+    );
+    assert.equal((await repo().traceObject(ws, "claim")).length, 2);
+  });
+  it("enforces row/payload ownership and workspace-scoped raw reads", async () => {
+    await repo().commitMutation({ ...metadata(0), write: object() });
+    assert.equal(await repo().findCurrent("other", "claim"), null);
+    assert.deepEqual(await repo().traceObject("other", "claim"), []);
+    await assert.rejects(
+      repo().commitMutation({
+        ...metadata(1),
+        write: { ...object("new"), originatingVentureId: "wrong" },
+      }),
+      /identity mismatch/,
+    );
+    assert.equal((await repo().listCurrentForVenture(ws, "venture")).length, 1);
+  });
+  for (const [label, sql] of [
+    [
+      "current document",
+      "UPDATE intelligence_objects SET document_json = '{}'",
+    ],
+    ["current hash", "UPDATE intelligence_objects SET document_hash = 'wrong'"],
+    [
+      "revision document",
+      "UPDATE intelligence_revisions SET document_json = '{}'",
+    ],
+    [
+      "previous link",
+      "UPDATE intelligence_revisions SET previous_revision_hash = 'wrong' WHERE revision = 2",
+    ],
+    [
+      "revision hash",
+      "UPDATE intelligence_revisions SET revision_hash = 'wrong'",
+    ],
+    [
+      "revision sequence",
+      "DELETE FROM intelligence_revisions WHERE revision = 1",
+    ],
+    [
+      "current pointer",
+      "UPDATE intelligence_objects SET current_revision_id = 'wrong'",
+    ],
+  ]) {
+    it("detects tampering of " + label, async () => {
+      await repo().commitMutation({ ...metadata(0), write: object() });
+      await repo().commitMutation({
+        ...metadata(1),
+        write: object("claim", 1, "AMEND"),
+      });
+      await getClient().execute(sql!);
+      await assert.rejects(repo().traceObject(ws, "claim"), /integrity/);
+    });
+  }
+
+  for (const configuredUrl of [":memory:", "file::memory:"]) {
+    it("shares current platform ephemeral resolution for " + configuredUrl, async () => {
+      await resetPersistenceLifecycle(configuredUrl);
+      await ensureSchema();
+      const resolved = getDatabaseUrl();
+      assert.ok(resolved.startsWith("file:"));
+      assert.ok(!resolved.includes(":memory:"));
+      await repo().commitMutation({ ...metadata(0), write: object() });
+      assert.equal(getDatabaseUrl(), resolved);
+      const singleton = await getClient().execute("SELECT current_revision FROM intelligence_objects WHERE id = 'claim'");
+      assert.equal(singleton.rows[0]?.current_revision, 1);
+      assert.equal((await repo().loadCatalogue(ws)).version, 1);
+      await assert.rejects(repo().commitMutation({ ...metadata(0), write: object("stale") }), /Catalogue version conflict/);
+      assert.equal((await repo().loadCatalogue(ws)).objects.length, 1);
+    });
+  }
+});

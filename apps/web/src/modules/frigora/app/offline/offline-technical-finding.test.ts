@@ -188,7 +188,7 @@ async function seedAssignedVisit(owner: Awaited<ReturnType<typeof seed>>, engine
 describe("F33-03 technical finding local capture + idempotent explicit acceptance", () => {
   it("A. SCHEMA_GENERATION is 28 and receipt uniqueness exists", async () => {
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 30/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 31/);
     assert.match(dbSource, /frigora_client_operation_receipts/);
     assert.match(
       dbSource,
