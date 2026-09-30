@@ -14,7 +14,9 @@ const DEFAULT_URL = "file:./data/ventureos.db";
 
 export type Database = LibSQLDatabase<typeof schema>;
 
-const SCHEMA_GENERATION = 31; // bump when ensureSchema DDL is extended
+// Generation 32 is the combined successor of two independent generation-31
+// evolutions: IAM-001 workspace_invitations and F34-04 work-order priority.
+const SCHEMA_GENERATION = 32; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -305,6 +307,33 @@ export async function ensureSchema() {
       `);
       await exec(
         `CREATE UNIQUE INDEX IF NOT EXISTS workspace_members_pk ON workspace_members (workspace_id, user_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS workspace_invitations (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          email TEXT NOT NULL,
+          role TEXT NOT NULL,
+          invited_by TEXT NOT NULL,
+          token_hash TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          accepted_at TEXT,
+          revoked_at TEXT,
+          created_at TEXT NOT NULL,
+          active_slot TEXT,
+          CHECK (role IN ('admin', 'member'))
+        )
+      `);
+      await addColumn("workspace_invitations", "active_slot", "TEXT");
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS workspace_invitations_token_hash_idx ON workspace_invitations (token_hash)`,
+      );
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS workspace_invitations_active_slot_idx ON workspace_invitations (active_slot) WHERE active_slot IS NOT NULL`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS workspace_invitations_workspace_email_idx ON workspace_invitations (workspace_id, email)`,
       );
 
       await exec(`
@@ -802,6 +831,7 @@ export async function ensureSchema() {
           primary_asset_id TEXT,
           work_reference TEXT NOT NULL,
           work_kind TEXT NOT NULL,
+          priority TEXT NOT NULL DEFAULT 'normal',
           reported_condition TEXT,
           status TEXT NOT NULL DEFAULT 'open',
           created_at TEXT NOT NULL,
@@ -844,6 +874,7 @@ export async function ensureSchema() {
       await exec(
         `CREATE INDEX IF NOT EXISTS frigora_work_orders_venture_scheduled_start_idx ON frigora_work_orders (venture_id, scheduled_start_at)`,
       );
+      await addColumn("frigora_work_orders", "priority", "TEXT NOT NULL DEFAULT 'normal'");
       await addColumn("frigora_work_orders", "cancellation_reason", "TEXT");
       await addColumn("frigora_work_orders", "source_recommended_action_id", "TEXT");
       await exec(

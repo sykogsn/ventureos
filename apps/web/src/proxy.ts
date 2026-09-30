@@ -34,6 +34,10 @@ export async function proxy(request: NextRequest) {
     return applyAuthNavigationHeaders(NextResponse.next());
   }
 
+  if (pathname === "/invite") {
+    return applyAuthNavigationHeaders(NextResponse.next());
+  }
+
   if (isFrigoraPwaPublicPath(pathname)) {
     return applyAuthNavigationHeaders(NextResponse.next());
   }

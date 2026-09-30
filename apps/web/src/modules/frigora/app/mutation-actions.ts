@@ -19,6 +19,7 @@ import {
   declineWorkOrderAssignmentAction,
   reopenWorkOrderAction,
   scheduleWorkOrderAction,
+  setWorkOrderPriorityAction,
   createUnavailabilityAction,
   updateUnavailabilityAction,
   deleteUnavailabilityAction,
@@ -477,6 +478,27 @@ export async function scheduleWorkOrderFormAction(
   }
   revalidateDispatch(scope.ventureId, workOrderId);
   return {};
+}
+
+export async function setWorkOrderPriorityFormAction(
+  _prev: OfficeFormState,
+  formData: FormData,
+): Promise<OfficeFormState> {
+  const scope = scopeFromForm(formData);
+  const workOrderId = text(formData, "workOrderId");
+  const priority = text(formData, "priority");
+  const expectedUpdatedAt = text(formData, "expectedUpdatedAt");
+  const result = await setWorkOrderPriorityAction({
+    ...scope,
+    id: workOrderId,
+    priority: priority as "normal" | "high" | "urgent",
+    expectedUpdatedAt,
+  });
+  if (result.error) {
+    return { error: result.error, code: result.code, values: { priority, expectedUpdatedAt } };
+  }
+  revalidateDispatch(scope.ventureId, workOrderId);
+  return { message: "Priority saved." };
 }
 
 export async function clearWorkOrderScheduleFormAction(

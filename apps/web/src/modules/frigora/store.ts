@@ -145,7 +145,13 @@ export type FrigoraStore = ReturnType<typeof createAvailabilityStore> & {
     siteId: FrigoraSiteId,
   ): Promise<FrigoraAsset[]>;
   insertWorkOrder(row: FrigoraWorkOrder): Promise<void>;
+  /** Owned-field update. Must not rewrite priority. */
   updateWorkOrder(row: FrigoraWorkOrder): Promise<void>;
+  /**
+   * Priority-only write guarded by the WorkOrder updatedAt token.
+   * Does not assign, schedule, or emit a dispatch event.
+   */
+  compareAndSetWorkOrderPriority(expected: FrigoraWorkOrder, next: FrigoraWorkOrder): Promise<void>;
   findWorkOrder(
     workspaceId: WorkspaceId,
     ventureId: VentureId,
@@ -730,7 +736,7 @@ export function createFrigoraStore(options: { createWriteClient?: FrigoraWriteCl
       try {
         await getDb()
           .update(frigoraWorkOrders)
-          .set(toWorkOrderValues(row))
+          .set(toWorkOrderOwnedUpdateValues(row))
           .where(
             and(
               eq(frigoraWorkOrders.id, row.id),
@@ -744,6 +750,50 @@ export function createFrigoraStore(options: { createWriteClient?: FrigoraWriteCl
           duplicateWorkOrderMessage(error),
         );
       }
+    },
+    async compareAndSetWorkOrderPriority(expected, next) {
+      await ensureSchema();
+      if (
+        expected.id !== next.id ||
+        expected.workspaceId !== next.workspaceId ||
+        expected.ventureId !== next.ventureId
+      ) {
+        throw new FrigoraError("invalid_input", "Priority mutation identity mismatch.");
+      }
+      const sql = `
+        UPDATE frigora_work_orders
+        SET priority = ?, updated_at = ?
+        WHERE id = ?
+          AND workspace_id = ?
+          AND venture_id = ?
+          AND updated_at = ?
+          AND status = 'open'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM frigora_visits v
+            WHERE v.work_order_id = ?
+              AND v.workspace_id = ?
+              AND v.venture_id = ?
+              AND v.status = 'open'
+          )
+      `;
+      const args = [
+        next.priority,
+        next.updatedAt,
+        expected.id,
+        expected.workspaceId,
+        expected.ventureId,
+        expected.updatedAt,
+        expected.id,
+        expected.workspaceId,
+        expected.ventureId,
+      ];
+      await withFrigoraWriteTransaction(async (transaction) => {
+        const updated = await transaction.execute({ sql, args });
+        if (updated.rowsAffected !== 1) {
+          await classifyFailedDispatchGuard(transaction, expected);
+        }
+      }, options.createWriteClient);
     },
     async findWorkOrder(workspaceId, ventureId, id) {
       await ensureSchema();
@@ -2250,6 +2300,7 @@ function toWorkOrderValues(row: FrigoraWorkOrder) {
     primaryAssetId: row.primaryAssetId,
     workReference: row.workReference,
     workKind: row.workKind,
+    priority: row.priority,
     reportedCondition: row.reportedCondition,
     status: row.status,
     assignedUserId: row.assignedUserId,
@@ -2262,6 +2313,33 @@ function toWorkOrderValues(row: FrigoraWorkOrder) {
     sourceRecommendedActionId: row.sourceRecommendedActionId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+/** Whole-row updates must not own priority. Only compareAndSetWorkOrderPriority may write it. */
+function toWorkOrderOwnedUpdateValues(row: FrigoraWorkOrder) {
+  const values = toWorkOrderValues(row);
+  return {
+    id: values.id,
+    workspaceId: values.workspaceId,
+    ventureId: values.ventureId,
+    customerId: values.customerId,
+    siteId: values.siteId,
+    primaryAssetId: values.primaryAssetId,
+    workReference: values.workReference,
+    workKind: values.workKind,
+    reportedCondition: values.reportedCondition,
+    status: values.status,
+    assignedUserId: values.assignedUserId,
+    scheduledStartAt: values.scheduledStartAt,
+    scheduledEndAt: values.scheduledEndAt,
+    assignmentAcceptedAt: values.assignmentAcceptedAt,
+    assignmentDeclinedAt: values.assignmentDeclinedAt,
+    assignmentDeclineReason: values.assignmentDeclineReason,
+    cancellationReason: values.cancellationReason,
+    sourceRecommendedActionId: values.sourceRecommendedActionId,
+    createdAt: values.createdAt,
+    updatedAt: values.updatedAt,
   };
 }
 
@@ -2670,6 +2748,7 @@ function mapWorkOrder(row: typeof frigoraWorkOrders.$inferSelect): FrigoraWorkOr
     primaryAssetId: (row.primaryAssetId as FrigoraAssetId | null) ?? null,
     workReference: row.workReference,
     workKind: row.workKind as FrigoraWorkKind,
+    priority: row.priority === "high" || row.priority === "urgent" ? row.priority : "normal",
     reportedCondition: row.reportedCondition ?? null,
     status: row.status as FrigoraWorkOrderStatus,
     assignedUserId: (row.assignedUserId as UserId | null) ?? null,

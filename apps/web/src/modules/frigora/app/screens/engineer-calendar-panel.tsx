@@ -7,9 +7,9 @@ import {
   formatWorkKindLabel,
   shiftUtcDate,
 } from "@/modules/frigora/app/engineer-calendar";
-import { DispatchControls } from "@/modules/frigora/app/forms/dispatch-controls";
+import { DispatchControls, PriorityControl, PriorityLabel } from "@/modules/frigora/app/forms/dispatch-controls";
 import { UnavailabilityForm } from "@/modules/frigora/app/forms/unavailability-form";
-import { hasActiveVisit } from "@/modules/frigora/app/operational-derivations";
+import { ATTENTION_SIGNAL_LABELS, hasActiveVisit } from "@/modules/frigora/app/operational-derivations";
 import type {
   DispatchBoardItem,
   EngineerCalendarSurface,
@@ -35,22 +35,44 @@ function DispatchCard({
   return (
     <li className="rounded-[var(--ids-foundation-radius-md)] border border-[var(--ids-foundation-stroke-subtle)] p-4">
       <Stack gap="tight">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="ids-body text-foreground">
+          <PriorityLabel priority={item.workOrder.priority} />
+          {" · "}
           <Link
             href={`${workBase}/${item.workOrder.id}`}
-            className="ids-body underline-offset-2 hover:underline"
+            className="underline-offset-2 hover:underline"
           >
             {item.workOrder.workReference}
           </Link>
-          <span className="ids-caption text-muted">{formatWorkKindLabel(item.workOrder.workKind)}</span>
-        </div>
+        </p>
+        <p className="ids-body text-foreground">{item.assignee?.name ?? "Unassigned"}</p>
+        <p className="ids-body text-foreground">{schedule}</p>
+        {item.signals.length > 0 ? (
+          <ul role="status">
+            {item.signals.map((signal) => (
+              <li key={signal} className="ids-caption text-foreground">
+                {ATTENTION_SIGNAL_LABELS[signal]}
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <p className="ids-caption text-muted">
           {item.customer?.displayName ?? "—"} / {item.site?.name ?? "—"}
+          {" · "}
+          {formatWorkKindLabel(item.workOrder.workKind)}
+          {" · "}
+          Response {item.responseState.replaceAll("_", " ")}
         </p>
-        <p className="ids-caption text-muted">{schedule}</p>
-        <p className="ids-caption text-muted">
-          {item.assignee?.name ?? "Unassigned"} · {item.responseState.replaceAll("_", " ")}
-        </p>
+        <PriorityControl
+          workspaceId={ctx.workspaceId}
+          ventureId={ctx.ventureId}
+          workOrderId={item.workOrder.id}
+          updatedAt={item.workOrder.updatedAt}
+          priority={item.workOrder.priority}
+          canWrite={ctx.canWrite}
+          isOpen={item.workOrder.status === "open"}
+          hasActiveVisit={hasActiveVisit(item.visits)}
+        />
         <details>
           <summary className="ids-caption cursor-pointer text-muted">Dispatch controls</summary>
           <div className="mt-3">
@@ -175,7 +197,7 @@ export function EngineerCalendarPanel({
                   {group.entries.length === 0 ? (
                     <p className="ids-caption text-muted">No scheduled work for this engineer.</p>
                   ) : (
-                    <ul className="grid gap-3 lg:grid-cols-2">
+                    <ul className="grid gap-3">
                       {group.entries.map((item) => (
                         <DispatchCard
                           key={item.workOrder.id}

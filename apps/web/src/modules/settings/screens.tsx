@@ -4,6 +4,8 @@ import { EmptyCopy } from "@/core/shell/empty-copy";
 import type { SessionUser } from "@/lib/auth/session";
 import { logoutAction } from "@/modules/auth/actions";
 import { SettingsAppearance } from "./appearance";
+import type { WorkspaceAccessView } from "@/modules/workspaces/access-policy";
+import { WorkspaceAccessPanel } from "@/modules/workspaces/access-panel";
 import type { WorkspaceRecord } from "@/modules/workspaces/service";
 import { getAiRuntime } from "@/ai/runtime";
 import { aiRuntimeStatusLabel } from "@/ai/status-label";
@@ -27,9 +29,11 @@ function SettingsSection({
 export function SettingsScreen({
   session,
   workspace,
+  access,
 }: {
   session: SessionUser;
   workspace: WorkspaceRecord | null;
+  access: WorkspaceAccessView | null;
 }) {
   const runtime = getAiRuntime();
 
@@ -61,6 +65,7 @@ export function SettingsScreen({
         <EmptyCopy>
           Switch or create a workspace from the header. Membership is enforced before a switch.
         </EmptyCopy>
+        {access ? <WorkspaceAccessPanel access={access} /> : null}
       </SettingsSection>
 
       <SettingsSection title="Appearance">
