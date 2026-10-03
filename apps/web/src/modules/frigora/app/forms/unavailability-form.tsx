@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Button } from "@repo/ui/button";
 import { Form } from "@/core/layout";
 import type { EngineerUnavailability } from "@/modules/frigora/availability";
+import { FrigoraWorkOrderLink } from "@/modules/frigora/app/entity-link";
 import type { UserDisplay } from "../views";
 import { unavailabilityFormAction, type OfficeFormState } from "../mutation-actions";
 
@@ -33,7 +34,10 @@ export function UnavailabilityForm({ workspaceId, ventureId, members, period }: 
     {state.message ? <p role="status" className="ids-caption">{state.message}</p> : null}
     {state.conflicts?.length ? <div role="status" className="ids-caption">
       <p>Existing bookings affected. Review these work orders; their dispatch state has not changed.</p>
-      <ul>{state.conflicts.map((work) => <li key={work.id}>{work.workReference}: {work.scheduledStartAt} – {work.scheduledEndAt}</li>)}</ul>
+      <ul>{state.conflicts.map((work) => <li key={work.id}>
+        <FrigoraWorkOrderLink ventureId={ventureId} workOrderId={work.id} workReference={work.workReference} />
+        {`: ${work.scheduledStartAt} – ${work.scheduledEndAt}`}
+      </li>)}</ul>
     </div> : null}
     <Button type="submit" disabled={pending || !members.length}>{pending ? "Saving…" : period ? "Update unavailable period" : "Add unavailable period"}</Button>
     {period ? <Button type="submit" name="operation" value="delete" formNoValidate variant="secondary" disabled={pending}>Remove unavailable period</Button> : null}

@@ -5,6 +5,11 @@ import { EmptyCopy } from "@/core/shell/empty-copy";
 import { Fit, Stack } from "@/core/layout";
 import { CreateCustomerForm } from "@/modules/frigora/app/forms/create-customer-form";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import { frigoraCustomerHref, frigoraSiteHref } from "@/modules/frigora/app/entity-routes";
+import {
+  FrigoraCustomerLink,
+  FrigoraEntityLink,
+} from "@/modules/frigora/app/entity-link";
 import type { FrigoraCustomer } from "@/modules/frigora/types";
 
 export function CustomersScreen({
@@ -16,8 +21,6 @@ export function CustomersScreen({
   customers: FrigoraCustomer[];
   error?: string;
 }) {
-  const base = `/ventures/${ctx.ventureId}/customers`;
-
   return (
     <PageFrame
       page="Customers"
@@ -51,11 +54,13 @@ export function CustomersScreen({
                 {customers.map((customer) => (
                   <tr key={customer.id} className="border-t border-[var(--ids-foundation-stroke-subtle)]">
                     <td className="py-3 pr-4 ids-body">
-                      <Link href={`${base}/${customer.id}`} className="underline-offset-2 hover:underline">
+                      <FrigoraEntityLink href={frigoraCustomerHref(ctx.ventureId, customer.id)}>
                         {customer.code}
-                      </Link>
+                      </FrigoraEntityLink>
                     </td>
-                    <td className="py-3 pr-4 ids-body">{customer.displayName}</td>
+                    <td className="py-3 pr-4 ids-body">
+                      <FrigoraCustomerLink ventureId={ctx.ventureId} customer={customer} />
+                    </td>
                     <td className="py-3 pr-4 ids-caption text-muted">{customer.status}</td>
                   </tr>
                 ))}
@@ -93,8 +98,6 @@ export function CustomerDetailScreen({
   sites: Array<{ id: string; code: string; name: string; status: string }>;
   createSiteSlot?: ReactNode;
 }) {
-  const base = `/ventures/${ctx.ventureId}/customers/${customer.id}`;
-
   return (
     <PageFrame
       page={customer.displayName}
@@ -133,13 +136,10 @@ export function CustomerDetailScreen({
             <ul className="divide-y divide-[var(--ids-foundation-stroke-subtle)]">
               {sites.map((site) => (
                 <li key={site.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
-                  <Link
-                    href={`${base}/sites/${site.id}`}
-                    className="ids-body underline-offset-2 hover:underline"
-                  >
+                  <FrigoraEntityLink href={frigoraSiteHref(ctx.ventureId, customer.id, site.id)}>
                     {site.name}{" "}
                     <span className="ids-caption text-muted">({site.code})</span>
-                  </Link>
+                  </FrigoraEntityLink>
                   <span className="ids-caption text-muted">{site.status}</span>
                 </li>
               ))}

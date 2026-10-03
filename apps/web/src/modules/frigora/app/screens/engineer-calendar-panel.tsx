@@ -10,6 +10,10 @@ import {
 import { DispatchControls, PriorityControl, PriorityLabel } from "@/modules/frigora/app/forms/dispatch-controls";
 import { UnavailabilityForm } from "@/modules/frigora/app/forms/unavailability-form";
 import { ATTENTION_SIGNAL_LABELS, hasActiveVisit } from "@/modules/frigora/app/operational-derivations";
+import {
+  FrigoraCustomerSiteLinks,
+  FrigoraWorkOrderLink,
+} from "@/modules/frigora/app/entity-link";
 import type {
   DispatchBoardItem,
   EngineerCalendarSurface,
@@ -20,12 +24,10 @@ function DispatchCard({
   ctx,
   item,
   members,
-  workBase,
 }: {
   ctx: FrigoraOpsContext;
   item: DispatchBoardItem;
   members: UserDisplay[];
-  workBase: string;
 }) {
   const schedule =
     item.workOrder.scheduledStartAt && item.workOrder.scheduledEndAt
@@ -38,12 +40,11 @@ function DispatchCard({
         <p className="ids-body text-foreground">
           <PriorityLabel priority={item.workOrder.priority} />
           {" · "}
-          <Link
-            href={`${workBase}/${item.workOrder.id}`}
-            className="underline-offset-2 hover:underline"
-          >
-            {item.workOrder.workReference}
-          </Link>
+          <FrigoraWorkOrderLink
+            ventureId={ctx.ventureId}
+            workOrderId={item.workOrder.id}
+            workReference={item.workOrder.workReference}
+          />
         </p>
         <p className="ids-body text-foreground">{item.assignee?.name ?? "Unassigned"}</p>
         <p className="ids-body text-foreground">{schedule}</p>
@@ -57,7 +58,11 @@ function DispatchCard({
           </ul>
         ) : null}
         <p className="ids-caption text-muted">
-          {item.customer?.displayName ?? "—"} / {item.site?.name ?? "—"}
+          <FrigoraCustomerSiteLinks
+            ventureId={ctx.ventureId}
+            customer={item.customer}
+            site={item.site}
+          />
           {" · "}
           {formatWorkKindLabel(item.workOrder.workKind)}
           {" · "}
@@ -109,7 +114,6 @@ export function EngineerCalendarPanel({
   calendar: EngineerCalendarSurface;
   unassignedQueue: DispatchBoardItem[];
 }) {
-  const workBase = `/ventures/${ctx.ventureId}/work`;
   const previousHref = buildOperationsCalendarHref(ctx.ventureId, {
     date: shiftUtcDate(date, -1),
     engineerId: calendar.engineerId,
@@ -204,7 +208,6 @@ export function EngineerCalendarPanel({
                           ctx={ctx}
                           item={item}
                           members={members}
-                          workBase={workBase}
                         />
                       ))}
                     </ul>
@@ -234,7 +237,6 @@ export function EngineerCalendarPanel({
                 ctx={ctx}
                 item={item}
                 members={members}
-                workBase={workBase}
               />
             ))}
           </ul>

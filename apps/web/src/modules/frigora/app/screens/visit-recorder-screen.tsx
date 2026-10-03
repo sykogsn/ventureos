@@ -16,6 +16,13 @@ import { RecordRefrigerantEventForm } from "@/modules/frigora/app/forms/record-r
 import { RecordTechnicalFindingForm } from "@/modules/frigora/app/forms/record-technical-finding-form";
 import { RecordVisitOutcomeForm } from "@/modules/frigora/app/forms/record-visit-outcome-form";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import {
+  FrigoraAssetLink,
+  FrigoraCustomerSiteLinks,
+  FrigoraSiteAddressLink,
+  FrigoraVisitLink,
+  FrigoraWorkOrderLink,
+} from "@/modules/frigora/app/entity-link";
 import { OfflineVisitFallback } from "@/modules/frigora/app/offline/offline-fallback-panels";
 import type { VisitRecorderView } from "@/modules/frigora/app/views";
 
@@ -97,18 +104,6 @@ export function VisitRecorderScreen({
 
   const workBase = `/ventures/${ctx.ventureId}/work/${workOrder.id}`;
   const primaryAssetId = workOrder.primaryAssetId;
-  const siteAddress = site
-    ? [
-        site.addressLine1,
-        site.addressLine2,
-        site.city,
-        site.region,
-        site.postalCode,
-        site.country,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : "";
 
   const formProps = {
     workspaceId: ctx.workspaceId,
@@ -125,9 +120,22 @@ export function VisitRecorderScreen({
   return (
     <PageFrame
       page="Visit recorder"
-      kicker={workOrder.workReference}
+      kicker={
+        <FrigoraWorkOrderLink
+          ventureId={ctx.ventureId}
+          workOrderId={workOrder.id}
+          workReference={workOrder.workReference}
+        />
+      }
       title="Visit recorder"
-      description={`${customer?.displayName ?? "Customer"} · ${site?.name ?? "Site"}`}
+      description={
+        <FrigoraCustomerSiteLinks
+          ventureId={ctx.ventureId}
+          customer={customer}
+          site={site}
+          separator=" · "
+        />
+      }
       meta={visit.status}
       ventureId={ctx.ventureId}
       actions={
@@ -159,12 +167,13 @@ export function VisitRecorderScreen({
             <ul className="mt-2 space-y-1">
               {otherOpenVisits.map((other) => (
                 <li key={other.id}>
-                  <Link
-                    href={`${workBase}/visit/${other.id}`}
-                    className="ids-body underline-offset-2 hover:underline"
+                  <FrigoraVisitLink
+                    ventureId={ctx.ventureId}
+                    workOrderId={workOrder.id}
+                    visitId={other.id}
                   >
                     {other.arrivedAt} — {other.status}
-                  </Link>
+                  </FrigoraVisitLink>
                 </li>
               ))}
             </ul>
@@ -193,14 +202,20 @@ export function VisitRecorderScreen({
           </div>
           <div className="sm:col-span-2">
             <dt className="ids-caption text-muted">Site address</dt>
-            <dd className="ids-body break-words">{siteAddress || "—"}</dd>
+            <dd className="ids-body break-words">
+              <FrigoraSiteAddressLink ventureId={ctx.ventureId} site={site} />
+            </dd>
           </div>
           {asset ? (
             <div className="sm:col-span-2">
               <dt className="ids-caption text-muted">Asset</dt>
               <dd className="ids-body">
-                {asset.tag}
-                {asset.name ? ` — ${asset.name}` : ""}
+                <FrigoraAssetLink
+                  ventureId={ctx.ventureId}
+                  customerId={customer?.id ?? workOrder.customerId}
+                  siteId={site?.id ?? asset.siteId}
+                  asset={asset}
+                />
               </dd>
             </div>
           ) : null}

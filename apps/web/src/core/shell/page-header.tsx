@@ -22,10 +22,10 @@ export function PageHeader({
   children,
 }: {
   page: string;
-  kicker?: string;
+  kicker?: ReactNode;
   title: string;
   lede?: string;
-  description?: string;
+  description?: ReactNode;
   meta?: string;
   actions?: ReactNode;
   children?: ReactNode;
