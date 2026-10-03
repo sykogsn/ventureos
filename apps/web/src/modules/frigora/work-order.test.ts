@@ -1437,3 +1437,281 @@ describe("Frigora WorkOrder priority", () => {
     );
   });
 });
+
+describe("Frigora assignment response ownership", () => {
+  const RESPONSE_LATER_START = "2026-09-23T13:00:00.000Z";
+  const RESPONSE_LATER_END = "2026-09-23T14:00:00.000Z";
+
+  async function addEngineer(owner: Awaited<ReturnType<typeof seed>>, userId: UserId) {
+    await getPersistence().memberships.setRole({
+      userId,
+      workspaceId: owner.workspaceId,
+      role: "member",
+      createdAt: NOW,
+    });
+  }
+
+  async function scheduledAssignment(owner: Awaited<ReturnType<typeof seed>>, reference: string, engineer: UserId) {
+    const created = await openWork(owner, reference);
+    const assigned = await owner.service.assignWorkOrder(owner.scope, created.id, {
+      userId: engineer,
+      expectedUpdatedAt: created.updatedAt,
+    });
+    const scheduled = await owner.service.scheduleWorkOrder(owner.scope, assigned.id, {
+      scheduledStartAt: PRIORITY_START,
+      scheduledEndAt: PRIORITY_END,
+      expectedUpdatedAt: assigned.updatedAt,
+    });
+    return { created, scheduled, engineerScope: { ...owner.scope, userId: engineer } };
+  }
+
+  async function writeStaleUnrelatedUpdate(before: FrigoraWorkOrder, reportedCondition: string) {
+    await createFrigoraStore().updateWorkOrder({
+      ...before,
+      reportedCondition,
+      updatedAt: "2026-09-30T00:00:00.000Z",
+    });
+  }
+
+  it("keeps a newer acceptance when a stale snapshot updates unrelated WorkOrder fields", async () => {
+    const owner = await seed();
+    const engineer = "user-response-engineer" as UserId;
+    await addEngineer(owner, engineer);
+    const { created, scheduled, engineerScope } = await scheduledAssignment(owner, "WO-ACCEPT-STALE", engineer);
+    const accepted = await owner.service.acceptWorkOrderAssignment(engineerScope, scheduled.id);
+    assert.ok(accepted.assignmentAcceptedAt);
+    assert.equal(accepted.assignmentDeclinedAt, null);
+    assert.equal(accepted.assignmentDeclineReason, null);
+
+    await writeStaleUnrelatedUpdate(created, "stale snapshot must not clear acceptance");
+    const stored = await owner.service.getWorkOrder(owner.scope, scheduled.id);
+    assert.equal(stored?.assignmentAcceptedAt, accepted.assignmentAcceptedAt);
+    assert.equal(stored?.assignmentDeclinedAt, null);
+    assert.equal(stored?.assignmentDeclineReason, null);
+    assert.equal(stored?.reportedCondition, "stale snapshot must not clear acceptance");
+  });
+
+  it("keeps a newer decline when a stale snapshot updates unrelated WorkOrder fields", async () => {
+    const owner = await seed();
+    const engineer = "user-response-engineer" as UserId;
+    await addEngineer(owner, engineer);
+    const { created, scheduled, engineerScope } = await scheduledAssignment(owner, "WO-DECLINE-STALE", engineer);
+    const declined = await owner.service.declineWorkOrderAssignment(engineerScope, scheduled.id, {
+      reason: "Cannot attend this window",
+    });
+    assert.ok(declined.assignmentDeclinedAt);
+    assert.equal(declined.assignmentDeclineReason, "Cannot attend this window");
+    assert.equal(declined.assignmentAcceptedAt, null);
+
+    await writeStaleUnrelatedUpdate(created, "stale snapshot must not clear decline");
+    const stored = await owner.service.getWorkOrder(owner.scope, scheduled.id);
+    assert.equal(stored?.assignmentDeclinedAt, declined.assignmentDeclinedAt);
+    assert.equal(stored?.assignmentDeclineReason, "Cannot attend this window");
+    assert.equal(stored?.assignmentAcceptedAt, null);
+    assert.equal(stored?.reportedCondition, "stale snapshot must not clear decline");
+  });
+
+  it("lets ordinary edits and lifecycle changes preserve response state they do not own", async () => {
+    const owner = await seed();
+    const engineer = "user-response-engineer" as UserId;
+    await addEngineer(owner, engineer);
+    const { scheduled, engineerScope } = await scheduledAssignment(owner, "WO-RESPONSE-LIFECYCLE", engineer);
+    const accepted = await owner.service.acceptWorkOrderAssignment(engineerScope, scheduled.id);
+
+    const edited = await owner.service.updateWorkOrder(owner.scope, scheduled.id, {
+      workKind: "inspection",
+      reportedCondition: "classification only",
+    });
+    assert.equal(edited.assignmentAcceptedAt, accepted.assignmentAcceptedAt);
+    assert.equal(edited.workKind, "inspection");
+
+    const cancelled = await owner.service.cancelWorkOrder(owner.scope, scheduled.id, {
+      reason: "Lifecycle must not own the response",
+    });
+    assert.equal(cancelled.status, "cancelled");
+    assert.equal(cancelled.assignmentAcceptedAt, accepted.assignmentAcceptedAt);
+    assert.equal(cancelled.assignmentDeclinedAt, null);
+
+    const reopenSource = await scheduledAssignment(owner, "WO-RESPONSE-REOPEN", engineer);
+    const acceptedAgain = await owner.service.acceptWorkOrderAssignment(
+      reopenSource.engineerScope,
+      reopenSource.scheduled.id,
+    );
+    const visit = await owner.service.recordVisitArrival(owner.scope, reopenSource.scheduled.id, {
+      userId: engineer,
+      arrivedAt: PRIORITY_START,
+    });
+    const closed = await completeWorkOrderFromVisit(
+      owner.service,
+      owner.scope,
+      reopenSource.scheduled.id,
+      visit,
+      owner.scope.userId,
+      {
+        outcomeAt: "2026-09-23T10:30:00.000Z",
+        departedAt: "2026-09-23T11:00:00.000Z",
+      },
+    );
+    assert.equal(closed.status, "closed");
+    assert.equal(closed.assignmentAcceptedAt, acceptedAgain.assignmentAcceptedAt);
+    const reopened = await owner.service.reopenWorkOrder(owner.scope, reopenSource.scheduled.id);
+    assert.equal(reopened.status, "open");
+    assert.equal(reopened.assignmentAcceptedAt, acceptedAgain.assignmentAcceptedAt);
+    assert.equal(reopened.assignmentDeclinedAt, null);
+    assert.equal(reopened.assignmentDeclineReason, null);
+  });
+
+  it("preserves intended dispatch resets and does not commit a reset from a rejected attempt", async () => {
+    const owner = await seed();
+    const engineer = "user-response-engineer" as UserId;
+    const other = "user-response-other" as UserId;
+    await addEngineer(owner, engineer);
+    await addEngineer(owner, other);
+    const { scheduled, engineerScope } = await scheduledAssignment(owner, "WO-RESPONSE-RESET", engineer);
+    const accepted = await owner.service.acceptWorkOrderAssignment(engineerScope, scheduled.id);
+    assert.ok(accepted.assignmentAcceptedAt);
+
+    const rescheduled = await owner.service.scheduleWorkOrder(owner.scope, scheduled.id, {
+      scheduledStartAt: RESPONSE_LATER_START,
+      scheduledEndAt: RESPONSE_LATER_END,
+      expectedUpdatedAt: accepted.updatedAt,
+    });
+    assert.equal(rescheduled.assignmentAcceptedAt, null);
+    assert.equal(rescheduled.assignmentDeclinedAt, null);
+
+    const acceptedAfterReschedule = await owner.service.acceptWorkOrderAssignment(
+      engineerScope,
+      rescheduled.id,
+    );
+    const sameEngineer = await owner.service.assignWorkOrder(owner.scope, rescheduled.id, {
+      userId: engineer,
+      expectedUpdatedAt: acceptedAfterReschedule.updatedAt,
+    });
+    assert.equal(sameEngineer.assignmentAcceptedAt, null);
+
+    const acceptedAfterSameEngineer = await owner.service.acceptWorkOrderAssignment(
+      engineerScope,
+      sameEngineer.id,
+    );
+    const identicalWindow = await owner.service.scheduleWorkOrder(owner.scope, sameEngineer.id, {
+      scheduledStartAt: RESPONSE_LATER_START,
+      scheduledEndAt: RESPONSE_LATER_END,
+      expectedUpdatedAt: acceptedAfterSameEngineer.updatedAt,
+    });
+    assert.equal(identicalWindow.assignmentAcceptedAt, null);
+
+    const acceptedAfterWindow = await owner.service.acceptWorkOrderAssignment(
+      engineerScope,
+      identicalWindow.id,
+    );
+    const reassigned = await owner.service.assignWorkOrder(owner.scope, identicalWindow.id, {
+      userId: other,
+      expectedUpdatedAt: acceptedAfterWindow.updatedAt,
+    });
+    assert.equal(reassigned.assignedUserId, other);
+    assert.equal(reassigned.assignmentAcceptedAt, null);
+
+    const returned = await owner.service.assignWorkOrder(owner.scope, reassigned.id, {
+      userId: engineer,
+      expectedUpdatedAt: reassigned.updatedAt,
+    });
+    const acceptedBeforeClear = await owner.service.acceptWorkOrderAssignment(
+      engineerScope,
+      returned.id,
+    );
+    const unassigned = await owner.service.clearWorkOrderAssignment(owner.scope, returned.id, {
+      expectedUpdatedAt: acceptedBeforeClear.updatedAt,
+    });
+    assert.equal(unassigned.assignedUserId, null);
+    assert.equal(unassigned.assignmentAcceptedAt, null);
+    assert.equal(unassigned.assignmentDeclineReason, null);
+
+    const reassignedForSchedule = await owner.service.assignWorkOrder(owner.scope, unassigned.id, {
+      userId: engineer,
+      expectedUpdatedAt: unassigned.updatedAt,
+    });
+    const acceptedBeforeScheduleClear = await owner.service.acceptWorkOrderAssignment(
+      engineerScope,
+      reassignedForSchedule.id,
+    );
+    const cleared = await owner.service.clearWorkOrderSchedule(owner.scope, reassignedForSchedule.id, {
+      expectedUpdatedAt: acceptedBeforeScheduleClear.updatedAt,
+    });
+    assert.equal(cleared.scheduledStartAt, null);
+    assert.equal(cleared.assignmentAcceptedAt, null);
+
+    const protectedWork = await scheduledAssignment(owner, "WO-RESPONSE-REJECT", engineer);
+    const protectedAcceptance = await owner.service.acceptWorkOrderAssignment(
+      protectedWork.engineerScope,
+      protectedWork.scheduled.id,
+    );
+    const overlapCreated = await openWork(owner, "WO-RESPONSE-OVERLAP");
+    const overlapAssigned = await owner.service.assignWorkOrder(owner.scope, overlapCreated.id, {
+      userId: engineer,
+      expectedUpdatedAt: overlapCreated.updatedAt,
+    });
+    await assert.rejects(
+      () =>
+        owner.service.scheduleWorkOrder(owner.scope, overlapAssigned.id, {
+          scheduledStartAt: PRIORITY_START,
+          scheduledEndAt: PRIORITY_END,
+          expectedUpdatedAt: overlapAssigned.updatedAt,
+        }),
+      priorityCode("double_booking"),
+    );
+    const afterWarning = await owner.service.getWorkOrder(owner.scope, protectedWork.scheduled.id);
+    assert.equal(afterWarning?.assignmentAcceptedAt, protectedAcceptance.assignmentAcceptedAt);
+    assert.equal(afterWarning?.updatedAt, protectedAcceptance.updatedAt);
+
+    await assert.rejects(
+      () =>
+        owner.service.scheduleWorkOrder(owner.scope, protectedWork.scheduled.id, {
+          scheduledStartAt: RESPONSE_LATER_START,
+          scheduledEndAt: RESPONSE_LATER_END,
+          expectedUpdatedAt: protectedWork.created.updatedAt,
+        }),
+      priorityCode("dispatch_conflict"),
+    );
+    await owner.service.createUnavailability(owner.scope, {
+      userId: engineer,
+      unavailableStartAt: RESPONSE_LATER_START,
+      unavailableEndAt: RESPONSE_LATER_END,
+    });
+    await assert.rejects(
+      () =>
+        owner.service.scheduleWorkOrder(owner.scope, protectedWork.scheduled.id, {
+          scheduledStartAt: RESPONSE_LATER_START,
+          scheduledEndAt: RESPONSE_LATER_END,
+          expectedUpdatedAt: protectedAcceptance.updatedAt,
+          confirmDoubleBooking: true,
+        }),
+      priorityCode("engineer_unavailable"),
+    );
+    await assert.rejects(
+      () =>
+        owner.service.scheduleWorkOrder(owner.scope, protectedWork.scheduled.id, {
+          scheduledStartAt: RESPONSE_LATER_END,
+          scheduledEndAt: RESPONSE_LATER_START,
+          expectedUpdatedAt: protectedAcceptance.updatedAt,
+        }),
+      priorityCode("invalid_input"),
+    );
+    const visit = await owner.service.recordVisitArrival(owner.scope, protectedWork.scheduled.id, {
+      userId: engineer,
+      arrivedAt: PRIORITY_START,
+    });
+    await assert.rejects(
+      () =>
+        owner.service.clearWorkOrderSchedule(owner.scope, protectedWork.scheduled.id, {
+          expectedUpdatedAt: protectedAcceptance.updatedAt,
+        }),
+      priorityCode("invalid_status"),
+    );
+    const preserved = await owner.service.getWorkOrder(owner.scope, protectedWork.scheduled.id);
+    assert.equal(preserved?.assignmentAcceptedAt, protectedAcceptance.assignmentAcceptedAt);
+    assert.equal(preserved?.assignmentDeclinedAt, null);
+    assert.equal(preserved?.assignmentDeclineReason, null);
+    assert.equal(preserved?.status, "open");
+    assert.ok(visit.id);
+  });
+});

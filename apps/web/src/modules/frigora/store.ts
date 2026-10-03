@@ -145,13 +145,18 @@ export type FrigoraStore = ReturnType<typeof createAvailabilityStore> & {
     siteId: FrigoraSiteId,
   ): Promise<FrigoraAsset[]>;
   insertWorkOrder(row: FrigoraWorkOrder): Promise<void>;
-  /** Owned-field update. Must not rewrite priority. */
+  /** Owned-field update. Must not rewrite priority or Engineer response state. */
   updateWorkOrder(row: FrigoraWorkOrder): Promise<void>;
   /**
    * Priority-only write guarded by the WorkOrder updatedAt token.
    * Does not assign, schedule, or emit a dispatch event.
    */
   compareAndSetWorkOrderPriority(expected: FrigoraWorkOrder, next: FrigoraWorkOrder): Promise<void>;
+  /**
+   * Engineer-response-only write guarded by the WorkOrder updatedAt token.
+   * Does not assign, schedule, change priority, or emit a dispatch event.
+   */
+  recordWorkOrderAssignmentResponse(expected: FrigoraWorkOrder, next: FrigoraWorkOrder): Promise<void>;
   findWorkOrder(
     workspaceId: WorkspaceId,
     ventureId: VentureId,
@@ -787,6 +792,43 @@ export function createFrigoraStore(options: { createWriteClient?: FrigoraWriteCl
         expected.id,
         expected.workspaceId,
         expected.ventureId,
+      ];
+      await withFrigoraWriteTransaction(async (transaction) => {
+        const updated = await transaction.execute({ sql, args });
+        if (updated.rowsAffected !== 1) {
+          await classifyFailedDispatchGuard(transaction, expected);
+        }
+      }, options.createWriteClient);
+    },
+    async recordWorkOrderAssignmentResponse(expected, next) {
+      await ensureSchema();
+      if (
+        expected.id !== next.id ||
+        expected.workspaceId !== next.workspaceId ||
+        expected.ventureId !== next.ventureId
+      ) {
+        throw new FrigoraError("invalid_input", "Assignment response identity mismatch.");
+      }
+      const sql = `
+        UPDATE frigora_work_orders
+        SET assignment_accepted_at = ?,
+            assignment_declined_at = ?,
+            assignment_decline_reason = ?,
+            updated_at = ?
+        WHERE id = ?
+          AND workspace_id = ?
+          AND venture_id = ?
+          AND updated_at = ?
+      `;
+      const args = [
+        next.assignmentAcceptedAt,
+        next.assignmentDeclinedAt,
+        next.assignmentDeclineReason,
+        next.updatedAt,
+        expected.id,
+        expected.workspaceId,
+        expected.ventureId,
+        expected.updatedAt,
       ];
       await withFrigoraWriteTransaction(async (transaction) => {
         const updated = await transaction.execute({ sql, args });
@@ -2316,7 +2358,12 @@ function toWorkOrderValues(row: FrigoraWorkOrder) {
   };
 }
 
-/** Whole-row updates must not own priority. Only compareAndSetWorkOrderPriority may write it. */
+/**
+ * Whole-row updates must not own priority or Engineer response state.
+ * Priority is written only by compareAndSetWorkOrderPriority.
+ * Response stamps are written only by recordWorkOrderAssignmentResponse
+ * and by the guarded dispatch mutation.
+ */
 function toWorkOrderOwnedUpdateValues(row: FrigoraWorkOrder) {
   const values = toWorkOrderValues(row);
   return {
@@ -2333,9 +2380,6 @@ function toWorkOrderOwnedUpdateValues(row: FrigoraWorkOrder) {
     assignedUserId: values.assignedUserId,
     scheduledStartAt: values.scheduledStartAt,
     scheduledEndAt: values.scheduledEndAt,
-    assignmentAcceptedAt: values.assignmentAcceptedAt,
-    assignmentDeclinedAt: values.assignmentDeclinedAt,
-    assignmentDeclineReason: values.assignmentDeclineReason,
     cancellationReason: values.cancellationReason,
     sourceRecommendedActionId: values.sourceRecommendedActionId,
     createdAt: values.createdAt,

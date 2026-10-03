@@ -1410,7 +1410,7 @@ export function createFrigoraService(options: {
         assignmentDeclineReason: null,
         updatedAt: acceptedAt,
       };
-      await store.updateWorkOrder(next);
+      await store.recordWorkOrderAssignmentResponse(existing, next);
       return next;
     },
     async declineWorkOrderAssignment(scope, id, input) {
@@ -1427,7 +1427,7 @@ export function createFrigoraService(options: {
         assignmentDeclineReason: parsed.reason,
         updatedAt: declinedAt,
       };
-      await store.updateWorkOrder(next);
+      await store.recordWorkOrderAssignmentResponse(existing, next);
       return next;
     },
     async listScheduledWorkOrders(scope, input) {
