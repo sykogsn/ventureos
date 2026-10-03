@@ -167,6 +167,7 @@ export function AuthField({
   required,
   minLength,
   defaultValue,
+  readOnly,
 }: {
   id: string;
   name?: string;
@@ -178,6 +179,7 @@ export function AuthField({
   required?: boolean;
   minLength?: number;
   defaultValue?: string;
+  readOnly?: boolean;
 }) {
   const errorId = `${id}-error`;
   const secret = type === "password";
@@ -203,6 +205,7 @@ export function AuthField({
           required={required}
           minLength={minLength}
           defaultValue={defaultValue}
+          readOnly={readOnly}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           className={cn(

@@ -8,6 +8,7 @@ import {
   issueSession,
   linkGoogleAfterPassword,
   registerUser,
+  registerInvitedUser,
   requestPasswordReset,
   resetPasswordWithToken,
   type UserRecord,
@@ -63,13 +64,28 @@ export async function signupAction(
     return { error: "Enter a name, valid email, and a password of at least 8 characters." };
   }
 
+  const invitationToken = formData.get("invitationToken");
+  const token = typeof invitationToken === "string" ? invitationToken.trim() : "";
+
   try {
-    const user = await registerUser({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      name: parsed.data.name,
-    });
-    await openDesk(user, true);
+    if (token) {
+      const joined = await registerInvitedUser({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        name: parsed.data.name,
+        token,
+      });
+      const sessionId = await issueSession(joined.user);
+      await setSessionCookie(joined.user, sessionId, { remember: true });
+      await setActiveWorkspaceCookie(joined.workspaceId);
+    } else {
+      const user = await registerUser({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        name: parsed.data.name,
+      });
+      await openDesk(user, true);
+    }
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Could not create the account.",

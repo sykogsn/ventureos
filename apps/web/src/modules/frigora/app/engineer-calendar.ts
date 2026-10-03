@@ -1,4 +1,9 @@
-import type { FrigoraVisit, FrigoraWorkKind, FrigoraWorkOrder } from "@/modules/frigora/types";
+import {
+  FRIGORA_WORK_ORDER_PRIORITY_RANK,
+  type FrigoraVisit,
+  type FrigoraWorkKind,
+  type FrigoraWorkOrder,
+} from "@/modules/frigora/types";
 import { hasActiveVisit } from "./operational-derivations";
 
 export function deriveEngineerWorkload(workOrders: readonly FrigoraWorkOrder[], range: ScheduleRange,
@@ -135,7 +140,18 @@ export function isUnassignedQueueWorkOrder(workOrder: FrigoraWorkOrder): boolean
   return workOrder.status === "open" && workOrder.assignedUserId === null;
 }
 
+function compareByPriority(left: FrigoraWorkOrder, right: FrigoraWorkOrder): number {
+  return (
+    FRIGORA_WORK_ORDER_PRIORITY_RANK[left.priority] -
+    FRIGORA_WORK_ORDER_PRIORITY_RANK[right.priority]
+  );
+}
+
 function compareCalendarEntries(left: FrigoraWorkOrder, right: FrigoraWorkOrder): number {
+  const byPriority = compareByPriority(left, right);
+  if (byPriority !== 0) {
+    return byPriority;
+  }
   const leftStart = left.scheduledStartAt ?? "";
   const rightStart = right.scheduledStartAt ?? "";
   if (leftStart !== rightStart) {
@@ -153,6 +169,14 @@ function compareCalendarEntries(left: FrigoraWorkOrder, right: FrigoraWorkOrder)
     return left.id < right.id ? -1 : 1;
   }
   return 0;
+}
+
+export function compareOperationalQueue(left: FrigoraWorkOrder, right: FrigoraWorkOrder): number {
+  const byPriority = compareByPriority(left, right);
+  if (byPriority !== 0) {
+    return byPriority;
+  }
+  return compareQueueEntries(left, right);
 }
 
 function compareQueueEntries(left: FrigoraWorkOrder, right: FrigoraWorkOrder): number {
@@ -213,5 +237,5 @@ export function projectUnassignedQueue(
 ): FrigoraWorkOrder[] {
   return uniqueWorkOrders(workOrders)
     .filter(isUnassignedQueueWorkOrder)
-    .sort(compareQueueEntries);
+    .sort(compareOperationalQueue);
 }

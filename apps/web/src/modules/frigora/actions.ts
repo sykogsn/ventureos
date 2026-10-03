@@ -56,6 +56,7 @@ import type {
   RecordVisitArrivalInput,
   RecordVisitDepartureInput,
   ScheduleWorkOrderInput,
+  SetWorkOrderPriorityInput,
   FrigoraRecommendedActionId,
   FrigoraVisitEvidence,
   FrigoraVisitEvidenceId,
@@ -199,6 +200,14 @@ export async function createWorkOrderAction(
   input: ScopedInput & CreateWorkOrderInput,
 ): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
   return mutate(input, (scope) => getFrigoraService().createWorkOrder(scope, input));
+}
+
+export async function setWorkOrderPriorityAction(
+  input: ScopedInput & { id: string } & SetWorkOrderPriorityInput,
+): Promise<FrigoraMutationResult<FrigoraWorkOrder>> {
+  return mutate(input, (scope) =>
+    getFrigoraService().setWorkOrderPriority(scope, input.id as FrigoraWorkOrderId, input),
+  );
 }
 
 export async function updateWorkOrderAction(

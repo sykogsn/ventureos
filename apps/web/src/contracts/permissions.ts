@@ -4,6 +4,9 @@ export type Permission =
   | "workspace.read"
   | "workspace.update"
   | "workspace.create"
+  | "workspace.members.read"
+  | "workspace.members.invite"
+  | "workspace.members.manage"
   | "venture.create"
   | "venture.read"
   | "venture.update";

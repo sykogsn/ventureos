@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import type { UserId } from "@/contracts";
+import type { UserId, WorkspaceId } from "@/contracts";
 import {
   createEvent,
   createId,
@@ -8,6 +8,11 @@ import {
   getPlatform,
   nowIso,
 } from "@/platform";
+import {
+  acceptInvitationForNewAccount,
+  previewWorkspaceInvitation,
+  WorkspaceAccessError,
+} from "@/modules/workspaces/access";
 import { createWorkspace } from "@/modules/workspaces/service";
 import type { AuthProvider } from "@/platform/persistence/repositories/ports";
 import { decideGoogleSignIn } from "@/modules/auth/google-account";
@@ -42,6 +47,7 @@ export async function registerUser(input: {
   email: string;
   password: string;
   name: string;
+  createPersonalWorkspace?: boolean;
 }): Promise<UserRecord> {
   await ensureSchema();
   const store = getPersistence();
@@ -85,12 +91,75 @@ export async function registerUser(input: {
     createEvent("user.registered", { userId: id, email }, { actorId: id }),
   );
 
-  await createWorkspace({
-    userId: id,
-    name: `${name}'s workspace`,
-  });
+  if (input.createPersonalWorkspace !== false) {
+    await createWorkspace({
+      userId: id,
+      name: `${name}'s workspace`,
+    });
+  }
 
   return { id, email, name };
+}
+
+export async function registerInvitedUser(input: {
+  email: string;
+  password: string;
+  name: string;
+  token: string;
+}): Promise<{ user: UserRecord; workspaceId: WorkspaceId }> {
+  const preview = await previewWorkspaceInvitation(input.token);
+  if (!preview || preview.state !== "pending") {
+    throw new Error(
+      preview?.state === "revoked"
+        ? "This invitation has been revoked."
+        : preview?.state === "accepted"
+          ? "This invitation has already been used."
+          : preview?.state === "expired"
+            ? "This invitation has expired."
+            : "This invitation is invalid or has expired.",
+    );
+  }
+  if (normalizeEmail(input.email) !== preview.email) {
+    throw new Error("This invitation was sent to a different email.");
+  }
+
+  await ensureSchema();
+  const email = normalizeEmail(input.email);
+  const name = input.name.trim();
+  const id = createId<UserId>();
+  const passwordHash = await bcrypt.hash(input.password, 12);
+  const createdAt = nowIso();
+  const joined = await acceptInvitationForNewAccount({
+    token: input.token,
+    user: {
+      id,
+      email,
+      name,
+      passwordHash,
+      createdAt,
+    },
+    identity: {
+      id: createId(),
+      userId: id,
+      provider: "password",
+      providerSubject: email,
+      secretHash: passwordHash,
+      createdAt,
+    },
+  }).catch(asAuthInvitationError);
+
+  const platform = getPlatform();
+  platform.knowledge.upsertEntity({
+    id,
+    kind: "user",
+    label: name,
+    properties: { email },
+  });
+  await platform.events.publish(
+    createEvent("user.registered", { userId: id, email }, { actorId: id }),
+  );
+
+  return { user: { id, email, name }, workspaceId: joined.workspaceId };
 }
 
 export async function requestPasswordReset(input: { email: string; origin: string }) {
@@ -166,15 +235,32 @@ export async function resetPasswordWithToken(input: { token: string; password: s
 }
 
 export type GoogleSignInResult =
-  | { status: "signed-in"; user: UserRecord }
+  | { status: "signed-in"; user: UserRecord; workspaceId?: WorkspaceId }
   | { status: "link-after-password"; email: string; subject: string; name: string };
 
-export async function completeGoogleSignIn(profile: {
-  subject: string;
-  email: string;
-  emailVerified: boolean;
-  name: string;
-}): Promise<GoogleSignInResult> {
+function asAuthInvitationError(error: unknown): never {
+  if (error instanceof WorkspaceAccessError) {
+    throw new Error(error.message);
+  }
+  throw error;
+}
+
+function rejectedInvitationMessage(state: string | undefined) {
+  if (state === "revoked") return "This invitation has been revoked.";
+  if (state === "accepted") return "This invitation has been used.";
+  if (state === "expired") return "This invitation has expired.";
+  return "This invitation is invalid or has expired.";
+}
+
+export async function completeGoogleSignIn(
+  profile: {
+    subject: string;
+    email: string;
+    emailVerified: boolean;
+    name: string;
+  },
+  options?: { invitationToken?: string },
+): Promise<GoogleSignInResult> {
   await ensureSchema();
   const store = getPersistence();
   const email = normalizeEmail(profile.email);
@@ -216,9 +302,51 @@ export async function completeGoogleSignIn(profile: {
     };
   }
 
+  const invitationToken = options?.invitationToken?.trim() ?? "";
+  const name = profile.name.trim() || email;
+  if (invitationToken) {
+    const preview = await previewWorkspaceInvitation(invitationToken);
+    if (!preview || preview.state !== "pending") {
+      throw new Error(rejectedInvitationMessage(preview?.state));
+    }
+    if (preview.email !== email) {
+      throw new Error("This invitation was sent to a different email.");
+    }
+    const id = createId<UserId>();
+    const createdAt = nowIso();
+    const joined = await acceptInvitationForNewAccount({
+      token: invitationToken,
+      user: {
+        id,
+        email,
+        name,
+        passwordHash: await unusablePasswordHash(),
+        createdAt,
+      },
+      identity: {
+        id: createId(),
+        userId: id,
+        provider: "google",
+        providerSubject: profile.subject,
+        secretHash: null,
+        createdAt,
+      },
+    }).catch(asAuthInvitationError);
+    const platform = getPlatform();
+    platform.knowledge.upsertEntity({
+      id,
+      kind: "user",
+      label: name,
+      properties: { email },
+    });
+    await platform.events.publish(
+      createEvent("user.registered", { userId: id, email, provider: "google" }, { actorId: id }),
+    );
+    return { status: "signed-in", user: { id, email, name }, workspaceId: joined.workspaceId };
+  }
+
   const id = createId<UserId>();
   const createdAt = nowIso();
-  const name = profile.name.trim() || email;
   await store.users.insert({
     id,
     email,
