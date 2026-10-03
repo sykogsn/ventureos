@@ -321,6 +321,17 @@
   transition-timing-function: var(--ids-foundation-motion-ease-standard);
 }
 
+@utility vos-entity-link {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 42%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition-property: color, text-decoration-color;
+  transition-duration: var(--ids-foundation-motion-duration-fast);
+  transition-timing-function: var(--ids-foundation-motion-ease-standard);
+}
+
 @utility vos-kbd {
   border-radius: var(--ids-foundation-surface-radius-control);
   border: var(--ids-foundation-surface-border-width) solid var(--border);
@@ -701,6 +712,16 @@ select:focus-visible {
 
 .vos-link:hover {
   color: var(--text-primary);
+}
+
+.vos-entity-link:hover {
+  color: var(--text-primary);
+  text-decoration-color: currentColor;
+}
+
+.vos-entity-link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ring) 55%, transparent);
+  outline-offset: 2px;
 }
 
 @supports (backdrop-filter: blur(1px)) {

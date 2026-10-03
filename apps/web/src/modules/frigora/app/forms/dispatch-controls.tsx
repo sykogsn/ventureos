@@ -11,6 +11,7 @@ import {
   setWorkOrderPriorityFormAction,
   type OfficeFormState,
 } from "@/modules/frigora/app/mutation-actions";
+import { FrigoraWorkOrderLink } from "@/modules/frigora/app/entity-link";
 import type { UserDisplay } from "@/modules/frigora/app/views";
 
 const WORK_ORDER_PRIORITY_OPTIONS = [
@@ -227,7 +228,14 @@ function DoubleBookingConfirmation({ state, action, pending, scope }: {
         : ` ${state.values.scheduledStartAt} – ${state.values.scheduledEndAt} UTC`}
     </p>
     <ul className="ids-caption">{state.conflicts?.map((conflict) =>
-      <li key={conflict.id}>{conflict.workReference}: {conflict.scheduledStartAt} – {conflict.scheduledEndAt}</li>)}</ul>
+      <li key={conflict.id}>
+        <FrigoraWorkOrderLink
+          ventureId={scope.ventureId}
+          workOrderId={conflict.id}
+          workReference={conflict.workReference}
+        />
+        {`: ${conflict.scheduledStartAt} – ${conflict.scheduledEndAt}`}
+      </li>)}</ul>
     <Button type="submit" name="confirmDoubleBooking" value="true" disabled={pending}>Confirm double-booking</Button>
     <Button type="button" variant="secondary" disabled={pending} onClick={() => setDismissed(state)}>Cancel</Button>
   </Form>;

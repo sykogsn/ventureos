@@ -2,6 +2,10 @@ import Link from "next/link";
 import { PageFrame } from "@/core";
 import { Fit, Stack } from "@/core/layout";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import {
+  FrigoraCustomerSiteLinks,
+  FrigoraWorkOrderLink,
+} from "@/modules/frigora/app/entity-link";
 import { DispatchControls, PriorityControl, PriorityLabel } from "@/modules/frigora/app/forms/dispatch-controls";
 import { EngineerCalendarPanel } from "@/modules/frigora/app/screens/engineer-calendar-panel";
 import {
@@ -179,12 +183,11 @@ export function OperationsScreen({
                           <p className="ids-body text-foreground">
                             <PriorityLabel priority={item.workOrder.priority} />
                             {" · "}
-                            <Link
-                              href={`${workBase}/${item.workOrder.id}`}
-                              className="underline-offset-2 hover:underline"
-                            >
-                              {item.workOrder.workReference}
-                            </Link>
+                            <FrigoraWorkOrderLink
+                              ventureId={ctx.ventureId}
+                              workOrderId={item.workOrder.id}
+                              workReference={item.workOrder.workReference}
+                            />
                           </p>
                           <p className="ids-body text-foreground">
                             {item.assignee?.name ?? "Unassigned"}
@@ -204,7 +207,11 @@ export function OperationsScreen({
                             </ul>
                           ) : null}
                           <p className="ids-caption text-muted">
-                            {item.customer?.displayName ?? "—"} / {item.site?.name ?? "—"}
+                            <FrigoraCustomerSiteLinks
+                              ventureId={ctx.ventureId}
+                              customer={item.customer}
+                              site={item.site}
+                            />
                             {" · "}
                             {item.workOrder.workKind}
                             {" · "}
@@ -267,18 +274,21 @@ export function OperationsScreen({
                 <li key={item.workOrder.id} className="py-3">
                   <Stack gap="tight">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <Link
-                        href={`${workBase}/${item.workOrder.id}`}
-                        className="ids-body underline-offset-2 hover:underline"
-                      >
-                        {item.workOrder.workReference}
-                      </Link>
+                      <FrigoraWorkOrderLink
+                        ventureId={ctx.ventureId}
+                        workOrderId={item.workOrder.id}
+                        workReference={item.workOrder.workReference}
+                      />
                       <span className="ids-caption text-muted">
                         {item.assignee?.name ?? "Unassigned"}
                       </span>
                     </div>
                     <p className="ids-caption text-muted">
-                      {item.customer?.displayName ?? "—"} / {item.site?.name ?? "—"}
+                      <FrigoraCustomerSiteLinks
+                        ventureId={ctx.ventureId}
+                        customer={item.customer}
+                        site={item.site}
+                      />
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {item.signals.map((signal) => (
@@ -307,12 +317,11 @@ export function OperationsScreen({
                 <li key={`${event.kind}-${event.sourceId}`} className="py-3">
                   <Stack gap="tight">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <Link
-                        href={`${workBase}/${event.workOrderId}`}
-                        className="ids-body underline-offset-2 hover:underline"
-                      >
-                        {event.workOrderReference}
-                      </Link>
+                      <FrigoraWorkOrderLink
+                        ventureId={ctx.ventureId}
+                        workOrderId={event.workOrderId}
+                        workReference={event.workOrderReference}
+                      />
                       <span className="ids-caption text-muted">{event.occurredAt}</span>
                     </div>
                     <p className="ids-body">{event.label}</p>

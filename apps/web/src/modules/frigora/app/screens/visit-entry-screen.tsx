@@ -3,6 +3,12 @@ import { PageFrame } from "@/core";
 import { Fit, Stack } from "@/core/layout";
 import { StartVisitForm } from "@/modules/frigora/app/forms/start-visit-form";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import {
+  FrigoraAssetLink,
+  FrigoraCustomerSiteLinks,
+  FrigoraSiteAddressLink,
+  FrigoraWorkOrderLink,
+} from "@/modules/frigora/app/entity-link";
 import type { VisitEntryView } from "@/modules/frigora/app/views";
 
 export function VisitEntryScreen({
@@ -14,25 +20,26 @@ export function VisitEntryScreen({
 }) {
   const { workOrder, customer, site, asset } = view;
   const workBase = `/ventures/${ctx.ventureId}/work/${workOrder.id}`;
-  const siteAddress = site
-    ? [
-        site.addressLine1,
-        site.addressLine2,
-        site.city,
-        site.region,
-        site.postalCode,
-        site.country,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : "";
 
   return (
     <PageFrame
       page="Start visit"
-      kicker={workOrder.workReference}
+      kicker={
+        <FrigoraWorkOrderLink
+          ventureId={ctx.ventureId}
+          workOrderId={workOrder.id}
+          workReference={workOrder.workReference}
+        />
+      }
       title="Start visit"
-      description={`${customer?.displayName ?? "Customer"} · ${site?.name ?? "Site"}`}
+      description={
+        <FrigoraCustomerSiteLinks
+          ventureId={ctx.ventureId}
+          customer={customer}
+          site={site}
+          separator=" · "
+        />
+      }
       ventureId={ctx.ventureId}
       actions={
         <Fit>
@@ -46,7 +53,9 @@ export function VisitEntryScreen({
         <dl className="grid gap-3">
           <div>
             <dt className="ids-caption text-muted">Site address</dt>
-            <dd className="ids-body break-words">{siteAddress || "—"}</dd>
+            <dd className="ids-body break-words">
+              <FrigoraSiteAddressLink ventureId={ctx.ventureId} site={site} />
+            </dd>
           </div>
           <div>
             <dt className="ids-caption text-muted">Service window</dt>
@@ -60,8 +69,12 @@ export function VisitEntryScreen({
             <div>
               <dt className="ids-caption text-muted">Asset</dt>
               <dd className="ids-body">
-                {asset.tag}
-                {asset.name ? ` — ${asset.name}` : ""}
+                <FrigoraAssetLink
+                  ventureId={ctx.ventureId}
+                  customerId={customer?.id ?? workOrder.customerId}
+                  siteId={site?.id ?? asset.siteId}
+                  asset={asset}
+                />
               </dd>
             </div>
           ) : null}

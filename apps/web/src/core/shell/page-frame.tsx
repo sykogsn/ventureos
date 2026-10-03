@@ -21,10 +21,10 @@ export function PageFrame({
   children,
 }: {
   page?: string;
-  kicker?: string;
+  kicker?: ReactNode;
   title: string;
   lede?: string;
-  description?: string;
+  description?: ReactNode;
   meta?: string;
   actions?: ReactNode;
   summary?: ReactNode;

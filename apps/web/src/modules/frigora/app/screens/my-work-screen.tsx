@@ -4,6 +4,12 @@ import { EmptyCopy } from "@/core/shell/empty-copy";
 import { Fit, Stack } from "@/core/layout";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
 import type { MyWorkRow } from "@/modules/frigora/app/views";
+import {
+  FrigoraAssetLink,
+  FrigoraCustomerSiteLinks,
+  FrigoraSiteAddressLink,
+  FrigoraWorkOrderLink,
+} from "@/modules/frigora/app/entity-link";
 import { FieldWorkspacePreloadControl } from "@/modules/frigora/app/offline/preload-control";
 import { OfflineMyWorkFallback } from "@/modules/frigora/app/offline/offline-fallback-panels";
 import { MyWorkOnlineList } from "@/modules/frigora/app/offline/my-work-online-bridge";
@@ -13,20 +19,6 @@ function previewText(text: string | null, max = 120): string {
     return "—";
   }
   return text.length > max ? `${text.slice(0, max)}…` : text;
-}
-
-function formatSiteAddress(site: MyWorkRow["site"]): string {
-  if (!site) return "—";
-  return [
-    site.addressLine1,
-    site.addressLine2,
-    site.city,
-    site.region,
-    site.postalCode,
-    site.country,
-  ]
-    .filter(Boolean)
-    .join(", ") || "—";
 }
 
 export function MyWorkScreen({
@@ -98,14 +90,18 @@ export function MyWorkScreen({
                   >
                     <Stack gap="tight">
                       <div>
-                        <Link
-                          href={`${base}/${workOrder.id}`}
-                          className="ids-label text-foreground underline-offset-2 hover:underline"
-                        >
-                          {workOrder.workReference}
-                        </Link>
+                        <FrigoraWorkOrderLink
+                          ventureId={ctx.ventureId}
+                          workOrderId={workOrder.id}
+                          workReference={workOrder.workReference}
+                        />
                         <p className="ids-caption text-muted">
-                          {customer?.displayName ?? "—"} · {site?.name ?? "—"}
+                          <FrigoraCustomerSiteLinks
+                            ventureId={ctx.ventureId}
+                            customer={customer}
+                            site={site}
+                            separator=" · "
+                          />
                         </p>
                       </div>
                       <dl className="grid gap-2 text-sm sm:grid-cols-2">
@@ -140,15 +136,19 @@ export function MyWorkScreen({
                         <div className="sm:col-span-2">
                           <dt className="ids-caption text-muted">Site address</dt>
                           <dd className="ids-body break-words">
-                            {formatSiteAddress(site)}
+                            <FrigoraSiteAddressLink ventureId={ctx.ventureId} site={site} />
                           </dd>
                         </div>
                         {asset ? (
                           <div className="sm:col-span-2">
                             <dt className="ids-caption text-muted">Asset</dt>
                             <dd className="ids-body">
-                              {asset.tag}
-                              {asset.name ? ` — ${asset.name}` : ""}
+                              <FrigoraAssetLink
+                                ventureId={ctx.ventureId}
+                                customerId={customer?.id ?? workOrder.customerId}
+                                siteId={site?.id ?? asset.siteId}
+                                asset={asset}
+                              />
                             </dd>
                           </div>
                         ) : null}

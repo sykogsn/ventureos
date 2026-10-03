@@ -4,6 +4,16 @@ import { PageFrame } from "@/core";
 import { EmptyCopy } from "@/core/shell/empty-copy";
 import { Fit, Stack } from "@/core/layout";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import {
+  FrigoraCustomerLink,
+  FrigoraEntityLink,
+  FrigoraSiteLink,
+} from "@/modules/frigora/app/entity-link";
+import {
+  frigoraAssetHref,
+  frigoraCustomerHref,
+  frigoraSiteHref,
+} from "@/modules/frigora/app/entity-routes";
 import type { FrigoraAsset, FrigoraCustomer, FrigoraSite } from "@/modules/frigora/types";
 
 export function SiteDetailScreen({
@@ -19,8 +29,7 @@ export function SiteDetailScreen({
   assets: FrigoraAsset[];
   createAssetSlot?: ReactNode;
 }) {
-  const customerHref = `/ventures/${ctx.ventureId}/customers/${customer.id}`;
-  const siteHref = `${customerHref}/sites/${site.id}`;
+  const customerHref = frigoraCustomerHref(ctx.ventureId, customer.id);
   const workNewHref = `/ventures/${ctx.ventureId}/work/new?siteId=${encodeURIComponent(site.id)}&customerId=${encodeURIComponent(customer.id)}`;
 
   return (
@@ -28,7 +37,12 @@ export function SiteDetailScreen({
       page={site.name}
       kicker="Site"
       title={site.name}
-      description={`${customer.displayName} · ${site.code}`}
+      description={
+        <>
+          <FrigoraCustomerLink ventureId={ctx.ventureId} customer={customer} />
+          {` · ${site.code}`}
+        </>
+      }
       meta={site.status}
       ventureId={ctx.ventureId}
       actions={
@@ -48,6 +62,12 @@ export function SiteDetailScreen({
     >
       <Stack gap="section">
         <dl className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt className="ids-caption text-muted">Customer</dt>
+            <dd className="ids-body">
+              <FrigoraCustomerLink ventureId={ctx.ventureId} customer={customer} />
+            </dd>
+          </div>
           <div>
             <dt className="ids-caption text-muted">Address</dt>
             <dd className="ids-body">
@@ -73,13 +93,12 @@ export function SiteDetailScreen({
             <ul className="divide-y divide-[var(--ids-foundation-stroke-subtle)]">
               {assets.map((asset) => (
                 <li key={asset.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
-                  <Link
-                    href={`${siteHref}/assets/${asset.id}`}
-                    className="ids-body underline-offset-2 hover:underline"
+                  <FrigoraEntityLink
+                    href={frigoraAssetHref(ctx.ventureId, customer.id, site.id, asset.id)}
                   >
                     {asset.tag}
                     {asset.name ? ` — ${asset.name}` : ""}
-                  </Link>
+                  </FrigoraEntityLink>
                   <span className="ids-caption text-muted">{asset.status}</span>
                 </li>
               ))}
@@ -104,7 +123,7 @@ export function AssetDetailScreen({
   site: FrigoraSite;
   asset: FrigoraAsset;
 }) {
-  const siteHref = `/ventures/${ctx.ventureId}/customers/${customer.id}/sites/${site.id}`;
+  const siteHref = frigoraSiteHref(ctx.ventureId, customer.id, site.id);
   const workNewHref = `/ventures/${ctx.ventureId}/work/new?siteId=${encodeURIComponent(site.id)}&customerId=${encodeURIComponent(customer.id)}&primaryAssetId=${encodeURIComponent(asset.id)}`;
 
   return (
@@ -112,7 +131,13 @@ export function AssetDetailScreen({
       page={asset.tag}
       kicker="Asset"
       title={asset.name ?? asset.tag}
-      description={`${site.name} · ${customer.displayName}`}
+      description={
+        <>
+          <FrigoraSiteLink ventureId={ctx.ventureId} site={site} />
+          {" · "}
+          <FrigoraCustomerLink ventureId={ctx.ventureId} customer={customer} />
+        </>
+      }
       meta={asset.status}
       ventureId={ctx.ventureId}
       actions={
@@ -131,6 +156,18 @@ export function AssetDetailScreen({
       }
     >
       <dl className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <dt className="ids-caption text-muted">Customer</dt>
+          <dd className="ids-body">
+            <FrigoraCustomerLink ventureId={ctx.ventureId} customer={customer} />
+          </dd>
+        </div>
+        <div>
+          <dt className="ids-caption text-muted">Site</dt>
+          <dd className="ids-body">
+            <FrigoraSiteLink ventureId={ctx.ventureId} site={site} />
+          </dd>
+        </div>
         <div>
           <dt className="ids-caption text-muted">Tag</dt>
           <dd className="ids-body">{asset.tag}</dd>

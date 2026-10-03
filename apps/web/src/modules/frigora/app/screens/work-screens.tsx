@@ -12,6 +12,14 @@ import {
   formatWorkOrderStatusLabel,
 } from "@/modules/frigora/app/operational-derivations";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
+import {
+  FrigoraAssetLink,
+  FrigoraCustomerLink,
+  FrigoraCustomerSiteLinks,
+  FrigoraSiteIdentityLink,
+  FrigoraVisitLink,
+  FrigoraWorkOrderLink,
+} from "@/modules/frigora/app/entity-link";
 import { OfflineWorkOrderFallback } from "@/modules/frigora/app/offline/offline-fallback-panels";
 import { TimeMaterialsSection } from "@/modules/frigora/app/screens/time-materials-section";
 import {
@@ -315,23 +323,22 @@ export function WorkListScreen({
                       className="border-t border-[var(--ids-foundation-stroke-subtle)]"
                     >
                       <td className="py-3 pr-4 ids-body">
-                        <Link
-                          href={`${base}/${workOrder.id}`}
-                          className="underline-offset-2 hover:underline"
-                        >
-                          {workOrder.workReference}
-                        </Link>
+                        <FrigoraWorkOrderLink
+                          ventureId={ctx.ventureId}
+                          workOrderId={workOrder.id}
+                          workReference={workOrder.workReference}
+                        />
                       </td>
                       <td className="py-3 pr-4 ids-caption text-muted">
                         {formatWorkOrderStatusLabel(workOrder.status)}
                       </td>
                       <td className="py-3 pr-4 ids-caption text-muted">{workOrder.workKind}</td>
                       <td className="py-3 pr-4 ids-body">
-                        {customer?.displayName ?? "—"}
-                        <span className="ids-caption text-muted">
-                          {" "}
-                          / {site?.name ?? "—"}
-                        </span>
+                        <FrigoraCustomerSiteLinks
+                          ventureId={ctx.ventureId}
+                          customer={customer}
+                          site={site}
+                        />
                       </td>
                       <td className="py-3 pr-4 ids-body">
                         {assignee?.name ?? "Unassigned"}
@@ -343,9 +350,17 @@ export function WorkListScreen({
                         ) : null}
                       </td>
                       <td className="py-3 pr-4 ids-caption text-muted">
-                        {latestVisit
-                          ? `${formatVisitStatusLabel(latestVisit.status)} · ${latestVisit.arrivedAt}`
-                          : "No visits"}
+                        {latestVisit ? (
+                          <FrigoraVisitLink
+                            ventureId={ctx.ventureId}
+                            workOrderId={workOrder.id}
+                            visitId={latestVisit.id}
+                          >
+                            {`${formatVisitStatusLabel(latestVisit.status)} · ${latestVisit.arrivedAt}`}
+                          </FrigoraVisitLink>
+                        ) : (
+                          "No visits"
+                        )}
                       </td>
                     </tr>
                   ),
@@ -462,18 +477,6 @@ export function WorkDetailScreen({
   const openVisits = visits.filter((visit) => visit.status === "open");
   const latestOpen = openVisits.length > 0 ? openVisits[openVisits.length - 1] : null;
   const mayExecute = isOpen && assignedToMe;
-  const siteAddress = site
-    ? [
-        site.addressLine1,
-        site.addressLine2,
-        site.city,
-        site.region,
-        site.postalCode,
-        site.country,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : "";
 
   const latestFacts = latestVisitId
     ? visitFacts.find((facts) => facts.visit.id === latestVisitId)
@@ -485,7 +488,14 @@ export function WorkDetailScreen({
       page={workOrder.workReference}
       kicker="Work order"
       title={workOrder.workReference}
-      description={`${customer?.displayName ?? "Customer"} · ${site?.name ?? "Site"}`}
+      description={
+        <FrigoraCustomerSiteLinks
+          ventureId={ctx.ventureId}
+          customer={customer}
+          site={site}
+          separator=" · "
+        />
+      }
       meta={formatWorkOrderStatusLabel(workOrder.status)}
       ventureId={ctx.ventureId}
       actions={
@@ -542,19 +552,25 @@ export function WorkDetailScreen({
           </div>
           <div>
             <dt className="ids-caption text-muted">Customer</dt>
-            <dd className="ids-body">{customer?.displayName ?? "—"}</dd>
+            <dd className="ids-body">
+              <FrigoraCustomerLink ventureId={ctx.ventureId} customer={customer} />
+            </dd>
           </div>
           <div>
             <dt className="ids-caption text-muted">Site</dt>
             <dd className="ids-body break-words">
-              {site?.name ?? "—"}
-              {siteAddress ? ` · ${siteAddress}` : ""}
+              <FrigoraSiteIdentityLink ventureId={ctx.ventureId} site={site} />
             </dd>
           </div>
           <div>
             <dt className="ids-caption text-muted">Primary asset</dt>
             <dd className="ids-body">
-              {asset ? `${asset.tag}${asset.name ? ` — ${asset.name}` : ""}` : "—"}
+              <FrigoraAssetLink
+                ventureId={ctx.ventureId}
+                customerId={customer?.id ?? workOrder.customerId}
+                siteId={site?.id ?? asset?.siteId ?? workOrder.siteId}
+                asset={asset}
+              />
             </dd>
           </div>
           <div>
@@ -702,12 +718,11 @@ export function WorkDetailScreen({
                     {followUp ? (
                       <p className="ids-caption">
                         Follow-up WorkOrder:{" "}
-                        <Link
-                          href={`/ventures/${ctx.ventureId}/work/${followUp.id}`}
-                          className="underline-offset-2 hover:underline"
-                        >
-                          {followUp.workReference}
-                        </Link>
+                        <FrigoraWorkOrderLink
+                          ventureId={ctx.ventureId}
+                          workOrderId={followUp.id}
+                          workReference={followUp.workReference}
+                        />
                       </p>
                     ) : ctx.canWrite ? (
                       <ConvertRecommendedActionForm
