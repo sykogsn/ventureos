@@ -15,6 +15,7 @@ export function PageFrame({
   description,
   meta,
   actions,
+  trail,
   summary,
   footer,
   ventureId,
@@ -27,6 +28,7 @@ export function PageFrame({
   description?: ReactNode;
   meta?: string;
   actions?: ReactNode;
+  trail?: ReactNode;
   summary?: ReactNode;
   footer?: ReactNode;
   ventureId?: string;
@@ -43,6 +45,7 @@ export function PageFrame({
           description={description}
           meta={meta}
           actions={actions}
+          trail={trail}
         />
         {summary}
         <Dashboard>{children}</Dashboard>
