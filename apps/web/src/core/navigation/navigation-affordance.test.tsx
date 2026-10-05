@@ -68,6 +68,23 @@ describe("VentureOS navigation affordance primitives", () => {
     assert.doesNotMatch(standard, /Frigora/);
   });
 
+  it("exposes the entity trail through the shared page shell", () => {
+    const frame = readFileSync(join(process.cwd(), "src/core/shell/page-frame.tsx"), "utf8");
+    const header = readFileSync(join(process.cwd(), "src/core/shell/page-header.tsx"), "utf8");
+    assert.match(frame, /trail\?: ReactNode/);
+    assert.match(frame, /trail=\{trail\}/);
+    assert.match(header, /trail\?: ReactNode/);
+    assert.match(header, /\{trail\}/);
+  });
+
+  it("inherits the certified entity-link interaction treatment", () => {
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    assert.match(css, /@utility vos-entity-link/);
+    assert.match(css, /\.vos-entity-link:hover/);
+    assert.match(css, /\.vos-entity-link:focus-visible/);
+    assert.equal(css.includes(".vos-entity-link:visited"), false);
+  });
+
   it("keeps the core navigation module free of product imports", () => {
     const root = join(process.cwd(), "src/core/navigation");
     for (const file of [
