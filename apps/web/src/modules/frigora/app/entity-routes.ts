@@ -1,4 +1,4 @@
-import { ventureEntityPath } from "@/core/navigation";
+import { ventureEntityPath } from "@/core/navigation/entity-routes";
 
 /**
  * Frigora operational entity routes.
