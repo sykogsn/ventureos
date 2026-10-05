@@ -20,11 +20,14 @@ export function EntityTrail({
     return null;
   }
 
+  const explicitCurrentIndex = items.findIndex((item) => item.current === true);
+  const currentIndex = explicitCurrentIndex >= 0 ? explicitCurrentIndex : items.length - 1;
+
   return (
     <nav aria-label={label} className="min-w-0">
       <ol className="flex min-w-0 flex-wrap items-center gap-2">
         {items.map((item, index) => {
-          const current = item.current ?? index === items.length - 1;
+          const current = index === currentIndex;
 
           return (
             <li key={item.key} className="flex min-w-0 items-center gap-2">
