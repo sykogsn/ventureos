@@ -1,6 +1,6 @@
 "use client";
 
-import { EntityLink } from "@/core/navigation";
+import { EntityLink } from "@/core/navigation/entity-link";
 import type { ReactNode } from "react";
 import {
   formatFrigoraAssetLabel,
