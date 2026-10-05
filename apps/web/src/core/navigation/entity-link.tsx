@@ -24,7 +24,7 @@ export function EntityLink({
   }
 
   return (
-    <Link href={href} className="vos-entity-link" aria-label={label}>
+    <Link href={href} className="vos-entity-link break-words" aria-label={label}>
       {children}
     </Link>
   );
