@@ -7,6 +7,7 @@ import { EntityLink } from "./entity-link";
 import { EntityTrail } from "./entity-trail";
 import { ventureEntityPath } from "./entity-routes";
 import { NAVIGATION_AFFORDANCE_STANDARD } from "./standard";
+import type { EntityRouteResolver } from "./types";
 
 function anchors(html: string) {
   return [...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)].map((match) => ({
@@ -22,6 +23,41 @@ describe("VentureOS navigation affordance primitives", () => {
       ventureEntityPath("ven/other", "records", "record 1"),
       "/ventures/ven%2Fother/records/record%201",
     );
+  });
+
+  it("supports venture-owned route resolution without owning domain meaning", () => {
+    type SyntheticReference = {
+      kind: "record" | "unsupported";
+      id: string;
+    };
+    type SyntheticContext = { ventureId: string };
+
+    const resolveSyntheticRoute: EntityRouteResolver<
+      SyntheticReference,
+      SyntheticContext
+    > = (reference, context) =>
+      reference.kind === "record"
+        ? ventureEntityPath(context.ventureId, "records", reference.id)
+        : null;
+
+    const supported = resolveSyntheticRoute(
+      { kind: "record", id: "rec 1" },
+      { ventureId: "ven-1" },
+    );
+    const unsupported = resolveSyntheticRoute(
+      { kind: "unsupported", id: "ghost" },
+      { ventureId: "ven-1" },
+    );
+
+    assert.equal(supported, "/ventures/ven-1/records/rec%201");
+    assert.equal(unsupported, null);
+
+    const unsupportedMarkup = renderToStaticMarkup(
+      <EntityLink href={unsupported}>Unsupported record</EntityLink>,
+    );
+    assert.equal(anchors(unsupportedMarkup).length, 0);
+    assert.match(unsupportedMarkup, /Unsupported record/);
+    assert.equal(unsupportedMarkup.includes("href="), false);
   });
 
   it("renders a semantic link only when a supported destination exists", () => {
