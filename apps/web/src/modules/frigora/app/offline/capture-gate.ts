@@ -1,3 +1,4 @@
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "./runtime-gate";
 import type { FrigoraOfflineOperationType } from "./types";
 
 /**
@@ -16,6 +17,9 @@ export type FrigoraOfflineCaptureAllowedOperation =
 export function isFrigoraOfflineCaptureOperationAllowed(
   operationType: string,
 ): operationType is FrigoraOfflineCaptureAllowedOperation {
+  if (!FRIGORA_F33_OFFLINE_RUNTIME_ENABLED) {
+    return false;
+  }
   return (FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST as readonly string[]).includes(
     operationType,
   );

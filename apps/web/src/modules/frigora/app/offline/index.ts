@@ -1,3 +1,5 @@
+export { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "./runtime-gate";
+
 export {
   FRIGORA_OFFLINE_DB_NAME,
   FRIGORA_OFFLINE_DB_VERSION,

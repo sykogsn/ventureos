@@ -9,6 +9,7 @@ import {
   useTransition,
 } from "react";
 import { Button } from "@repo/ui/button";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { Field, Form, Stack } from "@/core/layout";
 import {
   FRIGORA_EVIDENCE_ONLINE_NOTE,
@@ -118,7 +119,12 @@ export function RecordVisitEvidenceForm({
   primaryAssetId: string | null;
   actorUserId: string;
 }) {
-  const online = useSyncExternalStore(subscribeOnline, getOnlineSnapshot, getOnlineServerSnapshot);
+  const browserOnline = useSyncExternalStore(
+    subscribeOnline,
+    getOnlineSnapshot,
+    getOnlineServerSnapshot,
+  );
+  const online = browserOnline || !FRIGORA_F33_OFFLINE_RUNTIME_ENABLED;
   const [onlineState, onlineAction, onlinePending] = useActionState(
     recordVisitEvidenceFormAction,
     {} as FieldFormState,
@@ -138,6 +144,9 @@ export function RecordVisitEvidenceForm({
   }
 
   useEffect(() => {
+    if (!FRIGORA_F33_OFFLINE_RUNTIME_ENABLED) {
+      return;
+    }
     let cancelled = false;
     void (async () => {
       const ops = await listVisitEvidenceMutations(

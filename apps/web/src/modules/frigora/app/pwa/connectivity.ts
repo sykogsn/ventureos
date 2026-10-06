@@ -1,4 +1,5 @@
 import { isFrigoraFieldPath } from "./paths";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import {
   FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED,
   type FrigoraOfflineQueueStatus,
@@ -19,6 +20,9 @@ export function shouldBlockFrigoraFieldMutation(
   }
   if (!isFrigoraFieldPath(pathname)) {
     return false;
+  }
+  if (!FRIGORA_F33_OFFLINE_RUNTIME_ENABLED) {
+    return true;
   }
   if (
     options?.operationType &&
@@ -49,6 +53,9 @@ export function resolveConnectivityStatusLabel(input: {
     | "label"
   >;
 }): FrigoraOfflineQueueStatus["label"] {
+  if (!FRIGORA_F33_OFFLINE_RUNTIME_ENABLED) {
+    return input.online ? "online_idle" : "offline";
+  }
   if (!input.online) {
     const pending = input.queue?.pendingCount ?? 0;
     const blocked = (input.queue?.blockedCount ?? 0) + (input.queue?.conflictCount ?? 0);

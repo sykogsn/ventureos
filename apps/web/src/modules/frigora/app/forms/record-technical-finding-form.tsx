@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { Button } from "@repo/ui/button";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { Field, Form, Stack } from "@/core/layout";
 import {
   recordTechnicalFindingFormAction,
@@ -83,7 +84,12 @@ export function RecordTechnicalFindingForm({
   primaryAssetId?: string | null;
   actorUserId: string;
 }) {
-  const online = useSyncExternalStore(subscribeOnline, getOnlineSnapshot, getOnlineServerSnapshot);
+  const browserOnline = useSyncExternalStore(
+    subscribeOnline,
+    getOnlineSnapshot,
+    getOnlineServerSnapshot,
+  );
+  const online = browserOnline || !FRIGORA_F33_OFFLINE_RUNTIME_ENABLED;
   const [onlineState, onlineAction, onlinePending] = useActionState(
     recordTechnicalFindingFormAction,
     {} as FieldFormState,
@@ -103,6 +109,9 @@ export function RecordTechnicalFindingForm({
   }
 
   useEffect(() => {
+    if (!FRIGORA_F33_OFFLINE_RUNTIME_ENABLED) {
+      return;
+    }
     let cancelled = false;
     void (async () => {
       const ops = await listTechnicalFindingMutations(

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { useSyncExternalStore } from "react";
 
 function subscribe(onStoreChange: () => void) {
@@ -23,6 +24,9 @@ function getServerSnapshot() {
 /** Hides live SSR My Work list while disconnected so preloaded fallback is primary. */
 export function MyWorkOnlineList({ children }: { children: ReactNode }) {
   const online = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  if (!FRIGORA_F33_OFFLINE_RUNTIME_ENABLED) {
+    return <>{children}</>;
+  }
   if (!online) {
     return null;
   }

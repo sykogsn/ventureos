@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { Stack } from "@/core/layout";
 import {
   FieldOfflineReadBanner,
@@ -16,7 +17,16 @@ function textValue(value: unknown, fallback = "—"): string {
   return fallback;
 }
 
-export function OfflineMyWorkFallback({
+export function OfflineMyWorkFallback(props: {
+  partition: FrigoraOfflinePartition;
+  basePath: string;
+}) {
+  return FRIGORA_F33_OFFLINE_RUNTIME_ENABLED ? (
+    <OfflineMyWorkFallbackEnabled {...props} />
+  ) : null;
+}
+
+function OfflineMyWorkFallbackEnabled({
   partition,
   basePath,
 }: {
@@ -83,7 +93,16 @@ export function OfflineMyWorkFallback({
   );
 }
 
-export function OfflineWorkOrderFallback({
+export function OfflineWorkOrderFallback(props: {
+  partition: FrigoraOfflinePartition;
+  workOrderId: string;
+}) {
+  return FRIGORA_F33_OFFLINE_RUNTIME_ENABLED ? (
+    <OfflineWorkOrderFallbackEnabled {...props} />
+  ) : null;
+}
+
+function OfflineWorkOrderFallbackEnabled({
   partition,
   workOrderId,
 }: {
@@ -122,7 +141,17 @@ export function OfflineWorkOrderFallback({
   );
 }
 
-export function OfflineVisitFallback({
+export function OfflineVisitFallback(props: {
+  partition: FrigoraOfflinePartition;
+  workOrderId: string;
+  visitId: string;
+}) {
+  return FRIGORA_F33_OFFLINE_RUNTIME_ENABLED ? (
+    <OfflineVisitFallbackEnabled {...props} />
+  ) : null;
+}
+
+function OfflineVisitFallbackEnabled({
   partition,
   workOrderId,
   visitId,

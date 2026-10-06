@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { buildAuthenticatedFieldWorkspacePreload } from "@/modules/frigora/app/offline/preload-action";
 import { openFrigoraOfflineStore } from "@/modules/frigora/app/offline/store";
 import { FRIGORA_PRELOAD_STATUS_COPY } from "@/modules/frigora/app/pwa/copy";
@@ -16,6 +17,10 @@ export function FieldWorkspacePreloadControl({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  if (!FRIGORA_F33_OFFLINE_RUNTIME_ENABLED) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-2">

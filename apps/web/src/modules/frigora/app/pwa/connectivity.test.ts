@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import {
   resolveConnectivityStatusLabel,
   shouldBlockFrigoraFieldMutation,
 } from "./connectivity";
 
 describe("Frigora F3.2 connectivity", () => {
+  it("quarantines F3.3 runtime capability while F3.2 is active", () => {
+    assert.equal(FRIGORA_F33_OFFLINE_RUNTIME_ENABLED, false);
+  });
+
   it("blocks field mutations only while disconnected on field surfaces", () => {
     assert.equal(shouldBlockFrigoraFieldMutation(false, "/frigora"), true);
     assert.equal(
@@ -27,7 +32,7 @@ describe("Frigora F3.2 connectivity", () => {
       shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/assigned", {
         operationType: "recordTechnicalFinding",
       }),
-      false,
+      true,
     );
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/assigned", {
@@ -39,13 +44,13 @@ describe("Frigora F3.2 connectivity", () => {
       shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/wo-1/visit/vis-1", {
         operationType: "recordFieldCapture",
       }),
-      false,
+      true,
     );
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/wo-1/visit/vis-1", {
         operationType: "recordVisitEvidence",
       }),
-      false,
+      true,
     );
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/ven-1/work/wo-1/visit/vis-1", {
@@ -91,7 +96,7 @@ describe("Frigora F3.2 connectivity", () => {
           label: "saved_on_device",
         },
       }),
-      "saved_on_device",
+      "offline",
     );
   });
 });

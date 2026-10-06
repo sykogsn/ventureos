@@ -1,3 +1,5 @@
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
+
 export const FRIGORA_PWA_NAME = "Frigora";
 export const FRIGORA_PWA_SHORT_NAME = "Frigora";
 export const FRIGORA_DOCUMENT_TITLE_TEMPLATE = "%s · Frigora";
@@ -24,19 +26,23 @@ export const FRIGORA_AUTH_LOADING_MESSAGE = "Opening Frigora...";
 
 
 export const FRIGORA_CONNECTIVITY_OFFLINE_TITLE = "No connection";
-export const FRIGORA_CONNECTIVITY_OFFLINE_BODY =
-  "Most field changes still require a connection. Technical findings, field captures, and evidence may be saved on this device when a preloaded workspace lease is active. Reconnect enables explicit submission — reconnect alone does not submit.";
+export const FRIGORA_CONNECTIVITY_OFFLINE_BODY = FRIGORA_F33_OFFLINE_RUNTIME_ENABLED
+  ? "Most field changes still require a connection. Technical findings, field captures, and evidence may be saved on this device when a preloaded workspace lease is active. Reconnect enables explicit submission — reconnect alone does not submit."
+  : "Frigora field changes require an internet connection. Changes are not saved or queued while offline. Reconnect before continuing.";
 
 export const FRIGORA_CONNECTIVITY_RESTORED_TITLE = "Connection restored";
-export const FRIGORA_CONNECTIVITY_RESTORED_BODY =
-  "Continue in online mode. Pending technical findings, field captures, and evidence on this device stay local until you explicitly submit them. Reconnect alone does not change server records.";
+export const FRIGORA_CONNECTIVITY_RESTORED_BODY = FRIGORA_F33_OFFLINE_RUNTIME_ENABLED
+  ? "Continue in online mode. Pending technical findings, field captures, and evidence on this device stay local until you explicitly submit them. Reconnect alone does not change server records."
+  : "Connection restored. Changes attempted while offline were not queued or saved for later submission.";
 
 export const FRIGORA_OFFLINE_PAGE_TITLE = "Frigora is offline";
-export const FRIGORA_OFFLINE_PAGE_BODY =
-  "This install cannot open a new field session without a connection. Preloaded workspaces are available only from an already-open Frigora field session. Reconnect, then continue.";
+export const FRIGORA_OFFLINE_PAGE_BODY = FRIGORA_F33_OFFLINE_RUNTIME_ENABLED
+  ? "This install cannot open a new field session without a connection. Preloaded workspaces are available only from an already-open Frigora field session. Reconnect, then continue."
+  : "This install needs a connection to open and operate Frigora field work. Nothing is queued or saved for later sync. Reconnect, then continue.";
 
-export const FRIGORA_EVIDENCE_ONLINE_NOTE =
-  "When connected, photos and files upload immediately. When disconnected, authorised evidence may be saved on this device for explicit later submit. Removal and linking still require a connection.";
+export const FRIGORA_EVIDENCE_ONLINE_NOTE = FRIGORA_F33_OFFLINE_RUNTIME_ENABLED
+  ? "When connected, photos and files upload immediately. When disconnected, authorised evidence may be saved on this device for explicit later submit. Removal and linking still require a connection."
+  : "Photos and files upload only while connected. They are not saved on this device for later synchronisation.";
 
 /** F33-02 preload / read-only honesty copy. */
 export const FRIGORA_PRELOAD_STATUS_COPY = {

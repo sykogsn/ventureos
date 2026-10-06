@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { Button } from "@repo/ui/button";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { Field, Form, Stack } from "@/core/layout";
 import {
   recordFieldCaptureFormAction,
@@ -88,7 +89,12 @@ export function RecordFieldCaptureForm({
   primaryAssetId?: string | null;
   actorUserId: string;
 }) {
-  const online = useSyncExternalStore(subscribeOnline, getOnlineSnapshot, getOnlineServerSnapshot);
+  const browserOnline = useSyncExternalStore(
+    subscribeOnline,
+    getOnlineSnapshot,
+    getOnlineServerSnapshot,
+  );
+  const online = browserOnline || !FRIGORA_F33_OFFLINE_RUNTIME_ENABLED;
   const [onlineState, onlineAction, onlinePending] = useActionState(
     recordFieldCaptureFormAction,
     {} as FieldFormState,
@@ -111,6 +117,9 @@ export function RecordFieldCaptureForm({
   }
 
   useEffect(() => {
+    if (!FRIGORA_F33_OFFLINE_RUNTIME_ENABLED) {
+      return;
+    }
     let cancelled = false;
     void (async () => {
       const ops = await listFieldCaptureMutations(

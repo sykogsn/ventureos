@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { platformVentureRegistry } from "@/core/venture-definition/catalog";
 import { FRIGORA_FIELD_WORKFLOW_LABEL } from "@/modules/frigora/app/field-workflow";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { shouldBlockFrigoraFieldMutation } from "@/modules/frigora/app/pwa/connectivity";
 import { frigoraWebAppManifest } from "@/modules/frigora/app/pwa/web-app-manifest";
 import {
@@ -147,22 +148,18 @@ describe("Frigora F3.2 online PWA boundary", () => {
     }
     const offlineText = offline.replace(/\s+/g, " ");
     assert.match(offline, new RegExp(FRIGORA_OFFLINE_PAGE_TITLE));
-    assert.match(offline, /already-open Frigora field session/);
+    assert.match(offline, /Nothing is queued or saved for later sync/);
     assert.match(offline, /Reconnect, then continue/);
     assert.equal(offlineText.includes(FRIGORA_OFFLINE_PAGE_BODY), true);
   });
 
   it("does not imply disconnected mutations were saved and blocks them while offline", () => {
-    assert.match(
-      FRIGORA_CONNECTIVITY_OFFLINE_BODY,
-      /Technical findings, field captures, and evidence may be saved/,
-    );
-    assert.match(FRIGORA_CONNECTIVITY_OFFLINE_BODY, /reconnect alone does not submit/i);
-    assert.match(FRIGORA_CONNECTIVITY_RESTORED_BODY, /explicitly submit/i);
-    assert.match(FRIGORA_CONNECTIVITY_RESTORED_BODY, /Reconnect alone does not change server records/i);
-    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /upload immediately/i);
-    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /explicit later submit/i);
-    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /Removal and linking still require a connection/i);
+    assert.equal(FRIGORA_F33_OFFLINE_RUNTIME_ENABLED, false);
+    assert.match(FRIGORA_CONNECTIVITY_OFFLINE_BODY, /require an internet connection/i);
+    assert.match(FRIGORA_CONNECTIVITY_OFFLINE_BODY, /not saved or queued/i);
+    assert.match(FRIGORA_CONNECTIVITY_RESTORED_BODY, /not queued or saved/i);
+    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /only while connected/i);
+    assert.match(FRIGORA_EVIDENCE_ONLINE_NOTE, /not saved on this device/i);
     const banner = read("modules/frigora/app/pwa/connectivity-banner.tsx");
     const register = read("modules/frigora/app/pwa/register-service-worker.tsx");
     assert.match(banner, /shouldBlockFrigoraFieldMutation/);
@@ -180,6 +177,18 @@ describe("Frigora F3.2 online PWA boundary", () => {
       shouldBlockFrigoraFieldMutation(true, "/ventures/ven-1/work/assigned"),
       false,
     );
+
+    const quarantinedEntryPoints = [
+      read("modules/frigora/app/offline/preload-control.tsx"),
+      read("modules/frigora/app/offline/offline-fallback-panels.tsx"),
+      read("modules/frigora/app/offline/my-work-online-bridge.tsx"),
+      read("modules/frigora/app/forms/record-technical-finding-form.tsx"),
+      read("modules/frigora/app/forms/record-field-capture-form.tsx"),
+      read("modules/frigora/app/forms/record-visit-evidence-form.tsx"),
+    ];
+    for (const source of quarantinedEntryPoints) {
+      assert.match(source, /FRIGORA_F33_OFFLINE_RUNTIME_ENABLED/);
+    }
   });
 
   it("preserves the certified field workflow on the visit recorder", () => {
