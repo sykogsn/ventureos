@@ -148,7 +148,7 @@ describe("Frigora F3.2 online PWA boundary", () => {
     }
     const offlineText = offline.replace(/\s+/g, " ");
     assert.match(offline, new RegExp(FRIGORA_OFFLINE_PAGE_TITLE));
-    assert.match(offline, /Nothing is queued or saved for later sync/);
+    assert.match(offlineText, /Nothing is queued or saved for later sync/);
     assert.match(offline, /Reconnect, then continue/);
     assert.equal(offlineText.includes(FRIGORA_OFFLINE_PAGE_BODY), true);
   });
