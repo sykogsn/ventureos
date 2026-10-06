@@ -19,5 +19,6 @@ export {
 } from "./navigation";
 export type {
   EntityNavigationDestination,
+  EntityRouteResolver,
   EntityTrailItem,
 } from "./navigation";
