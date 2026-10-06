@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { EntityLink } from "@/core/navigation/entity-link";
 import type { ReactNode } from "react";
 import {
   formatFrigoraAssetLabel,
@@ -14,9 +14,8 @@ import {
 } from "@/modules/frigora/app/entity-routes";
 
 /**
- * Semantic link for a Frigora entity that already has a product route.
- * Renders an anchor so keyboard activation, focus, and native link actions
- * stay with the browser. Missing identities render text, never an empty href.
+ * Frigora adapter over the VentureOS semantic entity-link primitive.
+ * Frigora resolves its domain route; VentureOS owns the link behaviour.
  */
 export function FrigoraEntityLink({
   href,
@@ -28,9 +27,9 @@ export function FrigoraEntityLink({
   label?: string;
 }) {
   return (
-    <Link href={href} className="vos-entity-link" aria-label={label}>
+    <EntityLink href={href} label={label}>
       {children}
-    </Link>
+    </EntityLink>
   );
 }
 

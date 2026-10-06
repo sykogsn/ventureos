@@ -19,6 +19,7 @@ export function PageHeader({
   description,
   meta,
   actions,
+  trail,
   children,
 }: {
   page: string;
@@ -28,6 +29,7 @@ export function PageHeader({
   description?: ReactNode;
   meta?: string;
   actions?: ReactNode;
+  trail?: ReactNode;
   children?: ReactNode;
 }) {
   const { workspaces, activeWorkspaceId, ventures, activeVentureId } = useShell();
@@ -57,6 +59,8 @@ export function PageHeader({
           <span className="ids-caption text-foreground">{page}</span>
         </li>
       </Breadcrumb>
+
+      {trail}
 
       <Cluster justify="between">
         <ReadingRegion size="lg">

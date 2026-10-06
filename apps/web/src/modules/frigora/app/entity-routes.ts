@@ -1,3 +1,5 @@
+import { ventureEntityPath } from "@/core/navigation/entity-routes";
+
 /**
  * Frigora operational entity routes.
  *
@@ -17,12 +19,8 @@ export type FrigoraSiteAddressSource = {
   country: string | null;
 };
 
-function pathSegment(value: string): string {
-  return encodeURIComponent(value);
-}
-
 export function frigoraCustomerHref(ventureId: string, customerId: string): string {
-  return `/ventures/${pathSegment(ventureId)}/customers/${pathSegment(customerId)}`;
+  return ventureEntityPath(ventureId, "customers", customerId);
 }
 
 export function frigoraSiteHref(
@@ -30,7 +28,7 @@ export function frigoraSiteHref(
   customerId: string,
   siteId: string,
 ): string {
-  return `${frigoraCustomerHref(ventureId, customerId)}/sites/${pathSegment(siteId)}`;
+  return ventureEntityPath(ventureId, "customers", customerId, "sites", siteId);
 }
 
 export function frigoraAssetHref(
@@ -39,11 +37,19 @@ export function frigoraAssetHref(
   siteId: string,
   assetId: string,
 ): string {
-  return `${frigoraSiteHref(ventureId, customerId, siteId)}/assets/${pathSegment(assetId)}`;
+  return ventureEntityPath(
+    ventureId,
+    "customers",
+    customerId,
+    "sites",
+    siteId,
+    "assets",
+    assetId,
+  );
 }
 
 export function frigoraWorkOrderHref(ventureId: string, workOrderId: string): string {
-  return `/ventures/${pathSegment(ventureId)}/work/${pathSegment(workOrderId)}`;
+  return ventureEntityPath(ventureId, "work", workOrderId);
 }
 
 export function frigoraVisitHref(
@@ -51,7 +57,7 @@ export function frigoraVisitHref(
   workOrderId: string,
   visitId: string,
 ): string {
-  return `${frigoraWorkOrderHref(ventureId, workOrderId)}/visit/${pathSegment(visitId)}`;
+  return ventureEntityPath(ventureId, "work", workOrderId, "visit", visitId);
 }
 
 export function formatFrigoraSiteAddress(
