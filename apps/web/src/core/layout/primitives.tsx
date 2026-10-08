@@ -807,8 +807,8 @@ export function SurfaceTabFace({
     <span
       className={
         active
-          ? "ids-label ids-transition shrink-0 border-b-2 border-accent px-[var(--ids-foundation-space-3)] py-[var(--ids-foundation-space-3)] text-foreground"
-          : "ids-label ids-transition shrink-0 px-[var(--ids-foundation-space-3)] py-[var(--ids-foundation-space-3)] text-muted hover:text-foreground"
+          ? "ids-label ids-transition inline-flex shrink-0 whitespace-nowrap border-b-2 border-accent px-[var(--ids-foundation-space-3)] py-[var(--ids-foundation-space-3)] text-foreground"
+          : "ids-label ids-transition inline-flex shrink-0 whitespace-nowrap px-[var(--ids-foundation-space-3)] py-[var(--ids-foundation-space-3)] text-muted hover:text-foreground"
       }
     >
       {children}
