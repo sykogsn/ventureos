@@ -159,11 +159,15 @@ test("declined quote can be revised while original declined version remains trac
   });
   assert.equal(quotationStatus(revised), "in_preparation");
   assert.equal(revised.versions.length, 2);
-  assert.equal(revised.versions[0].status, "declined");
-  assert.equal(revised.versions[0].decision?.authorityEvidenceRef, "signed-decision-1");
-  assert.equal(revised.versions[0].totalMinor, 1495000);
-  assert.equal(revised.versions[1].totalMinor, 1250000);
-  assert.equal(revised.versions[1].decision, null);
+  const declinedVersion = revised.versions[0];
+  const preparedVersion = revised.versions[1];
+  assert.ok(declinedVersion, "Expected the original declined quotation version.");
+  assert.ok(preparedVersion, "Expected the revised quotation version.");
+  assert.equal(declinedVersion.status, "declined");
+  assert.equal(declinedVersion.decision?.authorityEvidenceRef, "signed-decision-1");
+  assert.equal(declinedVersion.totalMinor, 1495000);
+  assert.equal(preparedVersion.totalMinor, 1250000);
+  assert.equal(preparedVersion.decision, null);
   assert.equal(canAuthoriseNewQuotedRepair(revised), false);
   assert.equal(original.versions.length, 1);
 });
@@ -175,9 +179,15 @@ test("approved quote revision does not inherit the old version's authorisation",
     actorUserId: "office-user", description: "Revised scope",
     totalMinor: 1600000, documentHash: "sha-quote-v2",
   });
-  assert.equal(original.versions[0].status, "approved");
-  assert.equal(revised.versions[0].status, "approved");
-  assert.equal(revised.versions[1].status, "in_preparation");
+  const originalVersion = original.versions[0];
+  const previousVersion = revised.versions[0];
+  const nextVersion = revised.versions[1];
+  assert.ok(originalVersion, "Expected the original approved quotation version.");
+  assert.ok(previousVersion, "Expected the preserved approved quotation version.");
+  assert.ok(nextVersion, "Expected the revised quotation version.");
+  assert.equal(originalVersion.status, "approved");
+  assert.equal(previousVersion.status, "approved");
+  assert.equal(nextVersion.status, "in_preparation");
   assert.equal(canAuthoriseNewQuotedRepair(revised), false);
 });
 
@@ -188,8 +198,10 @@ test("sent quote can be revised before decision, preserving its sent snapshot", 
     actorUserId: "office-user", description: "Updated labour scope",
     totalMinor: 1500000, documentHash: "sha-quote-v2",
   });
-  assert.equal(revised.versions[0].status, "awaiting_customer_approval");
-  assert.equal(revised.versions[0].dispatchEvidenceRef, "outbound-mail-1");
+  const sentVersion = revised.versions[0];
+  assert.ok(sentVersion, "Expected the preserved sent quotation version.");
+  assert.equal(sentVersion.status, "awaiting_customer_approval");
+  assert.equal(sentVersion.dispatchEvidenceRef, "outbound-mail-1");
   assert.equal(quotationStatus(revised), "in_preparation");
   assert.equal(canAuthoriseNewQuotedRepair(revised), false);
 });
