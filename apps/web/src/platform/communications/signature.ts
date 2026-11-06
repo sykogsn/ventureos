@@ -23,11 +23,11 @@ export class MalformedWebhookError extends Error {
 }
 
 /**
- * Svix verification used by Resend: HMAC-SHA256 over `${id}.${timestamp}.${rawBody}`
- * with the base64 secret after the `whsec_` prefix. The body must be the original bytes.
+ * Svix verification used by Resend: HMAC-SHA256 over id, timestamp, and the
+ * original request bytes. The prefix is ASCII. The body is not decoded first.
  */
 export function verifyResendWebhook(input: {
-  rawBody: string;
+  rawBody: Uint8Array;
   headers: WebhookHeaders;
   secret: string;
   now?: Date;
@@ -49,8 +49,10 @@ export function verifyResendWebhook(input: {
   const key = decodeSecret(secret);
   if (!key) throw new WebhookSignatureError();
 
-  const signed = `${id}.${timestamp}.${input.rawBody}`;
-  const expected = createHmac("sha256", key).update(signed).digest();
+  const expected = createHmac("sha256", key)
+    .update(`${id}.${timestamp}.`, "utf8")
+    .update(input.rawBody)
+    .digest();
   const presented = signature
     .split(" ")
     .map((part) => (part.startsWith("v1,") ? part.slice(3) : ""))
@@ -58,8 +60,14 @@ export function verifyResendWebhook(input: {
   const matches = presented.some((candidate) => signaturesMatch(candidate, expected));
   if (!matches) throw new WebhookSignatureError();
 
+  let text: string;
   try {
-    return JSON.parse(input.rawBody) as unknown;
+    text = new TextDecoder("utf-8", { fatal: true }).decode(input.rawBody);
+  } catch {
+    throw new MalformedWebhookError();
+  }
+  try {
+    return JSON.parse(text) as unknown;
   } catch {
     throw new MalformedWebhookError();
   }

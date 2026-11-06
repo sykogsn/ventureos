@@ -29,8 +29,16 @@ export type InboundWebhookResult = {
  * It is not executed, and it is not applied to permissions, workforce, or configuration.
  * Venture scope comes only from the mailbox row that matches a recipient address.
  */
+export async function rejectUnreadInboundBody(
+  audit: AuditLog,
+  reason: "payload_too_large" | "payload_unreadable",
+): Promise<InboundWebhookResult> {
+  await record(audit, "communications.inbound.rejected", { reason });
+  return result(reason === "payload_too_large" ? 413 : 400, "rejected", reason);
+}
+
 export async function processInboundWebhook(input: {
-  rawBody: string;
+  rawBody: Uint8Array;
   headers: WebhookHeaders;
   now?: Date;
   config: CommunicationsConfig | null;
@@ -41,9 +49,8 @@ export async function processInboundWebhook(input: {
   const store = input.store ?? createCommunicationsStore();
   const eventId = input.headers.id && isEventId(input.headers.id) ? input.headers.id : "";
 
-  if (input.rawBody.length > MAX_WEBHOOK_BODY_BYTES) {
-    await record(input.audit, "communications.inbound.rejected", { reason: "payload_too_large" });
-    return result(413, "rejected", "payload_too_large");
+  if (input.rawBody.byteLength > MAX_WEBHOOK_BODY_BYTES) {
+    return rejectUnreadInboundBody(input.audit, "payload_too_large");
   }
 
   if (!input.config || !input.provider) {

@@ -86,11 +86,11 @@ describe("communications inbound foundation", () => {
     const store = await seedMailboxes();
     const raw = notice(EMAIL_A, [ADDRESS_A]);
     const response = await processInboundWebhook({
-      rawBody: raw,
+      rawBody: encode(raw),
       headers: {
         id: "msg_invalid",
         timestamp: TIMESTAMP,
-        signature: sign(notice(EMAIL_B, [ADDRESS_A]), "msg_invalid"),
+        signature: sign(encode(notice(EMAIL_B, [ADDRESS_A])), "msg_invalid"),
       },
       now: NOW,
       config: CONFIG,
@@ -307,7 +307,7 @@ describe("communications inbound foundation", () => {
     const store = await seedMailboxes();
     const audit = createAuditLog();
     const response = await processInboundWebhook({
-      rawBody: notice(EMAIL_A, [ADDRESS_A]),
+      rawBody: encode(notice(EMAIL_A, [ADDRESS_A])),
       headers: { id: "msg_config", timestamp: TIMESTAMP, signature: "v1,aaaa" },
       now: NOW,
       config: null,
@@ -431,10 +431,232 @@ describe("communications inbound foundation", () => {
       restoreEnv("COMMUNICATIONS_RESEND_WEBHOOK_SECRET", previousSecret);
     }
   });
+
+  it("accepts a signed body that is exactly the byte limit", async () => {
+    await seedMailboxes();
+    const bytes = paddedNotice(1_000_000);
+    const timestamp = currentTimestamp();
+    const previousFetch = globalThis.fetch;
+    globalThis.fetch = async () => receivedEmailResponse(EMAIL_A);
+    try {
+      const response = await postRoute(bytes, {
+        "content-type": "application/json",
+        "svix-id": "msg_exact_limit",
+        "svix-timestamp": timestamp,
+        "svix-signature": sign(bytes, "msg_exact_limit", timestamp),
+      });
+      assert.equal(response.status, 200);
+      const body = (await response.json()) as { status?: string; messageId?: string };
+      assert.equal(body.status, "accepted");
+      assert.ok(body.messageId);
+      assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_messages"), 1);
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+
+  it("rejects a body one byte over the limit and stores nothing", async () => {
+    const bytes = new Uint8Array(1_000_001);
+    const response = await postRoute(bytes, {
+      "content-type": "application/octet-stream",
+      "svix-id": "msg_over_limit",
+      "svix-timestamp": TIMESTAMP,
+      "svix-signature": "v1,not-used",
+    });
+    assert.equal(response.status, 413);
+    const body = (await response.json()) as { status?: string; code?: string };
+    assert.equal(body.status, "rejected");
+    assert.equal(body.code, "payload_too_large");
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_messages"), 0);
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_provider_events"), 0);
+  });
+
+  it("rejects oversized input split across chunks and cancels the stream", async () => {
+    const source = trackedStream([
+      chunk(300_000),
+      chunk(300_000),
+      chunk(300_000),
+      chunk(300_000),
+      chunk(300_000),
+    ]);
+    const response = await postRoute(source.stream, {
+      "content-type": "application/octet-stream",
+      "svix-id": "msg_chunked",
+      "svix-timestamp": TIMESTAMP,
+      "svix-signature": "v1,not-used",
+    });
+    assert.equal(response.status, 413);
+    assert.equal(source.cancelled(), true);
+    assert.equal(source.pulls(), 4);
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_messages"), 0);
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_provider_events"), 0);
+  });
+
+  it("counts multibyte UTF-8 by bytes when Content-Length understates the body", async () => {
+    const encoded = encode("é");
+    assert.equal(encoded.byteLength, 2);
+    const over = repeatBytes(encoded, 500_001);
+    assert.equal(over.byteLength, 1_000_002);
+    const source = trackedStream([over.subarray(0, 400_000), over.subarray(400_000)]);
+    const response = await postRoute(source.stream, {
+      "content-type": "application/json",
+      "content-length": String(500_001),
+      "svix-id": "msg_multibyte",
+      "svix-timestamp": TIMESTAMP,
+      "svix-signature": "v1,not-used",
+    });
+    assert.equal(response.status, 413);
+    assert.equal(source.cancelled(), true);
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_provider_events"), 0);
+
+    const exact = repeatBytes(encoded, 500_000);
+    assert.equal(exact.byteLength, 1_000_000);
+    const atLimit = await postRoute(exact, {
+      "content-type": "application/octet-stream",
+      "svix-id": "msg_multibyte_exact",
+      "svix-timestamp": TIMESTAMP,
+      "svix-signature": "v1,not-a-real-signature",
+    });
+    assert.equal(atLimit.status, 401);
+    const body = (await atLimit.json()) as { code?: string };
+    assert.equal(body.code, "invalid_signature");
+  });
+
+  it("verifies the signature against the original bytes and fails closed on malformed UTF-8", async () => {
+    const bytes = Uint8Array.of(0xff, 0xfe, 0xfd);
+    const timestamp = currentTimestamp();
+    const response = await postRoute(bytes, {
+      "content-type": "application/octet-stream",
+      "svix-id": "msg_raw_bytes",
+      "svix-timestamp": timestamp,
+      "svix-signature": sign(bytes, "msg_raw_bytes", timestamp),
+    });
+    assert.equal(response.status, 400);
+    const body = (await response.json()) as { code?: string };
+    assert.equal(body.code, "malformed_payload");
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_messages"), 0);
+  });
+
+  it("handles a failed request stream without persisting a message", async () => {
+    const source = trackedStream([chunk(32)], { failAt: 1 });
+    const response = await postRoute(source.stream, {
+      "content-type": "application/octet-stream",
+      "svix-id": "msg_broken_stream",
+      "svix-timestamp": TIMESTAMP,
+      "svix-signature": "v1,not-used",
+    });
+    assert.equal(response.status, 400);
+    const body = (await response.json()) as { code?: string };
+    assert.equal(body.code, "payload_unreadable");
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_messages"), 0);
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_provider_events"), 0);
+  });
 });
 
-function sign(rawBody: string, eventId: string) {
-  const digest = createHmac("sha256", SECRET_KEY).update(`${eventId}.${TIMESTAMP}.${rawBody}`).digest("base64");
+function encode(value: string) {
+  return new TextEncoder().encode(value);
+}
+
+function currentTimestamp() {
+  return String(Math.floor(Date.now() / 1000));
+}
+
+function paddedNotice(size: number) {
+  const raw = encode(notice(EMAIL_A, [ADDRESS_A]));
+  assert.ok(raw.byteLength < size);
+  const bytes = new Uint8Array(size);
+  bytes.set(raw);
+  bytes.fill(0x20, raw.byteLength);
+  return bytes;
+}
+
+function chunk(size: number) {
+  return new Uint8Array(size);
+}
+
+function repeatBytes(pattern: Uint8Array, times: number) {
+  const bytes = new Uint8Array(pattern.byteLength * times);
+  for (let index = 0; index < times; index += 1) {
+    bytes.set(pattern, index * pattern.byteLength);
+  }
+  return bytes;
+}
+
+function trackedStream(chunks: Uint8Array[], options?: { failAt?: number }) {
+  let pulls = 0;
+  let cancelled = false;
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (options?.failAt !== undefined && pulls === options.failAt) {
+        controller.error(new Error("stream failed"));
+        return;
+      }
+      if (pulls >= chunks.length) {
+        controller.close();
+        return;
+      }
+      const next = chunks[pulls];
+      if (!next) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(next);
+      pulls += 1;
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  return { stream, pulls: () => pulls, cancelled: () => cancelled };
+}
+
+async function postRoute(body: BodyInit, headers: Record<string, string>) {
+  const previousKey = process.env.COMMUNICATIONS_RESEND_API_KEY;
+  const previousSecret = process.env.COMMUNICATIONS_RESEND_WEBHOOK_SECRET;
+  process.env.COMMUNICATIONS_RESEND_API_KEY = API_KEY;
+  process.env.COMMUNICATIONS_RESEND_WEBHOOK_SECRET = SECRET;
+  const stream = typeof body === "object" && body !== null && "getReader" in body;
+  try {
+    return await POST(
+      new Request("https://venture.example/api/communications/inbound", {
+        method: "POST",
+        headers,
+        body,
+        ...(stream ? { duplex: "half" } : {}),
+      } as RequestInit),
+    );
+  } finally {
+    restoreEnv("COMMUNICATIONS_RESEND_API_KEY", previousKey);
+    restoreEnv("COMMUNICATIONS_RESEND_WEBHOOK_SECRET", previousSecret);
+  }
+}
+
+function receivedEmailResponse(emailId: string) {
+  return new Response(
+    JSON.stringify({
+      object: "email",
+      id: emailId,
+      from: "customer@example.com",
+      to: ["ignored@example.com"],
+      cc: [],
+      received_for: [ADDRESS_A],
+      subject: "Service question",
+      text: "Hello",
+      html: "<p>Hello</p>",
+      message_id: "<m1@example.com>",
+      headers: { "message-id": "<m1@example.com>" },
+      authentication: { spf: "pass", dkim: "pass", dmarc: "pass" },
+      attachments: [],
+    }),
+    { status: 200, headers: { "content-type": "application/json" } },
+  );
+}
+
+function sign(rawBody: Uint8Array, eventId: string, timestamp = TIMESTAMP) {
+  const digest = createHmac("sha256", SECRET_KEY)
+    .update(`${eventId}.${timestamp}.`, "utf8")
+    .update(rawBody)
+    .digest("base64");
   return `v1,${digest}`;
 }
 
@@ -491,9 +713,10 @@ async function deliver(
 ) {
   const retrieveInbound: EmailProvider["retrieveInbound"] =
     typeof retrieve === "function" ? retrieve : async () => retrieve;
+  const bytes = encode(rawBody);
   return processInboundWebhook({
-    rawBody,
-    headers: { id: eventId, timestamp: TIMESTAMP, signature: sign(rawBody, eventId) },
+    rawBody: bytes,
+    headers: { id: eventId, timestamp: TIMESTAMP, signature: sign(bytes, eventId) },
     now: NOW,
     config: CONFIG,
     provider: providerFor(retrieveInbound),

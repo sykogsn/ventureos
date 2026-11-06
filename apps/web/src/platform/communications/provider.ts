@@ -48,7 +48,7 @@ export type SignedInboundNotice = {
 export type EmailProvider = {
   readonly id: "resend";
   verifyWebhook(input: {
-    rawBody: string;
+    rawBody: Uint8Array;
     headers: WebhookHeaders;
     secret: string;
     now?: Date;
