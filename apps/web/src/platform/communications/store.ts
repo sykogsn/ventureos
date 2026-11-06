@@ -3,6 +3,7 @@ import { createId, nowIso } from "@/platform/ids";
 import { ensureSchema, getClient } from "@/platform/persistence/db";
 import { isSqliteConstraint } from "@/platform/persistence/durability-client";
 import { withPlatformWriteTransaction } from "@/platform/persistence/write-transaction";
+import { normalizeMailboxAddress } from "./policy";
 
 const PROVIDER = "resend";
 
@@ -12,6 +13,15 @@ export class MailboxScopeError extends Error {
   constructor() {
     super("venture_not_in_workspace");
     this.name = "MailboxScopeError";
+  }
+}
+
+export class MailboxAddressError extends Error {
+  readonly code = "invalid_mailbox_address";
+
+  constructor() {
+    super("invalid_mailbox_address");
+    this.name = "MailboxAddressError";
   }
 }
 
@@ -92,6 +102,8 @@ export type CommunicationsStore = {
 export function createCommunicationsStore(): CommunicationsStore {
   return {
     async registerMailbox(input) {
+      const address = normalizeMailboxAddress(input.address);
+      if (!address) throw new MailboxAddressError();
       await ensureSchema();
       return withPlatformWriteTransaction(async (transaction) => {
         const venture = await transaction.execute({
@@ -102,7 +114,7 @@ export function createCommunicationsStore(): CommunicationsStore {
 
         const existing = await transaction.execute({
           sql: `SELECT id, workspace_id, venture_id, address, status FROM communication_mailboxes WHERE address = ?`,
-          args: [input.address],
+          args: [address],
         });
         if (existing.rows.length === 1) {
           const mailbox = mapMailbox(existing.rows[0]);
@@ -118,13 +130,13 @@ export function createCommunicationsStore(): CommunicationsStore {
           sql: `INSERT INTO communication_mailboxes (
             id, workspace_id, venture_id, provider, address, status, created_at, updated_at
           ) VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`,
-          args: [id, input.workspaceId, input.ventureId, PROVIDER, input.address, createdAt, createdAt],
+          args: [id, input.workspaceId, input.ventureId, PROVIDER, address, createdAt, createdAt],
         });
         return {
           id,
           workspaceId: input.workspaceId,
           ventureId: input.ventureId,
-          address: input.address,
+          address,
           status: "active" as const,
         };
       });

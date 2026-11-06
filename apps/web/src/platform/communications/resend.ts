@@ -1,3 +1,5 @@
+import { readBoundedBody } from "./body";
+import { MAX_PROVIDER_RESPONSE_BYTES } from "./policy";
 import type {
   EmailProvider,
   InboundAttachment,
@@ -10,15 +12,23 @@ import { verifyResendWebhook } from "./signature";
 const RECEIVING_ENDPOINT = "https://api.resend.com/emails/receiving";
 const EMAIL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Budget for one receiving-API call, including the response body.
+ * The body itself cannot exceed MAX_PROVIDER_RESPONSE_BYTES.
+ */
+export const RESEND_RETRIEVAL_TIMEOUT_MS = 10_000;
+
 export function createResendEmailProvider(options: {
   apiKey: string;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }): EmailProvider {
   const apiKey = options.apiKey.trim();
   if (!apiKey) {
     throw new ProviderRetrievalError("configuration_unavailable");
   }
   const fetchImpl = options.fetchImpl ?? fetch;
+  const timeoutMs = options.timeoutMs ?? RESEND_RETRIEVAL_TIMEOUT_MS;
 
   return {
     id: "resend",
@@ -30,33 +40,64 @@ export function createResendEmailProvider(options: {
         throw new ProviderRetrievalError("invalid_email_id");
       }
       const url = `${RECEIVING_ENDPOINT}/${encodeURIComponent(emailId)}?html_format=cid`;
-      let response: Response;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        response = await fetchImpl(url, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            Accept: "application/json",
-          },
-        });
-      } catch {
-        throw new ProviderRetrievalError("network");
-      }
-      if (!response.ok) throw new ProviderRetrievalError("http");
+        let response: Response;
+        try {
+          response = await fetchImpl(url, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              Accept: "application/json",
+            },
+            signal: controller.signal,
+          });
+        } catch {
+          if (controller.signal.aborted) throw new ProviderRetrievalError("timeout");
+          throw new ProviderRetrievalError("network");
+        }
+        if (!response.ok) {
+          await cancelResponse(response);
+          throw new ProviderRetrievalError("http");
+        }
 
-      let body: unknown;
-      try {
-        body = await response.json();
-      } catch {
-        throw new ProviderRetrievalError("body");
+        const read = await readBoundedBody(response, MAX_PROVIDER_RESPONSE_BYTES, controller.signal);
+        if (controller.signal.aborted) throw new ProviderRetrievalError("timeout");
+        if (!read.ok) {
+          throw new ProviderRetrievalError(read.reason === "too_large" ? "body_too_large" : "body");
+        }
+
+        let text: string;
+        try {
+          text = new TextDecoder("utf-8", { fatal: true }).decode(read.bytes);
+        } catch {
+          throw new ProviderRetrievalError("body");
+        }
+        let body: unknown;
+        try {
+          body = JSON.parse(text) as unknown;
+        } catch {
+          throw new ProviderRetrievalError("body");
+        }
+        const email = parseRetrievedEmail(body);
+        if (!email || email.id !== emailId) {
+          throw new ProviderRetrievalError("shape");
+        }
+        return email;
+      } finally {
+        clearTimeout(timer);
       }
-      const email = parseRetrievedEmail(body);
-      if (!email || email.id !== emailId) {
-        throw new ProviderRetrievalError("shape");
-      }
-      return email;
     },
   };
+}
+
+async function cancelResponse(response: Response) {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // The response body is already closed. The HTTP failure still stands.
+  }
 }
 
 function parseRetrievedEmail(value: unknown): RetrievedInboundEmail | null {

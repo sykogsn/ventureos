@@ -15,8 +15,14 @@ import { readCommunicationsConfig } from "./config";
 import { processInboundWebhook } from "./inbound";
 import type { EmailProvider, RetrievedInboundEmail } from "./provider";
 import { ProviderRetrievalError } from "./provider";
+import { MAX_PROVIDER_RESPONSE_BYTES } from "./policy";
 import { createResendEmailProvider } from "./resend";
-import { createCommunicationsStore, MailboxScopeError, type CommunicationsStore } from "./store";
+import {
+  createCommunicationsStore,
+  MailboxAddressError,
+  MailboxScopeError,
+  type CommunicationsStore,
+} from "./store";
 
 const NOW = new Date("2026-11-06T03:00:00.000Z");
 const NOW_ISO = NOW.toISOString();
@@ -171,6 +177,78 @@ describe("communications inbound foundation", () => {
         }),
       MailboxScopeError,
     );
+  });
+
+  it("stores uppercase and padded mailbox addresses in normalised form", async () => {
+    const store = await seedMailboxes();
+    const created = await store.registerMailbox({
+      workspaceId: WS_A,
+      ventureId: VEN_A,
+      address: "  Mixed.Case@In.Frigora.Test  ",
+    });
+    assert.equal(created.address, "mixed.case@in.frigora.test");
+    const found = await store.findActiveByAddresses(["mixed.case@in.frigora.test"]);
+    assert.equal(found[0]?.id, created.id);
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_mailboxes"), 3);
+  });
+
+  it("treats a different casing as the same mailbox", async () => {
+    const store = await seedMailboxes();
+    const created = await store.registerMailbox({
+      workspaceId: WS_A,
+      ventureId: VEN_A,
+      address: "alias@in.frigora.test",
+    });
+    const duplicate = await store.registerMailbox({
+      workspaceId: WS_A,
+      ventureId: VEN_A,
+      address: "ALIAS@IN.FRIGORA.TEST",
+    });
+    assert.equal(duplicate.id, created.id);
+    assert.equal(duplicate.address, "alias@in.frigora.test");
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_mailboxes"), 3);
+  });
+
+  it("rejects an invalid mailbox address without persisting it", async () => {
+    const store = await seedMailboxes();
+    await assert.rejects(
+      () =>
+        store.registerMailbox({
+          workspaceId: WS_A,
+          ventureId: VEN_A,
+          address: "not an address",
+        }),
+      MailboxAddressError,
+    );
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_mailboxes"), 2);
+  });
+
+  it("does not reassign a mailbox address to another workspace or venture", async () => {
+    const store = await seedMailboxes();
+    const sibling = "ven-frigora-two" as VentureId;
+    await getPersistence().ventures.insert(venture(WS_A, sibling, "frigora-two"));
+    await assert.rejects(
+      () =>
+        store.registerMailbox({
+          workspaceId: WS_B,
+          ventureId: VEN_B,
+          address: ` ${ADDRESS_A.toUpperCase()} `,
+        }),
+      MailboxScopeError,
+    );
+    await assert.rejects(
+      () =>
+        store.registerMailbox({
+          workspaceId: WS_A,
+          ventureId: sibling,
+          address: ADDRESS_A.toUpperCase(),
+        }),
+      MailboxScopeError,
+    );
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_mailboxes"), 2);
+    const owned = await store.findActiveByAddresses([ADDRESS_A]);
+    assert.equal(owned[0]?.workspaceId, WS_A);
+    assert.equal(owned[0]?.ventureId, VEN_A);
   });
 
   it("fails closed when the provider cannot retrieve the message", async () => {
@@ -405,6 +483,162 @@ describe("communications inbound foundation", () => {
     await assert.rejects(() => failing.retrieveInbound(EMAIL_A), ProviderRetrievalError);
   });
 
+  it("reads a provider response below the size limit", async () => {
+    const provider = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () => providerResponse(encode(providerPayload())),
+    });
+    const email = await provider.retrieveInbound(EMAIL_A);
+    assert.equal(email.id, EMAIL_A);
+    assert.equal(email.text, "Hello");
+  });
+
+  it("accepts a provider response that is exactly the size limit", async () => {
+    const raw = encode(providerPayload());
+    assert.ok(raw.byteLength < MAX_PROVIDER_RESPONSE_BYTES);
+    const bytes = new Uint8Array(MAX_PROVIDER_RESPONSE_BYTES);
+    bytes.set(raw);
+    bytes.fill(0x20, raw.byteLength);
+    const provider = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () => providerResponse(bytes),
+    });
+    const email = await provider.retrieveInbound(EMAIL_A);
+    assert.equal(email.text, "Hello");
+  });
+
+  it("rejects a provider response above the size limit without parsing it", async () => {
+    const bytes = new Uint8Array(MAX_PROVIDER_RESPONSE_BYTES + 1);
+    const provider = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () => providerResponse(bytes),
+    });
+    await assert.rejects(
+      () => provider.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "body_too_large"),
+    );
+  });
+
+  it("rejects an oversized provider stream when Content-Length is missing or understated", async () => {
+    const oversizedPieces = () =>
+      Array.from(
+        { length: Math.ceil((MAX_PROVIDER_RESPONSE_BYTES + 1) / 1_000_000) + 2 },
+        () => chunk(1_000_000),
+      );
+    const missing = trackedStream(oversizedPieces());
+    const missingProvider = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () => providerResponse(missing.stream),
+    });
+    await assert.rejects(
+      () => missingProvider.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "body_too_large"),
+    );
+    assert.equal(missing.cancelled(), true);
+    assert.equal(missing.pulls() < oversizedPieces().length, true);
+
+    const understatedPieces = oversizedPieces();
+    const understated = trackedStream(understatedPieces);
+    const understatedProvider = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () =>
+        providerResponse(understated.stream, { "content-length": "10" }),
+    });
+    await assert.rejects(
+      () => understatedProvider.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "body_too_large"),
+    );
+    assert.equal(understated.cancelled(), true);
+    assert.equal(understated.pulls() < understatedPieces.length, true);
+  });
+
+  it("rejects a failed, malformed, or non-UTF-8 provider response", async () => {
+    const broken = trackedStream([chunk(16)], { failAt: 0 });
+    const failed = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () => providerResponse(broken.stream),
+    });
+    await assert.rejects(
+      () => failed.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "body"),
+    );
+
+    const malformed = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () => providerResponse(encode("{")),
+    });
+    await assert.rejects(
+      () => malformed.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "body"),
+    );
+
+    const invalid = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () => providerResponse(Uint8Array.of(0xff, 0xfe, 0xfd)),
+    });
+    await assert.rejects(
+      () => invalid.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "body"),
+    );
+  });
+
+  it("reports a stalled retrieval as a timeout and aborts the request", async () => {
+    let aborted = false;
+    const provider = createResendEmailProvider({
+      apiKey: API_KEY,
+      timeoutMs: 30,
+      fetchImpl: (_input, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            aborted = true;
+            const error = new Error("The operation was aborted");
+            error.name = "AbortError";
+            reject(error);
+          });
+        }),
+    });
+    await assert.rejects(
+      () => provider.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "timeout"),
+    );
+    assert.equal(aborted, true);
+  });
+
+  it("cancels a stalled provider body when retrieval times out", async () => {
+    let cancelled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      pull() {
+        return new Promise(() => undefined);
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const provider = createResendEmailProvider({
+      apiKey: API_KEY,
+      timeoutMs: 30,
+      fetchImpl: async () => providerResponse(stream),
+    });
+    await assert.rejects(
+      () => provider.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "timeout"),
+    );
+    assert.equal(cancelled, true);
+  });
+
+  it("reports an ordinary provider network failure without the credential", async () => {
+    const provider = createResendEmailProvider({
+      apiKey: API_KEY,
+      fetchImpl: async () => {
+        throw new Error(`offline ${API_KEY}`);
+      },
+    });
+    await assert.rejects(
+      () => provider.retrieveInbound(EMAIL_A),
+      (error: unknown) => retrievalFailure(error, "network"),
+    );
+  });
+
   it("exposes the inbound route without trusting a missing signature", async () => {
     const previousKey = process.env.COMMUNICATIONS_RESEND_API_KEY;
     const previousSecret = process.env.COMMUNICATIONS_RESEND_WEBHOOK_SECRET;
@@ -555,6 +789,38 @@ describe("communications inbound foundation", () => {
 
 function encode(value: string) {
   return new TextEncoder().encode(value);
+}
+
+function providerPayload() {
+  return JSON.stringify({
+    id: EMAIL_A,
+    from: "customer@example.com",
+    to: ["ignored@example.com"],
+    cc: [],
+    received_for: [ADDRESS_A],
+    subject: "Hello",
+    text: "Hello",
+    html: "<p>Hello</p>",
+    message_id: "<m1@example.com>",
+    attachments: [],
+  });
+}
+
+function providerResponse(body: BodyInit, headers: Record<string, string> = {}) {
+  const stream = typeof body === "object" && body !== null && "getReader" in body;
+  return new Response(body, {
+    status: 200,
+    headers: { "content-type": "application/json", ...headers },
+    ...(stream ? { duplex: "half" } : {}),
+  } as ResponseInit);
+}
+
+function retrievalFailure(error: unknown, message: string) {
+  assert.ok(error instanceof ProviderRetrievalError);
+  assert.equal(error.message, message);
+  assert.equal(error.message.includes(API_KEY), false);
+  assert.equal(error.message.includes("download_url"), false);
+  return true;
 }
 
 function currentTimestamp() {

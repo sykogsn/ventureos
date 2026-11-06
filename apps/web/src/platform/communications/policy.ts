@@ -3,6 +3,19 @@ import type { InboundAttachment, RetrievedInboundEmail } from "./provider";
 export const MAX_WEBHOOK_BODY_BYTES = 1_000_000;
 export const MAX_BODY_CHARS = 200_000;
 export const MAX_SUBJECT_CHARS = 998;
+
+/**
+ * Largest receiving-API response the adapter will read.
+ * Text and HTML may each contain MAX_BODY_CHARS, and JSON can escape one
+ * character as a six-byte \\uXXXX sequence. The subject uses that same bound.
+ * The envelope covers headers, attachment metadata, authentication, and framing.
+ * Attachment bytes are not part of this response.
+ */
+const JSON_ESCAPED_CHAR_BYTES = 6;
+const PROVIDER_RESPONSE_ENVELOPE_BYTES = 64 * 1024;
+export const MAX_PROVIDER_RESPONSE_BYTES =
+  JSON_ESCAPED_CHAR_BYTES * (MAX_BODY_CHARS * 2 + MAX_SUBJECT_CHARS) +
+  PROVIDER_RESPONSE_ENVELOPE_BYTES;
 export const MAX_ATTACHMENTS = 5;
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 export const MAX_ATTACHMENT_TOTAL_BYTES = 10 * 1024 * 1024;

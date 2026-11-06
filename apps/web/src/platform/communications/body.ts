@@ -8,22 +8,48 @@ export type BoundedBodyRead =
   | { ok: true; bytes: Uint8Array }
   | { ok: false; reason: "too_large" | "read_error" };
 
-export async function readBoundedRequestBody(
+type ByteStreamSource = {
+  body: ReadableStream<Uint8Array> | null;
+  headers: Headers;
+};
+
+export function readBoundedRequestBody(
   request: Request,
   maxBytes: number,
 ): Promise<BoundedBodyRead> {
+  return readBoundedBody(request, maxBytes);
+}
+
+export async function readBoundedBody(
+  source: ByteStreamSource,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<BoundedBodyRead> {
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  let onAbort: (() => void) | undefined;
   try {
-    const declared = declaredContentLength(request);
+    if (signal?.aborted) {
+      await cancelStream(source.body);
+      return { ok: false, reason: "read_error" };
+    }
+
+    const declared = declaredContentLength(source);
     if (declared !== null && declared > maxBytes) {
-      await cancelStream(request.body);
+      await cancelStream(source.body);
       return { ok: false, reason: "too_large" };
     }
 
-    const stream = request.body;
+    const stream = source.body;
     if (!stream) return { ok: true, bytes: new Uint8Array(0) };
 
     reader = stream.getReader();
+    if (signal) {
+      const activeReader = reader;
+      onAbort = () => {
+        void cancelReader(activeReader);
+      };
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
     const chunks: Uint8Array[] = [];
     let received = 0;
     for (;;) {
@@ -49,6 +75,7 @@ export async function readBoundedRequestBody(
     if (reader) await cancelReader(reader);
     return { ok: false, reason: "read_error" };
   } finally {
+    if (signal && onAbort) signal.removeEventListener("abort", onAbort);
     if (reader) {
       try {
         reader.releaseLock();
@@ -59,8 +86,8 @@ export async function readBoundedRequestBody(
   }
 }
 
-function declaredContentLength(request: Request): number | null {
-  const header = request.headers.get("content-length");
+function declaredContentLength(source: ByteStreamSource): number | null {
+  const header = source.headers.get("content-length");
   if (header === null || !/^[0-9]{1,18}$/.test(header)) return null;
   const value = Number(header);
   if (!Number.isSafeInteger(value)) return null;
