@@ -16,7 +16,7 @@ export type Database = LibSQLDatabase<typeof schema>;
 
 // Generation 32 is the combined successor of two independent generation-31
 // evolutions: IAM-001 workspace_invitations and F34-04 work-order priority.
-const SCHEMA_GENERATION = 32; // bump when ensureSchema DDL is extended
+const SCHEMA_GENERATION = 33; // bump when ensureSchema DDL is extended
 
 const globalStore = globalThis as typeof globalThis & {
   __vosDb?: Database;
@@ -1332,6 +1332,99 @@ export async function ensureSchema() {
       );
       await exec(
         "CREATE INDEX IF NOT EXISTS intelligence_revisions_workspace_idx ON intelligence_revisions (workspace_id, object_id)",
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS communication_mailboxes (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          provider TEXT NOT NULL,
+          address TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('active', 'disabled')),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS communication_mailboxes_address_idx ON communication_mailboxes (address)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS communication_mailboxes_scope_idx ON communication_mailboxes (workspace_id, venture_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS communication_conversations (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          mailbox_id TEXT NOT NULL,
+          thread_key TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS communication_conversations_thread_idx ON communication_conversations (mailbox_id, thread_key)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS communication_conversations_scope_idx ON communication_conversations (workspace_id, venture_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS communication_messages (
+          id TEXT PRIMARY KEY,
+          workspace_id TEXT NOT NULL,
+          venture_id TEXT NOT NULL,
+          mailbox_id TEXT NOT NULL,
+          conversation_id TEXT NOT NULL,
+          provider TEXT NOT NULL,
+          provider_message_id TEXT NOT NULL,
+          provider_event_id TEXT NOT NULL,
+          rfc_message_id TEXT NOT NULL,
+          direction TEXT NOT NULL CHECK (direction = 'inbound'),
+          status TEXT NOT NULL CHECK (status IN ('accepted', 'rejected')),
+          rejection_reason TEXT,
+          from_address TEXT NOT NULL,
+          to_json TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          text_body TEXT,
+          html_body TEXT,
+          attachment_json TEXT NOT NULL,
+          authentication_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS communication_messages_provider_message_idx ON communication_messages (provider, provider_message_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS communication_messages_scope_idx ON communication_messages (workspace_id, venture_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS communication_messages_conversation_idx ON communication_messages (conversation_id)`,
+      );
+
+      await exec(`
+        CREATE TABLE IF NOT EXISTS communication_provider_events (
+          id TEXT PRIMARY KEY,
+          provider TEXT NOT NULL,
+          provider_event_id TEXT NOT NULL,
+          provider_message_id TEXT,
+          status TEXT NOT NULL CHECK (status IN ('accepted', 'rejected', 'duplicate')),
+          reason TEXT,
+          workspace_id TEXT NOT NULL DEFAULT '',
+          venture_id TEXT NOT NULL DEFAULT '',
+          mailbox_id TEXT,
+          message_id TEXT,
+          created_at TEXT NOT NULL
+        )
+      `);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS communication_provider_events_event_idx ON communication_provider_events (provider, provider_event_id)`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS communication_provider_events_scope_idx ON communication_provider_events (workspace_id, venture_id)`,
       );
     })();
   }
