@@ -8,6 +8,7 @@ import { ProviderRetrievalError } from "./provider";
 import { isEventId, MalformedWebhookError, WebhookSignatureError } from "./signature";
 import {
   createCommunicationsStore,
+  MailboxCollisionError,
   MailboxScopeError,
   type CommunicationMailbox,
   type CommunicationsStore,
@@ -109,6 +110,13 @@ export async function processInboundWebhook(input: {
   try {
     mailboxes = await store.findActiveByAddresses(addresses);
   } catch (error) {
+    if (error instanceof MailboxCollisionError) {
+      await record(input.audit, "communications.inbound.failed", {
+        reason: error.code,
+        providerEventId: eventId,
+      });
+      return result(409, "failed", error.code);
+    }
     return persistenceFailure(input.audit, eventId, error);
   }
 

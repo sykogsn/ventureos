@@ -20,6 +20,7 @@ import { createResendEmailProvider } from "./resend";
 import {
   createCommunicationsStore,
   MailboxAddressError,
+  MailboxCollisionError,
   MailboxScopeError,
   type CommunicationsStore,
 } from "./store";
@@ -249,6 +250,105 @@ describe("communications inbound foundation", () => {
     const owned = await store.findActiveByAddresses([ADDRESS_A]);
     assert.equal(owned[0]?.workspaceId, WS_A);
     assert.equal(owned[0]?.ventureId, VEN_A);
+  });
+
+  it("routes and re-registers a legacy mixed-case mailbox without creating another", async () => {
+    const store = await seedMailboxes();
+    const legacy = "  INBOUND@IN.FRIGORA.TEST  ";
+    await getClient().execute({
+      sql: `UPDATE communication_mailboxes SET address = ? WHERE address = ?`,
+      args: [legacy, ADDRESS_A],
+    });
+
+    const registered = await store.registerMailbox({
+      workspaceId: WS_A,
+      ventureId: VEN_A,
+      address: ADDRESS_A,
+    });
+    const found = await store.findActiveByAddresses([ADDRESS_A]);
+    assert.equal(registered.id, found[0]?.id);
+    assert.equal(registered.address, ADDRESS_A);
+    assert.equal(registered.workspaceId, WS_A);
+    assert.equal(registered.ventureId, VEN_A);
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_mailboxes"), 2);
+    assert.equal((await mailboxRows()).find((row) => row.id === registered.id)?.address, legacy);
+
+    const response = await deliver(
+      store,
+      notice(EMAIL_A, [legacy]),
+      "msg_legacy",
+      createAuditLog(),
+      emailFor(EMAIL_A, { receivedFor: [legacy] }),
+    );
+    assert.equal(response.status, 200);
+    assert.equal(response.body.status, "accepted");
+    const message = await store.getMessage(
+      { workspaceId: WS_A, ventureId: VEN_A },
+      response.body.messageId ?? "",
+    );
+    assert.equal(message?.mailboxId, registered.id);
+    assert.equal(await store.getMessage({ workspaceId: WS_B, ventureId: VEN_B }, response.body.messageId ?? ""), null);
+    assert.equal(await scalar("SELECT COUNT(*) AS count FROM communication_mailboxes"), 2);
+  });
+
+  it("fails closed when legacy rows collide on the same normalised address", async () => {
+    const store = await seedMailboxes();
+    await insertRawMailbox("mbx-case-duplicate", WS_B, VEN_B, "INBOUND@IN.FRIGORA.TEST");
+    const before = await mailboxRows();
+
+    await assert.rejects(
+      () =>
+        store.registerMailbox({
+          workspaceId: WS_A,
+          ventureId: VEN_A,
+          address: ADDRESS_A,
+        }),
+      MailboxCollisionError,
+    );
+    await assert.rejects(
+      () =>
+        store.registerMailbox({
+          workspaceId: WS_B,
+          ventureId: VEN_B,
+          address: ` ${ADDRESS_A.toUpperCase()} `,
+        }),
+      MailboxCollisionError,
+    );
+    await assert.rejects(() => store.findActiveByAddresses([ADDRESS_A]), MailboxCollisionError);
+    assert.deepEqual(await mailboxRows(), before);
+
+    const audit = createAuditLog();
+    const response = await deliver(store, notice(EMAIL_A, [ADDRESS_A]), "msg_collision", audit, emailFor(EMAIL_A));
+    assert.equal(response.status, 409);
+    assert.equal(response.body.code, "mailbox_address_collision");
+    assert.equal(await store.countMessages(), 0);
+    assert.equal(await store.countEvents(), 0);
+    const listed = await audit.list();
+    assert.equal(listed.some((entry) => entry.metadata?.reason === "mailbox_address_collision"), true);
+    assert.deepEqual(await mailboxRows(), before);
+  });
+
+  it("fails closed when the same owner has two differently cased mailbox rows", async () => {
+    const store = await seedMailboxes();
+    await insertRawMailbox("mbx-alias-upper", WS_A, VEN_A, "ALIAS@IN.FRIGORA.TEST");
+    await insertRawMailbox("mbx-alias-lower", WS_A, VEN_A, "alias@in.frigora.test");
+    const before = await mailboxRows();
+
+    await assert.rejects(
+      () =>
+        store.registerMailbox({
+          workspaceId: WS_A,
+          ventureId: VEN_A,
+          address: "Alias@in.frigora.test",
+        }),
+      MailboxCollisionError,
+    );
+    await assert.rejects(
+      () => store.findActiveByAddresses(["alias@in.frigora.test"]),
+      MailboxCollisionError,
+    );
+    assert.deepEqual(await mailboxRows(), before);
+    assert.equal(before.filter((row) => row.address.toLowerCase().includes("alias@")).length, 2);
   });
 
   it("fails closed when the provider cannot retrieve the message", async () => {
@@ -1065,6 +1165,35 @@ function venture(workspaceId: WorkspaceId, id: VentureId, slug: string): Persist
     createdAt: NOW_ISO,
     updatedAt: NOW_ISO,
   };
+}
+
+async function insertRawMailbox(
+  id: string,
+  workspaceId: WorkspaceId,
+  ventureId: VentureId,
+  address: string,
+) {
+  await getClient().execute({
+    sql: `INSERT INTO communication_mailboxes (
+      id, workspace_id, venture_id, provider, address, status, created_at, updated_at
+    ) VALUES (?, ?, ?, 'resend', ?, 'active', ?, ?)`,
+    args: [id, workspaceId, ventureId, address, NOW_ISO, NOW_ISO],
+  });
+}
+
+async function mailboxRows() {
+  const result = await getClient().execute(
+    `SELECT id, workspace_id, venture_id, address FROM communication_mailboxes ORDER BY id`,
+  );
+  return result.rows.map((row) => {
+    const record = row as unknown as { id: unknown; workspace_id: unknown; venture_id: unknown; address: unknown };
+    return {
+      id: String(record.id),
+      workspaceId: String(record.workspace_id),
+      ventureId: String(record.venture_id),
+      address: String(record.address),
+    };
+  });
 }
 
 async function scalar(sql: string) {

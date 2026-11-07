@@ -25,6 +25,15 @@ export class MailboxAddressError extends Error {
   }
 }
 
+export class MailboxCollisionError extends Error {
+  readonly code = "mailbox_address_collision";
+
+  constructor() {
+    super("mailbox_address_collision");
+    this.name = "MailboxCollisionError";
+  }
+}
+
 export type CommunicationMailbox = {
   id: string;
   workspaceId: string;
@@ -112,16 +121,12 @@ export function createCommunicationsStore(): CommunicationsStore {
         });
         if (venture.rows.length !== 1) throw new MailboxScopeError();
 
-        const existing = await transaction.execute({
-          sql: `SELECT id, workspace_id, venture_id, address, status FROM communication_mailboxes WHERE address = ?`,
-          args: [address],
-        });
-        if (existing.rows.length === 1) {
-          const mailbox = mapMailbox(existing.rows[0]);
-          if (!mailbox || mailbox.workspaceId !== input.workspaceId || mailbox.ventureId !== input.ventureId) {
+        const existing = await mailboxByNormalisedAddress(transaction, address);
+        if (existing) {
+          if (existing.workspaceId !== input.workspaceId || existing.ventureId !== input.ventureId) {
             throw new MailboxScopeError();
           }
-          return mailbox;
+          return existing;
         }
 
         const createdAt = nowIso();
@@ -149,18 +154,22 @@ export function createCommunicationsStore(): CommunicationsStore {
 
     async findActiveByAddresses(addresses) {
       await ensureSchema();
-      if (addresses.length === 0) return [];
-      const placeholders = addresses.map(() => "?").join(", ");
-      const result = await getClient().execute({
-        sql: `SELECT id, workspace_id, venture_id, address, status
-          FROM communication_mailboxes
-          WHERE provider = ? AND status = 'active' AND address IN (${placeholders})`,
-        args: [PROVIDER, ...addresses],
-      });
-      return result.rows.flatMap((row) => {
-        const mailbox = mapMailbox(row);
-        return mailbox ? [mailbox] : [];
-      });
+      const requested = [
+        ...new Set(
+          addresses.flatMap((value) => {
+            const address = normalizeMailboxAddress(value);
+            return address ? [address] : [];
+          }),
+        ),
+      ];
+      if (requested.length === 0) return [];
+      const groups = await normalisedMailboxGroups(getClient());
+      const found: CommunicationMailbox[] = [];
+      for (const address of requested) {
+        const mailbox = mailboxForAddress(groups, address);
+        if (mailbox?.status === "active") found.push(mailbox);
+      }
+      return found;
     },
 
     async commitInbound(input) {
@@ -375,6 +384,49 @@ async function countRows(table: "communication_messages" | "communication_provid
     `SELECT COUNT(*) AS count FROM ${table}`,
   );
   return Number(cell(result.rows[0], "count") ?? "0");
+}
+
+/**
+ * The address unique index is case-sensitive and cannot represent
+ * normalizeMailboxAddress(), including whitespace and display-name wrapping.
+ * Rows are matched by that function. One stored row may keep its original
+ * text. Two rows that normalise to the same address are a collision:
+ * neither ownership is chosen and nothing is rewritten.
+ */
+async function mailboxByNormalisedAddress(
+  executor: Pick<Transaction, "execute">,
+  address: string,
+): Promise<CommunicationMailbox | null> {
+  return mailboxForAddress(await normalisedMailboxGroups(executor), address);
+}
+
+async function normalisedMailboxGroups(executor: Pick<Transaction, "execute">) {
+  const result = await executor.execute({
+    sql: `SELECT id, workspace_id, venture_id, address, status
+      FROM communication_mailboxes
+      WHERE provider = ?`,
+    args: [PROVIDER],
+  });
+  const groups = new Map<string, CommunicationMailbox[]>();
+  for (const row of result.rows) {
+    const mailbox = mapMailbox(row);
+    if (!mailbox) continue;
+    const address = normalizeMailboxAddress(mailbox.address);
+    if (!address) continue;
+    const group = groups.get(address) ?? [];
+    group.push({ ...mailbox, address });
+    groups.set(address, group);
+  }
+  return groups;
+}
+
+function mailboxForAddress(
+  groups: Map<string, CommunicationMailbox[]>,
+  address: string,
+): CommunicationMailbox | null {
+  const group = groups.get(address) ?? [];
+  if (group.length > 1) throw new MailboxCollisionError();
+  return group[0] ?? null;
 }
 
 function mapMailbox(row: unknown): CommunicationMailbox | null {
