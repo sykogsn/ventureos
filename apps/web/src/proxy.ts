@@ -34,6 +34,11 @@ export async function proxy(request: NextRequest) {
     return applyAuthNavigationHeaders(NextResponse.next());
   }
 
+  // Provider webhook. Authenticity is the signature check in the route, not a session cookie.
+  if (request.method === "POST" && pathname === "/api/communications/inbound") {
+    return applyAuthNavigationHeaders(NextResponse.next());
+  }
+
   if (pathname === "/invite") {
     return applyAuthNavigationHeaders(NextResponse.next());
   }
