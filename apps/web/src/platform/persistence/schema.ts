@@ -1123,6 +1123,101 @@ export const intelligenceRevisions = sqliteTable(
   ],
 );
 
+/** Provider-neutral inbound mailbox. Address is the routing key; venture scope comes from this row. */
+export const communicationMailboxes = sqliteTable(
+  "communication_mailboxes",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    provider: text("provider").notNull(),
+    address: text("address").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("communication_mailboxes_address_idx").on(table.address),
+    index("communication_mailboxes_scope_idx").on(table.workspaceId, table.ventureId),
+  ],
+);
+
+export const communicationConversations = sqliteTable(
+  "communication_conversations",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    mailboxId: text("mailbox_id").notNull(),
+    threadKey: text("thread_key").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("communication_conversations_thread_idx").on(table.mailboxId, table.threadKey),
+    index("communication_conversations_scope_idx").on(table.workspaceId, table.ventureId),
+  ],
+);
+
+export const communicationMessages = sqliteTable(
+  "communication_messages",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    mailboxId: text("mailbox_id").notNull(),
+    conversationId: text("conversation_id").notNull(),
+    provider: text("provider").notNull(),
+    providerMessageId: text("provider_message_id").notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    rfcMessageId: text("rfc_message_id").notNull(),
+    direction: text("direction").notNull(),
+    status: text("status").notNull(),
+    rejectionReason: text("rejection_reason"),
+    fromAddress: text("from_address").notNull(),
+    toJson: text("to_json").notNull(),
+    subject: text("subject").notNull(),
+    textBody: text("text_body"),
+    htmlBody: text("html_body"),
+    attachmentJson: text("attachment_json").notNull(),
+    authenticationJson: text("authentication_json").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("communication_messages_provider_message_idx").on(
+      table.provider,
+      table.providerMessageId,
+    ),
+    index("communication_messages_scope_idx").on(table.workspaceId, table.ventureId),
+    index("communication_messages_conversation_idx").on(table.conversationId),
+  ],
+);
+
+/** Dedup key is the provider event id (Svix id), never a caller-supplied venture id. */
+export const communicationProviderEvents = sqliteTable(
+  "communication_provider_events",
+  {
+    id: text("id").primaryKey(),
+    provider: text("provider").notNull(),
+    providerEventId: text("provider_event_id").notNull(),
+    providerMessageId: text("provider_message_id"),
+    status: text("status").notNull(),
+    reason: text("reason"),
+    workspaceId: text("workspace_id").notNull().default(""),
+    ventureId: text("venture_id").notNull().default(""),
+    mailboxId: text("mailbox_id"),
+    messageId: text("message_id"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("communication_provider_events_event_idx").on(
+      table.provider,
+      table.providerEventId,
+    ),
+    index("communication_provider_events_scope_idx").on(table.workspaceId, table.ventureId),
+  ],
+);
+
 export const schema = {
   intelligenceCatalogues,
   intelligenceObjects,
@@ -1174,6 +1269,10 @@ export const schema = {
   frigoraAssetOperationalConditions,
   frigoraVisitCustomerAcknowledgements,
   frigoraVisitEvidence,
+  communicationMailboxes,
+  communicationConversations,
+  communicationMessages,
+  communicationProviderEvents,
 };
 
 /** Durable optional upload identity; not a Venture acceptance receipt. */

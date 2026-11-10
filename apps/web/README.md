@@ -29,6 +29,15 @@ RESEND_API_KEY=
 
 Redirect URI: `{AUTH_URL}/auth/google/callback`. Without `RESEND_API_KEY`, reset links are written to the server log. Without Google credentials, Continue with Google explains that it is not configured.
 
+Inbound venture mail is a separate provider configuration. It does not read `RESEND_API_KEY` or `MAIL_FROM`. Point the provider at a dedicated receiving subdomain; do not change the root-domain MX records.
+
+```
+COMMUNICATIONS_RESEND_API_KEY=
+COMMUNICATIONS_RESEND_WEBHOOK_SECRET=
+```
+
+The inbound webhook is `POST /api/communications/inbound`. Mailbox addresses are stored per venture. If either variable is missing, inbound processing fails closed.
+
 Optional Workforce model adapter (server-side only; not used by the UI):
 
 ```
