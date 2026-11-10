@@ -4,7 +4,7 @@
 
 **Status.** Governance Foundation complete (VS-008A–C). Project Constitution registered as supreme law (2026-08-22). Controlled Delivery & Independent Verification constituted 2026-09-12.  
 **Owner.** Engineering  
-**Last Updated.** 2026-09-22
+**Last Updated.** 2026-11-10
 
 These records do not replace the Foundation Library, code-adjacent READMEs, or Runtime/IDS/Definition implementation sources. They index completed engineering work so the desk can remember it. They also name the standard every future change must follow.
 
@@ -65,6 +65,7 @@ If documents conflict, the [Project Constitution](../PROJECT_CONSTITUTION.md) wi
 | [ENGINEERING_HISTORY.md](./ENGINEERING_HISTORY.md) | Master sprint timeline (VS-001–VS-008C ledger) |
 | [BRAIN_PROGRAMME.md](./BRAIN_PROGRAMME.md) | Brain programme close-out (VC-001–VC-003). Not the VS history parser |
 | [FOUNDATION_CERTIFICATION_v1.1.md](./FOUNDATION_CERTIFICATION_v1.1.md) | Permanent Foundation v1.1 certification record |
+| [MGCO_P1_FOUNDER_CERTIFICATION_01.md](./MGCO_P1_FOUNDER_CERTIFICATION_01.md) | MGCO Package 1 Communications Foundation, certified with documented limitations at `649d27340dddcf8feb53ab823310d74208316f0d` |
 | [DECISION_REGISTER.md](./DECISION_REGISTER.md) | Named decisions with problem / outcome (distinct from ADR / FD) |
 | [TECHNICAL_DEBT_REGISTER.md](./TECHNICAL_DEBT_REGISTER.md) | Follow-up items from Foundation Certification v1.1 |
 | [RELEASE_HISTORY.md](./RELEASE_HISTORY.md) | Declared Foundation releases as engineering history |
