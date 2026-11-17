@@ -1,9 +1,10 @@
-import { createClient, type Client, type Transaction } from "@libsql/client";
+import type { Client, Transaction } from "@libsql/client";
 import { getDatabaseUrl } from "@/platform/persistence/db";
+import { createGuardedDatabaseClient } from "@/platform/persistence/persistent-dev-database";
 
 /** Each call owns a disposable client. Never return it to the shared read client. */
 export function createFrigoraWriteClient(): Client {
-  return createClient({ url: getDatabaseUrl(), timeout: 250 });
+  return createGuardedDatabaseClient({ url: getDatabaseUrl(), timeout: 250, concurrency: 1 });
 }
 
 export type FrigoraWriteClientFactory = () => Client;

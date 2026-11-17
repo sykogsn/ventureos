@@ -9,6 +9,7 @@ import {
 import {
   expiredAuthCookieOptions,
   sessionCookieOptions,
+  workspaceCookieOptions,
 } from "@/lib/auth/session-cookie";
 import { lookupPersistedSession } from "@/lib/auth/session-store";
 import {
@@ -67,13 +68,7 @@ export async function attachSessionCookies(
   const token = await createSessionToken(user, sessionId);
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(remember));
   if (workspaceId) {
-    response.cookies.set(WORKSPACE_COOKIE, workspaceId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-    });
+    response.cookies.set(WORKSPACE_COOKIE, workspaceId, workspaceCookieOptions());
   }
 }
 
@@ -101,11 +96,5 @@ export async function getActiveWorkspaceId() {
 
 export async function setActiveWorkspaceCookie(workspaceId: string) {
   const jar = await cookies();
-  jar.set(WORKSPACE_COOKIE, workspaceId, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-  });
+  jar.set(WORKSPACE_COOKIE, workspaceId, workspaceCookieOptions());
 }

@@ -1,9 +1,10 @@
-import { createClient, type Client, type Transaction } from "@libsql/client";
+import type { Client, Transaction } from "@libsql/client";
 import { getDatabaseUrl } from "@/platform/persistence/db";
+import { createGuardedDatabaseClient } from "@/platform/persistence/persistent-dev-database";
 
 /** Disposable writer. Do not reuse the shared read client for a write lock. */
 export function createPlatformWriteClient(): Client {
-  return createClient({ url: getDatabaseUrl(), timeout: 250 });
+  return createGuardedDatabaseClient({ url: getDatabaseUrl(), timeout: 250 });
 }
 
 let writeBarrier: (() => Promise<void>) | null = null;

@@ -34,5 +34,7 @@ describe("safeInternalPath", () => {
     assert.equal(safeInternalPath("/offline.html"), "/dashboard");
     assert.equal(safeInternalPath("/manifest.webmanifest"), "/dashboard");
     assert.equal(safeInternalPath("/frigora-icon/192"), "/dashboard");
+    assert.equal(safeInternalPath("/%2F%2Fevil.example"), "/dashboard");
+    assert.equal(safeInternalPath("/ventures/%2e%2e/%2e%2e/login"), "/dashboard");
   });
 });

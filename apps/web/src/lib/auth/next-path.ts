@@ -16,22 +16,29 @@ export function safeInternalPath(raw: unknown): string {
     return DEFAULT_AFTER_AUTH;
   }
 
-  if (!next.startsWith("/")) {
+  if (!isAcceptableInternalPath(next)) {
     return DEFAULT_AFTER_AUTH;
   }
 
-  if (next.startsWith("//") || next.startsWith("/\\") || next.includes("\\") || next.includes("://")) {
-    return DEFAULT_AFTER_AUTH;
-  }
-
-  const path = pathOnly(next);
-  if (path === "/login" || path === "/signup" || path.startsWith("/login/") || path.startsWith("/signup/")) {
-    return DEFAULT_AFTER_AUTH;
-  }
-
-  if (isFrigoraPwaPublicPath(path)) {
+  try {
+    const decoded = decodeURIComponent(next);
+    if (decoded !== next && !isAcceptableInternalPath(decoded)) {
+      return DEFAULT_AFTER_AUTH;
+    }
+  } catch {
     return DEFAULT_AFTER_AUTH;
   }
 
   return next;
+}
+
+function isAcceptableInternalPath(next: string) {
+  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return false;
+  if (next.includes("\\") || next.includes("://")) return false;
+  const path = pathOnly(next);
+  if (path.split("/").includes("..")) return false;
+  if (path === "/login" || path === "/signup" || path.startsWith("/login/") || path.startsWith("/signup/")) {
+    return false;
+  }
+  return !isFrigoraPwaPublicPath(path);
 }

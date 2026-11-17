@@ -1,19 +1,23 @@
 import { headers } from "next/headers";
+import { resolvePublicAppOrigin } from "@/platform/runtime/production-process-contract";
 
 export async function publicAppOrigin() {
-  if (process.env.AUTH_URL) {
-    return process.env.AUTH_URL.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production" || process.env.AUTH_URL) {
+    return resolvePublicAppOrigin({
+      nodeEnv: process.env.NODE_ENV,
+      authUrl: process.env.AUTH_URL,
+      forwardedHost: null,
+      forwardedProto: null,
+      host: null,
+    });
   }
 
   const headerList = await headers();
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
-  const proto =
-    headerList.get("x-forwarded-proto") ??
-    (process.env.NODE_ENV === "production" ? "https" : "http");
-
-  if (host) {
-    return `${proto}://${host}`;
-  }
-
-  return "http://localhost:3000";
+  return resolvePublicAppOrigin({
+    nodeEnv: process.env.NODE_ENV,
+    authUrl: process.env.AUTH_URL,
+    forwardedHost: headerList.get("x-forwarded-host"),
+    forwardedProto: headerList.get("x-forwarded-proto"),
+    host: headerList.get("host"),
+  });
 }

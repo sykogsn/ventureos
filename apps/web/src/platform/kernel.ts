@@ -9,6 +9,7 @@ import { createDbMembershipStore } from "@/platform/permissions/membership-store
 import { createPermissionService } from "@/platform/permissions/service";
 import { createLocalBlobStorageAdapter } from "@/platform/storage/local-adapter";
 import { createStoredObjectPort } from "@/platform/storage/port";
+import { onBeforePersistenceReset } from "@/platform/persistence/before-reset";
 import { createScheduler, type Scheduler } from "@/platform/scheduler/scheduler";
 import { createTelemetry, type Telemetry } from "@/platform/telemetry/telemetry";
 import { createWorkflowEngine } from "@/platform/workflows/engine";
@@ -96,3 +97,9 @@ export function getPlatform() {
 
   return globalStore.__vosPlatform;
 }
+
+onBeforePersistenceReset(async () => {
+  const platform = globalStore.__vosPlatform;
+  if (!platform) return;
+  await platform.scheduler.stopAll();
+});

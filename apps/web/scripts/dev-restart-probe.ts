@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { assertPersistentDevelopmentDatabaseReady } from "../src/platform/persistence/persistent-dev-database";
 import {
   IdsDevGuardError,
   assertExecutiveRuntimeHtml,
@@ -123,7 +124,7 @@ async function runOnce(webRoot: string, attempt: number) {
     cwd: webRoot,
     stdio: "pipe",
     shell: true,
-    env: process.env,
+    env: { ...process.env, VENTUREOS_PERSISTENT_DEV: "1" },
   });
 
   let stderr = "";
@@ -153,6 +154,8 @@ async function runOnce(webRoot: string, attempt: number) {
 }
 
 async function main() {
+  process.env.VENTUREOS_PERSISTENT_DEV = "1";
+  assertPersistentDevelopmentDatabaseReady();
   const webRoot = webRootFrom();
   recoverStaleDevServer(webRoot);
   await waitForPortFree(3000);

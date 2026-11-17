@@ -1677,6 +1677,7 @@ async function commitIntelligence(
   )
     throw new Error("Invalid mutation metadata");
   const tx = await openIntelligenceTransaction("write");
+  let failure: unknown;
   try {
     const before = await readIntelligence(tx, input.workspaceId);
     if (before.version !== input.expectedCatalogueVersion)
@@ -1806,19 +1807,27 @@ async function commitIntelligence(
     const result = await readIntelligence(tx, input.workspaceId);
     await tx.commit();
     return result;
+  } catch (error) {
+    failure = error;
+    throw error;
   } finally {
     // close() rolls back any open transaction, including database failures.
-    await tx.close();
+    // A cleanup failure must not replace the mutation error that caused it.
+    await closeIntelligenceTransaction(tx, failure);
   }
 }
 function createIntelligenceRepository(): IntelligenceRepository {
   return {
     async loadCatalogue(workspaceId) {
       const tx = await openIntelligenceTransaction("read");
+      let failure: unknown;
       try {
         return await readIntelligence(tx, workspaceId);
+      } catch (error) {
+        failure = error;
+        throw error;
       } finally {
-        await tx.close();
+        await closeIntelligenceTransaction(tx, failure);
       }
     },
     async findCurrent(workspaceId, objectId) {
@@ -1863,7 +1872,32 @@ function createIntelligenceRepository(): IntelligenceRepository {
   };
 }
 
-/** AIF-02 owns a short-lived SQLite connection so transaction handles are closed deterministically. */
+type IntelligenceTransaction = {
+  execute: Transaction["execute"];
+  commit: () => Promise<void>;
+  close: () => Promise<void>;
+};
+
+/** Keep the operation error when closing the transaction also fails. */
+async function closeIntelligenceTransaction(
+  tx: IntelligenceTransaction,
+  failure: unknown,
+) {
+  try {
+    await tx.close();
+  } catch (cleanup) {
+    if (failure === undefined) throw cleanup;
+  }
+}
+
+/**
+ * AIF-02 owns one short-lived client and one transaction object.
+ * @libsql/client 0.18.0 returns each execute() connection to the pool, and
+ * that release rolls back a transaction the connection still holds. Statements
+ * therefore stay on the transaction returned by client.transaction().
+ * Write mode is BEGIN IMMEDIATE. Read mode keeps the previous plain BEGIN,
+ * which SQLite runs as BEGIN DEFERRED, rather than a read-only transaction.
+ */
 async function openIntelligenceTransaction(mode: "read" | "write") {
   const url = getDatabaseUrl();
   if (!url.startsWith("file:") || url.includes(":memory:")) {
@@ -1872,26 +1906,32 @@ async function openIntelligenceTransaction(mode: "read" | "write") {
     );
   }
   const client = storedObjectDurability.openClient(SQLITE_DURABILITY_BUSY_TIMEOUT_MS);
-  let active = false;
+  let transaction: Transaction;
   try {
-    await client.execute(mode === "write" ? "BEGIN IMMEDIATE" : "BEGIN");
-    active = true;
+    transaction = await client.transaction(mode === "write" ? "write" : "deferred");
   } catch (error) {
     storedObjectDurability.disposeClient(client);
     throw error;
   }
+  let settled = false;
   return {
-    execute: client.execute.bind(client),
+    execute: transaction.execute.bind(transaction),
     async commit() {
-      await client.execute("COMMIT");
-      active = false;
+      await transaction.commit();
+      settled = true;
     },
     async close() {
       try {
-        if (active) await client.execute("ROLLBACK");
+        if (!settled && !transaction.closed) {
+          await transaction.rollback();
+          settled = true;
+        }
       } finally {
-        active = false;
-        storedObjectDurability.disposeClient(client);
+        try {
+          transaction.close();
+        } finally {
+          storedObjectDurability.disposeClient(client);
+        }
       }
     },
   };

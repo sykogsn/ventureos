@@ -25,6 +25,9 @@ function loginRedirect(request: NextRequest) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/api/health/live" || pathname === "/api/health/ready") {
+    return applyAuthNavigationHeaders(NextResponse.next());
+  }
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token
     ? await resolveSessionUser(token, lookupPersistedSession, nowIso())

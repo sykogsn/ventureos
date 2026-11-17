@@ -8,7 +8,7 @@
     "recover-dev": "tsx scripts/recover-dev.ts",
     "dev:probe": "tsx scripts/dev-restart-probe.ts",
     "build": "tsx scripts/ids-dev-guard.ts --build && next build",
-    "start": "next start",
+    "start": "tsx scripts/start.ts",
     "lint": "eslint --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit",
     "doctor": "tsx scripts/doctor.ts",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@repo/brain": "workspace:*",
-    "@libsql/client": "^0.17.4",
+    "@libsql/client": "0.18.0",
     "@repo/ids": "workspace:*",
     "@repo/storage-authority-kernel": "workspace:*",
     "@repo/ui": "workspace:*",

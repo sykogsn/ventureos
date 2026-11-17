@@ -1,6 +1,10 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import {
+  describePersistentDevelopmentDatabase,
+  assertPersistentDevelopmentDatabaseReady,
+} from "../src/platform/persistence/persistent-dev-database";
+import {
   IdsDevGuardError,
   assertExecutiveRuntimeHtml,
   assertIdsCssBundle,
@@ -101,6 +105,18 @@ async function assertCssFromLogin(html: string) {
 async function main() {
   const webRoot = webRootFrom();
   prepareIdsDevelopment(webRoot);
+  process.env.VENTUREOS_PERSISTENT_DEV = "1";
+  try {
+    assertPersistentDevelopmentDatabaseReady();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    process.exit(1);
+  }
+  const identity = describePersistentDevelopmentDatabase();
+  console.log(
+    `VentureOS development environment: ${identity.environment}, schema generation ${identity.schemaGeneration}, identity check passed.`,
+  );
 
   const nextBin = join(webRoot, "node_modules/next/dist/bin/next");
   const child = spawn(
@@ -109,7 +125,10 @@ async function main() {
     {
       cwd: webRoot,
       stdio: "inherit",
-      env: developmentEnvWithSystemCa(process.env),
+      env: developmentEnvWithSystemCa({
+        ...process.env,
+        VENTUREOS_PERSISTENT_DEV: "1",
+      }),
       windowsHide: true,
     },
   );

@@ -1,6 +1,7 @@
-import { createClient, type Client, type InStatement } from "@libsql/client";
+import type { Client, InStatement } from "@libsql/client";
 import { setTimeout as delay } from "node:timers/promises";
 import { ensureFileDatabase, getDatabaseUrl } from "@/platform/persistence/db";
+import { createGuardedDatabaseClient } from "@/platform/persistence/persistent-dev-database";
 
 /** Overall StoredObject durability contention budget, including native waits and visibility. */
 export const SQLITE_CONTENTION_BUDGET_MS = 5_000;
@@ -16,7 +17,7 @@ export const storedObjectDurability = {
   openClient(timeoutMs: number): Client {
     const url = getDatabaseUrl();
     ensureFileDatabase(url);
-    return createClient({ url, timeout: timeoutMs });
+    return createGuardedDatabaseClient({ url, timeout: timeoutMs });
   },
   disposeClient(client: Client): void {
     try {

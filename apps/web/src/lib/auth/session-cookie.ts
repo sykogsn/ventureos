@@ -1,20 +1,29 @@
-const cookieBase = {
-  httpOnly: true as const,
-  sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
-  path: "/",
-};
+function cookieBase() {
+  return {
+    httpOnly: true as const,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  };
+}
 
 export function sessionCookieOptions(remember: boolean) {
   return {
-    ...cookieBase,
+    ...cookieBase(),
     ...(remember ? { maxAge: 60 * 60 * 24 * 14 } : {}),
+  };
+}
+
+export function workspaceCookieOptions() {
+  return {
+    ...cookieBase(),
+    maxAge: 60 * 60 * 24 * 365,
   };
 }
 
 export function expiredAuthCookieOptions() {
   return {
-    ...cookieBase,
+    ...cookieBase(),
     maxAge: 0,
   };
 }
