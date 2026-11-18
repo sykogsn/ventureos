@@ -1,6 +1,8 @@
 import { ensureSchema, getClient, getDatabaseUrl, resetDatabaseLifecycle } from "./db";
 import { initialisePersistentDevelopmentDatabase, recordDatabaseInstance } from "./persistent-dev-database";
 
+type BoundaryModule = typeof import("./persistent-dev-database");
+
 const mode = process.argv[2];
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -27,6 +29,28 @@ if (mode === "build-default") {
     () => resetDatabaseLifecycle(databaseUrl),
   );
   process.stdout.write("initialised");
+} else if (mode === "module-boundary") {
+  const specifier = new URL("./persistent-dev-database.ts", import.meta.url).href;
+  const first = await import(specifier) as BoundaryModule;
+  const second = await import(`${specifier}?vos-module=action`) as BoundaryModule;
+  await resetDatabaseLifecycle(databaseUrl);
+  await ensureSchema();
+  const distinct = first.recheckPersistentDevelopmentDatabase !== second.recheckPersistentDevelopmentDatabase;
+  const sharedBefore = first.persistentProcessInstanceIdForTests() === second.persistentProcessInstanceIdForTests();
+  second.clearPersistentProcessAuthorizationForTests();
+  const clearedForBoth = first.persistentProcessInstanceIdForTests() === null;
+  second.recheckPersistentDevelopmentDatabase();
+  first.beginPersistentDatabaseMaintenance();
+  const depth = second.persistentProcessMaintenanceDepthForTests();
+  first.endPersistentDatabaseMaintenance();
+  process.stdout.write(JSON.stringify({
+    distinct,
+    sharedBefore,
+    clearedForBoth,
+    recovered: first.persistentProcessInstanceIdForTests(),
+    depth,
+    depthAfter: second.persistentProcessMaintenanceDepthForTests(),
+  }));
 } else if (mode === "read") {
   const email = process.argv[3];
   if (!email) throw new Error("The child process requires the fixture email argument.");
@@ -51,5 +75,5 @@ if (mode === "build-default") {
     definitionId: String(ventures.rows[0]?.definition_id ?? ""),
   }));
 } else {
-  throw new Error("The child process requires init, read, or build-default.");
+  throw new Error("The child process requires init, read, module-boundary, or build-default.");
 }

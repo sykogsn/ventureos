@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { authenticateUser, registerUser } from "@/modules/auth/service";
 import { createFrigoraWriteClient } from "@/modules/frigora/owned-write";
+import { getPlatform } from "@/platform/kernel";
 import { storedObjectDurability } from "@/platform/persistence/durability-client";
 import {
   applyFrigoraQuotationIdentitySeals,
@@ -15,13 +17,19 @@ import {
   getDatabaseUrl,
   resetDatabaseLifecycle,
 } from "./db";
+import { assessReadiness, INITIAL_PUBLIC_ORIGIN } from "@/platform/runtime/production-process-contract";
 import {
+  DATABASE_INSTANCE_RECORD_ID,
   PersistentDevelopmentDatabaseError,
   beginPersistentDatabaseMaintenance,
+  clearPersistentProcessAuthorizationForTests,
   createGuardedDatabaseClient,
   endPersistentDatabaseMaintenance,
   initialisePersistentDevelopmentDatabase,
   persistentApplicationId,
+  persistentProcessInstanceIdForTests,
+  persistentProcessMaintenanceDepthForTests,
+  recheckPersistentDevelopmentDatabase,
   recordDatabaseInstance,
   setPersistentDevelopmentCleanupFailureForTests,
 } from "./persistent-dev-database";
@@ -361,10 +369,215 @@ describe("persistent development database contract", () => {
     assert.equal(implicit.status, 0, implicit.stderr);
     assert.equal(implicit.stdout, "persistent_database_build_access_refused");
   });
+
+  it("lets signup and login recover authorization after startup and readiness", async () => {
+    const databaseUrl = isolatedDatabaseUrl("signup");
+    const filePath = databaseUrl.slice("file:".length);
+    const root = dirname(filePath);
+    const objects = join(root, "stored-objects");
+    mkdirSync(objects);
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousRoot = process.env.VENTUREOS_PERSISTENT_ROOT;
+    const previousObjects = process.env.STORED_OBJECT_ROOT;
+    const previousSecret = process.env.AUTH_SECRET;
+    const previousAuthUrl = process.env.AUTH_URL;
+    await initialise(databaseUrl);
+    delete process.env.VENTUREOS_AUTHORISE_DATABASE_INIT;
+    await resetDatabaseLifecycle(databaseUrl);
+    try {
+      await ensureSchema();
+      assert.equal(persistentProcessInstanceIdForTests(), INSTANCE);
+      clearPersistentProcessAuthorizationForTests();
+      const before = snapshotFiles(filePath);
+
+      (process.env as { NODE_ENV?: string }).NODE_ENV = "production";
+      process.env.VENTUREOS_PERSISTENT_ROOT = root;
+      process.env.STORED_OBJECT_ROOT = objects;
+      process.env.AUTH_SECRET = "hosted-signup-readiness-secret-value";
+      process.env.AUTH_URL = INITIAL_PUBLIC_ORIGIN;
+      const readiness = assessReadiness();
+      assert.equal(readiness.httpStatus, 200);
+      assert.deepEqual(readiness.body, { status: "ready" });
+      assert.equal(persistentProcessInstanceIdForTests(), null);
+      assert.deepEqual(snapshotFiles(filePath), before);
+
+      const user = await registerUser({
+        email: "hosted-signup@example.test",
+        password: "hosted-signup-password",
+        name: "Hosted Signup",
+      });
+      assert.equal(persistentProcessInstanceIdForTests(), INSTANCE);
+      clearPersistentProcessAuthorizationForTests();
+      const signedIn = await authenticateUser({
+        email: "hosted-signup@example.test",
+        password: "hosted-signup-password",
+      });
+      assert.equal(signedIn.id, user.id);
+      const users = await getClient().execute("SELECT COUNT(*) AS total FROM users");
+      const workspaces = await getClient().execute("SELECT COUNT(*) AS total FROM workspaces");
+      const version = await getClient().execute("PRAGMA user_version");
+      assert.equal(Number(users.rows[0]?.total), 1);
+      assert.equal(Number(workspaces.rows[0]?.total), 1);
+      assert.equal(Number(version.rows[0]?.user_version), 40);
+    } finally {
+      await getPlatform().scheduler.stopAll();
+      restore("VENTUREOS_PERSISTENT_ROOT", previousRoot);
+      restore("STORED_OBJECT_ROOT", previousObjects);
+      restore("AUTH_SECRET", previousSecret);
+      restore("AUTH_URL", previousAuthUrl);
+      if (previousNodeEnv === undefined) delete (process.env as { NODE_ENV?: string }).NODE_ENV;
+      else (process.env as { NODE_ENV?: string }).NODE_ENV = previousNodeEnv;
+    }
+  });
+
+  it("shares process authorization across module evaluations and schema maintenance", async () => {
+    const databaseUrl = isolatedDatabaseUrl("module-boundary");
+    await initialise(databaseUrl);
+    delete process.env.VENTUREOS_AUTHORISE_DATABASE_INIT;
+    await resetDatabaseLifecycle(databaseUrl);
+    await ensureSchema();
+    const boundary = await spawnChild("module-boundary", databaseUrl);
+    assert.equal(boundary.status, 0, boundary.stderr);
+    const shared = JSON.parse(boundary.stdout) as {
+      distinct: boolean;
+      sharedBefore: boolean;
+      clearedForBoth: boolean;
+      recovered: string;
+      depth: number;
+      depthAfter: number;
+    };
+    assert.equal(shared.distinct, true);
+    assert.equal(shared.sharedBefore, true);
+    assert.equal(shared.clearedForBoth, true);
+    assert.equal(shared.recovered, INSTANCE);
+    assert.equal(shared.depth, 1);
+    assert.equal(shared.depthAfter, 0);
+
+    clearPersistentProcessAuthorizationForTests();
+    const before = statSync(databaseUrl.slice("file:".length)).size;
+    recheckPersistentDevelopmentDatabase();
+    assert.equal(persistentProcessInstanceIdForTests(), INSTANCE);
+    assert.equal(statSync(databaseUrl.slice("file:".length)).size, before);
+
+    beginPersistentDatabaseMaintenance();
+    try {
+      assert.equal(persistentProcessMaintenanceDepthForTests(), 1);
+      await Promise.all([
+        getClient().execute("SELECT COUNT(*) AS total FROM users"),
+        getClient().execute("SELECT COUNT(*) AS total FROM workspaces"),
+      ]);
+    } finally {
+      endPersistentDatabaseMaintenance();
+    }
+    assert.equal(persistentProcessMaintenanceDepthForTests(), 0);
+
+    clearPersistentProcessAuthorizationForTests();
+    const reads = await Promise.all([
+      getClient().execute("SELECT 1 AS ok"),
+      getClient().execute("SELECT 1 AS ok"),
+    ]);
+    assert.equal(Number(reads[0].rows[0]?.ok), 1);
+    assert.equal(Number(reads[1].rows[0]?.ok), 1);
+    assert.equal(persistentProcessInstanceIdForTests(), INSTANCE);
+  });
+
+  it("rejects a replaced, rebound, or unverified database without adopting it", async () => {
+    const databaseUrl = isolatedDatabaseUrl("refuse-rebind");
+    const filePath = databaseUrl.slice("file:".length);
+    await initialise(databaseUrl);
+    delete process.env.VENTUREOS_AUTHORISE_DATABASE_INIT;
+    await resetDatabaseLifecycle(databaseUrl);
+    await getClient();
+
+    clearPersistentProcessAuthorizationForTests();
+    const decoy = isolatedDatabaseUrl("refuse-decoy");
+    const decoyDb = new DatabaseSync(decoy.slice("file:".length));
+    decoyDb.exec("CREATE TABLE decoy (id TEXT)");
+    decoyDb.close();
+    copyFileSync(decoy.slice("file:".length), filePath);
+    await expectCode(() => getClient().execute("CREATE TABLE adopted (id TEXT)"), "persistent_database_not_initialised");
+    assert.deepEqual(tableNames(databaseUrl), ["decoy"]);
+    assert.equal(existsSync(`${filePath}.ventureos-identity`), true);
+
+    const reboundUrl = isolatedDatabaseUrl("rebound");
+    const reboundPath = reboundUrl.slice("file:".length);
+    await initialise(reboundUrl);
+    delete process.env.VENTUREOS_AUTHORISE_DATABASE_INIT;
+    await resetDatabaseLifecycle(reboundUrl);
+    await getClient();
+    await getClient().execute({
+      sql: "UPDATE audit_events SET metadata_json = ? WHERE id = ?",
+      args: [JSON.stringify({ instanceId: OTHER_INSTANCE }), DATABASE_INSTANCE_RECORD_ID],
+    });
+    const sidecar = `${reboundPath}.ventureos-identity`;
+    const recorded = JSON.parse(readFileSync(sidecar, "utf8")) as { instanceId: string };
+    recorded.instanceId = OTHER_INSTANCE;
+    writeFileSync(sidecar, JSON.stringify(recorded));
+    process.env.VENTUREOS_DATABASE_INSTANCE_ID = OTHER_INSTANCE;
+    await expectCode(() => getClient().execute("SELECT 1"), "persistent_database_changed");
+
+    process.env.VENTUREOS_DATABASE_INSTANCE_ID = INSTANCE;
+    recorded.instanceId = INSTANCE;
+    writeFileSync(sidecar, JSON.stringify(recorded));
+    const restored = new DatabaseSync(reboundPath);
+    restored.prepare("UPDATE audit_events SET metadata_json = ? WHERE id = ?").run(
+      JSON.stringify({ instanceId: INSTANCE }),
+      DATABASE_INSTANCE_RECORD_ID,
+    );
+    restored.exec("PRAGMA user_version = 7");
+    restored.close();
+    clearPersistentProcessAuthorizationForTests();
+    await expectCode(() => getClient().execute("SELECT 1"), "persistent_database_generation_mismatch");
+
+    const generation = new DatabaseSync(reboundPath);
+    generation.exec("PRAGMA user_version = 40");
+    generation.close();
+    const fingerprint = JSON.parse(readFileSync(sidecar, "utf8")) as { schemaFingerprint: string; instanceId: string };
+    const originalFingerprint = fingerprint.schemaFingerprint;
+    fingerprint.schemaFingerprint = "0".repeat(64);
+    writeFileSync(sidecar, JSON.stringify(fingerprint));
+    clearPersistentProcessAuthorizationForTests();
+    await expectCode(() => getClient().execute("SELECT 1"), "persistent_database_identity_mismatch");
+    fingerprint.schemaFingerprint = originalFingerprint;
+    writeFileSync(sidecar, JSON.stringify(fingerprint));
+
+    process.env.VENTUREOS_DATABASE_IDENTITY = OTHER_TOKEN;
+    clearPersistentProcessAuthorizationForTests();
+    await expectCode(() => getClient().execute("SELECT 1"), "persistent_database_identity_mismatch");
+    process.env.VENTUREOS_DATABASE_IDENTITY = TOKEN;
+
+    const missingUrl = isolatedDatabaseUrl("missing");
+    assign(missingUrl, false);
+    await resetDatabaseLifecycle(missingUrl);
+    await expectCode(() => getClient().execute("SELECT 1"), "persistent_database_missing");
+    assert.equal(existsSync(missingUrl.slice("file:".length)), false);
+  });
 });
+
+function snapshotFiles(filePath: string) {
+  return [filePath, `${filePath}.ventureos-identity`].map((path) => ({
+    path,
+    bytes: readFileSync(path).toString("base64"),
+  }));
+}
 
 function code(expected: string) {
   return (error: unknown) => error instanceof PersistentDevelopmentDatabaseError && error.code === expected;
+}
+
+async function expectCode(run: () => Promise<unknown>, expected: string) {
+  try {
+    await run();
+  } catch (error) {
+    const actual = error instanceof PersistentDevelopmentDatabaseError
+      ? error.code
+      : error instanceof Error
+        ? error.name
+        : typeof error;
+    assert.equal(actual, expected);
+    return;
+  }
+  assert.fail(`expected ${expected}`);
 }
 
 async function assertOperationClosed(run: () => unknown) {

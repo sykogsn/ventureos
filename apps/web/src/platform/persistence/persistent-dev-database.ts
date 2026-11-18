@@ -41,9 +41,45 @@ export class PersistentDevelopmentDatabaseError extends Error {
 
 type AuthorizedDatabase = { path: string; instanceId: string };
 
-let initialisationClaim: string | null = null;
-let authorized: AuthorizedDatabase | null = null;
+type PersistentProcessState = {
+  initialisationClaim: string | null;
+  authorized: AuthorizedDatabase | null;
+  maintenanceDepth: number;
+};
+
+/**
+ * Next.js compiles instrumentation and server actions as separate modules.
+ * The shared client already lives on globalThis. This record has to as well,
+ * or a server action sees the client and treats the empty module slot as a changed database.
+ */
+function persistentProcessState(): PersistentProcessState {
+  const store = globalThis as typeof globalThis & { __vosPersistentProcess?: PersistentProcessState };
+  if (!store.__vosPersistentProcess) {
+    store.__vosPersistentProcess = {
+      initialisationClaim: null,
+      authorized: null,
+      maintenanceDepth: 0,
+    };
+  }
+  return store.__vosPersistentProcess;
+}
+
 let failCleanupForTests = false;
+
+/** Test-only. Drops the process authorization record. The shared client and database files stay in place. */
+export function clearPersistentProcessAuthorizationForTests() {
+  persistentProcessState().authorized = null;
+}
+
+/** Test-only. Reports the instance id recorded for this process, when one has been verified. */
+export function persistentProcessInstanceIdForTests() {
+  return persistentProcessState().authorized?.instanceId ?? null;
+}
+
+/** Test-only. Reports schema-maintenance depth shared by every module evaluation in this process. */
+export function persistentProcessMaintenanceDepthForTests() {
+  return persistentProcessState().maintenanceDepth;
+}
 
 export function persistentDevelopmentDatabaseEnabled() {
   if (process.env.NEXT_RUNTIME === "nodejs") return true;
@@ -95,7 +131,8 @@ export function resolvePersistentDevelopmentDatabase(selectedUrl: string) {
     throw new PersistentDevelopmentDatabaseError("persistent_database_selection_mismatch");
   }
   refuseProtectedDevelopmentDatabase(configuredPath);
-  if (initialisationClaim && samePath(initialisationClaim, configuredPath)) {
+  const state = persistentProcessState();
+  if (state.initialisationClaim && samePath(state.initialisationClaim, configuredPath)) {
     return fileUrl(configuredPath);
   }
   if (!existsSync(configuredPath)) {
@@ -103,7 +140,7 @@ export function resolvePersistentDevelopmentDatabase(selectedUrl: string) {
   }
   const opened = openedDatabasePath(configuredPath);
   const instanceId = verifyExistingDatabase(opened, identity);
-  authorized = { path: opened, instanceId };
+  state.authorized = { path: opened, instanceId };
   return fileUrl(opened);
 }
 
@@ -142,22 +179,28 @@ export function inspectPersistentDevelopmentDatabase(selectedUrl: string) {
   }
 }
 
-let maintenanceDepth = 0;
-
 /** Schema maintenance temporarily drops and recreates required objects. */
 export function beginPersistentDatabaseMaintenance() {
-  maintenanceDepth += 1;
+  persistentProcessState().maintenanceDepth += 1;
 }
 
 export function endPersistentDatabaseMaintenance() {
-  maintenanceDepth = Math.max(0, maintenanceDepth - 1);
+  const state = persistentProcessState();
+  state.maintenanceDepth = Math.max(0, state.maintenanceDepth - 1);
 }
 
 export function recheckPersistentDevelopmentDatabase() {
-  if (!persistentDevelopmentDatabaseEnabled() || initialisationClaim) return;
-  if (!authorized) throw new PersistentDevelopmentDatabaseError("persistent_database_changed");
-  const instanceId = verifyExistingDatabase(authorized.path, requiredIdentityToken(), maintenanceDepth > 0);
-  if (instanceId !== authorized.instanceId) {
+  const state = persistentProcessState();
+  if (!persistentDevelopmentDatabaseEnabled() || state.initialisationClaim) return;
+  if (!state.authorized) {
+    resolvePersistentDevelopmentDatabase(process.env.DATABASE_URL ?? "");
+    if (!persistentProcessState().authorized) {
+      throw new PersistentDevelopmentDatabaseError("persistent_database_changed");
+    }
+    return;
+  }
+  const instanceId = verifyExistingDatabase(state.authorized.path, requiredIdentityToken(), state.maintenanceDepth > 0);
+  if (instanceId !== state.authorized.instanceId) {
     throw new PersistentDevelopmentDatabaseError("persistent_database_changed");
   }
 }
@@ -343,7 +386,7 @@ export async function initialisePersistentDevelopmentDatabase(
       throw error;
     }
     databaseOwned = true;
-    initialisationClaim = filePath;
+    persistentProcessState().initialisationClaim = filePath;
     await migrate();
     if (!existsSync(filePath)) throw new PersistentDevelopmentDatabaseError("persistent_database_missing");
     await stamp(persistentApplicationId(identity), PERSISTENT_SCHEMA_GENERATION);
@@ -352,12 +395,12 @@ export async function initialisePersistentDevelopmentDatabase(
     sidecarOwned = true;
     const opened = openedDatabasePath(filePath);
     const recorded = verifyExistingDatabase(opened, identity);
-    authorized = { path: opened, instanceId: recorded };
+    persistentProcessState().authorized = { path: opened, instanceId: recorded };
   } catch (error) {
     failure = error;
     await release();
   } finally {
-    initialisationClaim = null;
+    persistentProcessState().initialisationClaim = null;
     closeSync(lock);
     databaseRemains = failure !== null && databaseOwned && !(await removeCreatedFile(filePath));
     sidecarRemains = failure !== null && sidecarOwned && !(await removeCreatedFile(sidecar));
