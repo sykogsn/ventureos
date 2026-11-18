@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { lstat, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeEach, describe, it, after } from "node:test";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
 import type { Role, UserId, VentureId, WorkspaceId } from "@/contracts";
 import { createPermissionService } from "@/platform/permissions/service";
 import { createDbMembershipStore } from "@/platform/permissions/membership-store";
@@ -41,6 +43,7 @@ import {
   refuseOfflineLeaseSelfExtension,
   resetMemoryOfflineDatabasesForTests,
 } from "@/modules/frigora/app/offline";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { shouldBlockFrigoraFieldMutation } from "@/modules/frigora/app/pwa/connectivity";
 
 const NOW = "2026-09-16T08:00:00.000Z";
@@ -56,10 +59,33 @@ after(() => {
   getPlatform().scheduler.stopAll();
 });
 
+let disposableObjectRoot: string | undefined;
+let previousStoredObjectRoot: string | undefined;
+
 beforeEach(async () => {
+  previousStoredObjectRoot = process.env.STORED_OBJECT_ROOT;
+  disposableObjectRoot = await mkdtemp(join(tmpdir(), "vos-host-recon-07-field-capture-"));
+  const rootStat = await lstat(disposableObjectRoot);
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+    throw new Error("Disposable object root must be a real directory.");
+  }
+  process.env.STORED_OBJECT_ROOT = disposableObjectRoot;
   await resetPersistenceLifecycle();
   await ensureSchema();
   resetMemoryOfflineDatabasesForTests();
+});
+
+afterEach(async () => {
+  if (previousStoredObjectRoot === undefined) {
+    delete process.env.STORED_OBJECT_ROOT;
+  } else {
+    process.env.STORED_OBJECT_ROOT = previousStoredObjectRoot;
+  }
+  const created = disposableObjectRoot;
+  disposableObjectRoot = undefined;
+  if (created) {
+    await rm(created, { recursive: true, force: true });
+  }
 });
 
 function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture {
@@ -230,9 +256,9 @@ async function seedLeasedWorkspace(
 }
 
 describe("F33-04 field capture + visit evidence local capture + idempotent explicit acceptance", () => {
-  it("A. SCHEMA_GENERATION is 28, product 0.22.0, allowlist exactly 3, global flag false", async () => {
+  it("A. SCHEMA_GENERATION is 40, product 0.22.0, allowlist exactly 3, global flag false", async () => {
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.equal(FRIGORA_FIELD_FORMS_OFFLINE_CAPTURE_ENABLED, false);
     assert.deepEqual(
@@ -713,24 +739,25 @@ describe("F33-04 field capture + visit evidence local capture + idempotent expli
   });
 
   it("L. allowlist exactly three; SW forbids mutation drain language", () => {
+    assert.equal(FRIGORA_F33_OFFLINE_RUNTIME_ENABLED, false);
     assert.deepEqual(
       [...FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST],
       ["recordTechnicalFinding", "recordFieldCapture", "recordVisitEvidence"],
     );
-    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordFieldCapture"), true);
-    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordVisitEvidence"), true);
+    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordFieldCapture"), false);
+    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordVisitEvidence"), false);
     assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordPartUsage"), false);
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/v/work/wo/visit/vi", {
         operationType: "recordFieldCapture",
       }),
-      false,
+      true,
     );
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/v/work/wo/visit/vi", {
         operationType: "recordVisitEvidence",
       }),
-      false,
+      true,
     );
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/v/work/wo/visit/vi", {

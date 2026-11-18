@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, describe, it, mock } from "node:test";
-import { getPlatform } from "@/platform/kernel";
+import { getPlatform, runPlatformMaintenance } from "@/platform/kernel";
 import { resetPersistenceLifecycle } from "@/platform/persistence/repositories";
 import { createScheduler, runGuardedSteps } from "./scheduler";
 
@@ -107,6 +107,32 @@ describe("scheduler lifecycle", () => {
 });
 
 describe("platform maintenance and persistence reset", () => {
+  it("reports both maintenance failures and still finishes the later step", async () => {
+    const captured = captureSchedulerErrors();
+    try {
+      let recovered = false;
+      await runPlatformMaintenance({
+        processDue: async () => {
+          throw new Error("due down");
+        },
+        recover: async () => {
+          recovered = true;
+          throw new Error("recover down");
+        },
+      });
+      assert.equal(recovered, true);
+      assert.deepEqual(
+        captured.errors.map((entry) => [entry[1], entry[2]]),
+        [
+          ["jobs.processDue", "due down"],
+          ["workforce.recover", "recover down"],
+        ],
+      );
+    } finally {
+      captured.restore();
+    }
+  });
+
   it("drains scheduled work before persistence reset and does not restart the scheduler", async () => {
     mock.timers.enable({ apis: ["setInterval"] });
     try {

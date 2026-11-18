@@ -18,6 +18,9 @@ const rolePermissions: Record<Role, Permission[]> = {
     "venture.create",
     "venture.read",
     "venture.update",
+    // Purchase cost is granted here by name. venture.update does not include it.
+    "venture.commercial_cost.read",
+    "venture.commercial_cost.update",
   ],
   admin: [
     "workspace.read",

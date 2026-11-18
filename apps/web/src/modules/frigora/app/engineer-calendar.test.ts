@@ -48,6 +48,8 @@ function workOrder(overrides: Partial<FrigoraWorkOrder> = {}): FrigoraWorkOrder 
     assignmentDeclineReason: null,
     cancellationReason: null,
     sourceRecommendedActionId: null,
+    authorisingQuotationId: null,
+    authorisingQuotationVersion: null,
     createdAt: "2026-09-07T12:00:00.000Z",
     updatedAt: "2026-09-07T12:00:00.000Z",
     ...overrides,
@@ -334,7 +336,7 @@ describe("F34-02 Service Desk integration", () => {
   it("keeps product, schema, and offline dispatch boundaries unchanged", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
     assert.equal(FRIGORA_OFFLINE_DB_NAME, "frigora-offline");
     assert.equal(FRIGORA_OFFLINE_DB_VERSION, 1);
     assert.deepEqual(

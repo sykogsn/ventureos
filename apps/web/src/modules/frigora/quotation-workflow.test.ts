@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { exampleQuotationCommercial, priceQuotationCommercial, quotationDocumentHash } from "./quotation-commercial";
 import {
   FRIGORA_QUOTE_STATUSES,
   canAuthoriseNewQuotedRepair,
+  correctQuotationDraft,
   createQuotationDraft,
   currentQuotationVersion,
   decideQuotation,
@@ -20,7 +22,7 @@ function draft() {
     recommendedActionId: "replace-compressor-1",
     assetId: "cold-room-1",
     description: "Replace compressor",
-    totalMinor: 1495000,
+    commercial: exampleQuotationCommercial(),
     documentHash: "sha-quote-v1",
     actorUserId: "office-user",
     eventId: "created-1",
@@ -155,7 +157,7 @@ test("declined quote can be revised while original declined version remains trac
   const revised = reviseQuotation(original, {
     eventId: "revision-2", occurredAt: "2026-10-24T10:00:00.000Z",
     actorUserId: "office-user", description: "Discounted compressor replacement",
-    totalMinor: 1250000, documentHash: "sha-quote-v2",
+    commercial: exampleQuotationCommercial({ travelRateMinor: 2500 }), documentHash: "sha-quote-v2",
   });
   assert.equal(quotationStatus(revised), "in_preparation");
   assert.equal(revised.versions.length, 2);
@@ -177,7 +179,7 @@ test("approved quote revision does not inherit the old version's authorisation",
   const revised = reviseQuotation(original, {
     eventId: "revision-after-approval", occurredAt: "2026-10-24T10:00:00.000Z",
     actorUserId: "office-user", description: "Revised scope",
-    totalMinor: 1600000, documentHash: "sha-quote-v2",
+    commercial: exampleQuotationCommercial({ travelRateMinor: 6000 }), documentHash: "sha-quote-v2",
   });
   const originalVersion = original.versions[0];
   const previousVersion = revised.versions[0];
@@ -196,7 +198,7 @@ test("sent quote can be revised before decision, preserving its sent snapshot", 
   const revised = reviseQuotation(original, {
     eventId: "revision-before-decision", occurredAt: "2026-10-24T08:30:00.000Z",
     actorUserId: "office-user", description: "Updated labour scope",
-    totalMinor: 1500000, documentHash: "sha-quote-v2",
+    commercial: exampleQuotationCommercial({ travelRateMinor: 5000 }), documentHash: "sha-quote-v2",
   });
   const sentVersion = revised.versions[0];
   assert.ok(sentVersion, "Expected the preserved sent quotation version.");
@@ -228,7 +230,44 @@ test("invalid ZAR minor-unit amounts are rejected", () => {
   assert.throws(() => createQuotationDraft({
     id: "q", scope: { workspaceId: "w", ventureId: "v" },
     originalWorkOrderId: "o", recommendedActionId: "r",
-    description: "Repair", totalMinor: 12.5,
+    description: "Repair", commercial: exampleQuotationCommercial({ labourRateMinor: 12.5 }),
     documentHash: "hash", actorUserId: "office", eventId: "e", occurredAt: "2026-10-24T08:00:00.000Z",
   }), /integer ZAR cents/);
+});
+
+test("corrects a draft in place without a new version or event", () => {
+  const created = draft();
+  const commercial = exampleQuotationCommercial({ travelRateMinor: 2500 });
+  const priced = priceQuotationCommercial(commercial);
+  const description = "Replace compressor and filter drier";
+  const documentHash = quotationDocumentHash({ version: 1, description, ...priced });
+  const corrected = correctQuotationDraft(created, { description, commercial, documentHash });
+  assert.equal(corrected.versions.length, 1);
+  assert.equal(corrected.events.length, 1);
+  assert.equal(corrected.events[0]?.kind, "created");
+  assert.equal(currentQuotationVersion(corrected).status, "in_preparation");
+  assert.equal(currentQuotationVersion(corrected).totalMinor, 1_250_000);
+  assert.equal(currentQuotationVersion(corrected).documentHash, documentHash);
+  assert.throws(
+    () => correctQuotationDraft(created, { description, commercial, documentHash: "not-the-hash" }),
+    /does not match its commercial basis/,
+  );
+});
+
+test("refuses to correct a sent quotation", () => {
+  const commercial = exampleQuotationCommercial();
+  const priced = priceQuotationCommercial(commercial);
+  const documentHash = quotationDocumentHash({
+    version: 1,
+    description: "Replace compressor",
+    ...priced,
+  });
+  assert.throws(
+    () => correctQuotationDraft(sent(), {
+      description: "Replace compressor",
+      commercial,
+      documentHash,
+    }),
+    /Only a draft in preparation can be corrected/,
+  );
 });

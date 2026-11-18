@@ -24,6 +24,16 @@ export type FrigoraVisitCustomerAcknowledgementId = string & {
 };
 export type FrigoraVisitEvidenceId = string & { readonly __brand: "FrigoraVisitEvidenceId" };
 export type FrigoraDispatchEventId = string & { readonly __brand: "FrigoraDispatchEventId" };
+export type FrigoraQuotationId = string & { readonly __brand: "FrigoraQuotationId" };
+export type FrigoraQuotationEventId = string & { readonly __brand: "FrigoraQuotationEventId" };
+export type FrigoraQuotationDecisionGrantId = string & {
+  readonly __brand: "FrigoraQuotationDecisionGrantId";
+};
+export type FrigoraQuotationDecisionId = string & { readonly __brand: "FrigoraQuotationDecisionId" };
+export type FrigoraCustomerContactId = string & { readonly __brand: "FrigoraCustomerContactId" };
+export type FrigoraContactVerificationChallengeId = string & {
+  readonly __brand: "FrigoraContactVerificationChallengeId";
+};
 
 export const FRIGORA_DISPATCH_EVENT_TYPES = [
   "ASSIGNED",
@@ -225,6 +235,9 @@ export type FrigoraWorkOrder = {
   assignmentDeclineReason: string | null;
   cancellationReason: string | null;
   sourceRecommendedActionId: FrigoraRecommendedActionId | null;
+  /** Quotation whose current approved version authorised this follow-up, when required. */
+  authorisingQuotationId: FrigoraQuotationId | null;
+  authorisingQuotationVersion: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -532,6 +545,8 @@ export type FrigoraRecommendedAction = {
   recommendedAt: string;
   recommendedByUserId: UserId;
   recordedByUserId: UserId;
+  /** Explicit office or recorder designation. Never inferred from text or a quotation row. */
+  quotationRequired: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -542,6 +557,11 @@ export type RecordRecommendedActionInput = {
   recommendedByUserId: string;
   recordedByUserId: string;
   assetId?: string | null;
+  quotationRequired?: boolean;
+};
+
+export type SetRecommendedActionQuotationRequirementInput = {
+  quotationRequired: boolean;
 };
 
 export type FrigoraPartReference = {
@@ -976,3 +996,240 @@ export type FrigoraAssetHistoryEntry =
       sourceId: FrigoraAssetOperationalConditionId;
       detail: FrigoraAssetHistoryOperationalConditionDetail;
     });
+
+export type CreateFrigoraQuotationInput = {
+  recommendedActionId: string;
+  description: string;
+  commercial: import("./quotation-commercial").FrigoraQuotationCommercialInput;
+};
+
+export type SendFrigoraQuotationInput = {
+  expectedCurrentVersion: number;
+  recipient: string;
+};
+
+export type ReviseFrigoraQuotationInput = {
+  expectedCurrentVersion: number;
+  description: string;
+  commercial: import("./quotation-commercial").FrigoraQuotationCommercialInput;
+};
+
+/** Same commercial fields as a revision, applied to the current draft only. */
+export type CorrectFrigoraQuotationInput = ReviseFrigoraQuotationInput;
+
+export type IssueFrigoraQuotationDecisionGrantInput = {
+  expectedCurrentVersion: number;
+};
+
+export type SubmitFrigoraQuotationDecisionInput = {
+  grantId: string;
+  secret: string;
+  decision: "approved" | "declined";
+  customerId: string;
+  siteId: string;
+};
+
+/** Plaintext exists only inside a server-side delivery boundary. */
+export type QuotationDecisionGrantDelivery = {
+  deliver(proof: {
+    grantId: FrigoraQuotationDecisionGrantId;
+    secret: string;
+    quotationId: FrigoraQuotationId;
+    version: number;
+    expiresAt: string;
+  }): Promise<void>;
+};
+
+export type FrigoraCustomerContactStatus = "active" | "revoked";
+
+export type FrigoraQuotationContactDesignation = {
+  contactId: FrigoraCustomerContactId;
+  basis: string;
+  designatedByUserId: UserId;
+  designatedAt: string;
+  revokedAt: string | null;
+  revokedByUserId: UserId | null;
+};
+
+export type FrigoraSupervisedVerificationMethod = "telephone" | "in_person";
+
+export type FrigoraSupervisedVerification = {
+  id: string;
+  contactId: FrigoraCustomerContactId;
+  method: FrigoraSupervisedVerificationMethod;
+  verifiedByUserId: UserId;
+  verifiedAt: string;
+  evidenceNote: string;
+  revokedAt: string | null;
+  revokedByUserId: UserId | null;
+};
+
+export type FrigoraCustomerContactAccess = FrigoraCustomerContact & {
+  supervisedVerifications: readonly FrigoraSupervisedVerification[];
+};
+
+export type RecordFrigoraSupervisedVerificationInput = {
+  method: FrigoraSupervisedVerificationMethod;
+  evidenceNote: string;
+};
+
+export type FrigoraCustomerContact = {
+  id: FrigoraCustomerContactId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  customerId: FrigoraCustomerId;
+  siteId: FrigoraSiteId;
+  displayName: string;
+  email: string;
+  emailVerifiedAt: string | null;
+  status: FrigoraCustomerContactStatus;
+  createdByUserId: UserId;
+  createdAt: string;
+  updatedAt: string;
+  designation: FrigoraQuotationContactDesignation | null;
+};
+
+export type CreateFrigoraCustomerContactInput = {
+  customerId: string;
+  siteId: string;
+  displayName: string;
+  email: string;
+};
+
+export type DesignateFrigoraQuotationContactInput = {
+  basis: string;
+};
+
+export type ConfirmFrigoraContactEmailInput = {
+  challengeId: string;
+  secret: string;
+};
+
+export type SetFrigoraVentureMailIdentityInput = {
+  fromName: string;
+  fromEmail: string;
+};
+
+export type DeliverFrigoraQuotationDecisionGrantInput = {
+  expectedCurrentVersion: number;
+  contactId: string;
+};
+
+export type FrigoraContactVerificationDispatch = {
+  challengeId: FrigoraContactVerificationChallengeId;
+  contactId: FrigoraCustomerContactId;
+  expiresAt: string;
+  outcome: "accepted_by_provider";
+  providerMessageId: string;
+};
+
+export type UpdateFrigoraCustomerContactInput = {
+  displayName: string;
+  email: string;
+};
+
+export type FrigoraQuotationDeliveryResult = {
+  grantId: FrigoraQuotationDecisionGrantId;
+  contactId: FrigoraCustomerContactId;
+  outcome: "accepted_by_provider";
+  providerMessageId: string;
+};
+
+export type FrigoraVentureMailIdentity = {
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  fromName: string;
+  fromEmail: string;
+  updatedByUserId: UserId;
+  updatedAt: string;
+};
+
+export type FrigoraQuotationDecisionGrantRecord = {
+  id: FrigoraQuotationDecisionGrantId;
+  quotationId: FrigoraQuotationId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  customerId: FrigoraCustomerId;
+  siteId: FrigoraSiteId;
+  version: number;
+  documentHash: string;
+  expiresAt: string;
+  issuedAt: string;
+  issuedByUserId: UserId;
+  consumedAt: string | null;
+  decisionId: FrigoraQuotationDecisionId | null;
+};
+
+export type FrigoraPersistedQuoteDecision = {
+  id: FrigoraQuotationDecisionId;
+  quotationId: FrigoraQuotationId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  customerId: FrigoraCustomerId;
+  siteId: FrigoraSiteId;
+  version: number;
+  documentHash: string;
+  decision: "approved" | "declined";
+  grantId: FrigoraQuotationDecisionGrantId;
+  decidedAt: string;
+};
+
+/** All four quotation statuses. Office writes still cannot set approved or declined. */
+export type FrigoraPersistedQuoteStatus =
+  | "in_preparation"
+  | "awaiting_customer_approval"
+  | "approved"
+  | "declined";
+
+export type FrigoraPersistedQuoteEventKind =
+  | "created"
+  | "sent"
+  | "revision_started"
+  | "approved"
+  | "declined";
+
+export type FrigoraPersistedQuoteVersion = {
+  quotationId: FrigoraQuotationId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  version: number;
+  status: FrigoraPersistedQuoteStatus;
+  description: string;
+  commercial: import("./quotation-commercial").FrigoraQuotationCommercialSnapshot;
+  totalMinor: number;
+  currency: "ZAR";
+  documentHash: string;
+  sentAt: string | null;
+  recipient: string | null;
+  dispatchEvidenceRef: string | null;
+};
+
+export type FrigoraPersistedQuoteEvent = {
+  id: FrigoraQuotationEventId;
+  quotationId: FrigoraQuotationId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  version: number;
+  kind: FrigoraPersistedQuoteEventKind;
+  occurredAt: string;
+  actorUserId: UserId | null;
+  actorContactId: FrigoraCustomerContactId | null;
+  evidenceRef: string | null;
+};
+
+export type FrigoraPersistedQuotation = {
+  id: FrigoraQuotationId;
+  workspaceId: WorkspaceId;
+  ventureId: VentureId;
+  customerId: FrigoraCustomerId;
+  siteId: FrigoraSiteId;
+  assetId: FrigoraAssetId | null;
+  originalWorkOrderId: FrigoraWorkOrderId;
+  recommendedActionId: FrigoraRecommendedActionId;
+  currentVersion: number;
+  createdAt: string;
+  updatedAt: string;
+  versions: readonly FrigoraPersistedQuoteVersion[];
+  events: readonly FrigoraPersistedQuoteEvent[];
+  decisions: readonly FrigoraPersistedQuoteDecision[];
+};

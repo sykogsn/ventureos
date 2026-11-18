@@ -1423,10 +1423,10 @@ describe("Frigora WorkOrder priority", () => {
     assert.equal(duringVisit?.priority, "high");
   });
 
-  it("keeps schema 32 with priority, invitations, and the offline allowlist unchanged", () => {
+  it("keeps schema 40 with priority, invitations, and the offline allowlist unchanged", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     const dbSource = readFileSync(join(process.cwd(), "src/platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
     assert.match(dbSource, /priority TEXT NOT NULL DEFAULT 'normal'/);
     assert.match(dbSource, /CREATE TABLE IF NOT EXISTS workspace_invitations/);
     assert.equal(FRIGORA_OFFLINE_DB_NAME, "frigora-offline");

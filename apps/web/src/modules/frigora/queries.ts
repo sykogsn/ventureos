@@ -26,6 +26,8 @@ import type {
   FrigoraVisitOutcomeId,
   FrigoraRecommendedAction,
   FrigoraRecommendedActionId,
+  FrigoraPersistedQuotation,
+  FrigoraQuotationId,
   FrigoraRefrigerantEvent,
   FrigoraRefrigerantEventId,
   FrigoraPartUsage,
@@ -621,4 +623,47 @@ export async function getWorkOrderTimeMaterialsQuery(
       input.workOrderId as FrigoraWorkOrderId,
     ),
   );
+}
+
+export async function getTaxPostureQuery(input: ScopedInput) {
+  return query(input, (scope) => getFrigoraService().getTaxPosture(scope));
+}
+
+export type QuotationCreateSource = {
+  recommendedActionId: string;
+  label: string;
+};
+
+export async function listQuotationsQuery(
+  input: ScopedInput,
+): Promise<FrigoraQueryResult<FrigoraPersistedQuotation[]>> {
+  return query(input, (scope) => getFrigoraService().listQuotations(scope));
+}
+
+export async function getQuotationQuery(
+  input: ScopedInput & { quotationId: string },
+): Promise<FrigoraQueryResult<FrigoraPersistedQuotation | null>> {
+  return query(input, (scope) =>
+    getFrigoraService().getQuotation(scope, input.quotationId as FrigoraQuotationId),
+  );
+}
+
+export async function listQuotationCreateSourcesQuery(
+  input: ScopedInput,
+): Promise<FrigoraQueryResult<QuotationCreateSource[]>> {
+  return query(input, async (scope) => {
+    const service = getFrigoraService();
+    const workOrders = await service.listWorkOrders(scope);
+    const sources: QuotationCreateSource[] = [];
+    for (const workOrder of workOrders) {
+      const recommendations = await service.listRecommendedActionsByWorkOrder(scope, workOrder.id);
+      for (const recommendation of recommendations) {
+        sources.push({
+          recommendedActionId: recommendation.id,
+          label: `${workOrder.workReference}: ${recommendation.description}`,
+        });
+      }
+    }
+    return sources;
+  });
 }

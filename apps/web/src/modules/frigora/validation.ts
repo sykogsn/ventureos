@@ -446,7 +446,14 @@ export const recordRecommendedActionSchema = z.object({
   recommendedByUserId: requiredText,
   recordedByUserId: requiredText,
   assetId: patchAssetIdNullable,
+  quotationRequired: z.boolean().optional(),
 });
+
+export const setRecommendedActionQuotationRequirementSchema = z
+  .object({
+    quotationRequired: z.boolean(),
+  })
+  .strict();
 
 /** Integer ZAR minor units (cents); non-negative. */
 export const zarCentsSchema = z.number().superRefine((value, ctx) => {
@@ -457,6 +464,108 @@ export const zarCentsSchema = z.number().superRefine((value, ctx) => {
     });
   }
 });
+
+export const quotationCommercialSchema = z
+  .object({
+    labourQuantityMilli: z.number().int().nonnegative(),
+    labourUnit: requiredText,
+    labourRateMinor: zarCentsSchema,
+    travelKilometresMilli: z.number().int().nonnegative(),
+    distanceBasis: z.enum(["one_way", "return"]),
+    travelRateMinor: zarCentsSchema,
+    taxTreatment: z.enum(["not_registered", "configured_rule"]),
+    taxRuleId: z.string().nullable().optional(),
+    taxRuleVersion: z.string().nullable().optional(),
+    taxRateNumerator: z.number().int().nonnegative().nullable().optional(),
+    taxRateDenominator: z.number().int().positive().nullable().optional(),
+    enteredTaxAmountMinor: zarCentsSchema.nullable().optional(),
+  })
+  .strict();
+
+export const createFrigoraQuotationSchema = z.object({
+  recommendedActionId: requiredText,
+  description: requiredText,
+  commercial: quotationCommercialSchema,
+});
+
+export const sendFrigoraQuotationSchema = z.object({
+  expectedCurrentVersion: z.number().int().positive(),
+  recipient: requiredText,
+});
+
+export const reviseFrigoraQuotationSchema = z.object({
+  expectedCurrentVersion: z.number().int().positive(),
+  description: requiredText,
+  commercial: quotationCommercialSchema,
+});
+
+export const correctFrigoraQuotationSchema = reviseFrigoraQuotationSchema;
+
+export const issueFrigoraQuotationDecisionGrantSchema = z
+  .object({
+    expectedCurrentVersion: z.number().int().positive(),
+  })
+  .strict();
+
+export const createFrigoraCustomerContactSchema = z
+  .object({
+    customerId: requiredText,
+    siteId: requiredText,
+    displayName: requiredText,
+    email: requiredText,
+  })
+  .strict();
+
+export const updateFrigoraCustomerContactSchema = z
+  .object({
+    displayName: requiredText,
+    email: requiredText,
+  })
+  .strict();
+
+export const recordFrigoraSupervisedVerificationSchema = z
+  .object({
+    method: z.enum(["telephone", "in_person"]),
+    evidenceNote: z.string().trim().min(1, "Required text is empty.").max(240, "Evidence note is too long."),
+  })
+  .strict();
+
+export const designateFrigoraQuotationContactSchema = z
+  .object({
+    basis: requiredText,
+  })
+  .strict();
+
+export const confirmFrigoraContactEmailSchema = z
+  .object({
+    challengeId: requiredText,
+    secret: requiredText,
+  })
+  .strict();
+
+export const setFrigoraVentureMailIdentitySchema = z
+  .object({
+    fromName: requiredText,
+    fromEmail: requiredText,
+  })
+  .strict();
+
+export const deliverFrigoraQuotationDecisionGrantSchema = z
+  .object({
+    expectedCurrentVersion: z.number().int().positive(),
+    contactId: requiredText,
+  })
+  .strict();
+
+export const submitFrigoraQuotationDecisionSchema = z
+  .object({
+    grantId: requiredText,
+    secret: requiredText,
+    decision: z.enum(["approved", "declined"]),
+    customerId: requiredText,
+    siteId: requiredText,
+  })
+  .strict();
 
 /** Optional nullable ZAR cents for catalogue / venture defaults. */
 export const optionalNullableZarCentsSchema = z

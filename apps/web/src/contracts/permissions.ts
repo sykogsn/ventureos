@@ -9,7 +9,9 @@ export type Permission =
   | "workspace.members.manage"
   | "venture.create"
   | "venture.read"
-  | "venture.update";
+  | "venture.update"
+  | "venture.commercial_cost.read"
+  | "venture.commercial_cost.update";
 
 export type Role = "owner" | "admin" | "member";
 

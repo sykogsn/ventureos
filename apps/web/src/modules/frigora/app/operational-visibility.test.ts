@@ -180,6 +180,10 @@ describe("F1.3 Operational Visibility", () => {
     const myWorkIndex = links.findIndex((link) => link.label === "My Work");
     const workIndex = links.findIndex((link) => link.label === "Work");
     assert.equal(links[opsIndex]?.href.endsWith("/operations"), true);
+    assert.equal(
+      links.some((link) => link.label === "Quotations" && link.href.endsWith("/quotations")),
+      true,
+    );
     assert.equal(opsIndex < myWorkIndex, true);
     assert.equal(myWorkIndex < workIndex, true);
     assert.deepEqual(
@@ -586,7 +590,7 @@ describe("F1.3 Operational Visibility", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
 
     const dbSource = readFileSync(join(WEB_ROOT, "platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
 
     const operationsPage = readFileSync(
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/operations/page.tsx"),

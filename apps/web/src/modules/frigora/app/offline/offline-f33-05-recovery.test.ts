@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { lstat, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { after, beforeEach, describe, it } from "node:test";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
 import type { UserId, VentureId, WorkspaceId } from "@/contracts";
 import { platformVentureRegistry } from "@/core/venture-definition/catalog";
 import { createPermissionService } from "@/platform/permissions/service";
@@ -59,10 +61,33 @@ after(() => {
   getPlatform().scheduler.stopAll();
 });
 
+let disposableObjectRoot: string | undefined;
+let previousStoredObjectRoot: string | undefined;
+
 beforeEach(async () => {
+  previousStoredObjectRoot = process.env.STORED_OBJECT_ROOT;
+  disposableObjectRoot = await mkdtemp(join(tmpdir(), "vos-host-recon-07-f33-05-"));
+  const rootStat = await lstat(disposableObjectRoot);
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+    throw new Error("Disposable object root must be a real directory.");
+  }
+  process.env.STORED_OBJECT_ROOT = disposableObjectRoot;
   await resetPersistenceLifecycle();
   await ensureSchema();
   resetMemoryOfflineDatabasesForTests();
+});
+
+afterEach(async () => {
+  if (previousStoredObjectRoot === undefined) {
+    delete process.env.STORED_OBJECT_ROOT;
+  } else {
+    process.env.STORED_OBJECT_ROOT = previousStoredObjectRoot;
+  }
+  const created = disposableObjectRoot;
+  disposableObjectRoot = undefined;
+  if (created) {
+    await rm(created, { recursive: true, force: true });
+  }
 });
 
 function ventureRow(overrides: Partial<PersistedVenture> = {}): PersistedVenture {
@@ -288,7 +313,7 @@ describe("F33-05 read-only acceptance recovery", () => {
     ]);
     assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordPartUsage"), false);
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
     const action = readFileSync(join(here, "offline-acceptance-action.ts"), "utf8");
     assert.doesNotMatch(action, /submitClientTechnicalFinding|submitClientFieldCapture|submitClientVisitEvidence/);
     const recovery = readFileSync(join(here, "offline-recovery.ts"), "utf8");

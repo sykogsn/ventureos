@@ -410,7 +410,7 @@ describe("F3.0 structured catalogues", () => {
     assert.equal(otherParts.length, 0);
   });
 
-  it("admits F3.1 T&M at frigora@0.21.0 and SCHEMA_GENERATION 26", () => {
+  it("admits F3.1 T&M at frigora@0.21.0 and SCHEMA_GENERATION 40", () => {
     assert.equal(platformVentureRegistry.resolve("frigora").version, "0.22.0");
     assert.match(
       platformVentureRegistry.resolve("frigora").description,
@@ -432,7 +432,7 @@ describe("F3.0 structured catalogues", () => {
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
   });
 
   it("preserves added ≠ leaked and rejects leaked kind", async () => {

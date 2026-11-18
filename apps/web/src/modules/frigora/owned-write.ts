@@ -9,6 +9,16 @@ export function createFrigoraWriteClient(): Client {
 
 export type FrigoraWriteClientFactory = () => Client;
 
+/**
+ * Test-only hook. It runs after BEGIN IMMEDIATE and before the transaction body.
+ * Production leaves it unset.
+ */
+let writeLockObserver: (() => Promise<void> | void) | undefined;
+
+export function setFrigoraWriteLockObserverForTests(observer?: () => Promise<void> | void) {
+  writeLockObserver = observer;
+}
+
 export async function withFrigoraWriteTransaction<T>(
   body: (transaction: Transaction) => Promise<T>,
   createWriteClient: FrigoraWriteClientFactory = createFrigoraWriteClient,
@@ -16,7 +26,11 @@ export async function withFrigoraWriteTransaction<T>(
   const client = createWriteClient();
   let transaction: Transaction | undefined;
   try {
+    await client.execute("PRAGMA foreign_keys = ON");
     transaction = await client.transaction("write");
+    if (writeLockObserver) {
+      await writeLockObserver();
+    }
     const result = await body(transaction);
     await transaction.commit();
     return result;

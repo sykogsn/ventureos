@@ -159,6 +159,7 @@ export const ventures = sqliteTable(
   },
   (table) => [
     uniqueIndex("ventures_workspace_slug_idx").on(table.workspaceId, table.slug),
+    uniqueIndex("ventures_id_workspace_uidx").on(table.id, table.workspaceId),
   ],
 );
 
@@ -597,6 +598,8 @@ export const frigoraWorkOrders = sqliteTable(
     assignmentDeclineReason: text("assignment_decline_reason"),
     cancellationReason: text("cancellation_reason"),
     sourceRecommendedActionId: text("source_recommended_action_id"),
+    authorisingQuotationId: text("authorising_quotation_id"),
+    authorisingQuotationVersion: integer("authorising_quotation_version"),
   },
   (table) => [
     uniqueIndex("frigora_work_orders_venture_reference_idx").on(
@@ -833,6 +836,7 @@ export const frigoraRecommendedActions = sqliteTable(
     recommendedAt: text("recommended_at").notNull(),
     recommendedByUserId: text("recommended_by_user_id").notNull(),
     recordedByUserId: text("recorded_by_user_id").notNull(),
+    quotationRequired: integer("quotation_required").notNull().default(0),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
@@ -921,6 +925,7 @@ export const frigoraPartReferences = sqliteTable(
   },
   (table) => [
     index("frigora_part_references_venture_status_idx").on(table.ventureId, table.status),
+    uniqueIndex("frigora_part_references_id_scope_uidx").on(table.id, table.workspaceId, table.ventureId),
   ],
 );
 
@@ -1054,6 +1059,375 @@ export const frigoraVisitEvidence = sqliteTable(
   ],
 );
 
+export const frigoraQuotations = sqliteTable(
+  "frigora_quotations",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    siteId: text("site_id").notNull(),
+    assetId: text("asset_id"),
+    originalWorkOrderId: text("original_work_order_id").notNull(),
+    recommendedActionId: text("recommended_action_id").notNull(),
+    currentVersion: integer("current_version").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    check("frigora_quotations_current_version_chk", sql`${table.currentVersion} >= 1`),
+    index("frigora_quotations_workspace_venture_idx").on(table.workspaceId, table.ventureId),
+    index("frigora_quotations_work_order_idx").on(table.ventureId, table.originalWorkOrderId),
+    index("frigora_quotations_asset_idx").on(table.ventureId, table.assetId),
+    index("frigora_quotations_recommended_action_idx").on(
+      table.ventureId,
+      table.recommendedActionId,
+    ),
+  ],
+);
+
+export const frigoraQuotationVersions = sqliteTable(
+  "frigora_quotation_versions",
+  {
+    quotationId: text("quotation_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    versionNumber: integer("version_number").notNull(),
+    status: text("status").notNull(),
+    description: text("description").notNull(),
+    totalMinor: integer("total_minor").notNull(),
+    currency: text("currency").notNull(),
+    documentHash: text("document_hash").notNull(),
+    sentAt: text("sent_at"),
+    recipient: text("recipient"),
+    dispatchEvidenceRef: text("dispatch_evidence_ref"),
+    labourQuantityMilli: integer("labour_quantity_milli", { mode: "number" }),
+    labourUnit: text("labour_unit"),
+    labourRateMinor: integer("labour_rate_minor", { mode: "number" }),
+    labourAmountMinor: integer("labour_amount_minor", { mode: "number" }),
+    travelKilometresMilli: integer("travel_kilometres_milli", { mode: "number" }),
+    distanceBasis: text("distance_basis"),
+    travelRateMinor: integer("travel_rate_minor", { mode: "number" }),
+    travelAmountMinor: integer("travel_amount_minor", { mode: "number" }),
+    taxTreatment: text("tax_treatment"),
+    taxRuleId: text("tax_rule_id"),
+    taxRuleVersion: text("tax_rule_version"),
+    taxRateNumerator: integer("tax_rate_numerator", { mode: "number" }),
+    taxRateDenominator: integer("tax_rate_denominator", { mode: "number" }),
+    taxableAmountMinor: integer("taxable_amount_minor", { mode: "number" }),
+    taxAmountMinor: integer("tax_amount_minor", { mode: "number" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.quotationId, table.versionNumber] }),
+    check(
+      "frigora_quotation_versions_status_chk",
+      sql`${table.status} IN ('in_preparation', 'awaiting_customer_approval', 'approved', 'declined')`,
+    ),
+    check("frigora_quotation_versions_currency_chk", sql`${table.currency} = 'ZAR'`),
+    check("frigora_quotation_versions_total_chk", sql`${table.totalMinor} >= 0`),
+    index("frigora_quotation_versions_scope_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.quotationId,
+    ),
+  ],
+);
+
+export const frigoraQuotationEvents = sqliteTable(
+  "frigora_quotation_events",
+  {
+    id: text("id").primaryKey(),
+    quotationId: text("quotation_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    versionNumber: integer("version_number").notNull(),
+    kind: text("kind").notNull(),
+    occurredAt: text("occurred_at").notNull(),
+    actorUserId: text("actor_user_id"),
+    actorContactId: text("actor_contact_id"),
+    evidenceRef: text("evidence_ref"),
+  },
+  (table) => [
+    check(
+      "frigora_quotation_events_kind_chk",
+      sql`${table.kind} IN ('created', 'sent', 'revision_started', 'approved', 'declined')`,
+    ),
+    check(
+      "frigora_quotation_events_actor_chk",
+      sql`(
+        (${table.actorUserId} IS NOT NULL AND ${table.actorContactId} IS NULL)
+        OR (${table.actorUserId} IS NULL AND ${table.actorContactId} IS NOT NULL)
+      )`,
+    ),
+    index("frigora_quotation_events_scope_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.quotationId,
+      table.occurredAt,
+    ),
+  ],
+);
+
+export const frigoraQuotationDecisionGrants = sqliteTable(
+  "frigora_quotation_decision_grants",
+  {
+    id: text("id").primaryKey(),
+    secretHash: text("secret_hash").notNull(),
+    quotationId: text("quotation_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    siteId: text("site_id").notNull(),
+    versionNumber: integer("version_number").notNull(),
+    documentHash: text("document_hash").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    issuedAt: text("issued_at").notNull(),
+    issuedByUserId: text("issued_by_user_id").notNull(),
+    consumedAt: text("consumed_at"),
+    decisionId: text("decision_id"),
+    revokedAt: text("revoked_at"),
+    contactId: text("contact_id"),
+  },
+  (table) => [
+    uniqueIndex("frigora_quotation_decision_grants_secret_hash_uidx").on(table.secretHash),
+    index("frigora_quotation_decision_grants_target_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.quotationId,
+      table.versionNumber,
+    ),
+  ],
+);
+
+export const frigoraQuotationDecisions = sqliteTable(
+  "frigora_quotation_decisions",
+  {
+    id: text("id").primaryKey(),
+    quotationId: text("quotation_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    siteId: text("site_id").notNull(),
+    versionNumber: integer("version_number").notNull(),
+    documentHash: text("document_hash").notNull(),
+    decision: text("decision").notNull(),
+    grantId: text("grant_id").notNull(),
+    decidedAt: text("decided_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_quotation_decisions_version_uidx").on(
+      table.quotationId,
+      table.versionNumber,
+    ),
+    uniqueIndex("frigora_quotation_decisions_grant_uidx").on(table.grantId),
+    check(
+      "frigora_quotation_decisions_kind_chk",
+      sql`${table.decision} IN ('approved', 'declined')`,
+    ),
+    index("frigora_quotation_decisions_scope_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.quotationId,
+    ),
+  ],
+);
+
+export const frigoraQuotationDeliveryOutbox = sqliteTable(
+  "frigora_quotation_delivery_outbox",
+  {
+    id: text("id").primaryKey(),
+    quotationId: text("quotation_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    versionNumber: integer("version_number").notNull(),
+    documentHash: text("document_hash").notNull(),
+    createdAt: text("created_at").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    state: text("state").notNull(),
+    holdReason: text("hold_reason").notNull(),
+    providerMessageId: text("provider_message_id"),
+  },
+  (table) => [
+    uniqueIndex("frigora_quotation_delivery_outbox_version_uidx").on(
+      table.quotationId,
+      table.versionNumber,
+    ),
+    check(
+      "frigora_quotation_delivery_outbox_state_chk",
+      sql`${table.state} IN ('held_pending_customer_access', 'accepted_by_provider', 'rejected_by_provider', 'outcome_unknown')`,
+    ),
+    index("frigora_quotation_delivery_outbox_scope_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.quotationId,
+    ),
+  ],
+);
+
+export const frigoraQuotationDeliveryAttempts = sqliteTable(
+  "frigora_quotation_delivery_attempts",
+  {
+    id: text("id").primaryKey(),
+    outboxId: text("outbox_id").notNull(),
+    occurredAt: text("occurred_at").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    outcome: text("outcome").notNull(),
+    detail: text("detail").notNull(),
+  },
+  (table) => [
+    check(
+      "frigora_quotation_delivery_attempts_outcome_chk",
+      sql`${table.outcome} IN ('held_pending_customer_access', 'accepted_by_provider', 'rejected_by_provider', 'outcome_unknown')`,
+    ),
+    index("frigora_quotation_delivery_attempts_outbox_idx").on(table.outboxId, table.occurredAt),
+  ],
+);
+
+export const frigoraQuotationCustomerDeliveries = sqliteTable(
+  "frigora_quotation_customer_deliveries",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    quotationId: text("quotation_id").notNull(),
+    versionNumber: integer("version_number").notNull(),
+    customerId: text("customer_id").notNull(),
+    siteId: text("site_id").notNull(),
+    contactId: text("contact_id").notNull(),
+    grantId: text("grant_id").notNull(),
+    documentHash: text("document_hash").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    payloadFingerprint: text("payload_fingerprint").notNull(),
+    payloadText: text("payload_text"),
+    payloadReadFailure: text("payload_read_failure"),
+    state: text("state").notNull(),
+    providerMessageId: text("provider_message_id"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    idempotencyStartedAt: text("idempotency_started_at"),
+    actorUserId: text("actor_user_id").notNull(),
+    claimOwner: text("claim_owner"),
+    claimLeaseExpiresAt: text("claim_lease_expires_at"),
+    providerRequestExpiresAt: text("provider_request_expires_at"),
+  },
+  (table) => [
+    uniqueIndex("frigora_quotation_customer_deliveries_target_uidx").on(
+      table.quotationId,
+      table.versionNumber,
+      table.contactId,
+    ),
+    uniqueIndex("frigora_quotation_customer_deliveries_key_uidx").on(table.idempotencyKey),
+    check(
+      "frigora_quotation_customer_deliveries_state_chk",
+      sql`${table.state} IN ('prepared', 'sending', 'accepted_by_provider', 'rejected_by_provider', 'outcome_unknown', 'reconciliation_required')`,
+    ),
+  ],
+);
+
+export const frigoraCustomerContacts = sqliteTable(
+  "frigora_customer_contacts",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    siteId: text("site_id").notNull(),
+    displayName: text("display_name").notNull(),
+    email: text("email").notNull(),
+    emailVerifiedAt: text("email_verified_at"),
+    status: text("status").notNull(),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_customer_contacts_site_email_uidx").on(
+      table.ventureId,
+      table.siteId,
+      table.email,
+    ),
+    check("frigora_customer_contacts_status_chk", sql`${table.status} IN ('active', 'revoked')`),
+    index("frigora_customer_contacts_scope_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.customerId,
+    ),
+  ],
+);
+
+export const frigoraQuotationContactDesignations = sqliteTable(
+  "frigora_quotation_contact_designations",
+  {
+    contactId: text("contact_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    siteId: text("site_id").notNull(),
+    basis: text("basis").notNull(),
+    designatedByUserId: text("designated_by_user_id").notNull(),
+    designatedAt: text("designated_at").notNull(),
+    revokedAt: text("revoked_at"),
+    revokedByUserId: text("revoked_by_user_id"),
+  },
+);
+
+export const frigoraContactVerificationChallenges = sqliteTable(
+  "frigora_contact_verification_challenges",
+  {
+    id: text("id").primaryKey(),
+    contactId: text("contact_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    siteId: text("site_id").notNull(),
+    secretHash: text("secret_hash").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull(),
+    consumedAt: text("consumed_at"),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [
+    uniqueIndex("frigora_contact_verification_challenges_hash_uidx").on(table.secretHash),
+    index("frigora_contact_verification_challenges_contact_idx").on(table.contactId),
+  ],
+);
+
+export const frigoraContactSupervisedVerifications = sqliteTable(
+  "frigora_contact_supervised_verifications",
+  {
+    id: text("id").primaryKey(),
+    contactId: text("contact_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    method: text("method").notNull(),
+    verifiedByUserId: text("verified_by_user_id").notNull(),
+    verifiedAt: text("verified_at").notNull(),
+    evidenceNote: text("evidence_note").notNull(),
+    revokedAt: text("revoked_at"),
+    revokedByUserId: text("revoked_by_user_id"),
+  },
+  (table) => [
+    index("frigora_contact_supervised_verifications_contact_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.contactId,
+    ),
+  ],
+);
+
+export const frigoraVentureMailIdentities = sqliteTable(
+  "frigora_venture_mail_identities",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    fromName: text("from_name").notNull(),
+    fromEmail: text("from_email").notNull(),
+    updatedByUserId: text("updated_by_user_id").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.workspaceId, table.ventureId] })],
+);
+
 export const intelligenceCatalogues = sqliteTable("intelligence_catalogues", {
   workspaceId: text("workspace_id").primaryKey(),
   version: integer("version").notNull(),
@@ -1123,6 +1497,288 @@ export const intelligenceRevisions = sqliteTable(
   ],
 );
 
+export const frigoraStockLocations = sqliteTable(
+  "frigora_stock_locations",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(),
+    status: text("status").notNull(),
+    custodianUserId: text("custodian_user_id"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_stock_locations_scope_uidx").on(table.id, table.workspaceId, table.ventureId),
+    index("frigora_stock_locations_scope_idx").on(table.workspaceId, table.ventureId, table.status),
+  ],
+);
+
+export const frigoraStockItems = sqliteTable(
+  "frigora_stock_items",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    partReferenceId: text("part_reference_id"),
+    description: text("description").notNull(),
+    descriptionNormalised: text("description_normalised").notNull(),
+    unit: text("unit").notNull(),
+    unitCustomLabel: text("unit_custom_label"),
+    unitCustomLabelNormalised: text("unit_custom_label_normalised").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_stock_items_scope_uidx").on(table.id, table.workspaceId, table.ventureId),
+  ],
+);
+
+export const frigoraStockMovements = sqliteTable(
+  "frigora_stock_movements",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    stockItemId: text("stock_item_id").notNull(),
+    locationId: text("location_id").notNull(),
+    kind: text("kind").notNull(),
+    movementLeg: text("movement_leg").notNull(),
+    quantityMilli: integer("quantity_milli").notNull(),
+    unitSnapshot: text("unit_snapshot").notNull(),
+    unitCustomLabelSnapshot: text("unit_custom_label_snapshot"),
+    descriptionSnapshot: text("description_snapshot").notNull(),
+    occurredAt: text("occurred_at").notNull(),
+    recordedAt: text("recorded_at").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    reason: text("reason"),
+    clientOperationId: text("client_operation_id").notNull(),
+    receiptReference: text("receipt_reference"),
+    supplierReference: text("supplier_reference"),
+    supportingDocumentReference: text("supporting_document_reference"),
+    enteredUnitCostMinor: integer("entered_unit_cost_minor"),
+    currency: text("currency"),
+    costSourceMovementId: text("cost_source_movement_id"),
+    pairGroupId: text("pair_group_id"),
+    correctsMovementId: text("corrects_movement_id"),
+    defectReportId: text("defect_report_id"),
+  },
+  (table) => [
+    uniqueIndex("frigora_stock_movements_scope_uidx").on(table.id, table.workspaceId, table.ventureId),
+    uniqueIndex("frigora_stock_movements_operation_leg_uidx").on(
+      table.ventureId,
+      table.clientOperationId,
+      table.movementLeg,
+    ),
+    index("frigora_stock_movements_location_idx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.stockItemId,
+      table.locationId,
+      table.recordedAt,
+    ),
+  ],
+);
+
+export const frigoraStockBalances = sqliteTable(
+  "frigora_stock_balances",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    stockItemId: text("stock_item_id").notNull(),
+    locationId: text("location_id").notNull(),
+    availableMilli: integer("available_milli").notNull(),
+    quarantinedMilli: integer("quarantined_milli").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.ventureId, table.stockItemId, table.locationId] }),
+  ],
+);
+
+export const frigoraStockOperationReceipts = sqliteTable(
+  "frigora_stock_operation_receipts",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    clientOperationId: text("client_operation_id").notNull(),
+    operationType: text("operation_type").notNull(),
+    requestFingerprint: text("request_fingerprint").notNull(),
+    resultJson: text("result_json").notNull(),
+    acceptedAt: text("accepted_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_stock_operation_receipts_operation_uidx").on(table.ventureId, table.clientOperationId),
+  ],
+);
+
+export const frigoraStockPricePolicies = sqliteTable(
+  "frigora_stock_price_policies",
+  {
+    stockItemId: text("stock_item_id").notNull(),
+    versionNumber: integer("version_number").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    method: text("method").notNull(),
+    markupNumerator: integer("markup_numerator"),
+    markupDenominator: integer("markup_denominator"),
+    fixedMinorPerUnit: integer("fixed_minor_per_unit"),
+    clearsOverrideNumber: integer("clears_override_number"),
+    actorUserId: text("actor_user_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.stockItemId, table.versionNumber] })],
+);
+
+export const frigoraStockPriceOverrides = sqliteTable(
+  "frigora_stock_price_overrides",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    stockItemId: text("stock_item_id").notNull(),
+    overrideNumber: integer("override_number").notNull(),
+    sellingPriceMinor: integer("selling_price_minor").notNull(),
+    reason: text("reason").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    occurredAt: text("occurred_at").notNull(),
+  },
+  (table) => [uniqueIndex("frigora_stock_price_overrides_number_uidx").on(table.stockItemId, table.overrideNumber)],
+);
+
+export const frigoraStockDefectReports = sqliteTable(
+  "frigora_stock_defect_reports",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    clientOperationId: text("client_operation_id").notNull(),
+    kind: text("kind").notNull(),
+    stockItemId: text("stock_item_id"),
+    locationId: text("location_id"),
+    descriptionSnapshot: text("description_snapshot"),
+    unitSnapshot: text("unit_snapshot"),
+    unitCustomLabelSnapshot: text("unit_custom_label_snapshot"),
+    customerLabel: text("customer_label"),
+    siteLabel: text("site_label"),
+    workOrderId: text("work_order_id"),
+    quantityMilli: integer("quantity_milli").notNull(),
+    reporterUserId: text("reporter_user_id").notNull(),
+    reason: text("reason").notNull(),
+    evidenceReference: text("evidence_reference"),
+    inspectedMilli: integer("inspected_milli").notNull(),
+    releasedMilli: integer("released_milli").notNull(),
+    supplierReturnedMilli: integer("supplier_returned_milli").notNull(),
+    writtenOffMilli: integer("written_off_milli").notNull(),
+    reversedMilli: integer("reversed_milli").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_stock_defect_reports_scope_uidx").on(table.id, table.workspaceId, table.ventureId),
+    uniqueIndex("frigora_stock_defect_reports_operation_uidx").on(table.ventureId, table.clientOperationId),
+  ],
+);
+
+export const frigoraStockDefectEventSequences = sqliteTable(
+  "frigora_stock_defect_event_sequences",
+  {
+    ventureId: text("venture_id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    nextSequence: integer("next_sequence").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_stock_defect_event_sequences_scope_uidx").on(table.ventureId, table.workspaceId),
+  ],
+);
+
+export const frigoraStockDefectEvents = sqliteTable(
+  "frigora_stock_defect_events",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    reportId: text("report_id").notNull(),
+    clientOperationId: text("client_operation_id").notNull(),
+    eventSequence: integer("event_sequence").notNull(),
+    eventType: text("event_type").notNull(),
+    quantityMilli: integer("quantity_milli").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    occurredAt: text("occurred_at").notNull(),
+    recordedAt: text("recorded_at").notNull(),
+    reason: text("reason"),
+    evidenceReference: text("evidence_reference"),
+    movementId: text("movement_id"),
+    pairGroupId: text("pair_group_id"),
+    correctsPairGroupId: text("corrects_pair_group_id"),
+    correctsEventId: text("corrects_event_id"),
+    supplierReference: text("supplier_reference"),
+    replacementReference: text("replacement_reference"),
+    supplierCreditReference: text("supplier_credit_reference"),
+  },
+  (table) => [
+    uniqueIndex("frigora_stock_defect_events_sequence_uidx").on(table.ventureId, table.eventSequence),
+    uniqueIndex("frigora_stock_defect_events_operation_uidx").on(table.ventureId, table.clientOperationId),
+    uniqueIndex("frigora_stock_defect_events_report_uidx").on(
+      table.id,
+      table.reportId,
+      table.workspaceId,
+      table.ventureId,
+    ),
+  ],
+);
+
+/** Selling catalogue. Not created by ensureSchema. Purchase cost is a separate table. */
+export const frigoraCommercialItems = sqliteTable(
+  "frigora_commercial_items",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    ventureId: text("venture_id").notNull(),
+    sku: text("sku").notNull(),
+    skuNormalised: text("sku_normalised").notNull(),
+    description: text("description").notNull(),
+    category: text("category").notNull(),
+    manufacturer: text("manufacturer").notNull(),
+    model: text("model").notNull(),
+    unit: text("unit").notNull(),
+    sellingPriceMinor: integer("selling_price_minor").notNull(),
+    currency: text("currency").notNull(),
+    taxTreatment: text("tax_treatment").notNull(),
+    supplierReference: text("supplier_reference").notNull(),
+    status: text("status").notNull(),
+    createdAt: text("created_at").notNull(),
+    createdByUserId: text("created_by_user_id").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    updatedByUserId: text("updated_by_user_id").notNull(),
+  },
+  (table) => [
+    uniqueIndex("frigora_commercial_items_sku_uidx").on(
+      table.workspaceId,
+      table.ventureId,
+      table.skuNormalised,
+    ),
+  ],
+);
+
+/** Purchase cost. Ordinary catalogue reads must not select this table. */
+export const frigoraCommercialItemCosts = sqliteTable("frigora_commercial_item_costs", {
+  itemId: text("item_id").primaryKey(),
+  workspaceId: text("workspace_id").notNull(),
+  ventureId: text("venture_id").notNull(),
+  purchaseCostMinor: integer("purchase_cost_minor").notNull(),
+  currency: text("currency").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  updatedByUserId: text("updated_by_user_id").notNull(),
+});
+
 export const schema = {
   intelligenceCatalogues,
   intelligenceObjects,
@@ -1174,6 +1830,18 @@ export const schema = {
   frigoraAssetOperationalConditions,
   frigoraVisitCustomerAcknowledgements,
   frigoraVisitEvidence,
+  frigoraStockLocations,
+  frigoraStockItems,
+  frigoraStockMovements,
+  frigoraStockBalances,
+  frigoraStockOperationReceipts,
+  frigoraStockPricePolicies,
+  frigoraStockPriceOverrides,
+  frigoraStockDefectReports,
+  frigoraStockDefectEventSequences,
+  frigoraStockDefectEvents,
+  frigoraCommercialItems,
+  frigoraCommercialItemCosts,
 };
 
 /** Durable optional upload identity; not a Venture acceptance receipt. */

@@ -4,6 +4,7 @@ import { applyAuthNavigationHeaders } from "@/lib/auth/navigation-headers";
 import { lookupPersistedSession } from "@/lib/auth/session-store";
 import { resolveSessionUser } from "@/lib/auth/session-token";
 import { isFrigoraPwaPublicPath } from "@/modules/frigora/app/pwa/paths";
+import { isQuotationDecisionPublicPath } from "@/modules/frigora/quotation-decision-public-path";
 import { nowIso } from "@/platform";
 
 const publicPaths = new Set([
@@ -38,6 +39,10 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname === "/invite") {
+    return applyAuthNavigationHeaders(NextResponse.next());
+  }
+
+  if (isQuotationDecisionPublicPath(pathname)) {
     return applyAuthNavigationHeaders(NextResponse.next());
   }
 

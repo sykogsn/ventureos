@@ -31,6 +31,7 @@ import {
   refuseOfflineLeaseSelfExtension,
   resetMemoryOfflineDatabasesForTests,
 } from "@/modules/frigora/app/offline";
+import { FRIGORA_F33_OFFLINE_RUNTIME_ENABLED } from "@/modules/frigora/app/offline/runtime-gate";
 import { shouldBlockFrigoraFieldMutation } from "@/modules/frigora/app/pwa/connectivity";
 
 const NOW = "2026-09-16T08:00:00.000Z";
@@ -186,9 +187,9 @@ async function seedAssignedVisit(owner: Awaited<ReturnType<typeof seed>>, engine
 }
 
 describe("F33-03 technical finding local capture + idempotent explicit acceptance", () => {
-  it("A. SCHEMA_GENERATION is 28 and receipt uniqueness exists", async () => {
+  it("A. SCHEMA_GENERATION is 40 and receipt uniqueness exists", async () => {
     const dbSource = readFileSync(join(here, "../../../../platform/persistence/db.ts"), "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
     assert.match(dbSource, /frigora_client_operation_receipts/);
     assert.match(
       dbSource,
@@ -478,31 +479,32 @@ describe("F33-03 technical finding local capture + idempotent explicit acceptanc
   });
 
   it("M. only the three allowlisted operations may bypass offline mutation block", () => {
+    assert.equal(FRIGORA_F33_OFFLINE_RUNTIME_ENABLED, false);
     assert.deepEqual(
       [...FRIGORA_OFFLINE_CAPTURE_OPERATION_ALLOWLIST],
       ["recordTechnicalFinding", "recordFieldCapture", "recordVisitEvidence"],
     );
-    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordTechnicalFinding"), true);
-    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordFieldCapture"), true);
-    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordVisitEvidence"), true);
+    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordTechnicalFinding"), false);
+    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordFieldCapture"), false);
+    assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordVisitEvidence"), false);
     assert.equal(isFrigoraOfflineCaptureOperationAllowed("recordPartUsage"), false);
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/v/work/wo/visit/vi", {
         operationType: "recordTechnicalFinding",
       }),
-      false,
+      true,
     );
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/v/work/wo/visit/vi", {
         operationType: "recordFieldCapture",
       }),
-      false,
+      true,
     );
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/v/work/wo/visit/vi", {
         operationType: "recordVisitEvidence",
       }),
-      false,
+      true,
     );
     assert.equal(
       shouldBlockFrigoraFieldMutation(false, "/ventures/v/work/wo/visit/vi", {

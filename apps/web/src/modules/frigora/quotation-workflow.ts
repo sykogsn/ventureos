@@ -1,3 +1,12 @@
+import {
+  priceQuotationCommercial,
+  quotationDocumentHash,
+  quotationOfferHash,
+  type FrigoraQuotationCommercialInput,
+  type FrigoraQuotationCommercialSnapshot,
+  type QuotationOfferLine,
+} from "./quotation-commercial";
+
 /**
  * FRIGORA-QUOTE-01: pure quotation lifecycle contract.
  *
@@ -16,6 +25,26 @@ export const FRIGORA_QUOTE_STATUSES = [
 ] as const;
 
 export type FrigoraQuoteStatus = (typeof FRIGORA_QUOTE_STATUSES)[number];
+
+/** Statuses this persistence packet may write. Approved and declined stay visible but have no writer yet. */
+export const FRIGORA_PERSISTABLE_QUOTE_STATUSES = [
+  "in_preparation",
+  "awaiting_customer_approval",
+] as const;
+
+export type FrigoraPersistableQuoteStatus = (typeof FRIGORA_PERSISTABLE_QUOTE_STATUSES)[number];
+
+export const FRIGORA_PERSISTABLE_QUOTE_EVENT_KINDS = [
+  "created",
+  "sent",
+  "revision_started",
+] as const;
+
+export type FrigoraPersistableQuoteEventKind =
+  (typeof FRIGORA_PERSISTABLE_QUOTE_EVENT_KINDS)[number];
+
+export { quotationDocumentHash };
+
 export type FrigoraQuoteDecisionKind = "approved" | "declined";
 
 export type FrigoraQuoteScope = Readonly<{
@@ -37,6 +66,7 @@ export type FrigoraQuoteVersion = Readonly<{
   version: number;
   status: FrigoraQuoteStatus;
   description: string;
+  commercial: FrigoraQuotationCommercialSnapshot;
   totalMinor: number;
   currency: "ZAR";
   documentHash: string;
@@ -78,11 +108,15 @@ function required(value: string, field: string): string {
   return trimmed;
 }
 
-function validTotal(value: number): number {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new FrigoraQuoteTransitionError("Quotation total must be non-negative integer ZAR cents.");
+function commercialSnapshot(input: FrigoraQuotationCommercialInput): FrigoraQuotationCommercialSnapshot {
+  try {
+    return priceQuotationCommercial(input);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new FrigoraQuoteTransitionError(error.message);
+    }
+    throw error;
   }
-  return value;
 }
 
 function current(quote: FrigoraQuotation): FrigoraQuoteVersion {
@@ -106,6 +140,51 @@ function record(
   return { ...quote, versions, events: [...quote.events, event] };
 }
 
+/**
+ * Corrects the current draft in place. A sent or decided version is not
+ * rewritten; that history is preserved and a revision is a new version.
+ */
+export function correctQuotationDraft(
+  quote: FrigoraQuotation,
+  input: {
+    description: string;
+    commercial: FrigoraQuotationCommercialInput;
+    documentHash: string;
+    lines?: readonly QuotationOfferLine[];
+  },
+): FrigoraQuotation {
+  const version = current(quote);
+  if (version.status !== "in_preparation") {
+    throw new FrigoraQuoteTransitionError(
+      "Only a draft in preparation can be corrected. Revise a sent quotation instead.",
+    );
+  }
+  const priced = commercialSnapshot(input.commercial);
+  const description = required(input.description, "Description");
+  const documentHash = required(input.documentHash, "Document hash");
+  const expected = quotationOfferHash({
+    version: version.version,
+    description,
+    ...priced,
+    lines: input.lines,
+  });
+  if (documentHash !== expected) {
+    throw new FrigoraQuoteTransitionError("Corrected draft hash does not match its commercial basis.");
+  }
+  const next: FrigoraQuoteVersion = {
+    ...version,
+    description,
+    commercial: priced,
+    totalMinor: priced.totalMinor,
+    currency: priced.currency,
+    documentHash,
+  };
+  return {
+    ...quote,
+    versions: [...quote.versions.slice(0, -1), next],
+  };
+}
+
 export function quotationStatus(quote: FrigoraQuotation): FrigoraQuoteStatus {
   return current(quote).status;
 }
@@ -121,18 +200,20 @@ export function createQuotationDraft(input: {
   recommendedActionId: string;
   assetId?: string | null;
   description: string;
-  totalMinor: number;
+  commercial: FrigoraQuotationCommercialInput;
   documentHash: string;
   actorUserId: string;
   eventId: string;
   occurredAt: string;
 }): FrigoraQuotation {
+  const priced = commercialSnapshot(input.commercial);
   const version: FrigoraQuoteVersion = {
     version: 1,
     status: "in_preparation",
     description: required(input.description, "Description"),
-    totalMinor: validTotal(input.totalMinor),
-    currency: "ZAR",
+    commercial: priced,
+    totalMinor: priced.totalMinor,
+    currency: priced.currency,
     documentHash: required(input.documentHash, "Document hash"),
     sentAt: null,
     recipient: null,
@@ -251,20 +332,23 @@ export function reviseQuotation(
     occurredAt: string;
     actorUserId: string;
     description: string;
-    totalMinor: number;
+    commercial: FrigoraQuotationCommercialInput;
     documentHash: string;
+    revisePreparedDraft?: boolean;
   },
 ): FrigoraQuotation {
   const v = current(quote);
-  if (v.status === "in_preparation") {
+  if (v.status === "in_preparation" && input.revisePreparedDraft !== true) {
     throw new FrigoraQuoteTransitionError("Edit the current draft instead of creating a new revision.");
   }
+  const priced = commercialSnapshot(input.commercial);
   const next: FrigoraQuoteVersion = {
     version: v.version + 1,
     status: "in_preparation",
     description: required(input.description, "Description"),
-    totalMinor: validTotal(input.totalMinor),
-    currency: "ZAR",
+    commercial: priced,
+    totalMinor: priced.totalMinor,
+    currency: priced.currency,
     documentHash: required(input.documentHash, "Document hash"),
     sentAt: null,
     recipient: null,

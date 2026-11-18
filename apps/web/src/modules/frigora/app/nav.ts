@@ -21,6 +21,8 @@ export function buildVentureSurfaceLinks(input: {
       { href: `${base}/work`, label: "Work", match: "prefix" },
       { href: `${base}/customers`, label: "Customers", match: "prefix" },
       { href: `${base}/catalogue`, label: "Catalogue", match: "prefix" },
+      { href: `${base}/commercial-catalogue`, label: "Commercial Catalogue", match: "prefix" },
+      { href: `${base}/quotations`, label: "Quotations", match: "prefix" },
     ];
   }
 

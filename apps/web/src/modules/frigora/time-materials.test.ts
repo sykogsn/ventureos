@@ -688,7 +688,7 @@ describe("F3.1 time & materials customer charge", () => {
     assert.equal("quote" in summary, false);
   });
 
-  it("admits F3.1 T&M at frigora@0.21.0 and SCHEMA_GENERATION 26", () => {
+  it("admits F3.1 T&M at frigora@0.21.0 and SCHEMA_GENERATION 40", () => {
     const frigora = platformVentureRegistry.resolve("frigora");
     assert.equal(frigora.version, "0.22.0");
     assert.match(frigora.description, /F3\.1/);
@@ -699,6 +699,6 @@ describe("F3.1 time & materials customer charge", () => {
       join(process.cwd(), "src/platform/persistence/db.ts"),
       "utf8",
     );
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
   });
 });

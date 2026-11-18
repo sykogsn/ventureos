@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { after, beforeEach, describe, it } from "node:test";
+import { lstat, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, afterEach, beforeEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { platformVentureRegistry } from "@/core/venture-definition/catalog";
 import type { Role, UserId, VentureId, WorkspaceId } from "@/contracts";
@@ -32,9 +35,32 @@ after(() => {
   getPlatform().scheduler.stopAll();
 });
 
+let disposableObjectRoot: string | undefined;
+let previousStoredObjectRoot: string | undefined;
+
 beforeEach(async () => {
+  previousStoredObjectRoot = process.env.STORED_OBJECT_ROOT;
+  disposableObjectRoot = await mkdtemp(join(tmpdir(), "vos-host-recon-07-visit-evidence-"));
+  const rootStat = await lstat(disposableObjectRoot);
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
+    throw new Error("Disposable object root must be a real directory.");
+  }
+  process.env.STORED_OBJECT_ROOT = disposableObjectRoot;
   await resetPersistenceLifecycle();
   await ensureSchema();
+});
+
+afterEach(async () => {
+  if (previousStoredObjectRoot === undefined) {
+    delete process.env.STORED_OBJECT_ROOT;
+  } else {
+    process.env.STORED_OBJECT_ROOT = previousStoredObjectRoot;
+  }
+  const created = disposableObjectRoot;
+  disposableObjectRoot = undefined;
+  if (created) {
+    await rm(created, { recursive: true, force: true });
+  }
 });
 
 async function seed(options: {
@@ -570,7 +596,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     assert.equal(FRIGORA_ASSET_OPERATIONAL_CONDITION_KINDS.includes("evidence" as never), false);
   });
 
-  it("persists through restart with SCHEMA_GENERATION 26 and admits frigora@0.21.0", async () => {
+  it("persists through restart with SCHEMA_GENERATION 40 and admits frigora@0.21.0", async () => {
     const owner = await seed();
     const attendeeId = "user-attendee" as UserId;
     await addMember(owner.workspaceId, attendeeId);
@@ -587,7 +613,7 @@ describe("Frigora visit evidence (F2.0)", () => {
     const schemaPath = fileURLToPath(
       new URL("../../platform/persistence/schema.ts", import.meta.url),
     );
-    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 32/);
+    assert.match(readFileSync(dbPath, "utf8"), /SCHEMA_GENERATION = 40/);
     assert.match(readFileSync(schemaPath, "utf8"), /frigora_visit_evidence/);
     assert.match(
       readFileSync(schemaPath, "utf8"),

@@ -64,6 +64,13 @@ import type {
   FrigoraRecommendedAction,
   FrigoraRecommendedActionId,
   RecordRecommendedActionInput,
+  SetRecommendedActionQuotationRequirementInput,
+  FrigoraPersistedQuotation,
+  FrigoraQuotationId,
+  CorrectFrigoraQuotationInput,
+  CreateFrigoraQuotationInput,
+  SendFrigoraQuotationInput,
+  ReviseFrigoraQuotationInput,
   FrigoraRefrigerantEvent,
   FrigoraRefrigerantEventId,
   RecordRefrigerantEventInput,
@@ -101,6 +108,25 @@ import type {
   UpdateSiteInput,
   SetWorkOrderPriorityInput,
   UpdateWorkOrderInput,
+  FrigoraQuotationDecisionGrantId,
+  FrigoraQuotationDecisionGrantRecord,
+  IssueFrigoraQuotationDecisionGrantInput,
+  QuotationDecisionGrantDelivery,
+  SubmitFrigoraQuotationDecisionInput,
+  FrigoraCustomerContact,
+  FrigoraCustomerContactAccess,
+  FrigoraCustomerContactId,
+  FrigoraSupervisedVerification,
+  CreateFrigoraCustomerContactInput,
+  RecordFrigoraSupervisedVerificationInput,
+  UpdateFrigoraCustomerContactInput,
+  DesignateFrigoraQuotationContactInput,
+  ConfirmFrigoraContactEmailInput,
+  FrigoraContactVerificationDispatch,
+  SetFrigoraVentureMailIdentityInput,
+  FrigoraVentureMailIdentity,
+  DeliverFrigoraQuotationDecisionGrantInput,
+  FrigoraQuotationDeliveryResult,
   FrigoraVentureCommercialSettings,
   SetVentureLabourHourlyChargeInput,
   SetPartUsageUnitChargeInput,
@@ -108,6 +134,59 @@ import type {
   SetVisitLabourHourlyChargeInput,
 } from "./types";
 import { FRIGORA_ASSET_HISTORY_EVENT_KINDS } from "./types";
+import {
+  correctPersistedQuotation,
+  createPersistedQuotation,
+  issuePersistedQuotation,
+  issuePersistedQuotationDecisionGrant,
+  recoverPersistedQuotationDelivery,
+  revisePersistedQuotation,
+  sendPersistedQuotation,
+  submitPersistedQuotationDecision,
+  type QuotationIssueResult,
+} from "./quotation-commands";
+import {
+  activatePersistedQuotationCustomerAccess,
+  type QuotationCustomerAccessActivation,
+  type QuotationCustomerAccessActivationInput,
+} from "./quotation-customer-access";
+import type {
+  QuotationCustomerDeliveryOfficeView,
+  QuotationDeliveryOutbox,
+  QuotationDeliveryRecovery,
+} from "./quotation-delivery";
+import { listQuotationCustomerDeliveries } from "./quotation-customer-delivery";
+import {
+  approveReferenceTaxRule,
+  getTaxPosture,
+  revokeVerifiedTaxConfiguration,
+  saveTaxConfigurationDraft,
+  submitTaxConfigurationForReview,
+  verifyTaxConfiguration,
+} from "./tax-configuration-commands";
+import {
+  confirmCustomerContactEmail,
+  createCustomerContact,
+  createQuotationCustomerContact,
+  deliverQuotationDecisionGrant,
+  designateQuotationContact,
+  listQuotationCustomerContacts,
+  recordSupervisedContactVerification,
+  requestCustomerContactVerification,
+  revokeCustomerContact,
+  revokeQuotationContactDesignation,
+  revokeSupervisedContactVerification,
+  setVentureMailIdentity,
+  updateCustomerContact,
+  updateQuotationCustomerContact,
+} from "./customer-contact-commands";
+import type { FrigoraMailRuntime } from "./mail";
+import {
+  reviewCustomerQuotation as reviewCustomerQuotationRecord,
+  submitCustomerQuotation as submitCustomerQuotationRecord,
+  type CustomerQuotationReview,
+  type CustomerQuotationSubmission,
+} from "./quotation-review";
 import {
   computeWorkOrderTimeMaterials,
   type FrigoraTimeMaterialsSummary,
@@ -132,6 +211,7 @@ import {
   recordCorrectiveActionSchema,
   recordVisitOutcomeSchema,
   recordRecommendedActionSchema,
+  setRecommendedActionQuotationRequirementSchema,
   recordRefrigerantEventSchema,
   recordPartUsageSchema,
   createPartReferenceSchema,
@@ -411,6 +491,11 @@ export type FrigoraService = {
     visitId: FrigoraVisitId,
     input: RecordRecommendedActionInput,
   ): Promise<FrigoraRecommendedAction>;
+  setRecommendedActionQuotationRequirement(
+    scope: FrigoraScope,
+    id: FrigoraRecommendedActionId,
+    input: SetRecommendedActionQuotationRequirementInput,
+  ): Promise<FrigoraRecommendedAction>;
   getRecommendedAction(
     scope: FrigoraScope,
     id: FrigoraRecommendedActionId,
@@ -596,14 +681,182 @@ export type FrigoraService = {
     scope: FrigoraScope,
     assetId: FrigoraAssetId,
   ): Promise<FrigoraAssetHistoryEntry[]>;
+  createQuotation(
+    scope: FrigoraScope,
+    input: CreateFrigoraQuotationInput,
+  ): Promise<FrigoraPersistedQuotation>;
+  getQuotation(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+  ): Promise<FrigoraPersistedQuotation | null>;
+  listQuotationsByWorkOrder(
+    scope: FrigoraScope,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraPersistedQuotation[]>;
+  listQuotationsByAsset(
+    scope: FrigoraScope,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraPersistedQuotation[]>;
+  listQuotations(scope: FrigoraScope): Promise<FrigoraPersistedQuotation[]>;
+  correctQuotation(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: CorrectFrigoraQuotationInput,
+  ): Promise<FrigoraPersistedQuotation>;
+  sendQuotation(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: SendFrigoraQuotationInput,
+  ): Promise<FrigoraPersistedQuotation>;
+  issueQuotation(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: SendFrigoraQuotationInput,
+  ): Promise<QuotationIssueResult>;
+  getQuotationDelivery(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+  ): Promise<QuotationDeliveryOutbox | null>;
+  listQuotationCustomerDeliveries(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+  ): Promise<QuotationCustomerDeliveryOfficeView[]>;
+  recoverQuotationDelivery(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+  ): Promise<QuotationDeliveryRecovery>;
+  getTaxPosture(scope: FrigoraScope): Promise<Awaited<ReturnType<typeof getTaxPosture>>>;
+  saveTaxConfigurationDraft(scope: FrigoraScope, input: unknown): Promise<Awaited<ReturnType<typeof saveTaxConfigurationDraft>>>;
+  submitTaxConfigurationForReview(scope: FrigoraScope, input: unknown): Promise<Awaited<ReturnType<typeof submitTaxConfigurationForReview>>>;
+  verifyTaxConfiguration(scope: FrigoraScope, input: unknown): Promise<Awaited<ReturnType<typeof verifyTaxConfiguration>>>;
+  approveReferenceTaxRule(scope: FrigoraScope): Promise<Awaited<ReturnType<typeof approveReferenceTaxRule>>>;
+  revokeVerifiedTaxConfiguration(scope: FrigoraScope, configurationId: string): Promise<void>;
+  reviseQuotation(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: ReviseFrigoraQuotationInput,
+  ): Promise<FrigoraPersistedQuotation>;
+  issueQuotationDecisionGrant(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: IssueFrigoraQuotationDecisionGrantInput,
+    delivery: QuotationDecisionGrantDelivery,
+  ): Promise<FrigoraQuotationDecisionGrantRecord>;
+  activateQuotationCustomerAccess(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: QuotationCustomerAccessActivationInput,
+  ): Promise<QuotationCustomerAccessActivation>;
+  listQuotationCustomerAccess(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+  ): Promise<Array<{
+    id: string;
+    version: number;
+    documentHash: string;
+    issuedAt: string;
+    expiresAt: string;
+    state: "active" | "expired" | "revoked" | "consumed";
+    decision: "approved" | "declined" | null;
+  }>>;
+  revokeQuotationCustomerAccess(
+    scope: FrigoraScope,
+    grantId: FrigoraQuotationDecisionGrantId,
+  ): Promise<void>;
+  submitQuotationDecision(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: SubmitFrigoraQuotationDecisionInput,
+  ): Promise<FrigoraPersistedQuotation>;
+  createCustomerContact(
+    scope: FrigoraScope,
+    input: CreateFrigoraCustomerContactInput,
+  ): Promise<FrigoraCustomerContact>;
+  updateCustomerContact(
+    scope: FrigoraScope,
+    contactId: FrigoraCustomerContactId,
+    input: UpdateFrigoraCustomerContactInput,
+  ): Promise<FrigoraCustomerContact>;
+  listQuotationCustomerContacts(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+  ): Promise<FrigoraCustomerContactAccess[]>;
+  createQuotationCustomerContact(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: { displayName: string; email: string },
+  ): Promise<FrigoraCustomerContact>;
+  updateQuotationCustomerContact(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    contactId: FrigoraCustomerContactId,
+    input: UpdateFrigoraCustomerContactInput,
+  ): Promise<FrigoraCustomerContact>;
+  recordSupervisedContactVerification(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    contactId: FrigoraCustomerContactId,
+    input: RecordFrigoraSupervisedVerificationInput,
+  ): Promise<FrigoraSupervisedVerification>;
+  revokeSupervisedContactVerification(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    contactId: FrigoraCustomerContactId,
+  ): Promise<FrigoraCustomerContact>;
+  getCustomerContact(
+    scope: FrigoraScope,
+    contactId: FrigoraCustomerContactId,
+  ): Promise<FrigoraCustomerContact | null>;
+  designateQuotationContact(
+    scope: FrigoraScope,
+    contactId: FrigoraCustomerContactId,
+    input: DesignateFrigoraQuotationContactInput,
+  ): Promise<FrigoraCustomerContact>;
+  revokeQuotationContactDesignation(
+    scope: FrigoraScope,
+    contactId: FrigoraCustomerContactId,
+  ): Promise<FrigoraCustomerContact>;
+  revokeCustomerContact(
+    scope: FrigoraScope,
+    contactId: FrigoraCustomerContactId,
+  ): Promise<FrigoraCustomerContact>;
+  setVentureMailIdentity(
+    scope: FrigoraScope,
+    input: SetFrigoraVentureMailIdentityInput,
+  ): Promise<FrigoraVentureMailIdentity>;
+  requestCustomerContactVerification(
+    scope: FrigoraScope,
+    contactId: FrigoraCustomerContactId,
+  ): Promise<FrigoraContactVerificationDispatch>;
+  confirmCustomerContactEmail(
+    scope: FrigoraScope,
+    input: ConfirmFrigoraContactEmailInput,
+  ): Promise<FrigoraCustomerContact>;
+  deliverQuotationDecisionGrant(
+    scope: FrigoraScope,
+    quotationId: FrigoraQuotationId,
+    input: DeliverFrigoraQuotationDecisionGrantInput,
+    beforeGuardedWrite?: () => Promise<void>,
+  ): Promise<FrigoraQuotationDeliveryResult>;
+  reviewCustomerQuotation(input: { grantId: string; secret: string }): Promise<CustomerQuotationReview>;
+  submitCustomerQuotation(input: {
+    grantId: string;
+    secret: string;
+    decision: "approved" | "declined";
+    selectedOptionalLineIds?: readonly string[];
+  }): Promise<CustomerQuotationSubmission>;
 };
 
 export function createFrigoraService(options: {
   store?: FrigoraStore;
   permissions?: PermissionService;
+  now?: () => string;
+  mail?: FrigoraMailRuntime;
 } = {}): FrigoraService {
   const store = options.store ?? createFrigoraStore();
   const permissions = options.permissions;
+  const clock = options.now ?? nowIso;
+  const mail = options.mail ?? {};
 
   async function permissionService(): Promise<PermissionService> {
     return permissions ?? getPlatform().permissions;
@@ -951,6 +1204,8 @@ export function createFrigoraService(options: {
         assignmentDeclineReason: null,
         cancellationReason: null,
         sourceRecommendedActionId: null,
+        authorisingQuotationId: null,
+        authorisingQuotationVersion: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -1077,17 +1332,6 @@ export function createFrigoraService(options: {
       if (!recommendation) {
         throw new FrigoraError("not_found", "Recommended action was not found.");
       }
-      const existingFollowUp = await store.findWorkOrderBySourceRecommendedActionId(
-        scope.workspaceId,
-        scope.ventureId,
-        recommendation.id,
-      );
-      if (existingFollowUp) {
-        throw new FrigoraError(
-          "duplicate",
-          "This recommended action already has a follow-up work order.",
-        );
-      }
       const sourceWorkOrder = await requireWorkOrder(store, scope, recommendation.workOrderId);
       const site = await requireSite(store, scope, sourceWorkOrder.siteId);
       await assertSiteAcceptsWorkOrder(store, scope, site);
@@ -1123,11 +1367,40 @@ export function createFrigoraService(options: {
         assignmentDeclineReason: null,
         cancellationReason: null,
         sourceRecommendedActionId: recommendation.id,
+        authorisingQuotationId: null,
+        authorisingQuotationVersion: null,
         createdAt: now,
         updatedAt: now,
       };
-      await store.insertWorkOrder(row);
-      return row;
+      try {
+        const saved = await store.insertAuthorisedFollowUpWorkOrder(row, {
+          recommendedActionId: recommendation.id,
+          sourceWorkOrderId: sourceWorkOrder.id,
+          customerId: sourceWorkOrder.customerId,
+          siteId: sourceWorkOrder.siteId,
+          assetId: recommendation.assetId,
+          followUpAssetId: primaryAssetId,
+          actorUserId: scope.userId,
+        });
+        return saved;
+      } catch (error) {
+        if (isFrigoraError(error) && error.code === "customer_approval_required") {
+          await getPlatform().audit.record({
+            action: "frigora.repair_follow_up.rejected",
+            actor: {
+              userId: scope.userId,
+              workspaceId: scope.workspaceId,
+              ventureId: scope.ventureId,
+            },
+            metadata: {
+              recommendedActionId: recommendation.id,
+              sourceWorkOrderId: sourceWorkOrder.id,
+              outcome: "customer_approval_required",
+            },
+          });
+        }
+        throw error;
+      }
     },
     async getFollowUpWorkOrderByRecommendedAction(scope, recommendedActionId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -2069,11 +2342,36 @@ export function createFrigoraService(options: {
         recommendedAt: parsed.recommendedAt,
         recommendedByUserId,
         recordedByUserId,
+        quotationRequired: parsed.quotationRequired === true,
         createdAt: now,
         updatedAt: now,
       };
       await store.insertRecommendedAction(row);
       return row;
+    },
+    async setRecommendedActionQuotationRequirement(scope, id, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      const parsed = parseWithFrigora(setRecommendedActionQuotationRequirementSchema, input);
+      const existing = await store.findRecommendedAction(scope.workspaceId, scope.ventureId, id);
+      if (!existing) {
+        throw new FrigoraError("not_found", "Recommended action was not found.");
+      }
+      if (existing.quotationRequired && !parsed.quotationRequired) {
+        throw new FrigoraError(
+          "invalid_status",
+          "A quotation requirement cannot be removed.",
+        );
+      }
+      if (existing.quotationRequired === parsed.quotationRequired) {
+        return existing;
+      }
+      const next: FrigoraRecommendedAction = {
+        ...existing,
+        quotationRequired: parsed.quotationRequired,
+        updatedAt: nowIso(),
+      };
+      await store.updateRecommendedActionQuotationRequirement(next);
+      return next;
     },
     async getRecommendedAction(scope, id) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -3152,6 +3450,208 @@ export function createFrigoraService(options: {
         throw error;
       }
       return tombstoned;
+    },
+    async createQuotation(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return createPersistedQuotation(store, scope, input);
+    },
+    async getQuotation(scope, quotationId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findPersistedQuotation(scope.workspaceId, scope.ventureId, quotationId);
+    },
+    async listQuotationsByWorkOrder(scope, workOrderId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const workOrder = await store.findWorkOrder(scope.workspaceId, scope.ventureId, workOrderId);
+      if (!workOrder) {
+        return [];
+      }
+      return store.listPersistedQuotationsByWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        workOrderId,
+      );
+    },
+    async listQuotationsByAsset(scope, assetId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
+      if (!asset) {
+        return [];
+      }
+      return store.listPersistedQuotationsByAsset(scope.workspaceId, scope.ventureId, assetId);
+    },
+    async listQuotations(scope) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return store.listPersistedQuotations(scope.workspaceId, scope.ventureId);
+    },
+    async correctQuotation(scope, quotationId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return correctPersistedQuotation(store, scope, quotationId, input);
+    },
+    async sendQuotation(scope, quotationId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return sendPersistedQuotation(store, scope, quotationId, input);
+    },
+    async issueQuotation(scope, quotationId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return issuePersistedQuotation(store, scope, quotationId, input);
+    },
+    async getQuotationDelivery(scope, quotationId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      const quotation = await store.findPersistedQuotation(scope.workspaceId, scope.ventureId, quotationId);
+      if (!quotation) {
+        return null;
+      }
+      return store.findQuotationDeliveryOutbox(
+        scope.workspaceId,
+        scope.ventureId,
+        quotationId,
+        quotation.currentVersion,
+      );
+    },
+    async listQuotationCustomerDeliveries(scope, quotationId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return listQuotationCustomerDeliveries(scope.workspaceId, scope.ventureId, quotationId);
+    },
+    async recoverQuotationDelivery(scope, quotationId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return recoverPersistedQuotationDelivery(store, scope, quotationId);
+    },
+    async getTaxPosture(scope) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return { rules: [], configurations: [], events: [] };
+      }
+      return getTaxPosture(store, scope);
+    },
+    async saveTaxConfigurationDraft(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return saveTaxConfigurationDraft(store, scope, input);
+    },
+    async submitTaxConfigurationForReview(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return submitTaxConfigurationForReview(store, scope, input);
+    },
+    async verifyTaxConfiguration(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return verifyTaxConfiguration(store, scope, input);
+    },
+    async approveReferenceTaxRule(scope) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return approveReferenceTaxRule(store, scope);
+    },
+    async revokeVerifiedTaxConfiguration(scope, configurationId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await revokeVerifiedTaxConfiguration(store, scope, configurationId);
+    },
+    async reviseQuotation(scope, quotationId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return revisePersistedQuotation(store, scope, quotationId, input);
+    },
+    async issueQuotationDecisionGrant(scope, quotationId, input, delivery) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return issuePersistedQuotationDecisionGrant(store, scope, quotationId, input, delivery, clock);
+    },
+    async activateQuotationCustomerAccess(scope, quotationId, input: QuotationCustomerAccessActivationInput) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return activatePersistedQuotationCustomerAccess(store, scope, quotationId, input, clock);
+    },
+    async listQuotationCustomerAccess(scope, quotationId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return store.listQuotationDecisionGrants(scope.workspaceId, scope.ventureId, quotationId, clock());
+    },
+    async revokeQuotationCustomerAccess(scope, grantId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      await store.revokeQuotationDecisionGrant({
+        id: grantId,
+        workspaceId: scope.workspaceId,
+        ventureId: scope.ventureId,
+        revokedAt: clock(),
+      });
+    },
+    async submitQuotationDecision(scope, quotationId, input) {
+      return submitPersistedQuotationDecision(store, scope, quotationId, input, clock);
+    },
+    async createCustomerContact(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return createCustomerContact(store, scope, input, clock);
+    },
+    async updateCustomerContact(scope, contactId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return updateCustomerContact(store, scope, contactId, input, clock);
+    },
+    async listQuotationCustomerContacts(scope, quotationId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return [];
+      }
+      return listQuotationCustomerContacts(store, scope, quotationId);
+    },
+    async createQuotationCustomerContact(scope, quotationId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return createQuotationCustomerContact(store, scope, quotationId, input, clock);
+    },
+    async updateQuotationCustomerContact(scope, quotationId, contactId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return updateQuotationCustomerContact(store, scope, quotationId, contactId, input, clock);
+    },
+    async recordSupervisedContactVerification(scope, quotationId, contactId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return recordSupervisedContactVerification(store, scope, quotationId, contactId, input, clock);
+    },
+    async revokeSupervisedContactVerification(scope, quotationId, contactId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return revokeSupervisedContactVerification(store, scope, quotationId, contactId, clock);
+    },
+    async getCustomerContact(scope, contactId) {
+      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+        return null;
+      }
+      return store.findCustomerContact(scope.workspaceId, scope.ventureId, contactId);
+    },
+    async designateQuotationContact(scope, contactId, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return designateQuotationContact(store, scope, contactId, input, clock);
+    },
+    async revokeQuotationContactDesignation(scope, contactId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return revokeQuotationContactDesignation(store, scope, contactId, clock);
+    },
+    async revokeCustomerContact(scope, contactId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return revokeCustomerContact(store, scope, contactId, clock);
+    },
+    async setVentureMailIdentity(scope, input) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return setVentureMailIdentity(store, scope, input, mail, clock);
+    },
+    async requestCustomerContactVerification(scope, contactId) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return requestCustomerContactVerification(store, scope, contactId, mail, clock);
+    },
+    async confirmCustomerContactEmail(scope, input) {
+      return confirmCustomerContactEmail(store, scope, input, clock);
+    },
+    async deliverQuotationDecisionGrant(scope, quotationId, input, beforeGuardedWrite?: () => Promise<void>) {
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
+      return deliverQuotationDecisionGrant(store, scope, quotationId, input, mail, clock, beforeGuardedWrite);
+    },
+    reviewCustomerQuotation(input) {
+      return reviewCustomerQuotationRecord(store, input, clock);
+    },
+    submitCustomerQuotation(input) {
+      return submitCustomerQuotationRecord(store, input, clock);
     },
     async listAssetHistory(scope, assetId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {

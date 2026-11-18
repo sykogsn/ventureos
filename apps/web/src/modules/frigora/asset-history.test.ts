@@ -771,12 +771,12 @@ describe("Frigora asset history projection (F0.13)", () => {
     assert.equal(typeof listAssetHistoryQuery, "function");
   });
 
-  it("keeps SCHEMA_GENERATION at 26 with no asset history table", async () => {
+  it("keeps SCHEMA_GENERATION at 40 with no asset history table", async () => {
     const dbPath = fileURLToPath(new URL("../../platform/persistence/db.ts", import.meta.url));
     const schemaPath = fileURLToPath(new URL("../../platform/persistence/schema.ts", import.meta.url));
     const dbSource = readFileSync(dbPath, "utf8");
     const schemaSource = readFileSync(schemaPath, "utf8");
-    assert.match(dbSource, /SCHEMA_GENERATION = 32/);
+    assert.match(dbSource, /SCHEMA_GENERATION = 40/);
     assert.equal(schemaSource.includes("frigora_asset_history"), false);
   });
 

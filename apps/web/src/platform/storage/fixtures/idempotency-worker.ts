@@ -2,7 +2,7 @@
 import { createStoredObjectService } from "../service";
 import { createLocalBlobStorageAdapter } from "../local-adapter";
 import { createAuditLog } from "@/platform/audit/log";
-import { createClient } from "@libsql/client";
+import { createClient, type Transaction } from "@libsql/client";
 import { resetDatabaseLifecycle, ensureSchema, getClient } from "@/platform/persistence/db";
 import { isSqliteBusy, storedObjectDurability } from "@/platform/persistence/durability-client";
 import { createPermissionService } from "@/platform/permissions/service";
@@ -43,8 +43,22 @@ function durabilityStatementPositionalArg(statement: unknown): unknown {
 }
 
 const databaseUrl = requiredWorkerDatabaseUrl();
+const workerMode = process.argv[3];
 await resetDatabaseLifecycle(databaseUrl);
-await ensureSchema();
+if (workerMode === "accept") {
+  // Setup has committed this file and exited. Storage and audit still call
+  // ensureSchema(); this process-local memo makes those calls return without
+  // repeating DDL. 40 is SCHEMA_GENERATION in persistence/db.ts.
+  const schemaMemo = globalThis as typeof globalThis & {
+    __vosSchemaGeneration?: number;
+    __vosSchemaReady?: Promise<void>;
+  };
+  schemaMemo.__vosSchemaGeneration = 40;
+  schemaMemo.__vosSchemaReady = Promise.resolve();
+  process.send?.({ schemaInitialisation: "reused" });
+} else {
+  await ensureSchema();
+}
 const openDurabilityClient = storedObjectDurability.openClient.bind(storedObjectDurability);
 storedObjectDurability.openClient = (timeoutMs) => {
   const client = openDurabilityClient(timeoutMs);
@@ -106,7 +120,27 @@ try {
     let nativeBusy = 0;
     let reusedPoisoned = 0;
     const blocker = createClient({ url: databaseUrl, timeout: 0 });
+    let held: Transaction | undefined;
     let lockState: "idle" | "held" | "released" = "idle";
+    const releaseBlocker = async () => {
+      if (lockState !== "held") return;
+      try {
+        if (held && !held.closed) await held.rollback();
+      } finally {
+        try {
+          held?.close();
+        } catch {
+          // The write lock is already closed.
+        }
+        try {
+          blocker.close();
+        } catch {
+          // The blocker client is already closed.
+        }
+        held = undefined;
+        lockState = "released";
+      }
+    };
     const open = storedObjectDurability.openClient.bind(storedObjectDurability);
     storedObjectDurability.openClient = (timeoutMs) => {
       const client = open(timeoutMs);
@@ -114,7 +148,10 @@ try {
       client.execute = async (...args: Parameters<typeof execute>) => {
         if (poisoned.has(client)) reusedPoisoned++;
         if (lockState === "idle") {
-          await blocker.execute("BEGIN IMMEDIATE");
+          // One write transaction holds BEGIN IMMEDIATE until the contended
+          // statement returns. A parent-client execute("BEGIN") would be
+          // rolled back when 0.18.0 released that connection.
+          held = await blocker.transaction("write");
           lockState = "held";
         }
         try {
@@ -123,10 +160,10 @@ try {
           if (isSqliteBusy(error)) {
             poisoned.add(client);
             nativeBusy++;
-            if (lockState === "held") {
-              await blocker.execute("ROLLBACK");
-              blocker.close();
-              lockState = "released";
+            try {
+              await releaseBlocker();
+            } catch {
+              // Keep the SQLITE_BUSY result that the durability retry observes.
             }
           }
           throw error;
@@ -159,6 +196,7 @@ try {
       });
     } finally {
       observer.close();
+      try { await releaseBlocker(); } catch { /* already closed */ }
       try { blocker.close(); } catch { /* already closed */ }
     }
   } else {

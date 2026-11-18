@@ -38,6 +38,8 @@ function workOrder(
     assignmentDeclineReason: null,
     cancellationReason: null,
     sourceRecommendedActionId: null,
+    authorisingQuotationId: null,
+    authorisingQuotationVersion: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,

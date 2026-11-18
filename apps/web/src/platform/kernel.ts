@@ -10,7 +10,7 @@ import { createPermissionService } from "@/platform/permissions/service";
 import { createLocalBlobStorageAdapter } from "@/platform/storage/local-adapter";
 import { createStoredObjectPort } from "@/platform/storage/port";
 import { onBeforePersistenceReset } from "@/platform/persistence/before-reset";
-import { createScheduler, type Scheduler } from "@/platform/scheduler/scheduler";
+import { createScheduler, runGuardedSteps, type Scheduler } from "@/platform/scheduler/scheduler";
 import { createTelemetry, type Telemetry } from "@/platform/telemetry/telemetry";
 import { createWorkflowEngine } from "@/platform/workflows/engine";
 import { WORKFORCE_RUN_STEP_JOB } from "@/core/workforce/run";
@@ -59,13 +59,15 @@ export function createPlatform(): Platform {
     const { getWorkforceService } = await import("@/modules/workforce/service");
     await getWorkforceService().orchestrator.handleJob(job);
   });
-  scheduler.every("jobs.processDue", 15_000, () => {
-    void (async () => {
-      await jobs.processDue();
-      const { getWorkforceService } = await import("@/modules/workforce/service");
-      await getWorkforceService().orchestrator.recover();
-    })();
-  });
+  scheduler.every("jobs.processDue", 15_000, () =>
+    runPlatformMaintenance({
+      processDue: () => jobs.processDue(),
+      recover: async () => {
+        const { getWorkforceService } = await import("@/modules/workforce/service");
+        await getWorkforceService().orchestrator.recover();
+      },
+    }),
+  );
 
   const permissions = createPermissionService(createDbMembershipStore());
   const storedObjectAdapter = createLocalBlobStorageAdapter();
@@ -96,6 +98,35 @@ export function getPlatform() {
   }
 
   return globalStore.__vosPlatform;
+}
+
+export async function runPlatformMaintenance(steps: {
+  processDue: () => Promise<unknown>;
+  recover: () => Promise<unknown>;
+}): Promise<void> {
+  await runGuardedSteps([
+    {
+      name: "jobs.processDue",
+      run: async () => {
+        await steps.processDue();
+      },
+    },
+    {
+      name: "workforce.recover",
+      run: async () => {
+        await steps.recover();
+      },
+    },
+    {
+      name: "frigora.customer-delivery.sweep",
+      run: async () => {
+        const { runScheduledQuotationCustomerDeliverySweep } = await import(
+          "@/modules/frigora/quotation-customer-delivery"
+        );
+        await runScheduledQuotationCustomerDeliverySweep(new Date().toISOString());
+      },
+    },
+  ]);
 }
 
 onBeforePersistenceReset(async () => {

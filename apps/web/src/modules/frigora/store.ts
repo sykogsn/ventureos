@@ -1,8 +1,22 @@
 import { and, asc, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import type { Transaction } from "@libsql/client";
 import { assertSchedulingWindow, createAvailabilityStore } from "./availability-store";
+import { createCustomerContactPersistence } from "./customer-contact-store";
 import { withFrigoraWriteTransaction, type FrigoraWriteClientFactory } from "./owned-write";
+import {
+  createQuotationPersistence,
+  type QuotationCreateCommit,
+  type QuotationDecisionCommit,
+  type QuotationDecisionGrantCommit,
+  type QuotationCorrectCommit,
+  type QuotationDeliveryRecoveryCommit,
+  type QuotationReviseCommit,
+  type QuotationSendCommit,
+} from "./quotation-store";
+import type { QuotationDeliveryOutbox, QuotationDeliveryRecovery } from "./quotation-delivery";
+import { createTaxConfigurationPersistence } from "./tax-configuration-store";
 import type { VentureId, WorkspaceId, UserId, StoredObjectId } from "@/contracts";
+import { createId } from "@/platform/ids";
 import { ensureSchema, getClient, getDb } from "@/platform/persistence/db";
 import {
   frigoraAssets,
@@ -26,7 +40,11 @@ import {
   frigoraWorkOrders,
   frigoraDispatchEvents,
 } from "@/platform/persistence/schema";
-import { FrigoraError, FRIGORA_DISPATCH_CONFLICT_MESSAGE } from "./errors";
+import {
+  FrigoraError,
+  FRIGORA_CUSTOMER_APPROVAL_REQUIRED_MESSAGE,
+  FRIGORA_DISPATCH_CONFLICT_MESSAGE,
+} from "./errors";
 import type {
   FrigoraAsset,
   FrigoraAssetId,
@@ -84,6 +102,9 @@ import type {
   FrigoraDispatchEvent,
   FrigoraDispatchEventId,
   FrigoraDispatchEventType,
+  FrigoraPersistedQuotation,
+  FrigoraQuotationDecisionGrantId,
+  FrigoraQuotationId,
 } from "./types";
 
 export type FrigoraStore = ReturnType<typeof createAvailabilityStore> & {
@@ -203,6 +224,22 @@ export type FrigoraStore = ReturnType<typeof createAvailabilityStore> & {
     ventureId: VentureId,
     sourceRecommendedActionId: FrigoraRecommendedActionId,
   ): Promise<FrigoraWorkOrder | null>;
+  /**
+   * Inserts a follow-up work order in one write transaction.
+   * Quotation-required actions are authorised only by the persisted current version.
+   */
+  insertAuthorisedFollowUpWorkOrder(
+    row: FrigoraWorkOrder,
+    gate: {
+      recommendedActionId: FrigoraRecommendedActionId;
+      sourceWorkOrderId: FrigoraWorkOrderId;
+      customerId: FrigoraCustomerId;
+      siteId: FrigoraSiteId;
+      assetId: FrigoraAssetId | null;
+      followUpAssetId: FrigoraAssetId | null;
+      actorUserId: UserId;
+    },
+  ): Promise<FrigoraWorkOrder>;
   /**
    * F34-01: atomic guarded WorkOrder UPDATE, optionally with a dispatch event INSERT.
    * When event is null, UPDATE-only (metadata/stamp cleanup) under the same guard.
@@ -342,6 +379,7 @@ export type FrigoraStore = ReturnType<typeof createAvailabilityStore> & {
     assetId: FrigoraAssetId,
   ): Promise<FrigoraVisitOutcome[]>;
   insertRecommendedAction(row: FrigoraRecommendedAction): Promise<void>;
+  updateRecommendedActionQuotationRequirement(row: FrigoraRecommendedAction): Promise<void>;
   findRecommendedAction(
     workspaceId: WorkspaceId,
     ventureId: VentureId,
@@ -494,11 +532,70 @@ export type FrigoraStore = ReturnType<typeof createAvailabilityStore> & {
     ventureId: VentureId,
     workOrderId: FrigoraWorkOrderId,
   ): Promise<FrigoraVisitEvidence[]>;
-};
+  findPersistedQuotation(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    quotationId: FrigoraQuotationId,
+  ): Promise<FrigoraPersistedQuotation | null>;
+  listPersistedQuotationsByWorkOrder(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    workOrderId: FrigoraWorkOrderId,
+  ): Promise<FrigoraPersistedQuotation[]>;
+  listPersistedQuotationsByAsset(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    assetId: FrigoraAssetId,
+  ): Promise<FrigoraPersistedQuotation[]>;
+  listPersistedQuotations(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+  ): Promise<FrigoraPersistedQuotation[]>;
+  commitQuotationCreate(input: QuotationCreateCommit): Promise<void>;
+  commitQuotationCorrect(input: QuotationCorrectCommit): Promise<void>;
+  commitQuotationSend(input: QuotationSendCommit): Promise<void>;
+  findQuotationDeliveryOutbox(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    quotationId: FrigoraQuotationId,
+    version: number,
+  ): Promise<QuotationDeliveryOutbox | null>;
+  commitQuotationDeliveryRecovery(input: QuotationDeliveryRecoveryCommit): Promise<QuotationDeliveryRecovery>;
+  commitQuotationRevision(input: QuotationReviseCommit): Promise<void>;
+  commitQuotationDecisionGrant(input: QuotationDecisionGrantCommit): Promise<void>;
+  commitQuotationDecision(input: QuotationDecisionCommit): Promise<void>;
+  revokeQuotationDecisionGrant(input: {
+    id: FrigoraQuotationDecisionGrantId;
+    workspaceId: WorkspaceId;
+    ventureId: VentureId;
+    revokedAt: string;
+    deliveryFailure?: {
+      outcome: "rejected" | "unknown" | "unavailable";
+      actorUserId: UserId;
+    };
+  }): Promise<void>;
+  listQuotationDecisionGrants(
+    workspaceId: WorkspaceId,
+    ventureId: VentureId,
+    quotationId: FrigoraQuotationId,
+    now: string,
+  ): Promise<Array<{
+    id: string;
+    version: number;
+    documentHash: string;
+    issuedAt: string;
+    expiresAt: string;
+    state: "active" | "expired" | "revoked" | "consumed";
+    decision: "approved" | "declined" | null;
+  }>>;
+} & ReturnType<typeof createCustomerContactPersistence> & ReturnType<typeof createTaxConfigurationPersistence>;
 
 export function createFrigoraStore(options: { createWriteClient?: FrigoraWriteClientFactory } = {}): FrigoraStore {
   return {
     ...createAvailabilityStore(options.createWriteClient),
+    ...createQuotationPersistence(options.createWriteClient),
+    ...createTaxConfigurationPersistence(options.createWriteClient),
+    ...createCustomerContactPersistence(options.createWriteClient),
     async insertCustomer(row) {
       await ensureSchema();
       try {
@@ -727,6 +824,12 @@ export function createFrigoraStore(options: { createWriteClient?: FrigoraWriteCl
     },
     async insertWorkOrder(row) {
       await ensureSchema();
+      if (row.sourceRecommendedActionId) {
+        throw new FrigoraError(
+          "customer_approval_required",
+          FRIGORA_CUSTOMER_APPROVAL_REQUIRED_MESSAGE,
+        );
+      }
       try {
         await getDb().insert(frigoraWorkOrders).values(toWorkOrderValues(row));
       } catch (error) {
@@ -734,6 +837,172 @@ export function createFrigoraStore(options: { createWriteClient?: FrigoraWriteCl
           error,
           duplicateWorkOrderMessage(error),
         );
+      }
+    },
+    async insertAuthorisedFollowUpWorkOrder(row, gate) {
+      await ensureSchema();
+      if (row.sourceRecommendedActionId !== gate.recommendedActionId) {
+        throw new FrigoraError(
+          "customer_approval_required",
+          FRIGORA_CUSTOMER_APPROVAL_REQUIRED_MESSAGE,
+        );
+      }
+      try {
+        return await withFrigoraWriteTransaction(async (transaction) => {
+          const existing = await transaction.execute({
+            sql: `
+              SELECT id
+              FROM frigora_work_orders
+              WHERE workspace_id = ?
+                AND venture_id = ?
+                AND source_recommended_action_id = ?
+              LIMIT 1
+            `,
+            args: [row.workspaceId, row.ventureId, gate.recommendedActionId],
+          });
+          if (existing.rows.length > 0) {
+            throw new FrigoraError(
+              "duplicate",
+              "This recommended action already has a follow-up work order.",
+            );
+          }
+          let authorisingQuotationId: string | null = null;
+          let authorisingQuotationVersion: number | null = null;
+          const designation = await transaction.execute({
+            sql: `
+              SELECT quotation_required
+              FROM frigora_recommended_actions
+              WHERE id = ?
+                AND workspace_id = ?
+                AND venture_id = ?
+            `,
+            args: [gate.recommendedActionId, row.workspaceId, row.ventureId],
+          });
+          const designationRow = designation.rows[0] as Record<string, unknown> | undefined;
+          if (!designationRow) {
+            throw new FrigoraError("not_found", "Recommended action was not found.");
+          }
+          // The pre-transaction flag is not authoritative. A designation that
+          // commits before this write transaction is the value enforced here.
+          // A conversion that commits while the flag is still false stays an
+          // ordinary follow-up. A later designation is rejected and does not
+          // rewrite this work order.
+          const quotationRequired = Number(designationRow.quotation_required) === 1;
+          if (quotationRequired) {
+            const authorised = await readCurrentRepairAuthorisation(transaction, {
+              workspaceId: row.workspaceId,
+              ventureId: row.ventureId,
+              recommendedActionId: gate.recommendedActionId,
+              sourceWorkOrderId: gate.sourceWorkOrderId,
+              customerId: gate.customerId,
+              siteId: gate.siteId,
+              assetId: gate.assetId,
+              followUpAssetId: gate.followUpAssetId,
+            });
+            authorisingQuotationId = authorised.quotationId;
+            authorisingQuotationVersion = authorised.version;
+          }
+          await transaction.execute({
+            sql: `
+              INSERT INTO frigora_work_orders (
+                id, workspace_id, venture_id, customer_id, site_id, primary_asset_id,
+                work_reference, work_kind, priority, reported_condition, status,
+                created_at, updated_at, assigned_user_id, scheduled_start_at, scheduled_end_at,
+                assignment_accepted_at, assignment_declined_at, assignment_decline_reason,
+                cancellation_reason, source_recommended_action_id,
+                authorising_quotation_id, authorising_quotation_version
+              ) VALUES (
+                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, ?,
+                ?, ?
+              )
+            `,
+            args: [
+              row.id,
+              row.workspaceId,
+              row.ventureId,
+              row.customerId,
+              row.siteId,
+              row.primaryAssetId,
+              row.workReference,
+              row.workKind,
+              row.priority,
+              row.reportedCondition,
+              row.status,
+              row.createdAt,
+              row.updatedAt,
+              row.assignedUserId,
+              row.scheduledStartAt,
+              row.scheduledEndAt,
+              row.assignmentAcceptedAt,
+              row.assignmentDeclinedAt,
+              row.assignmentDeclineReason,
+              row.cancellationReason,
+              row.sourceRecommendedActionId,
+              authorisingQuotationId,
+              authorisingQuotationVersion,
+            ],
+          });
+          const saved = {
+            ...row,
+            authorisingQuotationId: authorisingQuotationId as FrigoraWorkOrder["authorisingQuotationId"],
+            authorisingQuotationVersion: authorisingQuotationVersion,
+          };
+          try {
+            await transaction.execute({
+              sql: `
+                INSERT INTO audit_events (
+                  id, action, occurred_at, actor_user_id, actor_kind,
+                  actor_agent_instance_id, actor_component,
+                  workspace_id, venture_id, metadata_json
+                ) VALUES (?, 'frigora.repair_follow_up.converted', ?, ?, 'human', NULL, NULL, ?, ?, ?)
+              `,
+              args: [
+                createId(),
+                row.updatedAt,
+                gate.actorUserId,
+                row.workspaceId,
+                row.ventureId,
+                JSON.stringify({
+                  workOrderId: saved.id,
+                  recommendedActionId: gate.recommendedActionId,
+                  sourceWorkOrderId: gate.sourceWorkOrderId,
+                  quotationRequired: quotationRequired ? "true" : "false",
+                  authorisingQuotationId: saved.authorisingQuotationId ?? "",
+                  authorisingQuotationVersion:
+                    saved.authorisingQuotationVersion == null
+                      ? ""
+                      : String(saved.authorisingQuotationVersion),
+                }),
+              ],
+            });
+          } catch (error) {
+            const text = error instanceof Error ? error.message : String(error);
+            if (/SQLITE_BUSY|database is locked|database is busy/i.test(text)) {
+              throw error;
+            }
+            throw new FrigoraError(
+              "invalid_status",
+              "The follow-up could not be recorded because its audit evidence failed to persist.",
+            );
+          }
+          return saved;
+        }, options.createWriteClient);
+      } catch (error) {
+        if (error instanceof FrigoraError) {
+          throw error;
+        }
+        const text = error instanceof Error ? error.message : String(error);
+        if (/SQLITE_BUSY|database is locked|database is busy/i.test(text)) {
+          throw new FrigoraError(
+            "quotation_conflict",
+            "This repair changed while the follow-up was being created. Refresh before trying again.",
+          );
+        }
+        throw uniqueOrOriginal(error, duplicateWorkOrderMessage(error));
       }
     },
     async updateWorkOrder(row) {
@@ -1680,6 +1949,59 @@ export function createFrigoraStore(options: { createWriteClient?: FrigoraWriteCl
       await ensureSchema();
       await getDb().insert(frigoraRecommendedActions).values(toRecommendedActionValues(row));
     },
+    async updateRecommendedActionQuotationRequirement(row) {
+      await ensureSchema();
+      if (!row.quotationRequired) {
+        throw new FrigoraError(
+          "invalid_status",
+          "A quotation requirement cannot be removed.",
+        );
+      }
+      await withFrigoraWriteTransaction(async (transaction) => {
+        const updated = await transaction.execute({
+          sql: `
+            UPDATE frigora_recommended_actions
+            SET quotation_required = 1, updated_at = ?
+            WHERE id = ?
+              AND workspace_id = ?
+              AND venture_id = ?
+              AND quotation_required = 0
+              AND NOT EXISTS (
+                SELECT 1
+                FROM frigora_work_orders
+                WHERE source_recommended_action_id = frigora_recommended_actions.id
+                  AND workspace_id = frigora_recommended_actions.workspace_id
+                  AND venture_id = frigora_recommended_actions.venture_id
+              )
+          `,
+          args: [row.updatedAt, row.id, row.workspaceId, row.ventureId],
+        });
+        if (updated.rowsAffected === 1) {
+          return;
+        }
+        const followUp = await transaction.execute({
+          sql: `
+            SELECT id
+            FROM frigora_work_orders
+            WHERE source_recommended_action_id = ?
+              AND workspace_id = ?
+              AND venture_id = ?
+            LIMIT 1
+          `,
+          args: [row.id, row.workspaceId, row.ventureId],
+        });
+        if (followUp.rows.length > 0) {
+          throw new FrigoraError(
+            "invalid_status",
+            "A quotation requirement cannot be added after a follow-up work order exists.",
+          );
+        }
+        throw new FrigoraError(
+          "quotation_conflict",
+          "This recommended action changed since you opened it. Refresh before trying again.",
+        );
+      }, options.createWriteClient);
+    },
     async findRecommendedAction(workspaceId, ventureId, id) {
       await ensureSchema();
       const rows = await getDb()
@@ -2353,6 +2675,8 @@ function toWorkOrderValues(row: FrigoraWorkOrder) {
     assignmentDeclineReason: row.assignmentDeclineReason,
     cancellationReason: row.cancellationReason,
     sourceRecommendedActionId: row.sourceRecommendedActionId,
+    authorisingQuotationId: row.authorisingQuotationId,
+    authorisingQuotationVersion: row.authorisingQuotationVersion,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -2610,6 +2934,7 @@ function toRecommendedActionValues(row: FrigoraRecommendedAction) {
     recommendedAt: row.recommendedAt,
     recommendedByUserId: row.recommendedByUserId,
     recordedByUserId: row.recordedByUserId,
+    quotationRequired: row.quotationRequired ? 1 : 0,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -2804,6 +3129,10 @@ function mapWorkOrder(row: typeof frigoraWorkOrders.$inferSelect): FrigoraWorkOr
     cancellationReason: row.cancellationReason ?? null,
     sourceRecommendedActionId:
       (row.sourceRecommendedActionId as FrigoraRecommendedActionId | null) ?? null,
+    authorisingQuotationId:
+      (row.authorisingQuotationId as FrigoraQuotationId | null) ?? null,
+    authorisingQuotationVersion:
+      row.authorisingQuotationVersion == null ? null : Number(row.authorisingQuotationVersion),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -2965,6 +3294,7 @@ function mapRecommendedAction(
     recommendedAt: row.recommendedAt,
     recommendedByUserId: row.recommendedByUserId as UserId,
     recordedByUserId: row.recordedByUserId as UserId,
+    quotationRequired: Number(row.quotationRequired) === 1,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -3126,6 +3456,144 @@ function mapVisitEvidence(row: typeof frigoraVisitEvidence.$inferSelect): Frigor
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,
   };
+}
+
+function cell(value: unknown) {
+  return value == null ? "" : String(value);
+}
+
+function readCurrentRepairAuthorisation(
+  transaction: Transaction,
+  gate: {
+    workspaceId: string;
+    ventureId: string;
+    recommendedActionId: string;
+    sourceWorkOrderId: string;
+    customerId: string;
+    siteId: string;
+    assetId: string | null;
+    followUpAssetId: string | null;
+  },
+): Promise<{ quotationId: string; version: number }> {
+  return transaction
+    .execute({
+      sql: `
+        SELECT
+          q.id AS quotation_id,
+          q.current_version AS current_version,
+          q.customer_id AS customer_id,
+          q.site_id AS site_id,
+          q.asset_id AS asset_id,
+          q.original_work_order_id AS original_work_order_id,
+          q.recommended_action_id AS recommended_action_id,
+          q.workspace_id AS workspace_id,
+          q.venture_id AS venture_id,
+          v.status AS version_status,
+          v.document_hash AS version_hash,
+          v.version_number AS version_number,
+          d.decision AS decision,
+          d.version_number AS decision_version,
+          d.document_hash AS decision_hash,
+          d.customer_id AS decision_customer_id,
+          d.site_id AS decision_site_id,
+          d.workspace_id AS decision_workspace_id,
+          d.venture_id AS decision_venture_id
+        FROM frigora_quotations q
+        JOIN frigora_quotation_versions v
+          ON v.quotation_id = q.id
+         AND v.version_number = q.current_version
+         AND v.workspace_id = q.workspace_id
+         AND v.venture_id = q.venture_id
+        JOIN frigora_quotation_decisions d
+          ON d.quotation_id = q.id
+         AND d.version_number = q.current_version
+         AND d.workspace_id = q.workspace_id
+         AND d.venture_id = q.venture_id
+         AND d.customer_id = q.customer_id
+         AND d.site_id = q.site_id
+         AND d.decision = 'approved'
+         AND d.document_hash = v.document_hash
+        JOIN frigora_quotation_decision_grants g
+          ON g.id = d.grant_id
+         AND g.decision_id = d.id
+         AND g.quotation_id = q.id
+         AND g.workspace_id = q.workspace_id
+         AND g.venture_id = q.venture_id
+         AND g.customer_id = q.customer_id
+         AND g.site_id = q.site_id
+         AND g.version_number = q.current_version
+         AND g.document_hash = v.document_hash
+         AND g.consumed_at IS NOT NULL
+         AND g.revoked_at IS NULL
+         AND g.contact_id IS NOT NULL
+        JOIN frigora_quotation_events e
+          ON e.evidence_ref = d.id
+         AND e.quotation_id = q.id
+         AND e.workspace_id = q.workspace_id
+         AND e.venture_id = q.venture_id
+         AND e.version_number = q.current_version
+         AND e.kind = 'approved'
+         AND e.actor_user_id IS NULL
+         AND e.actor_contact_id = g.contact_id
+        WHERE q.workspace_id = ?
+          AND q.venture_id = ?
+          AND q.recommended_action_id = ?
+      `,
+      args: [gate.workspaceId, gate.ventureId, gate.recommendedActionId],
+    })
+    .then((result) => {
+      const rows = result.rows as unknown as Array<Record<string, unknown>>;
+      const matches = rows.filter((row) => authorisationRowMatches(row, gate));
+      const match = matches.length === 1 ? matches[0] : undefined;
+      if (!match) {
+        throw new FrigoraError(
+          "customer_approval_required",
+          FRIGORA_CUSTOMER_APPROVAL_REQUIRED_MESSAGE,
+        );
+      }
+      return {
+        quotationId: cell(match.quotation_id),
+        version: Number(match.current_version),
+      };
+    });
+}
+
+function authorisationRowMatches(
+  row: Record<string, unknown>,
+  gate: {
+    workspaceId: string;
+    ventureId: string;
+    recommendedActionId: string;
+    sourceWorkOrderId: string;
+    customerId: string;
+    siteId: string;
+    assetId: string | null;
+    followUpAssetId: string | null;
+  },
+): boolean {
+  const quotationAssetId = row.asset_id == null ? null : cell(row.asset_id);
+  const namedAssetMatchesFollowUp =
+    quotationAssetId === null || quotationAssetId === gate.followUpAssetId;
+  return (
+    cell(row.workspace_id) === gate.workspaceId &&
+    cell(row.venture_id) === gate.ventureId &&
+    cell(row.recommended_action_id) === gate.recommendedActionId &&
+    cell(row.original_work_order_id) === gate.sourceWorkOrderId &&
+    cell(row.customer_id) === gate.customerId &&
+    cell(row.site_id) === gate.siteId &&
+    quotationAssetId === gate.assetId &&
+    namedAssetMatchesFollowUp &&
+    cell(row.version_status) === "approved" &&
+    Number(row.version_number) === Number(row.current_version) &&
+    cell(row.decision) === "approved" &&
+    Number(row.decision_version) === Number(row.current_version) &&
+    cell(row.decision_hash) !== "" &&
+    cell(row.decision_hash) === cell(row.version_hash) &&
+    cell(row.decision_customer_id) === gate.customerId &&
+    cell(row.decision_site_id) === gate.siteId &&
+    cell(row.decision_workspace_id) === gate.workspaceId &&
+    cell(row.decision_venture_id) === gate.ventureId
+  );
 }
 
 function duplicateWorkOrderMessage(error: unknown) {
