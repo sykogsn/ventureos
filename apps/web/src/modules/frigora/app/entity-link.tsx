@@ -38,13 +38,16 @@ type CustomerRef = { id: string; displayName: string } | null | undefined;
 export function FrigoraCustomerLink({
   ventureId,
   customer,
+  navigable = true,
 }: {
   ventureId: string;
   customer: CustomerRef;
+  navigable?: boolean;
 }) {
   if (!customer?.id || !customer.displayName.trim()) {
     return "—";
   }
+  if (!navigable) return customer.displayName;
   return (
     <FrigoraEntityLink href={frigoraCustomerHref(ventureId, customer.id)}>
       {customer.displayName}
@@ -57,13 +60,16 @@ type SiteRef = { id: string; customerId: string; name: string } | null | undefin
 export function FrigoraSiteLink({
   ventureId,
   site,
+  navigable = true,
 }: {
   ventureId: string;
   site: SiteRef;
+  navigable?: boolean;
 }) {
   if (!site?.id || !site.customerId || !site.name.trim()) {
     return "—";
   }
+  if (!navigable) return site.name;
   return (
     <FrigoraEntityLink href={frigoraSiteHref(ventureId, site.customerId, site.id)}>
       {site.name}
@@ -76,9 +82,11 @@ type SiteAddressRef = ({ id: string; customerId: string; name: string } & Frigor
 export function FrigoraSiteAddressLink({
   ventureId,
   site,
+  navigable = true,
 }: {
   ventureId: string;
   site: SiteAddressRef;
+  navigable?: boolean;
 }) {
   if (!site?.id || !site.customerId) {
     return "—";
@@ -87,6 +95,7 @@ export function FrigoraSiteAddressLink({
   if (!address) {
     return "—";
   }
+  if (!navigable) return address;
   const name = site.name.trim() ? site.name : "Site";
   return (
     <FrigoraEntityLink
@@ -101,14 +110,17 @@ export function FrigoraSiteAddressLink({
 export function FrigoraSiteIdentityLink({
   ventureId,
   site,
+  navigable = true,
 }: {
   ventureId: string;
   site: SiteAddressRef;
+  navigable?: boolean;
 }) {
   if (!site?.id || !site.customerId || !site.name.trim()) {
     return "—";
   }
   const address = formatFrigoraSiteAddress(site);
+  if (!navigable) return address ? `${site.name} · ${address}` : site.name;
   return (
     <FrigoraEntityLink href={frigoraSiteHref(ventureId, site.customerId, site.id)}>
       {address ? `${site.name} · ${address}` : site.name}
@@ -128,18 +140,20 @@ export function FrigoraAssetLink({
   customerId,
   siteId,
   asset,
+  navigable = true,
 }: {
   ventureId: string;
   customerId: string | null | undefined;
   siteId: string | null | undefined;
   asset: AssetRef;
+  navigable?: boolean;
 }) {
   if (!asset?.id || !asset.tag.trim()) {
     return "—";
   }
   const label = formatFrigoraAssetLabel(asset);
   const resolvedSiteId = siteId || asset.siteId;
-  if (!customerId || !resolvedSiteId) {
+  if (!navigable || !customerId || !resolvedSiteId) {
     return label;
   }
   return (
@@ -196,17 +210,19 @@ export function FrigoraCustomerSiteLinks({
   customer,
   site,
   separator = " / ",
+  navigable = true,
 }: {
   ventureId: string;
   customer: CustomerRef;
   site: SiteRef;
   separator?: string;
+  navigable?: boolean;
 }) {
   return (
     <>
-      <FrigoraCustomerLink ventureId={ventureId} customer={customer} />
+      <FrigoraCustomerLink ventureId={ventureId} customer={customer} navigable={navigable} />
       {separator}
-      <FrigoraSiteLink ventureId={ventureId} site={site} />
+      <FrigoraSiteLink ventureId={ventureId} site={site} navigable={navigable} />
     </>
   );
 }
