@@ -139,72 +139,16 @@ function CommercialFields({
           className="vos-field"
         >
           <option value="">Select a tax treatment</option>
-          <option value="not_registered">Not registered</option>
-          <option value="configured_rule">Configured rule snapshot</option>
+          <option value="not_registered">Not VAT-registered</option>
+          <option value="configured_rule">VAT registered — apply approved rate</option>
         </select>
         <span className="ids-caption text-muted">
           This choice is stored with the draft. It is not proof that the treatment is legally applicable.
         </span>
       </Field>
-      <Field>
-        Tax rule id
-        <input
-          name="taxRuleId"
-          defaultValue={value("taxRuleId", commercial?.taxRuleId ?? "")}
-          className="vos-field"
-          autoComplete="off"
-        />
-      </Field>
-      <Field>
-        Tax rule version
-        <input
-          name="taxRuleVersion"
-          defaultValue={value("taxRuleVersion", commercial?.taxRuleVersion ?? "")}
-          className="vos-field"
-          autoComplete="off"
-        />
-      </Field>
-      <Field>
-        Tax rate numerator
-        <input
-          name="taxRateNumerator"
-          inputMode="numeric"
-          defaultValue={value(
-            "taxRateNumerator",
-            commercial?.taxRateNumerator == null ? "" : String(commercial.taxRateNumerator),
-          )}
-          className="vos-field"
-          autoComplete="off"
-        />
-      </Field>
-      <Field>
-        Tax rate denominator
-        <input
-          name="taxRateDenominator"
-          inputMode="numeric"
-          defaultValue={value(
-            "taxRateDenominator",
-            commercial?.taxRateDenominator == null ? "" : String(commercial.taxRateDenominator),
-          )}
-          className="vos-field"
-          autoComplete="off"
-        />
-      </Field>
-      <Field>
-        Entered tax amount (R, optional)
-        <input
-          name="enteredTaxAmount"
-          inputMode="decimal"
-          defaultValue={value(
-            "enteredTaxAmount",
-            commercial?.taxTreatment === "configured_rule" && commercial.taxAmountMinor > 0
-              ? formatZarMinor(commercial.taxAmountMinor)
-              : "",
-          )}
-          className="vos-field"
-          autoComplete="off"
-        />
-      </Field>
+      <p className="ids-caption text-muted">
+        The VAT rate and tax amount are calculated from the venture's verified tax configuration. No tax rule details need to be entered here.
+      </p>
     </>
   );
 }
