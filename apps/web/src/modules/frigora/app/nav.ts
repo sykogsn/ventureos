@@ -9,7 +9,8 @@ export function buildVentureSurfaceLinks(input: {
   slug: string;
   definitionId: string;
   companyHomeHref: string;
-}): VentureSurfaceLink[] {
+  canManageTeam?: boolean;
+): VentureSurfaceLink[] {
   const base = `/ventures/${input.ventureId}`;
 
   // Frigora customer shell: operational surfaces only — no VentureOS company
@@ -17,6 +18,9 @@ export function buildVentureSurfaceLinks(input: {
   if (input.definitionId === "frigora") {
     return [
       { href: `${base}/operations`, label: "Operations", match: "prefix" },
+      ...(input.canManageTeam
+        ? [{ href: `${base}/team`, label: "Team & Access", match: "prefix" as const }]
+        : []),
       { href: `${base}/work/assigned`, label: "My Work", match: "prefix" },
       { href: `${base}/work`, label: "Work", match: "prefix" },
       { href: `${base}/customers`, label: "Customers", match: "prefix" },

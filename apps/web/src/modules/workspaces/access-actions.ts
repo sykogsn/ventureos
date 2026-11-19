@@ -25,6 +25,11 @@ export type AccessActionState = {
 
 const roleSchema = z.enum(["owner", "admin", "member"]);
 
+function refreshWorkspaceAccessSurfaces() {
+  revalidatePath("/settings");
+  revalidatePath("/ventures/[ventureId]/team", "page");
+}
+
 function failure(error: unknown, fallback: string): AccessActionState {
   if (error instanceof WorkspaceAccessError) {
     return { error: error.message };
@@ -66,7 +71,7 @@ export async function inviteMemberAction(
     return failure(error, "Could not send the invitation.");
   }
 
-  revalidatePath("/settings");
+  refreshWorkspaceAccessSurfaces();
   return { notice: "Invitation sent." };
 }
 
@@ -98,7 +103,7 @@ export async function revokeInvitationAction(
     return failure(error, "Could not revoke the invitation.");
   }
 
-  revalidatePath("/settings");
+  refreshWorkspaceAccessSurfaces();
   return { notice: "Invitation revoked." };
 }
 
@@ -133,7 +138,7 @@ export async function changeMemberRoleAction(
     return failure(error, "Could not change that role.");
   }
 
-  revalidatePath("/settings");
+  refreshWorkspaceAccessSurfaces();
   return { notice: "Role updated." };
 }
 
@@ -165,7 +170,7 @@ export async function removeMemberAction(
     return failure(error, "Could not remove that member.");
   }
 
-  revalidatePath("/settings");
+  refreshWorkspaceAccessSurfaces();
   return { notice: "Workspace access removed." };
 }
 

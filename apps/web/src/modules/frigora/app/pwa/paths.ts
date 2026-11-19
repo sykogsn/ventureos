@@ -51,7 +51,7 @@ export function isFrigoraCustomerPath(pathname: string): boolean {
   if (pathname === FRIGORA_PWA_START_PATH) {
     return true;
   }
-  return /\/ventures\/[^/]+\/(work|operations|customers|catalogue)(\/|$)/.test(
+  return /\/ventures\/[^/]+\/(work|operations|customers|catalogue|commercial-catalogue|quotations|team)(\/|$)/.test(
     pathname,
   );
 }
