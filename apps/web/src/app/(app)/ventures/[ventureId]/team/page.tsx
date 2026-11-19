@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { UserId } from "@/contracts";
 import { PageFrame } from "@/core";
 import { requireFrigoraOpsContext } from "@/modules/frigora/app/context";
 import { WorkspaceAccessPanel } from "@/modules/workspaces/access-panel";
@@ -12,7 +13,7 @@ export default async function FrigoraTeamAccessPage({
   const { ventureId } = await params;
   const ctx = await requireFrigoraOpsContext(ventureId);
   const access = await loadWorkspaceAccess({
-    actorId: ctx.sessionUserId,
+    actorId: ctx.sessionUserId as UserId,
     workspaceId: ctx.workspaceId,
   });
 
