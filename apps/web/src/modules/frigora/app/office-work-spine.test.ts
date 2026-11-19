@@ -165,6 +165,7 @@ describe("F1.1 Office Work Spine", () => {
       slug: "frigora-one",
       definitionId: "frigora",
       companyHomeHref: "/ventures/hq/frigora-one",
+      canAccessOffice: true,
     });
     assert.deepEqual(
       frigora.map((link) => link.label),
