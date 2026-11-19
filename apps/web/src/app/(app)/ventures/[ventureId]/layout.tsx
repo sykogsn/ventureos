@@ -76,6 +76,7 @@ export default async function VentureLayout({
       slug={venture.slug}
       definitionId={venture.definitionId}
       canManageTeam={canManageTeam}
+      canAccessOffice={canManageTeam}
     >
       {children}
     </VentureWorkspace>
