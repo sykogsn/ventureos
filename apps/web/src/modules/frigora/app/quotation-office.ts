@@ -4,7 +4,11 @@ import {
   type FrigoraQuotationCommercialSnapshot,
 } from "@/modules/frigora/quotation-commercial";
 import { QUOTATION_ISSUE_OFFICE_NOTICE } from "@/modules/frigora/quotation-delivery";
-import { TAX_CONFIGURATION_SEND_BLOCKED } from "@/modules/frigora/tax-configuration";
+import {
+  TAX_CONFIGURATION_SEND_BLOCKED,
+  type TaxConfigurationRecord,
+  type TaxRuleRecord,
+} from "@/modules/frigora/tax-configuration";
 import { parseZarInputToCents } from "@/modules/frigora/time-materials";
 
 export const FRIGORA_OFFICE_QUOTATION_SEND_BLOCKED = TAX_CONFIGURATION_SEND_BLOCKED;
@@ -62,6 +66,95 @@ export function readOfficeQuotationFields(
     values[key] = typeof value === "string" ? value : "";
   }
   return values;
+}
+
+/**
+ * The quote author selects a treatment, not a rate. Resolve pricing metadata
+ * from this venture's verified VAT registration and an approved dated rule.
+ * Ignore untrusted tax-rule inputs from the browser in every case.
+ */
+export function resolveOfficeQuotationTaxFields(
+  source: OfficeQuotationFieldValues,
+  posture: {
+    configurations: readonly TaxConfigurationRecord[];
+    rules: readonly TaxRuleRecord[];
+    asOfDate: string;
+  },
+):
+  | { ok: true; values: OfficeQuotationFieldValues }
+  | { ok: false; error: string; values: OfficeQuotationFieldValues } {
+  const values: OfficeQuotationFieldValues = {
+    ...source,
+    taxRuleId: "",
+    taxRuleVersion: "",
+    taxRateNumerator: "",
+    taxRateDenominator: "",
+    enteredTaxAmount: "",
+  };
+  const verified = posture.configurations.filter((configuration) => configuration.status === "verified");
+  if (source.taxTreatment === "not_registered") {
+    if (verified.length === 1 && verified[0]?.registrationState === "registered") {
+      return {
+        ok: false,
+        error: "This venture is verified as VAT-registered. Choose the approved VAT treatment.",
+        values,
+      };
+    }
+    return { ok: true, values };
+  }
+  if (source.taxTreatment !== "configured_rule") {
+    return { ok: false, error: "Select a valid tax treatment.", values };
+  }
+  if (verified.length !== 1) {
+    return {
+      ok: false,
+      error: "An approved VAT rate requires exactly one verified venture tax configuration. Review Tax configuration before quoting VAT.",
+      values,
+    };
+  }
+  const configuration = verified[0]!;
+  if (
+    configuration.registrationState !== "registered" ||
+    !configuration.registrationNumber?.trim() ||
+    !configuration.evidenceReference?.trim() ||
+    !configuration.liabilityDate ||
+    configuration.liabilityDate > posture.asOfDate ||
+    !configuration.taxRuleId
+  ) {
+    return {
+      ok: false,
+      error: "This venture has no effective, verified VAT registration. Review Tax configuration before quoting VAT.",
+      values,
+    };
+  }
+  const rule = posture.rules.find((candidate) => candidate.id === configuration.taxRuleId);
+  if (
+    !rule ||
+    rule.status !== "approved" ||
+    rule.jurisdiction !== configuration.jurisdiction ||
+    rule.jurisdiction !== "ZA" ||
+    rule.effectiveFrom > posture.asOfDate ||
+    (rule.effectiveUntil !== null && rule.effectiveUntil < posture.asOfDate) ||
+    !Number.isSafeInteger(rule.rateNumerator) ||
+    !Number.isSafeInteger(rule.rateDenominator) ||
+    rule.rateDenominator <= 0
+  ) {
+    return {
+      ok: false,
+      error: "The venture does not have a currently approved South African VAT rule. Review Tax configuration.",
+      values,
+    };
+  }
+  return {
+    ok: true,
+    values: {
+      ...values,
+      taxRuleId: rule.id,
+      taxRuleVersion: rule.effectiveFrom,
+      taxRateNumerator: String(rule.rateNumerator),
+      taxRateDenominator: String(rule.rateDenominator),
+    },
+  };
 }
 
 export function officeQuotationFieldsFromForm(formData: FormData): OfficeQuotationFieldValues {
