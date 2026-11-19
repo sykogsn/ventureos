@@ -10,6 +10,7 @@ const settings = readFileSync(join(root, "../settings/screens.tsx"), "utf8");
 const invite = readFileSync(join(root, "invite-screen.tsx"), "utf8");
 const accept = readFileSync(join(root, "accept-invitation-form.tsx"), "utf8");
 const settingsPage = readFileSync(join(root, "../../app/(app)/settings/page.tsx"), "utf8");
+const teamPage = readFileSync(join(root, "../../app/(app)/ventures/[ventureId]/team/page.tsx"), "utf8");
 
 describe("settings membership surface", () => {
   it("keeps membership on the canonical settings workspace section", () => {
@@ -17,6 +18,16 @@ describe("settings membership surface", () => {
     assert.match(settings, /WorkspaceAccessPanel/);
     assert.match(settings, /title="Workspace"/);
     assert.doesNotMatch(settingsPage, /\/admin/);
+  });
+
+  it("keeps Frigora staff management venture-scoped and restricted to owner/admin", () => {
+    assert.match(teamPage, /requireFrigoraOpsContext/);
+    assert.match(teamPage, /loadWorkspaceAccess/);
+    assert.match(teamPage, /access\.actorRole !== "owner"/);
+    assert.match(teamPage, /access\.actorRole !== "admin"/);
+    assert.match(teamPage, /notFound\(\)/);
+    assert.match(teamPage, /WorkspaceAccessPanel/);
+    assert.doesNotMatch(teamPage, /\/settings/);
   });
 
   it("exposes members, invitations, and invite controls with labels", () => {

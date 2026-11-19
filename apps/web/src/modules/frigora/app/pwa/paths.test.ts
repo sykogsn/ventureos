@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { buildVentureSurfaceLinks } from "@/modules/frigora/app/nav";
 import {
   listFrigoraPwaVentures,
   resolveFrigoraPwaStart,
@@ -63,10 +64,30 @@ describe("Frigora F3.2 PWA paths", () => {
     assert.equal(isFrigoraCustomerPath("/ventures/ven-1/operations"), true);
     assert.equal(isFrigoraCustomerPath("/ventures/ven-1/customers"), true);
     assert.equal(isFrigoraCustomerPath("/ventures/ven-1/catalogue"), true);
+    assert.equal(isFrigoraCustomerPath("/ventures/ven-1/commercial-catalogue"), true);
+    assert.equal(isFrigoraCustomerPath("/ventures/ven-1/quotations"), true);
+    assert.equal(isFrigoraCustomerPath("/ventures/ven-1/team"), true);
+    assert.equal(isFrigoraAuthContinuation("/ventures/ven-1/team"), true);
     assert.equal(isFrigoraCustomerPath("/ventures/ven-1/agents"), false);
     assert.equal(isFrigoraCustomerPath("/dashboard"), false);
     assert.equal(isFrigoraCustomerPath("/brain"), false);
     assert.equal(isFrigoraCustomerPath("/engineering"), false);
+  });
+
+  it("shows Team & Access for Frigora office roles, not field members or other ventures", () => {
+    const input = {
+      ventureId: "ven-1",
+      slug: "frigora-one",
+      definitionId: "frigora",
+      companyHomeHref: "/ventures/hq/frigora-one",
+    };
+    const teamHref = "/ventures/ven-1/team";
+    assert.equal(buildVentureSurfaceLinks(input).some((item) => item.href === teamHref), false);
+    const office = buildVentureSurfaceLinks({ ...input, canManageTeam: true });
+    assert.equal(office[1]?.href, teamHref);
+    assert.equal(office[1]?.label, "Team & Access");
+    assert.equal(buildVentureSurfaceLinks({ ...input, definitionId: "ventureos.company", canManageTeam: true })
+      .some((item) => item.href === teamHref), false);
   });
 
   it("routes a single Frigora company to assigned work and keeps a picker otherwise", () => {

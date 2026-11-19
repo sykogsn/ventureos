@@ -10,6 +10,7 @@ import {
 } from "@/modules/frigora/app/pwa/identity";
 import { VentureWorkspace } from "@/modules/ventures";
 import { getVenture } from "@/modules/ventures/service";
+import { getPlatform } from "@/platform/kernel";
 
 export async function generateMetadata({
   params,
@@ -64,11 +65,17 @@ export default async function VentureLayout({
     notFound();
   }
 
+  const memberRole = isFrigoraVenture(venture.definitionId)
+    ? await getPlatform().permissions.roleFor(session.id, venture.workspaceId)
+    : null;
+  const canManageTeam = memberRole === "owner" || memberRole === "admin";
+
   return (
     <VentureWorkspace
       ventureId={ventureId}
       slug={venture.slug}
       definitionId={venture.definitionId}
+      canManageTeam={canManageTeam}
     >
       {children}
     </VentureWorkspace>
