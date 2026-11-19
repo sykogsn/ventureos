@@ -4,12 +4,11 @@ import { EmptyCopy } from "@/core/shell/empty-copy";
 import { Fit, Stack } from "@/core/layout";
 import type { FrigoraOpsContext } from "@/modules/frigora/app/context";
 import type { MyWorkRow } from "@/modules/frigora/app/views";
+import { FrigoraWorkOrderLink } from "@/modules/frigora/app/entity-link";
 import {
-  FrigoraAssetLink,
-  FrigoraCustomerSiteLinks,
-  FrigoraSiteAddressLink,
-  FrigoraWorkOrderLink,
-} from "@/modules/frigora/app/entity-link";
+  formatFrigoraAssetLabel,
+  formatFrigoraSiteAddress,
+} from "@/modules/frigora/app/entity-routes";
 import { FieldWorkspacePreloadControl } from "@/modules/frigora/app/offline/preload-control";
 import { OfflineMyWorkFallback } from "@/modules/frigora/app/offline/offline-fallback-panels";
 import { MyWorkOnlineList } from "@/modules/frigora/app/offline/my-work-online-bridge";
@@ -96,12 +95,7 @@ export function MyWorkScreen({
                           workReference={workOrder.workReference}
                         />
                         <p className="ids-caption text-muted">
-                          <FrigoraCustomerSiteLinks
-                            ventureId={ctx.ventureId}
-                            customer={customer}
-                            site={site}
-                            separator=" · "
-                          />
+                          {customer?.displayName ?? "—"} · {site?.name ?? "—"}
                         </p>
                       </div>
                       <dl className="grid gap-2 text-sm sm:grid-cols-2">
@@ -136,19 +130,14 @@ export function MyWorkScreen({
                         <div className="sm:col-span-2">
                           <dt className="ids-caption text-muted">Site address</dt>
                           <dd className="ids-body break-words">
-                            <FrigoraSiteAddressLink ventureId={ctx.ventureId} site={site} />
+                            {formatFrigoraSiteAddress(site) || "—"}
                           </dd>
                         </div>
                         {asset ? (
                           <div className="sm:col-span-2">
                             <dt className="ids-caption text-muted">Asset</dt>
                             <dd className="ids-body">
-                              <FrigoraAssetLink
-                                ventureId={ctx.ventureId}
-                                customerId={customer?.id ?? workOrder.customerId}
-                                siteId={site?.id ?? asset.siteId}
-                                asset={asset}
-                              />
+                              {formatFrigoraAssetLabel(asset)}
                             </dd>
                           </div>
                         ) : null}
