@@ -123,6 +123,15 @@ describe("Frigora hostname entry", () => {
     assert.equal(start.includes("269b4f10-255b-429e-a678-bea4e67e1c88"), false);
     assert.equal(proxy.includes("269b4f10-255b-429e-a678-bea4e67e1c88"), false);
   });
+  it("never uses Render's internal request URL for public Frigora entry redirects", () => {
+    const route = readFileSync(join(process.cwd(), "src/app/frigora/enter/route.ts"), "utf8");
+    assert.match(route, /const publicOrigin = await publicAppOrigin\(\)/);
+    assert.match(route, /new URL\(frigoraDirectLoginPath\(\), publicOrigin\)/);
+    assert.match(route, /new URL\("\/frigora", publicOrigin\)/);
+    assert.match(route, /new URL\(choice\.path, publicOrigin\)/);
+    assert.doesNotMatch(route, /new URL\([^\n]+request\.url/);
+  });
+
 });
 
 describe("Frigora authorised destination", () => {
