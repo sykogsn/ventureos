@@ -130,6 +130,7 @@ export function VisitRecorderScreen({
       title="Visit recorder"
       description={
         <FrigoraCustomerSiteLinks
+          navigable={ctx.canWrite}
           ventureId={ctx.ventureId}
           customer={customer}
           site={site}
@@ -203,7 +204,8 @@ export function VisitRecorderScreen({
           <div className="sm:col-span-2">
             <dt className="ids-caption text-muted">Site address</dt>
             <dd className="ids-body break-words">
-              <FrigoraSiteAddressLink ventureId={ctx.ventureId} site={site} />
+              <FrigoraSiteAddressLink
+          navigable={ctx.canWrite} ventureId={ctx.ventureId} site={site} />
             </dd>
           </div>
           {asset ? (
@@ -211,6 +213,7 @@ export function VisitRecorderScreen({
               <dt className="ids-caption text-muted">Asset</dt>
               <dd className="ids-body">
                 <FrigoraAssetLink
+          navigable={ctx.canWrite}
                   ventureId={ctx.ventureId}
                   customerId={customer?.id ?? workOrder.customerId}
                   siteId={site?.id ?? asset.siteId}
