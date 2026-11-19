@@ -10,7 +10,7 @@ export function buildVentureSurfaceLinks(input: {
   definitionId: string;
   companyHomeHref: string;
   canManageTeam?: boolean;
-): VentureSurfaceLink[] {
+}): VentureSurfaceLink[] {
   const base = `/ventures/${input.ventureId}`;
 
   // Frigora customer shell: operational surfaces only — no VentureOS company
