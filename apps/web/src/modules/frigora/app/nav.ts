@@ -10,6 +10,7 @@ export function buildVentureSurfaceLinks(input: {
   definitionId: string;
   companyHomeHref: string;
   canManageTeam?: boolean;
+  canAccessOffice?: boolean;
 }): VentureSurfaceLink[] {
   const base = `/ventures/${input.ventureId}`;
 
@@ -17,16 +18,22 @@ export function buildVentureSurfaceLinks(input: {
   // desk tabs (Company HQ, Executive Office, Documents, CRM, Finance).
   if (input.definitionId === "frigora") {
     return [
-      { href: `${base}/operations`, label: "Operations", match: "prefix" },
-      ...(input.canManageTeam
-        ? [{ href: `${base}/team`, label: "Team & Access", match: "prefix" as const }]
-        : []),
+      ...(input.canAccessOffice ? [
+        { href: `${base}/operations`, label: "Operations", match: "prefix" as const },
+        ...(input.canManageTeam
+          ? [{ href: `${base}/team`, label: "Team & Access", match: "prefix" as const }]
+          : []),
+      ] : []),
       { href: `${base}/work/assigned`, label: "My Work", match: "prefix" },
-      { href: `${base}/work`, label: "Work", match: "prefix" },
-      { href: `${base}/customers`, label: "Customers", match: "prefix" },
+      ...(input.canAccessOffice ? [
+        { href: `${base}/work`, label: "Work", match: "prefix" as const },
+        { href: `${base}/customers`, label: "Customers", match: "prefix" as const },
+      ] : []),
       { href: `${base}/catalogue`, label: "Catalogue", match: "prefix" },
-      { href: `${base}/commercial-catalogue`, label: "Commercial Catalogue", match: "prefix" },
-      { href: `${base}/quotations`, label: "Quotations", match: "prefix" },
+      ...(input.canAccessOffice ? [
+        { href: `${base}/commercial-catalogue`, label: "Commercial Catalogue", match: "prefix" as const },
+        { href: `${base}/quotations`, label: "Quotations", match: "prefix" as const },
+      ] : []),
     ];
   }
 
