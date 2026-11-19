@@ -1,5 +1,5 @@
 import { QuotationsScreen } from "@/modules/frigora/app/screens/quotations-screen";
-import { frigoraScope, requireFrigoraOpsContext } from "@/modules/frigora/app/context";
+import { frigoraScope, requireFrigoraOfficeContext } from "@/modules/frigora/app/context";
 import {
   listQuotationCreateSourcesQuery,
   listQuotationsQuery,
@@ -11,7 +11,7 @@ export default async function FrigoraQuotationsPage({
   params: Promise<{ ventureId: string }>;
 }) {
   const { ventureId } = await params;
-  const ctx = await requireFrigoraOpsContext(ventureId);
+  const ctx = await requireFrigoraOfficeContext(ventureId);
   const scope = frigoraScope(ctx);
   const [quotations, sources] = await Promise.all([
     listQuotationsQuery(scope),
