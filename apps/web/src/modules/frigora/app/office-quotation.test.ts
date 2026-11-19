@@ -32,6 +32,7 @@ describe("Frigora office quotation workflow", () => {
       slug: "frigora-one",
       definitionId: "frigora",
       companyHomeHref: "/ventures/hq/frigora-one",
+      canAccessOffice: true,
     });
     const quotations = frigora.find((link) => link.label === "Quotations");
     assert.equal(quotations?.href, "/ventures/ven-1/quotations");
