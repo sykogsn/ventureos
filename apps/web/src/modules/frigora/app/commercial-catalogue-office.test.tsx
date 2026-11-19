@@ -203,6 +203,7 @@ describe("Frigora office commercial catalogue", () => {
       slug: "frigora-one",
       definitionId: "frigora",
       companyHomeHref: "/ventures/hq/frigora-one",
+      canAccessOffice: true,
     });
     const link = frigora.find((item) => item.label === "Commercial Catalogue");
     assert.equal(link?.href, "/ventures/ven-1/commercial-catalogue");
