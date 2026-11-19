@@ -11,11 +11,13 @@ export function VentureWorkspaceNav({
   slug,
   definitionId,
   canManageTeam = false,
+  canAccessOffice = false,
 }: {
   ventureId: string;
   slug: string;
   definitionId: string;
   canManageTeam?: boolean;
+  canAccessOffice?: boolean;
 }) {
   const pathname = usePathname();
   const links = buildVentureSurfaceLinks({
@@ -24,6 +26,7 @@ export function VentureWorkspaceNav({
     definitionId,
     companyHomeHref: companyHomeHref(slug),
     canManageTeam,
+    canAccessOffice,
   });
 
   return (
