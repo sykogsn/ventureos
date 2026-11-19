@@ -365,7 +365,7 @@ describe("Frigora operational surfaces", () => {
       members: [],
       timeMaterials: null,
     };
-    const detail = markup(<WorkDetailScreen ctx={ctx} view={detailView} />);
+    const detail = markup(<WorkDetailScreen ctx={{ ...ctx, canWrite: true }} view={detailView} />);
     assert.equal(anchorByText(detail, "FuelCo").href, frigoraCustomerHref(VENTURE, "cus-1"));
     assert.equal(
       anchorByText(detail, "1 High Street").href,
@@ -379,7 +379,7 @@ describe("Frigora operational surfaces", () => {
     assert.equal(detail.includes("<form"), false);
   });
 
-  it("links my work, site, and asset surfaces", () => {
+  it("links assigned jobs but keeps field customer, site and asset labels non-navigable", () => {
     const mine = markup(
       <MyWorkScreen
         ctx={ctx}
@@ -397,9 +397,10 @@ describe("Frigora operational surfaces", () => {
       />,
     );
     assert.equal(anchorByText(mine, "WO-1864").href, frigoraWorkOrderHref(VENTURE, "wo-1"));
-    assert.equal(anchorByText(mine, "FuelCo").href, frigoraCustomerHref(VENTURE, "cus-1"));
-    assert.equal(anchorByText(mine, "1 High Street").href, frigoraSiteHref(VENTURE, "cus-1", "site-1"));
-    assert.equal(anchorByText(mine, "A-1").href, frigoraAssetHref(VENTURE, "cus-1", "site-1", "asset-1"));
+    assert.match(mine, /FuelCo/);
+    assert.match(mine, /1 High Street/);
+    assert.match(mine, /A-1/);
+    assert.equal(anchors(mine).some((item) => item.href.includes("/customers/")), false);
 
     const siteHtml = markup(
       <SiteDetailScreen ctx={ctx} customer={customer()} site={site()} assets={[asset()]} />,
