@@ -1,5 +1,5 @@
 import { CustomersScreen } from "@/modules/frigora/app/screens/customers-screen";
-import { frigoraScope, requireFrigoraOpsContext } from "@/modules/frigora/app/context";
+import { frigoraScope, requireFrigoraOfficeContext } from "@/modules/frigora/app/context";
 import { listCustomersQuery } from "@/modules/frigora/queries";
 
 export default async function FrigoraCustomersPage({
@@ -8,7 +8,7 @@ export default async function FrigoraCustomersPage({
   params: Promise<{ ventureId: string }>;
 }) {
   const { ventureId } = await params;
-  const ctx = await requireFrigoraOpsContext(ventureId);
+  const ctx = await requireFrigoraOfficeContext(ventureId);
   const result = await listCustomersQuery(frigoraScope(ctx));
 
   return (
