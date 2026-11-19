@@ -7,6 +7,7 @@ describe("safeInternalPath", () => {
     assert.equal(safeInternalPath("/settings"), "/settings");
     assert.equal(safeInternalPath("/ventures/launch"), "/ventures/launch");
     assert.equal(safeInternalPath("/frigora"), "/frigora");
+    assert.equal(safeInternalPath("/frigora/enter"), "/frigora/enter");
     assert.equal(
       safeInternalPath("/ventures/ven-1/work/assigned"),
       "/ventures/ven-1/work/assigned",

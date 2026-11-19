@@ -1,12 +1,18 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { LoginScreen } from "@/modules/auth";
 import { loginMessages } from "@/modules/auth/messages";
+import { isFrigoraDirectAccessRequest } from "@/modules/frigora/app/direct-access";
 import { FRIGORA_AUTH_SIGN_IN_TITLE } from "@/modules/frigora/app/pwa/copy";
 import {
   frigoraCustomerFacingMetadata,
   frigoraCustomerFacingViewport,
 } from "@/modules/frigora/app/pwa/identity";
-import { isFrigoraAuthContinuation } from "@/modules/frigora/app/pwa/paths";
+import {
+  FRIGORA_DIRECT_ENTRY_PATH,
+  isFrigoraAuthContinuation,
+} from "@/modules/frigora/app/pwa/paths";
 
 export async function generateMetadata({
   searchParams,
@@ -50,6 +56,17 @@ export default async function LoginPage({
   const next = typeof params.next === "string" ? params.next : "";
   const error = typeof params.error === "string" ? params.error : "";
   const reset = params.reset === "1";
+  const headerList = await headers();
+  if (
+    next === "" &&
+    isFrigoraDirectAccessRequest(headerList.get("host"), headerList.get("x-forwarded-host"))
+  ) {
+    const target = new URLSearchParams();
+    target.set("next", FRIGORA_DIRECT_ENTRY_PATH);
+    if (reset) target.set("reset", "1");
+    if (error) target.set("error", error);
+    redirect(`/login?${target.toString()}`);
+  }
 
   return (
     <LoginScreen

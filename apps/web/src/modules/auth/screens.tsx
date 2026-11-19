@@ -38,8 +38,13 @@ import {
   FRIGORA_AUTH_ORIENTATION_RETURNING,
   FRIGORA_AUTH_SIGN_IN_TITLE,
   FRIGORA_AUTH_TRUST_NOTES,
+  FRIGORA_DIRECT_AUTH_ORIENTATION,
 } from "@/modules/frigora/app/pwa/copy";
-import { isFrigoraAuthContinuation } from "@/modules/frigora/app/pwa/paths";
+import {
+  frigoraPathname,
+  isFrigoraAuthContinuation,
+  isFrigoraDirectEntryPath,
+} from "@/modules/frigora/app/pwa/paths";
 
 function googleHref(next: string, remember: boolean) {
   const params = new URLSearchParams();
@@ -123,6 +128,7 @@ export function LoginScreen({
   const [state, formAction, pending] = useActionState(loginAction, {});
   const query = queryNotice(errorCode, error, next);
   const frigora = isFrigoraAuthContinuation(next);
+  const directEntry = isFrigoraDirectEntryPath(frigoraPathname(next));
 
   useEffect(() => {
     const onPageShow = (event: PageTransitionEvent) => {
@@ -146,7 +152,9 @@ export function LoginScreen({
         title={frigora ? FRIGORA_AUTH_SIGN_IN_TITLE : "Sign in to VentureOS"}
         description={
           frigora
-            ? FRIGORA_AUTH_ORIENTATION_RETURNING
+            ? directEntry
+              ? FRIGORA_DIRECT_AUTH_ORIENTATION
+              : FRIGORA_AUTH_ORIENTATION_RETURNING
             : next
               ? AUTH_ORIENTATION_RETURNING
               : AUTH_ORIENTATION

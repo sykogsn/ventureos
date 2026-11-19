@@ -1,11 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Role, UserId, WorkspaceId } from "@/contracts";
 import { publicAppOrigin } from "@/lib/auth/origin";
 import { getSession, setActiveWorkspaceCookie } from "@/lib/auth/session";
+import { isFrigoraDirectAccessRequest } from "@/modules/frigora/app/direct-access";
+import { FRIGORA_DIRECT_ENTRY_PATH } from "@/modules/frigora/app/pwa/paths";
 import {
   acceptWorkspaceInvitation,
   changeWorkspaceMemberRole,
@@ -189,5 +192,11 @@ export async function acceptInvitationAction(
   }
 
   revalidatePath("/", "layout");
+  const headerList = await headers();
+  if (
+    isFrigoraDirectAccessRequest(headerList.get("host"), headerList.get("x-forwarded-host"))
+  ) {
+    redirect(FRIGORA_DIRECT_ENTRY_PATH);
+  }
   redirect("/dashboard");
 }

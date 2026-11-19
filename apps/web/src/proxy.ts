@@ -3,7 +3,14 @@ import { SESSION_COOKIE, WORKSPACE_COOKIE } from "@/lib/auth/cookies";
 import { applyAuthNavigationHeaders } from "@/lib/auth/navigation-headers";
 import { lookupPersistedSession } from "@/lib/auth/session-store";
 import { resolveSessionUser } from "@/lib/auth/session-token";
-import { isFrigoraPwaPublicPath } from "@/modules/frigora/app/pwa/paths";
+import {
+  decideFrigoraDirectAccess,
+  frigoraSignedInLoginRedirect,
+} from "@/modules/frigora/app/direct-access";
+import {
+  FRIGORA_DIRECT_ENTRY_PATH,
+  isFrigoraPwaPublicPath,
+} from "@/modules/frigora/app/pwa/paths";
 import { isQuotationDecisionPublicPath } from "@/modules/frigora/quotation-decision-public-path";
 import { nowIso } from "@/platform";
 
@@ -15,9 +22,12 @@ const publicPaths = new Set([
   "/reset-password",
 ]);
 
-function loginRedirect(request: NextRequest) {
+function loginRedirect(request: NextRequest, nextPath?: string) {
   const login = new URL("/login", request.url);
-  login.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+  login.searchParams.set(
+    "next",
+    nextPath ?? `${request.nextUrl.pathname}${request.nextUrl.search}`,
+  );
   const response = NextResponse.redirect(login);
   response.cookies.delete(SESSION_COOKIE);
   response.cookies.delete(WORKSPACE_COOKIE);
@@ -33,6 +43,23 @@ export async function proxy(request: NextRequest) {
   const session = token
     ? await resolveSessionUser(token, lookupPersistedSession, nowIso())
     : null;
+
+  const host = request.headers.get("host");
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const directAccess = decideFrigoraDirectAccess({
+    host,
+    forwardedHost,
+    pathname,
+    authenticated: Boolean(session),
+  });
+  if (directAccess.kind === "login") {
+    return loginRedirect(request, FRIGORA_DIRECT_ENTRY_PATH);
+  }
+  if (directAccess.kind === "enter") {
+    return applyAuthNavigationHeaders(
+      NextResponse.redirect(new URL(FRIGORA_DIRECT_ENTRY_PATH, request.url)),
+    );
+  }
 
   if (pathname.startsWith("/auth/google")) {
     return applyAuthNavigationHeaders(NextResponse.next());
@@ -52,8 +79,9 @@ export async function proxy(request: NextRequest) {
 
   if (publicPaths.has(pathname)) {
     if (session) {
+      const frigoraLogin = frigoraSignedInLoginRedirect({ host, forwardedHost, pathname });
       return applyAuthNavigationHeaders(
-        NextResponse.redirect(new URL("/dashboard", request.url)),
+        NextResponse.redirect(new URL(frigoraLogin ?? "/dashboard", request.url)),
       );
     }
     return applyAuthNavigationHeaders(NextResponse.next());

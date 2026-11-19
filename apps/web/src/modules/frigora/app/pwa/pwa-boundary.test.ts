@@ -209,7 +209,9 @@ describe("Frigora F3.2 online PWA boundary", () => {
     assert.match(recorder, /RecordRefrigerantEventForm/);
     assert.match(recorder, /RecordVisitEvidenceForm/);
     assert.match(assigned, /MyWorkScreen/);
-    assert.match(start, /resolveFrigoraPwaStart/);
+    assert.match(start, /listAuthorisedFrigoraVentures/);
+    assert.equal(start.includes("/ventures/launch"), false);
+    assert.equal(start.includes("FounderWelcome"), false);
     assert.match(start, /absolute: FRIGORA_PWA_NAME/);
     assert.equal(recorder.includes("closeWorkOrder"), false);
     assert.equal(recorder.includes("Complete Work Order"), false);

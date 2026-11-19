@@ -13,6 +13,7 @@ import {
   frigoraAssignedWorkPath,
   isFrigoraAuthContinuation,
   isFrigoraCustomerPath,
+  isFrigoraDirectEntryPath,
   isFrigoraFieldPath,
   isFrigoraPwaPublicPath,
 } from "./paths";
@@ -32,6 +33,10 @@ describe("Frigora F3.2 PWA paths", () => {
       isFrigoraAuthContinuation("/ventures/ven-1/work/assigned?from=pwa"),
       true,
     );
+    assert.equal(isFrigoraAuthContinuation("/frigora/enter"), true);
+    assert.equal(isFrigoraDirectEntryPath("/frigora/enter"), true);
+    assert.equal(isFrigoraCustomerPath("/frigora/enter"), false);
+    assert.equal(isFrigoraFieldPath("/frigora/enter"), false);
     assert.equal(isFrigoraAuthContinuation("/dashboard"), false);
     assert.equal(isFrigoraAuthContinuation("/login?next=/frigora"), false);
     assert.equal(

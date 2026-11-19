@@ -15,9 +15,14 @@ import { AuthIdentity } from "@/modules/auth/presentation/surface";
 import {
   FRIGORA_AUTH_EXPERIENCE,
   FRIGORA_AUTH_MARK,
+  FRIGORA_DIRECT_AUTH_EXPERIENCE,
   FRIGORA_PWA_NAME,
 } from "@/modules/frigora/app/pwa/copy";
-import { isFrigoraAuthContinuation } from "@/modules/frigora/app/pwa/paths";
+import {
+  frigoraPathname,
+  isFrigoraAuthContinuation,
+  isFrigoraDirectEntryPath,
+} from "@/modules/frigora/app/pwa/paths";
 
 const NEUTRAL_AUTH_EXPERIENCE: AuthExperienceCopy = {
   eyebrow: "",
@@ -59,12 +64,20 @@ export function FrigoraAwareAuthIdentity() {
   );
 }
 
+function frigoraExperience(next: string) {
+  return isFrigoraDirectEntryPath(frigoraPathname(next))
+    ? FRIGORA_DIRECT_AUTH_EXPERIENCE
+    : FRIGORA_AUTH_EXPERIENCE;
+}
+
 export function FrigoraAwareAuthExperiencePanel() {
-  const frigora = useFrigoraAuthContinuation();
+  const params = useSearchParams();
+  const next = params.get("next") ?? "";
+  const frigora = isFrigoraAuthContinuation(next);
   return frigora ? (
     <AuthExperiencePanel
       mark={FRIGORA_AUTH_MARK}
-      experience={FRIGORA_AUTH_EXPERIENCE}
+      experience={frigoraExperience(next)}
       ariaLabel="About Frigora"
     />
   ) : (
@@ -77,9 +90,11 @@ export function FrigoraAwareAuthExperiencePanel() {
 }
 
 export function FrigoraAwareAuthExperienceBand() {
-  const frigora = useFrigoraAuthContinuation();
+  const params = useSearchParams();
+  const next = params.get("next") ?? "";
+  const frigora = isFrigoraAuthContinuation(next);
   return frigora ? (
-    <AuthExperienceBand experience={FRIGORA_AUTH_EXPERIENCE} />
+    <AuthExperienceBand experience={frigoraExperience(next)} />
   ) : (
     <AuthExperienceBand experience={AUTH_EXPERIENCE} />
   );

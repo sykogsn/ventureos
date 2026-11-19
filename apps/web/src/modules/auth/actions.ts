@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -22,7 +22,20 @@ import {
   setActiveWorkspaceCookie,
   setSessionCookie,
 } from "@/lib/auth/session";
+import {
+  frigoraDirectLoginPath,
+  isFrigoraDirectAccessRequest,
+} from "@/modules/frigora/app/direct-access";
+import { FRIGORA_DIRECT_ENTRY_PATH } from "@/modules/frigora/app/pwa/paths";
 import { listWorkspaces } from "@/modules/workspaces/service";
+
+async function onFrigoraHost() {
+  const headerList = await headers();
+  return isFrigoraDirectAccessRequest(
+    headerList.get("host"),
+    headerList.get("x-forwarded-host"),
+  );
+}
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -66,6 +79,7 @@ export async function signupAction(
 
   const invitationToken = formData.get("invitationToken");
   const token = typeof invitationToken === "string" ? invitationToken.trim() : "";
+  let nextPath = "/dashboard";
 
   try {
     if (token) {
@@ -78,6 +92,7 @@ export async function signupAction(
       const sessionId = await issueSession(joined.user);
       await setSessionCookie(joined.user, sessionId, { remember: true });
       await setActiveWorkspaceCookie(joined.workspaceId);
+      if (await onFrigoraHost()) nextPath = FRIGORA_DIRECT_ENTRY_PATH;
     } else {
       const user = await registerUser({
         email: parsed.data.email,
@@ -92,7 +107,7 @@ export async function signupAction(
     };
   }
 
-  redirect("/dashboard");
+  redirect(nextPath);
 }
 
 export async function loginAction(
@@ -190,10 +205,11 @@ export async function resetPasswordAction(
     };
   }
 
-  redirect("/login?reset=1");
+  redirect((await onFrigoraHost()) ? `${frigoraDirectLoginPath()}&reset=1` : "/login?reset=1");
 }
 
 export async function logoutAction() {
+  const frigora = await onFrigoraHost();
   await clearSessionCookie();
-  redirect("/login");
+  redirect(frigora ? frigoraDirectLoginPath() : "/login");
 }

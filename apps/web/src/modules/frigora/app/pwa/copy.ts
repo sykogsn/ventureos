@@ -15,6 +15,16 @@ export const FRIGORA_AUTH_EXPERIENCE = {
   cadence: ["Arrive.", "Record.", "Finish."] as const,
   message: "Sign in to continue assigned field work. This uses your existing organisation sign-in.",
 } as const;
+/** Domain entry is shared by owners, admins, and field users. */
+export const FRIGORA_DIRECT_AUTH_ORIENTATION =
+  "Frigora will open the workspace your organisation has authorised after you sign in.";
+export const FRIGORA_DIRECT_AUTH_EXPERIENCE = {
+  eyebrow: "Frigora",
+  title: "Continue into Frigora",
+  cadence: ["Sign in.", "Open your workspace.", "Continue."] as const,
+  message:
+    "Sign in to open your authorised Frigora company. This uses your existing organisation sign-in.",
+} as const;
 
 /** Frigora continuation login trust copy — no VentureOS product name. */
 export const FRIGORA_AUTH_TRUST_NOTES = [

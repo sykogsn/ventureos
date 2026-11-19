@@ -1,4 +1,6 @@
 export const FRIGORA_PWA_START_PATH = "/frigora";
+/** Hostname entry. Resolves an authorised Frigora workspace, then redirects. */
+export const FRIGORA_DIRECT_ENTRY_PATH = "/frigora/enter";
 export const FRIGORA_PWA_MANIFEST_PATH = "/frigora-manifest.webmanifest";
 export const VENTUREOS_ORIGIN_MANIFEST_PATH = "/manifest.webmanifest";
 export const FRIGORA_PWA_SERVICE_WORKER_PATH = "/sw.js";
@@ -29,6 +31,10 @@ export function isFrigoraPwaPublicPath(pathname: string): boolean {
   );
 }
 
+export function isFrigoraDirectEntryPath(pathname: string): boolean {
+  return pathname === FRIGORA_DIRECT_ENTRY_PATH;
+}
+
 export function isFrigoraFieldPath(pathname: string): boolean {
   if (pathname === FRIGORA_PWA_START_PATH) {
     return true;
@@ -55,5 +61,6 @@ export function frigoraPathname(raw: string): string {
 }
 
 export function isFrigoraAuthContinuation(next: string): boolean {
-  return isFrigoraCustomerPath(frigoraPathname(next));
+  const path = frigoraPathname(next);
+  return isFrigoraCustomerPath(path) || isFrigoraDirectEntryPath(path);
 }
