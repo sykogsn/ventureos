@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, WORKSPACE_COOKIE } from "@/lib/auth/cookies";
 import { applyAuthNavigationHeaders } from "@/lib/auth/navigation-headers";
+import { resolveProxyRedirectOrigin } from "@/lib/auth/proxy-redirect-origin";
 import { lookupPersistedSession } from "@/lib/auth/session-store";
 import { resolveSessionUser } from "@/lib/auth/session-token";
 import {
@@ -22,8 +23,16 @@ const publicPaths = new Set([
   "/reset-password",
 ]);
 
+function redirectBase(request: NextRequest): string {
+  return resolveProxyRedirectOrigin({
+    nodeEnv: process.env.NODE_ENV,
+    authUrl: process.env.AUTH_URL,
+    requestUrl: request.url,
+  });
+}
+
 function loginRedirect(request: NextRequest, nextPath?: string) {
-  const login = new URL("/login", request.url);
+  const login = new URL("/login", redirectBase(request));
   login.searchParams.set(
     "next",
     nextPath ?? `${request.nextUrl.pathname}${request.nextUrl.search}`,
@@ -57,7 +66,7 @@ export async function proxy(request: NextRequest) {
   }
   if (directAccess.kind === "enter") {
     return applyAuthNavigationHeaders(
-      NextResponse.redirect(new URL(FRIGORA_DIRECT_ENTRY_PATH, request.url)),
+      NextResponse.redirect(new URL(FRIGORA_DIRECT_ENTRY_PATH, redirectBase(request))),
     );
   }
 
@@ -81,7 +90,7 @@ export async function proxy(request: NextRequest) {
     if (session) {
       const frigoraLogin = frigoraSignedInLoginRedirect({ host, forwardedHost, pathname });
       return applyAuthNavigationHeaders(
-        NextResponse.redirect(new URL(frigoraLogin ?? "/dashboard", request.url)),
+        NextResponse.redirect(new URL(frigoraLogin ?? "/dashboard", redirectBase(request))),
       );
     }
     return applyAuthNavigationHeaders(NextResponse.next());
