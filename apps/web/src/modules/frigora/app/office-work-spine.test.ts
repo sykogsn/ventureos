@@ -255,7 +255,7 @@ describe("F1.1 Office Work Spine", () => {
     assert.deepEqual(visits, []);
   });
 
-  it("rejects writes for member role and allows reads", async () => {
+  it("rejects member directory reads and writes", async () => {
     const owner = await seed({ userId: "user-owner" as UserId, role: "owner" });
     const customer = await owner.service.createCustomer(owner.scope, {
       code: "FUELCO",
@@ -283,7 +283,9 @@ describe("F1.1 Office Work Spine", () => {
       ventureId: owner.ventureId,
     };
     const listed = await owner.service.listCustomers(memberScope);
-    assert.equal(listed.some((row) => row.id === customer.id), true);
+    assert.equal(listed.length, 0);
+    assert.equal((await owner.service.getCustomer(owner.scope, customer.id))?.displayName, "FuelCo");
+    assert.equal(await owner.service.getCustomer(memberScope, customer.id), null);
 
     await assert.rejects(
       () =>

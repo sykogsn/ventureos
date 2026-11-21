@@ -404,8 +404,9 @@ describe("Frigora office commercial catalogue", () => {
     assert.equal(saved.error, undefined);
     const loaded = await commercialItemCosts(catalogue, owner, [created.item!], true);
     assert.deepEqual(loaded, { [id]: 45500 });
-    const selling = await catalogue.getItem(member, id);
+    const selling = await catalogue.getItem(admin, id);
     assert.equal("purchaseCostMinor" in selling, false);
+    await assert.rejects(() => catalogue.getItem(member, id));
     const rows = await getClient().execute("SELECT COUNT(*) AS n FROM frigora_commercial_item_costs");
     assert.equal(Number(rows.rows[0]?.n), 1);
   });

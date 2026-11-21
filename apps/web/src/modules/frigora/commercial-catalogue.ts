@@ -321,7 +321,7 @@ export function createCommercialCatalogue(options: { permissions: PermissionServ
     },
 
     async getItem(scope: FrigoraScope, id: string): Promise<FrigoraCommercialItem> {
-      await assertPermission(scope, "venture.read");
+      await assertPermission(scope, "venture.update");
       await ensureFrigoraCommercialCatalogueSchema();
       const item = await readItem(scope, id);
       if (!item) {
@@ -331,7 +331,7 @@ export function createCommercialCatalogue(options: { permissions: PermissionServ
     },
 
     async listItems(scope: FrigoraScope, input: unknown = {}): Promise<FrigoraCommercialItem[]> {
-      await assertPermission(scope, "venture.read");
+      await assertPermission(scope, "venture.update");
       const parsed = parseCatalogue(listSchema, input);
       await ensureFrigoraCommercialCatalogueSchema();
       const clauses = ["workspace_id = ?", "venture_id = ?"];
@@ -373,7 +373,7 @@ export function createCommercialCatalogue(options: { permissions: PermissionServ
     },
 
     async searchItems(scope: FrigoraScope, input: unknown): Promise<FrigoraCommercialItem[]> {
-      await assertPermission(scope, "venture.read");
+      await assertPermission(scope, "venture.update");
       const parsed = parseCatalogue(searchSchema, input);
       await ensureFrigoraCommercialCatalogueSchema();
       const clauses = ["workspace_id = ?", "venture_id = ?"];
@@ -407,7 +407,7 @@ export function createCommercialCatalogue(options: { permissions: PermissionServ
     },
 
     async selectItem(scope: FrigoraScope, id: string): Promise<FrigoraCommercialItem> {
-      await assertPermission(scope, "venture.read");
+      await assertPermission(scope, "venture.update");
       await ensureFrigoraCommercialCatalogueSchema();
       const item = await readItem(scope, id);
       if (!item) {

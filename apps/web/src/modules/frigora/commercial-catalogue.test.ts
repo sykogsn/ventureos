@@ -231,18 +231,30 @@ describe("Frigora commercial catalogue", () => {
     assert.equal(selected.status, "active");
   });
 
-  it("does not give a quotation reader purchase cost or margin", async () => {
-    const { catalogue, owner, member } = await seed();
+  it("does not give an administrator purchase cost and denies member catalogue reads", async () => {
+    const { catalogue, owner, admin, member } = await seed();
     const created = await catalogue.createItem(owner, itemInput());
     await catalogue.setItemCost(owner, created.id, { purchaseCostMinor: 40000 });
-    const visible = await catalogue.getItem(member, created.id);
+    const visible = await catalogue.getItem(admin, created.id);
     assert.equal(visible.sellingPriceMinor, 100000);
     assert.equal("purchaseCostMinor" in visible, false);
     assert.equal("margin" in visible, false);
     assert.equal("grossProfitMinor" in visible, false);
-    const searched = await catalogue.searchItems(member, { sku: "COMP-100" });
+    const searched = await catalogue.searchItems(admin, { sku: "COMP-100" });
     assert.equal(JSON.stringify(searched).includes("purchaseCost"), false);
     assert.equal(JSON.stringify(searched).includes("margin"), false);
+    await assert.rejects(
+      () => catalogue.getItem(member, created.id),
+      (error: unknown) => assertCode(error, "forbidden"),
+    );
+    await assert.rejects(
+      () => catalogue.listItems(member),
+      (error: unknown) => assertCode(error, "forbidden"),
+    );
+    await assert.rejects(
+      () => catalogue.searchItems(member, { sku: "COMP-100" }),
+      (error: unknown) => assertCode(error, "forbidden"),
+    );
   });
 
   it("rejects cost reads and writes for a venture.update user and a reader", async () => {
