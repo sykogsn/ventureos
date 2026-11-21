@@ -21,9 +21,9 @@ describe("Frigora proxy public redirect origin", () => {
       "/ventures/ven-1/work/assigned",
       "/dashboard",
     ]) {
-      const location = new URL(path, origin);
-      assert.equal(location.origin, PUBLIC_ORIGIN);
-      assert.equal(location.hostname.includes("localhost"), false);
+      const redirectUrl: URL = new URL(path, origin);
+      assert.equal(redirectUrl.origin, PUBLIC_ORIGIN);
+      assert.equal(redirectUrl.hostname.includes("localhost"), false);
     }
     assert.equal(resolve("production", `${PUBLIC_ORIGIN}/`), PUBLIC_ORIGIN);
   });
