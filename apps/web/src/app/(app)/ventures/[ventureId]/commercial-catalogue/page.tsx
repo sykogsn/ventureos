@@ -1,6 +1,6 @@
 import { CommercialCatalogueScreen } from "@/modules/frigora/app/screens/commercial-catalogue-screen";
 import { commercialItemCosts } from "@/modules/frigora/app/commercial-catalogue-office";
-import { requireFrigoraOpsContext } from "@/modules/frigora/app/context";
+import { requireFrigoraOfficeContext } from "@/modules/frigora/app/context";
 import { createCommercialCatalogue } from "@/modules/frigora/commercial-catalogue";
 import { isFrigoraError } from "@/modules/frigora/errors";
 import { createScope } from "@/modules/frigora/service";
@@ -21,7 +21,7 @@ export default async function FrigoraCommercialCataloguePage({
 }) {
   const { ventureId } = await params;
   const query = await searchParams;
-  const ctx = await requireFrigoraOpsContext(ventureId);
+  const ctx = await requireFrigoraOfficeContext(ventureId);
   const scope = createScope({
     userId: ctx.sessionUserId as UserId,
     workspaceId: ctx.workspaceId,

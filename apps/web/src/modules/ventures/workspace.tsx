@@ -7,12 +7,14 @@ export function VentureWorkspace({
   slug,
   definitionId,
   canManageTeam = false,
+  canAccessOffice = false,
   children,
 }: {
   ventureId: string;
   slug: string;
   definitionId: string;
   canManageTeam?: boolean;
+  canAccessOffice?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -22,6 +24,7 @@ export function VentureWorkspace({
         slug={slug}
         definitionId={definitionId}
         canManageTeam={canManageTeam}
+        canAccessOffice={canAccessOffice}
       />
       <Flow>{children}</Flow>
     </Stage>

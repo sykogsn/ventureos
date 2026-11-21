@@ -83,7 +83,13 @@ describe("Frigora F3.2 PWA paths", () => {
     };
     const teamHref = "/ventures/ven-1/team";
     assert.equal(buildVentureSurfaceLinks(input).some((item) => item.href === teamHref), false);
-    const office = buildVentureSurfaceLinks({ ...input, canManageTeam: true });
+    const field = buildVentureSurfaceLinks(input);
+    assert.deepEqual(field.map((item) => item.label), ["My Work", "Catalogue"]);
+    const office = buildVentureSurfaceLinks({ ...input, canManageTeam: true, canAccessOffice: true });
+    assert.deepEqual(
+      office.map((item) => item.label),
+      ["Operations", "Team & Access", "My Work", "Work", "Customers", "Catalogue", "Commercial Catalogue", "Quotations"],
+    );
     assert.equal(office[1]?.href, teamHref);
     assert.equal(office[1]?.label, "Team & Access");
     assert.equal(buildVentureSurfaceLinks({ ...input, definitionId: "ventureos.company", canManageTeam: true })

@@ -490,6 +490,7 @@ export function WorkDetailScreen({
       title={workOrder.workReference}
       description={
         <FrigoraCustomerSiteLinks
+          navigable={ctx.canWrite}
           ventureId={ctx.ventureId}
           customer={customer}
           site={site}
@@ -553,19 +554,22 @@ export function WorkDetailScreen({
           <div>
             <dt className="ids-caption text-muted">Customer</dt>
             <dd className="ids-body">
-              <FrigoraCustomerLink ventureId={ctx.ventureId} customer={customer} />
+              <FrigoraCustomerLink
+          navigable={ctx.canWrite} ventureId={ctx.ventureId} customer={customer} />
             </dd>
           </div>
           <div>
             <dt className="ids-caption text-muted">Site</dt>
             <dd className="ids-body break-words">
-              <FrigoraSiteIdentityLink ventureId={ctx.ventureId} site={site} />
+              <FrigoraSiteIdentityLink
+          navigable={ctx.canWrite} ventureId={ctx.ventureId} site={site} />
             </dd>
           </div>
           <div>
             <dt className="ids-caption text-muted">Primary asset</dt>
             <dd className="ids-body">
               <FrigoraAssetLink
+          navigable={ctx.canWrite}
                 ventureId={ctx.ventureId}
                 customerId={customer?.id ?? workOrder.customerId}
                 siteId={site?.id ?? asset?.siteId ?? workOrder.siteId}

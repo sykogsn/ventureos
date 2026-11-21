@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { frigoraScope, requireFrigoraOpsContext } from "@/modules/frigora/app/context";
+import { frigoraScope, requireFrigoraOfficeContext } from "@/modules/frigora/app/context";
 import { AssetDetailScreen } from "@/modules/frigora/app/screens/site-asset-screens";
 import {
   getAssetQuery,
@@ -18,7 +18,7 @@ export default async function FrigoraAssetDetailPage({
   }>;
 }) {
   const { ventureId, customerId, siteId, assetId } = await params;
-  const ctx = await requireFrigoraOpsContext(ventureId);
+  const ctx = await requireFrigoraOfficeContext(ventureId);
   const scope = frigoraScope(ctx);
 
   const [customerResult, siteResult, assetResult] = await Promise.all([
