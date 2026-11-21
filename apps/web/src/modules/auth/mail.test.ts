@@ -116,65 +116,65 @@ describe("auth mail delivery boundary", () => {
       await resetPersistenceLifecycle(databaseUrl);
       await ensureSchema();
       const ownerId = createId<UserId>();
-    const workspaceId = createId<WorkspaceId>();
-    await getPersistence().users.insert({
-      id: ownerId,
-      email: "owner-mail@ventureos.test",
-      name: "Owner",
-      passwordHash: "not-used",
-      createdAt: NOW,
-    });
-    await getPersistence().organisations.insert({
-      id: workspaceId,
-      name: "North",
-      slug: workspaceId,
-      createdAt: NOW,
-    });
-    await getPersistence().memberships.insert({
-      workspaceId,
-      userId: ownerId,
-      role: "owner",
-      createdAt: NOW,
-    });
+      const workspaceId = createId<WorkspaceId>();
+      await getPersistence().users.insert({
+        id: ownerId,
+        email: "owner-mail@ventureos.test",
+        name: "Owner",
+        passwordHash: "not-used",
+        createdAt: NOW,
+      });
+      await getPersistence().organisations.insert({
+        id: workspaceId,
+        name: "North",
+        slug: workspaceId,
+        createdAt: NOW,
+      });
+      await getPersistence().memberships.insert({
+        workspaceId,
+        userId: ownerId,
+        role: "owner",
+        createdAt: NOW,
+      });
 
-    const events: DomainEvent[] = [];
-    const stop = getPlatform().events.subscribe("workspace.member.invited", (event) => {
-      events.push(event);
-    });
-    // The pinned database selection, environment URL and volume root must agree
-    // when the production persistence guard validates the write transaction.
-    process.env.DATABASE_URL = databaseUrl;
-    process.env.VENTUREOS_PERSISTENT_ROOT = root;
-    const restore = withEnv({ NODE_ENV: "production" });
-    const logs = captureConsole();
-    try {
-      await assert.rejects(
-        () =>
-          inviteWorkspaceMember({
-            actorId: ownerId,
-            workspaceId,
-            email: "new-member@ventureos.test",
-            role: "member",
-            origin: "http://localhost:3000",
-          }),
-        (error: unknown) =>
-          error instanceof Error &&
-          !(error instanceof WorkspaceAccessError) &&
-          /Email delivery is not configured/.test(error.message),
-      );
-      assert.equal(events.length, 0);
-      const invitations = await getPersistence().invitations.listByWorkspace(workspaceId);
-      assert.equal(invitations.length, 1);
-      assert.ok(invitations[0]?.revokedAt);
-      assert.equal(invitations[0]?.activeSlot, null);
-      assert.equal(invitations[0]?.acceptedAt, null);
-      assert.equal(logs.lines.some((line) => line.includes("token=")), false);
-      assert.equal(takeAuthMailOutbox().length, 0);
-    } finally {
-      stop();
-      logs.restore();
-      restore();
-    }
+      const events: DomainEvent[] = [];
+      const stop = getPlatform().events.subscribe("workspace.member.invited", (event) => {
+        events.push(event);
+      });
+      // The pinned database selection, environment URL and volume root must agree
+      // when the production persistence guard validates the write transaction.
+      process.env.DATABASE_URL = databaseUrl;
+      process.env.VENTUREOS_PERSISTENT_ROOT = root;
+      const restore = withEnv({ NODE_ENV: "production" });
+      const logs = captureConsole();
+      try {
+        await assert.rejects(
+          () =>
+            inviteWorkspaceMember({
+              actorId: ownerId,
+              workspaceId,
+              email: "new-member@ventureos.test",
+              role: "member",
+              origin: "http://localhost:3000",
+            }),
+          (error: unknown) =>
+            error instanceof Error &&
+            !(error instanceof WorkspaceAccessError) &&
+            /Email delivery is not configured/.test(error.message),
+        );
+        assert.equal(events.length, 0);
+        const invitations = await getPersistence().invitations.listByWorkspace(workspaceId);
+        assert.equal(invitations.length, 1);
+        assert.ok(invitations[0]?.revokedAt);
+        assert.equal(invitations[0]?.activeSlot, null);
+        assert.equal(invitations[0]?.acceptedAt, null);
+        assert.equal(logs.lines.some((line) => line.includes("token=")), false);
+        assert.equal(takeAuthMailOutbox().length, 0);
+      } finally {
+        stop();
+        logs.restore();
+        restore();
+      }
     } finally {
       // Close the file-backed client before removing the temporary database.
       await resetPersistenceLifecycle(":memory:");
