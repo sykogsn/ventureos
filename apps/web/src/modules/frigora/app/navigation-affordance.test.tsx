@@ -377,7 +377,16 @@ describe("Frigora operational surfaces", () => {
       frigoraAssetHref(VENTURE, "cus-1", "site-1", "asset-1"),
     );
     assert.equal(anchors(detail).some((item) => item.text.includes("Pat Engineer")), false);
-    assert.equal(detail.includes("<form"), false);
+    // An office writer must retain operational forms alongside navigable entities.
+    assert.match(detail, /<form\\b/);
+
+    // Field Members can read the assigned job, not office mutation controls or directories.
+    const fieldDetail = markup(<WorkDetailScreen ctx={ctx} view={detailView} />);
+    assert.doesNotMatch(fieldDetail, /<form\\b/);
+    assert.equal(anchors(fieldDetail).some((item) => item.href.includes("/customers/")), false);
+    assert.match(fieldDetail, /FuelCo/);
+    assert.match(fieldDetail, /1 High Street/);
+    assert.match(fieldDetail, /A-1/);
   });
 
   it("links assigned jobs but keeps field customer, site and asset labels non-navigable", () => {
