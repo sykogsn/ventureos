@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
 import { after, beforeEach, describe, it } from "node:test";
 import type { DomainEvent } from "../../contracts";
 import type { UserId, WorkspaceId } from "../../contracts";
@@ -17,6 +21,37 @@ import { sendAuthMail, takeAuthMailOutbox } from "./mail";
 
 const NOW = "2026-09-27T12:00:00.000Z";
 const LIVE_TOKEN = "live-invitation-token-must-not-be-logged";
+
+/** 
+ * Native libSQL file handles can survive client.close() until the next
+ * finalizer pass on Windows. Clean up ONLY the unique temp root we created.
+ * Keep the retry bounded and never mask an unexpected filesystem error.
+ */
+async function removeClosedMailFixture(root: string) {
+  const attempts = 12;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await rm(root, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+      if ((code !== "EPERM" && code !== "EBUSY") || attempt === attempts) {
+        throw error;
+      }
+      if (process.platform === "win32") {
+        // Same closed-libSQL-handle finalization strategy as persistence/db.ts.
+        try {
+          setFlagsFromString("--expose-gc");
+          const gc = runInNewContext("gc");
+          if (typeof gc === "function") gc();
+        } catch {
+          // Bounded retries still surface a real cleanup failure if GC is unavailable.
+        }
+      }
+      await delay(75);
+    }
+  }
+}
 
 function captureConsole() {
   const lines: string[] = [];
@@ -182,7 +217,7 @@ describe("auth mail delivery boundary", () => {
       else process.env.DATABASE_URL = previousDatabaseUrl;
       if (previousRoot === undefined) delete process.env.VENTUREOS_PERSISTENT_ROOT;
       else process.env.VENTUREOS_PERSISTENT_ROOT = previousRoot;
-      rmSync(root, { recursive: true, force: true });
+      await removeClosedMailFixture(root);
     }
   });
 });
