@@ -861,6 +861,105 @@ export function createFrigoraService(options: {
   async function permissionService(): Promise<PermissionService> {
     return permissions ?? getPlatform().permissions;
   }
+
+  type ReadGate = "office" | "field" | "closed";
+
+  async function readGate(scope: FrigoraScope): Promise<ReadGate> {
+    const perms = await permissionService();
+    const allowed = await perms.can({
+      userId: scope.userId,
+      permission: "venture.read",
+      resource: { type: "workspace", id: scope.workspaceId },
+    });
+    if (!allowed) {
+      throw new FrigoraError("forbidden", "Not allowed.");
+    }
+    const venture = await getPersistence().ventures.findById(scope.ventureId);
+    if (!venture || venture.workspaceId !== scope.workspaceId || venture.definitionId !== "frigora") {
+      return "closed";
+    }
+    const office = await perms.can({
+      userId: scope.userId,
+      permission: "venture.update",
+      resource: { type: "workspace", id: scope.workspaceId },
+    });
+    return office ? "office" : "field";
+  }
+
+  async function mayReadWorkOrder(scope: FrigoraScope, workOrder: FrigoraWorkOrder): Promise<boolean> {
+    const gate = await readGate(scope);
+    if (gate !== "field") return gate === "office";
+    return workOrder.assignedUserId === scope.userId;
+  }
+
+  async function mayReadVisit(scope: FrigoraScope, visit: FrigoraVisit): Promise<boolean> {
+    const gate = await readGate(scope);
+    if (gate !== "field") return gate === "office";
+    if (visit.attendingUserId === scope.userId) return true;
+    const workOrder = await store.findWorkOrder(
+      scope.workspaceId,
+      scope.ventureId,
+      visit.workOrderId,
+    );
+    return workOrder?.assignedUserId === scope.userId;
+  }
+
+  async function revealAssignedRecord<T extends { workOrderId: string | null; visitId?: string | null }>(
+    scope: FrigoraScope,
+    row: T | null,
+  ): Promise<T | null> {
+    if (!row) return null;
+    const gate = await readGate(scope);
+    if (gate === "closed") return null;
+    if (gate === "office") return row;
+    if (row.workOrderId) {
+      const workOrder = await store.findWorkOrder(
+        scope.workspaceId,
+        scope.ventureId,
+        row.workOrderId as FrigoraWorkOrderId,
+      );
+      if (workOrder?.assignedUserId === scope.userId) return row;
+    }
+    if (row.visitId) {
+      const visit = await store.findVisit(
+        scope.workspaceId,
+        scope.ventureId,
+        row.visitId as FrigoraVisitId,
+      );
+      if (visit?.attendingUserId === scope.userId) return row;
+    }
+    return null;
+  }
+
+  async function filterAssignedRecords<T extends { workOrderId: string | null; visitId?: string | null }>(
+    scope: FrigoraScope,
+    rows: T[],
+  ): Promise<T[]> {
+    const gate = await readGate(scope);
+    if (gate === "office") return rows;
+    if (gate === "closed") return [];
+    const kept: T[] = [];
+    for (const row of rows) {
+      if (await revealAssignedRecord(scope, row)) kept.push(row);
+    }
+    return kept;
+  }
+
+  function projectCustomer(gate: ReadGate, row: FrigoraCustomer): FrigoraCustomer {
+    if (gate !== "field") return row;
+    return { ...row, legalName: null, notes: null };
+  }
+
+  function projectSite(gate: ReadGate, row: FrigoraSite): FrigoraSite {
+    if (gate !== "field") return row;
+    return { ...row, notes: null };
+  }
+
+  function projectAsset(gate: ReadGate, row: FrigoraAsset): FrigoraAsset {
+    if (gate !== "field") return row;
+    return { ...row, notes: null };
+  }
+
   async function saveUnavailability(scope: FrigoraScope, input: UnavailabilityInput, identity?: { id: string; expectedUpdatedAt: string }) {
     await assertFrigoraAccess(await permissionService(), scope, "venture.update");
     const parsed = parseWithFrigora(unavailabilitySchema, input);
@@ -881,7 +980,7 @@ export function createFrigoraService(options: {
       return store.mutateUnavailability({ scope, ...parsed, next: null });
     },
     async listUnavailability(scope, input) {
-      await assertFrigoraAccess(await permissionService(), scope, "venture.read");
+      await assertFrigoraAccess(await permissionService(), scope, "venture.update");
       const parsed = parseWithFrigora(listScheduledWorkOrdersSchema, input);
       return store.listUnavailability(scope, parsed.rangeStart, parsed.rangeEnd);
     },
@@ -938,15 +1037,22 @@ export function createFrigoraService(options: {
       return next;
     },
     async getCustomer(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await store.findCustomer(scope.workspaceId, scope.ventureId, id);
+      if (!row) return null;
+      if (gate === "field") {
+        const orders = await store.listWorkOrdersByAssignee(
+          scope.workspaceId,
+          scope.ventureId,
+          scope.userId,
+        );
+        if (!orders.some((order) => order.customerId === row.id)) return null;
       }
-      return store.findCustomer(scope.workspaceId, scope.ventureId, id);
+      return projectCustomer(gate, row);
     },
     async listCustomers(scope) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       return store.listCustomers(scope.workspaceId, scope.ventureId);
     },
     async createSite(scope, input) {
@@ -1026,15 +1132,22 @@ export function createFrigoraService(options: {
       return next;
     },
     async getSite(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await store.findSite(scope.workspaceId, scope.ventureId, id);
+      if (!row) return null;
+      if (gate === "field") {
+        const orders = await store.listWorkOrdersByAssignee(
+          scope.workspaceId,
+          scope.ventureId,
+          scope.userId,
+        );
+        if (!orders.some((order) => order.siteId === row.id)) return null;
       }
-      return store.findSite(scope.workspaceId, scope.ventureId, id);
+      return projectSite(gate, row);
     },
     async listSitesByCustomer(scope, customerId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       const customer = await store.findCustomer(
         scope.workspaceId,
         scope.ventureId,
@@ -1157,15 +1270,22 @@ export function createFrigoraService(options: {
       return next;
     },
     async getAsset(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await store.findAsset(scope.workspaceId, scope.ventureId, id);
+      if (!row) return null;
+      if (gate === "field") {
+        const orders = await store.listWorkOrdersByAssignee(
+          scope.workspaceId,
+          scope.ventureId,
+          scope.userId,
+        );
+        if (!orders.some((order) => order.primaryAssetId === row.id)) return null;
       }
-      return store.findAsset(scope.workspaceId, scope.ventureId, id);
+      return projectAsset(gate, row);
     },
     async listAssetsBySite(scope, siteId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       const site = await store.findSite(scope.workspaceId, scope.ventureId, siteId);
       if (!site) {
         return [];
@@ -1403,45 +1523,45 @@ export function createFrigoraService(options: {
       }
     },
     async getFollowUpWorkOrderByRecommendedAction(scope, recommendedActionId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findWorkOrderBySourceRecommendedActionId(
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await store.findWorkOrderBySourceRecommendedActionId(
         scope.workspaceId,
         scope.ventureId,
         recommendedActionId,
       );
+      if (!row) return null;
+      if (gate === "field" && row.assignedUserId !== scope.userId) return null;
+      return row;
     },
     async getWorkOrder(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findWorkOrder(scope.workspaceId, scope.ventureId, id);
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await store.findWorkOrder(scope.workspaceId, scope.ventureId, id);
+      if (!row) return null;
+      if (gate === "field" && row.assignedUserId !== scope.userId) return null;
+      return row;
     },
     async getWorkOrderByReference(scope, workReference) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
       const trimmed = workReference.trim();
-      if (!trimmed) {
-        return null;
-      }
-      return store.findWorkOrderByReference(
+      if (!trimmed) return null;
+      const row = await store.findWorkOrderByReference(
         scope.workspaceId,
         scope.ventureId,
         trimmed,
       );
+      if (!row) return null;
+      if (gate === "field" && row.assignedUserId !== scope.userId) return null;
+      return row;
     },
     async listWorkOrders(scope, status) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       return store.listWorkOrders(scope.workspaceId, scope.ventureId, status);
     },
     async listWorkOrdersByCustomer(scope, customerId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       const customer = await store.findCustomer(
         scope.workspaceId,
         scope.ventureId,
@@ -1457,9 +1577,7 @@ export function createFrigoraService(options: {
       );
     },
     async listWorkOrdersBySite(scope, siteId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       const site = await store.findSite(scope.workspaceId, scope.ventureId, siteId);
       if (!site) {
         return [];
@@ -1467,9 +1585,7 @@ export function createFrigoraService(options: {
       return store.listWorkOrdersBySite(scope.workspaceId, scope.ventureId, siteId);
     },
     async listWorkOrdersByAsset(scope, assetId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
       if (!asset) {
         return [];
@@ -1560,9 +1676,9 @@ export function createFrigoraService(options: {
       return next;
     },
     async listWorkOrdersByAssignee(scope, userId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      const gate = await readGate(scope);
+      if (gate === "closed") return [];
+      if (gate === "field" && scope.userId !== userId) return [];
       const permissions = await permissionService();
       const hasHigherAuthority = await permissions.can({
         userId: scope.userId,
@@ -1704,9 +1820,7 @@ export function createFrigoraService(options: {
       return next;
     },
     async listScheduledWorkOrders(scope, input) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       const parsed = parseWithFrigora(listScheduledWorkOrdersSchema, input);
       return store.listScheduledWorkOrders(
         scope.workspaceId,
@@ -1781,10 +1895,11 @@ export function createFrigoraService(options: {
       return next;
     },
     async getVisit(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findVisit(scope.workspaceId, scope.ventureId, id);
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const visit = await store.findVisit(scope.workspaceId, scope.ventureId, id);
+      if (!visit || !(await mayReadVisit(scope, visit))) return null;
+      return visit;
     },
     async listVisitsByWorkOrder(scope, workOrderId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -1795,15 +1910,15 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listVisitsByWorkOrder(scope.workspaceId, scope.ventureId, workOrderId);
     },
     async listVisitsByAttendingUser(scope, userId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      const gate = await readGate(scope);
+      if (gate === "closed") return [];
+      if (gate === "field" && userId !== scope.userId) return [];
       const member = await getPersistence().memberships.getRole(userId, scope.workspaceId);
       if (!member) {
         return [];
@@ -1919,17 +2034,15 @@ export function createFrigoraService(options: {
       }
     },
     async getFieldCapture(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findFieldCapture(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findFieldCapture(scope.workspaceId, scope.ventureId, id));
     },
     async listFieldCapturesByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
       return store.listFieldCapturesByVisit(scope.workspaceId, scope.ventureId, visitId);
@@ -1943,7 +2056,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listFieldCapturesByWorkOrder(
@@ -1960,7 +2073,7 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return store.listFieldCapturesByAsset(scope.workspaceId, scope.ventureId, assetId);
+      return filterAssignedRecords(scope, await store.listFieldCapturesByAsset(scope.workspaceId, scope.ventureId, assetId));
     },
     async recordTechnicalFinding(scope, visitId, input) {
       const row = await prepareTechnicalFindingRow(
@@ -2069,17 +2182,15 @@ export function createFrigoraService(options: {
       }
     },
     async getTechnicalFinding(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findTechnicalFinding(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findTechnicalFinding(scope.workspaceId, scope.ventureId, id));
     },
     async listTechnicalFindingsByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
       return store.listTechnicalFindingsByVisit(scope.workspaceId, scope.ventureId, visitId);
@@ -2093,7 +2204,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listTechnicalFindingsByWorkOrder(
@@ -2110,7 +2221,7 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return store.listTechnicalFindingsByAsset(scope.workspaceId, scope.ventureId, assetId);
+      return filterAssignedRecords(scope, await store.listTechnicalFindingsByAsset(scope.workspaceId, scope.ventureId, assetId));
     },
     async recordCorrectiveAction(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");
@@ -2166,17 +2277,15 @@ export function createFrigoraService(options: {
       return row;
     },
     async getCorrectiveAction(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findCorrectiveAction(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findCorrectiveAction(scope.workspaceId, scope.ventureId, id));
     },
     async listCorrectiveActionsByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
       return store.listCorrectiveActionsByVisit(scope.workspaceId, scope.ventureId, visitId);
@@ -2190,7 +2299,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listCorrectiveActionsByWorkOrder(
@@ -2207,7 +2316,7 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return store.listCorrectiveActionsByAsset(scope.workspaceId, scope.ventureId, assetId);
+      return filterAssignedRecords(scope, await store.listCorrectiveActionsByAsset(scope.workspaceId, scope.ventureId, assetId));
     },
     async recordVisitOutcome(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");
@@ -2259,17 +2368,15 @@ export function createFrigoraService(options: {
       return row;
     },
     async getVisitOutcome(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findVisitOutcome(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findVisitOutcome(scope.workspaceId, scope.ventureId, id));
     },
     async getVisitOutcomeByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return null;
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return null;
       }
       return store.findVisitOutcomeByVisit(scope.workspaceId, scope.ventureId, visitId);
@@ -2283,7 +2390,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listVisitOutcomesByWorkOrder(
@@ -2300,7 +2407,7 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return store.listVisitOutcomesByAsset(scope.workspaceId, scope.ventureId, assetId);
+      return filterAssignedRecords(scope, await store.listVisitOutcomesByAsset(scope.workspaceId, scope.ventureId, assetId));
     },
     async recordRecommendedAction(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");
@@ -2374,17 +2481,15 @@ export function createFrigoraService(options: {
       return next;
     },
     async getRecommendedAction(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findRecommendedAction(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findRecommendedAction(scope.workspaceId, scope.ventureId, id));
     },
     async listRecommendedActionsByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
       return store.listRecommendedActionsByVisit(scope.workspaceId, scope.ventureId, visitId);
@@ -2398,7 +2503,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listRecommendedActionsByWorkOrder(
@@ -2415,7 +2520,7 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return store.listRecommendedActionsByAsset(scope.workspaceId, scope.ventureId, assetId);
+      return filterAssignedRecords(scope, await store.listRecommendedActionsByAsset(scope.workspaceId, scope.ventureId, assetId));
     },
     async recordRefrigerantEvent(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");
@@ -2496,17 +2601,15 @@ export function createFrigoraService(options: {
       return row;
     },
     async getRefrigerantEvent(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findRefrigerantEvent(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findRefrigerantEvent(scope.workspaceId, scope.ventureId, id));
     },
     async listRefrigerantEventsByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
       return store.listRefrigerantEventsByVisit(scope.workspaceId, scope.ventureId, visitId);
@@ -2520,7 +2623,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listRefrigerantEventsByWorkOrder(
@@ -2537,7 +2640,7 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId);
+      return filterAssignedRecords(scope, await store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId));
     },
     async recordPartUsage(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");
@@ -2618,17 +2721,15 @@ export function createFrigoraService(options: {
       return row;
     },
     async getPartUsage(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findPartUsage(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findPartUsage(scope.workspaceId, scope.ventureId, id));
     },
     async listPartUsagesByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
       return store.listPartUsagesByVisit(scope.workspaceId, scope.ventureId, visitId);
@@ -2642,7 +2743,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listPartUsagesByWorkOrder(
@@ -2659,7 +2760,7 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId);
+      return filterAssignedRecords(scope, await store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId));
     },
     async createPartReference(scope, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
@@ -2717,22 +2818,25 @@ export function createFrigoraService(options: {
       return next;
     },
     async getPartReference(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findPartReference(scope.workspaceId, scope.ventureId, id);
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await store.findPartReference(scope.workspaceId, scope.ventureId, id);
+      if (!row || gate !== "field") return row;
+      return { ...row, defaultUnitChargeCents: null };
     },
     async listPartReferences(scope) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
-      return store.listPartReferences(scope.workspaceId, scope.ventureId);
+      const gate = await readGate(scope);
+      if (gate === "closed") return [];
+      const rows = await store.listPartReferences(scope.workspaceId, scope.ventureId);
+      if (gate !== "field") return rows;
+      return rows.map((row) => ({ ...row, defaultUnitChargeCents: null }));
     },
     async listActivePartReferences(scope) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
-      return store.listActivePartReferences(scope.workspaceId, scope.ventureId);
+      const gate = await readGate(scope);
+      if (gate === "closed") return [];
+      const rows = await store.listActivePartReferences(scope.workspaceId, scope.ventureId);
+      if (gate !== "field") return rows;
+      return rows.map((row) => ({ ...row, defaultUnitChargeCents: null }));
     },
     async createRefrigerantReference(scope, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
@@ -2827,22 +2931,25 @@ export function createFrigoraService(options: {
       return next;
     },
     async getRefrigerantReference(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findRefrigerantReference(scope.workspaceId, scope.ventureId, id);
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await store.findRefrigerantReference(scope.workspaceId, scope.ventureId, id);
+      if (!row || gate !== "field") return row;
+      return { ...row, defaultChargePerKgCents: null };
     },
     async listRefrigerantReferences(scope) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
-      return store.listRefrigerantReferences(scope.workspaceId, scope.ventureId);
+      const gate = await readGate(scope);
+      if (gate === "closed") return [];
+      const rows = await store.listRefrigerantReferences(scope.workspaceId, scope.ventureId);
+      if (gate !== "field") return rows;
+      return rows.map((row) => ({ ...row, defaultChargePerKgCents: null }));
     },
     async listActiveRefrigerantReferences(scope) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
-      return store.listActiveRefrigerantReferences(scope.workspaceId, scope.ventureId);
+      const gate = await readGate(scope);
+      if (gate === "closed") return [];
+      const rows = await store.listActiveRefrigerantReferences(scope.workspaceId, scope.ventureId);
+      if (gate !== "field") return rows;
+      return rows.map((row) => ({ ...row, defaultChargePerKgCents: null }));
     },
     async getVentureCommercialSettings(scope) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
@@ -2994,10 +3101,8 @@ export function createFrigoraService(options: {
       return row;
     },
     async getAssetOperationalCondition(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findAssetOperationalCondition(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findAssetOperationalCondition(scope.workspaceId, scope.ventureId, id));
     },
     async listAssetOperationalConditionsByAsset(scope, assetId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -3007,26 +3112,32 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return store.listAssetOperationalConditionsByAsset(
+      return filterAssignedRecords(scope, await store.listAssetOperationalConditionsByAsset(
         scope.workspaceId,
         scope.ventureId,
         assetId,
-      );
+      ));
     },
     async getCurrentAssetOperationalCondition(scope, assetId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
       const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
-      if (!asset) {
-        return null;
+      if (!asset) return null;
+      if (gate === "field") {
+        const orders = await store.listWorkOrdersByAssignee(
+          scope.workspaceId,
+          scope.ventureId,
+          scope.userId,
+        );
+        if (!orders.some((order) => order.primaryAssetId === assetId)) return null;
       }
       const rows = await store.listAssetOperationalConditionsByAsset(
         scope.workspaceId,
         scope.ventureId,
         assetId,
       );
-      return selectCurrentAssetOperationalCondition(rows);
+      const visible = gate === "office" ? rows : await filterAssignedRecords(scope, rows);
+      return selectCurrentAssetOperationalCondition(visible);
     },
     async recordVisitCustomerAcknowledgement(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");
@@ -3061,17 +3172,15 @@ export function createFrigoraService(options: {
       return row;
     },
     async getVisitCustomerAcknowledgement(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findVisitCustomerAcknowledgement(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findVisitCustomerAcknowledgement(scope.workspaceId, scope.ventureId, id));
     },
     async listVisitCustomerAcknowledgementsByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
       return store.listVisitCustomerAcknowledgementsByVisit(
@@ -3089,7 +3198,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listVisitCustomerAcknowledgementsByWorkOrder(
@@ -3369,17 +3478,15 @@ export function createFrigoraService(options: {
       );
     },
     async getVisitEvidence(scope, id) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
-      return store.findVisitEvidence(scope.workspaceId, scope.ventureId, id);
+      if ((await readGate(scope)) === "closed") return null;
+      return revealAssignedRecord(scope, await store.findVisitEvidence(scope.workspaceId, scope.ventureId, id));
     },
     async listVisitEvidenceByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
         return [];
       }
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, visitId);
-      if (!visit) {
+      if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
       return store.listActiveVisitEvidenceByVisit(
@@ -3397,7 +3504,7 @@ export function createFrigoraService(options: {
         scope.ventureId,
         workOrderId,
       );
-      if (!workOrder) {
+      if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
       return store.listActiveVisitEvidenceByWorkOrder(
@@ -3456,15 +3563,11 @@ export function createFrigoraService(options: {
       return createPersistedQuotation(store, scope, input);
     },
     async getQuotation(scope, quotationId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
+      if ((await readGate(scope)) !== "office") return null;
       return store.findPersistedQuotation(scope.workspaceId, scope.ventureId, quotationId);
     },
     async listQuotationsByWorkOrder(scope, workOrderId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       const workOrder = await store.findWorkOrder(scope.workspaceId, scope.ventureId, workOrderId);
       if (!workOrder) {
         return [];
@@ -3476,9 +3579,7 @@ export function createFrigoraService(options: {
       );
     },
     async listQuotationsByAsset(scope, assetId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
       if (!asset) {
         return [];
@@ -3486,9 +3587,7 @@ export function createFrigoraService(options: {
       return store.listPersistedQuotationsByAsset(scope.workspaceId, scope.ventureId, assetId);
     },
     async listQuotations(scope) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       return store.listPersistedQuotations(scope.workspaceId, scope.ventureId);
     },
     async correctQuotation(scope, quotationId, input) {
@@ -3504,9 +3603,7 @@ export function createFrigoraService(options: {
       return issuePersistedQuotation(store, scope, quotationId, input);
     },
     async getQuotationDelivery(scope, quotationId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
+      if ((await readGate(scope)) !== "office") return null;
       const quotation = await store.findPersistedQuotation(scope.workspaceId, scope.ventureId, quotationId);
       if (!quotation) {
         return null;
@@ -3519,9 +3616,7 @@ export function createFrigoraService(options: {
       );
     },
     async listQuotationCustomerDeliveries(scope, quotationId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       return listQuotationCustomerDeliveries(scope.workspaceId, scope.ventureId, quotationId);
     },
     async recoverQuotationDelivery(scope, quotationId) {
@@ -3529,7 +3624,7 @@ export function createFrigoraService(options: {
       return recoverPersistedQuotationDelivery(store, scope, quotationId);
     },
     async getTaxPosture(scope) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
+      if ((await readGate(scope)) !== "office") {
         return { rules: [], configurations: [], events: [] };
       }
       return getTaxPosture(store, scope);
@@ -3567,9 +3662,7 @@ export function createFrigoraService(options: {
       return activatePersistedQuotationCustomerAccess(store, scope, quotationId, input, clock);
     },
     async listQuotationCustomerAccess(scope, quotationId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       return store.listQuotationDecisionGrants(scope.workspaceId, scope.ventureId, quotationId, clock());
     },
     async revokeQuotationCustomerAccess(scope, grantId) {
@@ -3593,9 +3686,7 @@ export function createFrigoraService(options: {
       return updateCustomerContact(store, scope, contactId, input, clock);
     },
     async listQuotationCustomerContacts(scope, quotationId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      if ((await readGate(scope)) !== "office") return [];
       return listQuotationCustomerContacts(store, scope, quotationId);
     },
     async createQuotationCustomerContact(scope, quotationId, input) {
@@ -3615,9 +3706,7 @@ export function createFrigoraService(options: {
       return revokeSupervisedContactVerification(store, scope, quotationId, contactId, clock);
     },
     async getCustomerContact(scope, contactId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return null;
-      }
+      if ((await readGate(scope)) !== "office") return null;
       return store.findCustomerContact(scope.workspaceId, scope.ventureId, contactId);
     },
     async designateQuotationContact(scope, contactId, input) {
@@ -3654,20 +3743,24 @@ export function createFrigoraService(options: {
       return submitCustomerQuotationRecord(store, input, clock);
     },
     async listAssetHistory(scope, assetId) {
-      if (!(await allowFrigoraRead(await permissionService(), scope))) {
-        return [];
-      }
+      const gate = await readGate(scope);
+      if (gate === "closed") return [];
       const asset = await store.findAsset(scope.workspaceId, scope.ventureId, assetId);
       if (!asset) {
         return [];
       }
 
       const entries: FrigoraAssetHistoryEntry[] = [];
-      const workOrders = await store.listWorkOrdersByAsset(
+      let workOrders = await store.listWorkOrdersByAsset(
         scope.workspaceId,
         scope.ventureId,
         assetId,
       );
+      if (gate === "field") {
+        workOrders = workOrders.filter((workOrder) => workOrder.assignedUserId === scope.userId);
+        if (workOrders.length === 0) return [];
+      }
+      const visibleWorkOrderIds = new Set(workOrders.map((workOrder) => workOrder.id));
 
       for (const workOrder of workOrders) {
         if (workOrder.reportedCondition !== null) {
@@ -3706,29 +3799,33 @@ export function createFrigoraService(options: {
         store.listAssetOperationalConditionsByAsset(scope.workspaceId, scope.ventureId, assetId),
       ]);
 
+      const onVisibleWorkOrder = (workOrderId: string | null) =>
+        gate === "office" || (workOrderId !== null && visibleWorkOrderIds.has(workOrderId as FrigoraWorkOrderId));
       for (const fieldCapture of fieldCaptures) {
-        entries.push(mapObservedEntry(fieldCapture));
+        if (onVisibleWorkOrder(fieldCapture.workOrderId)) entries.push(mapObservedEntry(fieldCapture));
       }
       for (const finding of findings) {
-        entries.push(mapFindingEntry(finding));
+        if (onVisibleWorkOrder(finding.workOrderId)) entries.push(mapFindingEntry(finding));
       }
       for (const correctiveAction of correctiveActions) {
-        entries.push(mapCorrectiveActionEntry(correctiveAction));
+        if (onVisibleWorkOrder(correctiveAction.workOrderId)) entries.push(mapCorrectiveActionEntry(correctiveAction));
       }
       for (const outcome of outcomes) {
-        entries.push(mapOutcomeEntry(outcome));
+        if (onVisibleWorkOrder(outcome.workOrderId)) entries.push(mapOutcomeEntry(outcome));
       }
       for (const recommendation of recommendations) {
-        entries.push(mapRecommendationEntry(recommendation));
+        if (onVisibleWorkOrder(recommendation.workOrderId)) entries.push(mapRecommendationEntry(recommendation));
       }
       for (const refrigerantEvent of refrigerantEvents) {
-        entries.push(mapRefrigerantEntry(refrigerantEvent));
+        if (onVisibleWorkOrder(refrigerantEvent.workOrderId)) entries.push(mapRefrigerantEntry(refrigerantEvent));
       }
       for (const partUsage of partUsages) {
-        entries.push(mapPartUsageEntry(partUsage));
+        if (onVisibleWorkOrder(partUsage.workOrderId)) entries.push(mapPartUsageEntry(partUsage));
       }
       for (const operationalCondition of operationalConditions) {
-        entries.push(mapOperationalConditionEntry(operationalCondition));
+        if (onVisibleWorkOrder(operationalCondition.workOrderId)) {
+          entries.push(mapOperationalConditionEntry(operationalCondition));
+        }
       }
 
       return sortAssetHistoryEntries(entries);

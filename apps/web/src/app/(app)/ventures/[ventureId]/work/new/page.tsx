@@ -1,4 +1,4 @@
-import { frigoraScope, requireFrigoraOpsContext } from "@/modules/frigora/app/context";
+import { frigoraScope, requireFrigoraOfficeContext } from "@/modules/frigora/app/context";
 import { WorkCreateScreen } from "@/modules/frigora/app/screens/work-screens";
 import { loadWorkCreateOptions } from "@/modules/frigora/app/views";
 
@@ -15,7 +15,7 @@ export default async function FrigoraWorkCreatePage({
 }) {
   const { ventureId } = await params;
   const query = await searchParams;
-  const ctx = await requireFrigoraOpsContext(ventureId);
+  const ctx = await requireFrigoraOfficeContext(ventureId);
   const { options, error } = await loadWorkCreateOptions(frigoraScope(ctx));
 
   return (

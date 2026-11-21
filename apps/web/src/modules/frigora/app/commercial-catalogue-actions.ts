@@ -104,7 +104,7 @@ export async function selectCommercialItemFormAction(
   _previous: CommercialCatalogueFormState,
   formData: FormData,
 ): Promise<CommercialCatalogueFormState> {
-  const access = await signedScope(formData, "venture.read");
+  const access = await signedScope(formData, "venture.update");
   if ("error" in access) return { error: access.error };
   const selected = await selectCommercialItemForOffice(
     catalogueForSession(),

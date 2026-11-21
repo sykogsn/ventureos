@@ -617,7 +617,7 @@ describe("Frigora operational domain", () => {
     assert.equal(customer.code, "FUELCO");
   });
 
-  it("allows members to read and not mutate", async () => {
+  it("rejects member customer directory reads and writes", async () => {
     const owner = await seed();
     const memberId = "user-member" as UserId;
     await getPersistence().memberships.setRole({
@@ -632,7 +632,9 @@ describe("Frigora operational domain", () => {
     });
     const memberScope: FrigoraScope = { ...owner.scope, userId: memberId };
     const listed = await owner.service.listCustomers(memberScope);
-    assert.equal(listed[0]?.id, customer.id);
+    assert.equal(listed.length, 0);
+    assert.equal((await owner.service.getCustomer(owner.scope, customer.id))?.code, "FUELCO");
+    assert.equal(await owner.service.getCustomer(memberScope, customer.id), null);
     await expectCode(
       () => owner.service.createCustomer(memberScope, { code: "X", displayName: "X" }),
       "forbidden",

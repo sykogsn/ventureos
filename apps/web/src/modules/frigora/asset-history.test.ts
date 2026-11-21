@@ -265,16 +265,18 @@ describe("Frigora asset history projection (F0.13)", () => {
     );
   });
 
-  it("allows authorized venture.read member to list asset history", async () => {
+  it("limits a field member's asset history to assigned work", async () => {
     const owner = await seed();
     const memberId = "user-member" as UserId;
     await addMember(owner.workspaceId, memberId);
-    const { asset } = await seedHierarchy(owner.service, owner.scope);
-    const history = await owner.service.listAssetHistory(
-      { ...owner.scope, userId: memberId },
-      asset.id,
-    );
-    assert.ok(Array.isArray(history));
+    const { asset, workOrder } = await seedHierarchy(owner.service, owner.scope);
+    const memberScope = { ...owner.scope, userId: memberId };
+    assert.deepEqual(await owner.service.listAssetHistory(memberScope, asset.id), []);
+    await owner.service.assignWorkOrder(owner.scope, workOrder.id, {
+      expectedUpdatedAt: workOrder.updatedAt,
+      userId: memberId,
+    });
+    const history = await owner.service.listAssetHistory(memberScope, asset.id);
     assert.equal(history.some((entry) => entry.kind === "reported_intake"), true);
   });
 
