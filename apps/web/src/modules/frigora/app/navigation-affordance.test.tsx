@@ -247,7 +247,8 @@ describe("Frigora entity routes", () => {
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/work/[workOrderId]/page.tsx"),
       "utf8",
     );
-    assert.match(customerPage, /requireFrigoraOpsContext/);
+    assert.match(customerPage, /requireFrigoraOfficeContext/);
+    assert.doesNotMatch(customerPage, /requireFrigoraOpsContext/);
     assert.match(workPage, /requireFrigoraOpsContext/);
   });
 });
