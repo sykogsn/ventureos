@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import type { UserId } from "@/contracts";
 import { WORKSPACE_COOKIE } from "@/lib/auth/cookies";
 import { publicAppOrigin } from "@/lib/auth/origin";
@@ -14,7 +14,7 @@ import { listAuthorisedFrigoraVentures } from "@/modules/frigora/app/direct-acce
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   // Render may expose its internal localhost address through request.url.
   // Always derive outward-facing redirects from the configured public origin.
   const publicOrigin = await publicAppOrigin();
