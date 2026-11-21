@@ -34,6 +34,7 @@ export function VisitEntryScreen({
       title="Start visit"
       description={
         <FrigoraCustomerSiteLinks
+          navigable={ctx.canWrite}
           ventureId={ctx.ventureId}
           customer={customer}
           site={site}
@@ -54,7 +55,8 @@ export function VisitEntryScreen({
           <div>
             <dt className="ids-caption text-muted">Site address</dt>
             <dd className="ids-body break-words">
-              <FrigoraSiteAddressLink ventureId={ctx.ventureId} site={site} />
+              <FrigoraSiteAddressLink
+          navigable={ctx.canWrite} ventureId={ctx.ventureId} site={site} />
             </dd>
           </div>
           <div>
@@ -70,6 +72,7 @@ export function VisitEntryScreen({
               <dt className="ids-caption text-muted">Asset</dt>
               <dd className="ids-body">
                 <FrigoraAssetLink
+          navigable={ctx.canWrite}
                   ventureId={ctx.ventureId}
                   customerId={customer?.id ?? workOrder.customerId}
                   siteId={site?.id ?? asset.siteId}

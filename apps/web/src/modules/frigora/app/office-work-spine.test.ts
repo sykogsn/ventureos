@@ -165,6 +165,7 @@ describe("F1.1 Office Work Spine", () => {
       slug: "frigora-one",
       definitionId: "frigora",
       companyHomeHref: "/ventures/hq/frigora-one",
+      canAccessOffice: true,
     });
     assert.deepEqual(
       frigora.map((link) => link.label),
@@ -372,7 +373,8 @@ describe("F1.1 Office Work Spine", () => {
       join(WEB_ROOT, "app/(app)/ventures/[ventureId]/work/page.tsx"),
       "utf8",
     );
-    assert.match(customersPage, /requireFrigoraOpsContext/);
+    assert.match(customersPage, /requireFrigoraOfficeContext/);
+    assert.doesNotMatch(customersPage, /requireFrigoraOpsContext/);
     assert.match(workPage, /requireFrigoraOpsContext/);
     assert.match(customersPage, /listCustomersQuery/);
     assert.equal(customersPage.includes("mock"), false);

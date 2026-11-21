@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Stack } from "@/core/layout";
-import { frigoraScope, requireFrigoraOpsContext } from "@/modules/frigora/app/context";
+import { frigoraScope, requireFrigoraOfficeContext } from "@/modules/frigora/app/context";
 import { CreateSiteForm } from "@/modules/frigora/app/forms/create-site-form";
 import { CustomerDetailScreen } from "@/modules/frigora/app/screens/customers-screen";
 import { getCustomerQuery, listSitesByCustomerQuery } from "@/modules/frigora/queries";
@@ -11,7 +11,7 @@ export default async function FrigoraCustomerDetailPage({
   params: Promise<{ ventureId: string; customerId: string }>;
 }) {
   const { ventureId, customerId } = await params;
-  const ctx = await requireFrigoraOpsContext(ventureId);
+  const ctx = await requireFrigoraOfficeContext(ventureId);
   const scope = frigoraScope(ctx);
 
   const customerResult = await getCustomerQuery({ ...scope, id: customerId });

@@ -62,3 +62,10 @@ export function frigoraScope(ctx: Pick<FrigoraOpsContext, "workspaceId" | "ventu
     ventureId: ctx.ventureId,
   };
 }
+
+/** Office-only pages must fail closed before loading commercial or customer data. */
+export async function requireFrigoraOfficeContext(ventureIdParam: string): Promise<FrigoraOpsContext> {
+  const ctx = await requireFrigoraOpsContext(ventureIdParam);
+  if (!ctx.canWrite) notFound();
+  return ctx;
+}
