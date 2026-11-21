@@ -378,11 +378,11 @@ describe("Frigora operational surfaces", () => {
     );
     assert.equal(anchors(detail).some((item) => item.text.includes("Pat Engineer")), false);
     // An office writer must retain operational forms alongside navigable entities.
-    assert.match(detail, /<form\\b/);
+    assert.match(detail, /<form\b/);
 
     // Field Members can read the assigned job, not office mutation controls or directories.
     const fieldDetail = markup(<WorkDetailScreen ctx={ctx} view={detailView} />);
-    assert.doesNotMatch(fieldDetail, /<form\\b/);
+    assert.doesNotMatch(fieldDetail, /<form\b/);
     assert.equal(anchors(fieldDetail).some((item) => item.href.includes("/customers/")), false);
     assert.match(fieldDetail, /FuelCo/);
     assert.match(fieldDetail, /1 High Street/);
