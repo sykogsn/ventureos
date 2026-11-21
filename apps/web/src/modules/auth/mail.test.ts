@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { after, beforeEach, describe, it } from "node:test";
 import type { DomainEvent } from "../../contracts";
 import type { UserId, WorkspaceId } from "../../contracts";
@@ -103,7 +106,16 @@ describe("auth mail delivery boundary", () => {
   });
 
   it("revokes a committed invitation when production delivery is not configured", async () => {
-    const ownerId = createId<UserId>();
+    // Use a disposable file-backed database for this production-mode scenario.
+    // Production storage guards must remain enabled, not bypassed for tests.
+    const root = mkdtempSync(join(tmpdir(), "vos-auth-mail-prod-"));
+    const databaseUrl = `file:${join(root, "mail-fixture.db").replaceAll("\\", "/")}`;
+    const previousDatabaseUrl = process.env.DATABASE_URL;
+    const previousRoot = process.env.VENTUREOS_PERSISTENT_ROOT;
+    try {
+      await resetPersistenceLifecycle(databaseUrl);
+      await ensureSchema();
+      const ownerId = createId<UserId>();
     const workspaceId = createId<WorkspaceId>();
     await getPersistence().users.insert({
       id: ownerId,
@@ -129,6 +141,10 @@ describe("auth mail delivery boundary", () => {
     const stop = getPlatform().events.subscribe("workspace.member.invited", (event) => {
       events.push(event);
     });
+    // The pinned database selection, environment URL and volume root must agree
+    // when the production persistence guard validates the write transaction.
+    process.env.DATABASE_URL = databaseUrl;
+    process.env.VENTUREOS_PERSISTENT_ROOT = root;
     const restore = withEnv({ NODE_ENV: "production" });
     const logs = captureConsole();
     try {
@@ -158,6 +174,15 @@ describe("auth mail delivery boundary", () => {
       stop();
       logs.restore();
       restore();
+    }
+    } finally {
+      // Close the file-backed client before removing the temporary database.
+      await resetPersistenceLifecycle(":memory:");
+      if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = previousDatabaseUrl;
+      if (previousRoot === undefined) delete process.env.VENTUREOS_PERSISTENT_ROOT;
+      else process.env.VENTUREOS_PERSISTENT_ROOT = previousRoot;
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });
