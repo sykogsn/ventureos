@@ -960,6 +960,48 @@ export function createFrigoraService(options: {
     return { ...row, notes: null };
   }
 
+  /**
+   * Office-only selling-charge snapshots.
+   * Field readers keep the operational record and receive null for the charge.
+   * Office readers receive the stored value. Callers must project a copy of the
+   * response after persistence so stored financial rows stay unchanged.
+   */
+  function projectVisit(gate: ReadGate, row: FrigoraVisit): FrigoraVisit {
+    if (gate === "office") return row;
+    return { ...row, labourHourlyChargeCents: null };
+  }
+
+  function projectVisits(gate: ReadGate, rows: FrigoraVisit[]): FrigoraVisit[] {
+    if (gate === "office") return rows;
+    return rows.map((row) => projectVisit(gate, row));
+  }
+
+  function projectPartUsage(gate: ReadGate, row: FrigoraPartUsage): FrigoraPartUsage {
+    if (gate === "office") return row;
+    return { ...row, unitChargeCents: null };
+  }
+
+  function projectPartUsages(gate: ReadGate, rows: FrigoraPartUsage[]): FrigoraPartUsage[] {
+    if (gate === "office") return rows;
+    return rows.map((row) => projectPartUsage(gate, row));
+  }
+
+  function projectRefrigerantEvent(
+    gate: ReadGate,
+    row: FrigoraRefrigerantEvent,
+  ): FrigoraRefrigerantEvent {
+    if (gate === "office") return row;
+    return { ...row, chargePerKgCents: null };
+  }
+
+  function projectRefrigerantEvents(
+    gate: ReadGate,
+    rows: FrigoraRefrigerantEvent[],
+  ): FrigoraRefrigerantEvent[] {
+    if (gate === "office") return rows;
+    return rows.map((row) => projectRefrigerantEvent(gate, row));
+  }
+
   async function saveUnavailability(scope: FrigoraScope, input: UnavailabilityInput, identity?: { id: string; expectedUpdatedAt: string }) {
     await assertFrigoraAccess(await permissionService(), scope, "venture.update");
     const parsed = parseWithFrigora(unavailabilitySchema, input);
@@ -1856,7 +1898,7 @@ export function createFrigoraService(options: {
         updatedAt: now,
       };
       await store.insertVisit(row);
-      return row;
+      return projectVisit(await readGate(scope), row);
     },
     async recordVisitDeparture(scope, id, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");
@@ -1881,7 +1923,7 @@ export function createFrigoraService(options: {
         updatedAt: nowIso(),
       };
       await store.updateVisit(next);
-      return next;
+      return projectVisit(await readGate(scope), next);
     },
     async cancelVisit(scope, id) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
@@ -1892,14 +1934,14 @@ export function createFrigoraService(options: {
         updatedAt: nowIso(),
       };
       await store.updateVisit(next);
-      return next;
+      return projectVisit(await readGate(scope), next);
     },
     async getVisit(scope, id) {
       const gate = await readGate(scope);
       if (gate === "closed") return null;
       const visit = await store.findVisit(scope.workspaceId, scope.ventureId, id);
       if (!visit || !(await mayReadVisit(scope, visit))) return null;
-      return visit;
+      return projectVisit(gate, visit);
     },
     async listVisitsByWorkOrder(scope, workOrderId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -1913,7 +1955,10 @@ export function createFrigoraService(options: {
       if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
-      return store.listVisitsByWorkOrder(scope.workspaceId, scope.ventureId, workOrderId);
+      return projectVisits(
+        await readGate(scope),
+        await store.listVisitsByWorkOrder(scope.workspaceId, scope.ventureId, workOrderId),
+      );
     },
     async listVisitsByAttendingUser(scope, userId) {
       const gate = await readGate(scope);
@@ -1923,7 +1968,10 @@ export function createFrigoraService(options: {
       if (!member) {
         return [];
       }
-      return store.listVisitsByAttendingUser(scope.workspaceId, scope.ventureId, userId);
+      return projectVisits(
+        gate,
+        await store.listVisitsByAttendingUser(scope.workspaceId, scope.ventureId, userId),
+      );
     },
     async recordFieldCapture(scope, visitId, input) {
       const row = await prepareFieldCaptureRow(
@@ -2598,11 +2646,16 @@ export function createFrigoraService(options: {
         updatedAt: now,
       };
       await store.insertRefrigerantEvent(row);
-      return row;
+      return projectRefrigerantEvent(await readGate(scope), row);
     },
     async getRefrigerantEvent(scope, id) {
-      if ((await readGate(scope)) === "closed") return null;
-      return revealAssignedRecord(scope, await store.findRefrigerantEvent(scope.workspaceId, scope.ventureId, id));
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await revealAssignedRecord(
+        scope,
+        await store.findRefrigerantEvent(scope.workspaceId, scope.ventureId, id),
+      );
+      return row ? projectRefrigerantEvent(gate, row) : null;
     },
     async listRefrigerantEventsByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -2612,7 +2665,10 @@ export function createFrigoraService(options: {
       if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
-      return store.listRefrigerantEventsByVisit(scope.workspaceId, scope.ventureId, visitId);
+      return projectRefrigerantEvents(
+        await readGate(scope),
+        await store.listRefrigerantEventsByVisit(scope.workspaceId, scope.ventureId, visitId),
+      );
     },
     async listRefrigerantEventsByWorkOrder(scope, workOrderId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -2626,10 +2682,13 @@ export function createFrigoraService(options: {
       if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
-      return store.listRefrigerantEventsByWorkOrder(
-        scope.workspaceId,
-        scope.ventureId,
-        workOrderId,
+      return projectRefrigerantEvents(
+        await readGate(scope),
+        await store.listRefrigerantEventsByWorkOrder(
+          scope.workspaceId,
+          scope.ventureId,
+          workOrderId,
+        ),
       );
     },
     async listRefrigerantEventsByAsset(scope, assetId) {
@@ -2640,7 +2699,13 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return filterAssignedRecords(scope, await store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId));
+      return projectRefrigerantEvents(
+        await readGate(scope),
+        await filterAssignedRecords(
+          scope,
+          await store.listRefrigerantEventsByAsset(scope.workspaceId, scope.ventureId, assetId),
+        ),
+      );
     },
     async recordPartUsage(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.read");
@@ -2718,11 +2783,16 @@ export function createFrigoraService(options: {
         updatedAt: now,
       };
       await store.insertPartUsage(row);
-      return row;
+      return projectPartUsage(await readGate(scope), row);
     },
     async getPartUsage(scope, id) {
-      if ((await readGate(scope)) === "closed") return null;
-      return revealAssignedRecord(scope, await store.findPartUsage(scope.workspaceId, scope.ventureId, id));
+      const gate = await readGate(scope);
+      if (gate === "closed") return null;
+      const row = await revealAssignedRecord(
+        scope,
+        await store.findPartUsage(scope.workspaceId, scope.ventureId, id),
+      );
+      return row ? projectPartUsage(gate, row) : null;
     },
     async listPartUsagesByVisit(scope, visitId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -2732,7 +2802,10 @@ export function createFrigoraService(options: {
       if (!visit || !(await mayReadVisit(scope, visit))) {
         return [];
       }
-      return store.listPartUsagesByVisit(scope.workspaceId, scope.ventureId, visitId);
+      return projectPartUsages(
+        await readGate(scope),
+        await store.listPartUsagesByVisit(scope.workspaceId, scope.ventureId, visitId),
+      );
     },
     async listPartUsagesByWorkOrder(scope, workOrderId) {
       if (!(await allowFrigoraRead(await permissionService(), scope))) {
@@ -2746,10 +2819,13 @@ export function createFrigoraService(options: {
       if (!workOrder || !(await mayReadWorkOrder(scope, workOrder))) {
         return [];
       }
-      return store.listPartUsagesByWorkOrder(
-        scope.workspaceId,
-        scope.ventureId,
-        workOrderId,
+      return projectPartUsages(
+        await readGate(scope),
+        await store.listPartUsagesByWorkOrder(
+          scope.workspaceId,
+          scope.ventureId,
+          workOrderId,
+        ),
       );
     },
     async listPartUsagesByAsset(scope, assetId) {
@@ -2760,7 +2836,13 @@ export function createFrigoraService(options: {
       if (!asset) {
         return [];
       }
-      return filterAssignedRecords(scope, await store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId));
+      return projectPartUsages(
+        await readGate(scope),
+        await filterAssignedRecords(
+          scope,
+          await store.listPartUsagesByAsset(scope.workspaceId, scope.ventureId, assetId),
+        ),
+      );
     },
     async createPartReference(scope, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
@@ -2985,7 +3067,7 @@ export function createFrigoraService(options: {
         updatedAt: nowIso(),
       };
       await store.updatePartUsage(next);
-      return next;
+      return projectPartUsage(await readGate(scope), next);
     },
     async setRefrigerantEventChargePerKg(scope, eventId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
@@ -3010,7 +3092,7 @@ export function createFrigoraService(options: {
         updatedAt: nowIso(),
       };
       await store.updateRefrigerantEvent(next);
-      return next;
+      return projectRefrigerantEvent(await readGate(scope), next);
     },
     async setVisitLabourHourlyCharge(scope, visitId, input) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
@@ -3028,7 +3110,7 @@ export function createFrigoraService(options: {
         updatedAt: nowIso(),
       };
       await store.updateVisit(next);
-      return next;
+      return projectVisit(await readGate(scope), next);
     },
     async getWorkOrderTimeMaterials(scope, workOrderId) {
       await assertFrigoraAccess(await permissionService(), scope, "venture.update");
