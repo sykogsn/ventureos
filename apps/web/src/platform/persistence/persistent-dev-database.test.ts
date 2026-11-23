@@ -6,6 +6,7 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { REGISTRATION_POLICY_ENV, RegistrationPolicyError } from "@/modules/auth/registration-policy";
 import { authenticateUser, registerUser } from "@/modules/auth/service";
 import { createFrigoraWriteClient } from "@/modules/frigora/owned-write";
 import { getPlatform } from "@/platform/kernel";
@@ -370,7 +371,7 @@ describe("persistent development database contract", () => {
     assert.equal(implicit.stdout, "persistent_database_build_access_refused");
   });
 
-  it("lets signup and login recover authorization after startup and readiness", async () => {
+  it("refuses uninvited production signup and lets login recover authorization", async () => {
     const databaseUrl = isolatedDatabaseUrl("signup");
     const filePath = databaseUrl.slice("file:".length);
     const root = dirname(filePath);
@@ -381,16 +382,23 @@ describe("persistent development database contract", () => {
     const previousObjects = process.env.STORED_OBJECT_ROOT;
     const previousSecret = process.env.AUTH_SECRET;
     const previousAuthUrl = process.env.AUTH_URL;
+    const previousPolicy = process.env[REGISTRATION_POLICY_ENV];
     await initialise(databaseUrl);
     delete process.env.VENTUREOS_AUTHORISE_DATABASE_INIT;
     await resetDatabaseLifecycle(databaseUrl);
     try {
       await ensureSchema();
+      const user = await registerUser({
+        email: "hosted-signup@example.test",
+        password: "hosted-signup-password",
+        name: "Hosted Signup",
+      });
       assert.equal(persistentProcessInstanceIdForTests(), INSTANCE);
       clearPersistentProcessAuthorizationForTests();
       const before = snapshotFiles(filePath);
 
       (process.env as { NODE_ENV?: string }).NODE_ENV = "production";
+      delete process.env[REGISTRATION_POLICY_ENV];
       process.env.VENTUREOS_PERSISTENT_ROOT = root;
       process.env.STORED_OBJECT_ROOT = objects;
       process.env.AUTH_SECRET = "hosted-signup-readiness-secret-value";
@@ -401,23 +409,32 @@ describe("persistent development database contract", () => {
       assert.equal(persistentProcessInstanceIdForTests(), null);
       assert.deepEqual(snapshotFiles(filePath), before);
 
-      const user = await registerUser({
-        email: "hosted-signup@example.test",
-        password: "hosted-signup-password",
-        name: "Hosted Signup",
-      });
-      assert.equal(persistentProcessInstanceIdForTests(), INSTANCE);
-      clearPersistentProcessAuthorizationForTests();
+      await assert.rejects(
+        () =>
+          registerUser({
+            email: "hosted-open-signup@example.test",
+            password: "hosted-signup-password",
+            name: "Open Signup",
+          }),
+        (error: unknown) => error instanceof RegistrationPolicyError,
+      );
+      assert.equal(persistentProcessInstanceIdForTests(), null);
       const signedIn = await authenticateUser({
         email: "hosted-signup@example.test",
         password: "hosted-signup-password",
       });
       assert.equal(signedIn.id, user.id);
+      assert.equal(persistentProcessInstanceIdForTests(), INSTANCE);
       const users = await getClient().execute("SELECT COUNT(*) AS total FROM users");
       const workspaces = await getClient().execute("SELECT COUNT(*) AS total FROM workspaces");
       const version = await getClient().execute("PRAGMA user_version");
       assert.equal(Number(users.rows[0]?.total), 1);
       assert.equal(Number(workspaces.rows[0]?.total), 1);
+      const rejected = await getClient().execute({
+        sql: "SELECT COUNT(*) AS total FROM users WHERE email = ?",
+        args: ["hosted-open-signup@example.test"],
+      });
+      assert.equal(Number(rejected.rows[0]?.total), 0);
       assert.equal(Number(version.rows[0]?.user_version), 40);
     } finally {
       await getPlatform().scheduler.stopAll();
@@ -425,6 +442,7 @@ describe("persistent development database contract", () => {
       restore("STORED_OBJECT_ROOT", previousObjects);
       restore("AUTH_SECRET", previousSecret);
       restore("AUTH_URL", previousAuthUrl);
+      restore(REGISTRATION_POLICY_ENV, previousPolicy);
       if (previousNodeEnv === undefined) delete (process.env as { NODE_ENV?: string }).NODE_ENV;
       else (process.env as { NODE_ENV?: string }).NODE_ENV = previousNodeEnv;
     }

@@ -17,6 +17,7 @@ import { createWorkspace } from "@/modules/workspaces/service";
 import type { AuthProvider } from "@/platform/persistence/repositories/ports";
 import { decideGoogleSignIn } from "@/modules/auth/google-account";
 import { sendAuthMail } from "@/modules/auth/mail";
+import { assertOpenRegistrationAllowed } from "@/modules/auth/registration-policy";
 import {
   createPasswordResetToken,
   hashPasswordResetToken,
@@ -49,6 +50,7 @@ export async function registerUser(input: {
   name: string;
   createPersonalWorkspace?: boolean;
 }): Promise<UserRecord> {
+  assertOpenRegistrationAllowed();
   await ensureSchema();
   const store = getPersistence();
   const platform = getPlatform();
@@ -345,6 +347,7 @@ export async function completeGoogleSignIn(
     return { status: "signed-in", user: { id, email, name }, workspaceId: joined.workspaceId };
   }
 
+  assertOpenRegistrationAllowed();
   const id = createId<UserId>();
   const createdAt = nowIso();
   await store.users.insert({

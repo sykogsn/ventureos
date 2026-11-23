@@ -99,7 +99,8 @@ function queryNotice(
   if (
     code === "google_failed" ||
     code === "google_config" ||
-    code === "google_unverified"
+    code === "google_unverified" ||
+    code === "google_invitation"
   ) {
     return {
       tone: "warning",
