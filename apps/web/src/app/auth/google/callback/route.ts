@@ -8,6 +8,7 @@ import {
   readOAuthState,
   signGoogleLink,
 } from "@/modules/auth/google-oauth";
+import { googleRegistrationErrorCode } from "@/modules/auth/registration-policy";
 import { completeGoogleSignIn, issueSession } from "@/modules/auth/service";
 import { attachSessionCookies } from "@/lib/auth/session";
 import { invitationTokenFromNext } from "@/modules/workspaces/invitation-token";
@@ -89,11 +90,12 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     const code =
-      message.includes("verify")
+      googleRegistrationErrorCode(error) ??
+      (message.includes("verify")
         ? "google_unverified"
         : message.includes("already")
           ? "google_in_use"
-          : "google_failed";
+          : "google_failed");
     const failed = loginRedirect(origin, code);
     failed.cookies.delete(OAUTH_COOKIE);
     return failed;

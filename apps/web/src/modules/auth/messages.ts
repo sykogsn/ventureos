@@ -3,6 +3,7 @@ export const loginMessages: Record<string, string> = {
   google_denied: "Google sign-in was cancelled.",
   google_failed: "Google sign-in could not complete.",
   google_unverified: "Google did not verify that email.",
+  google_invitation: "An invitation is required to create an account.",
   google_link:
     "An account already exists for this email. Sign in with your password to connect Google.",
   google_in_use: "That email is already on a desk.",
